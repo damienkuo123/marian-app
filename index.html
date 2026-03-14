@@ -35,8 +35,12 @@
 
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxHkA5LmIqBVuMEkaT1IcOarqMuEtw7HBX-BplhvOiDw_XCGiksPQotRb0qwftm2Lub/exec"; 
+    
+    // 1. 你的長金鑰
     const AZURE_KEY = "7GrGGySZJ7wxugw35x4xgYx5IzIP9pd6eZL2Pqy5GOo8FhEoJhyTJQQJ99CCAC3pKaRXJ3w3AAAYACOGiIOL";
-    const AZURE_REGION = "eastasia"; 
+    
+    // 2. 你的專屬端點 (基於你的資源名稱 Marian-speech-app)
+    const AZURE_ENDPOINT = "https://marian-speech-app.cognitiveservices.azure.com/";
 
     const params = new URLSearchParams(window.location.search);
     const STUDENT_ID = params.get('id') || "S001";
@@ -49,7 +53,7 @@
         document.getElementById('info-text').innerText = "麥克風已就緒！";
         document.getElementById('start-btn').style.display = 'inline-block';
       } catch (e) {
-        alert("無法開啟麥克風。請確認：\n1. 是用 Safari 開啟\n2. 點擊了 AA 允許麥克風");
+        alert("無法開啟麥克風。");
       }
     };
 
@@ -61,8 +65,7 @@
         .then(data => {
           words = data.words || ["Hello"];
           renderWord();
-        })
-        .catch(err => alert("抓取題庫失敗：" + err));
+        });
     };
 
     function renderWord() {
@@ -112,8 +115,8 @@
     };
 
     async function evaluateAzure(arrayBuffer, text) {
-      // 使用更穩定的 API 端點
-      const url = `https://${AZURE_REGION}.api.cognitive.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US`;
+      // 核心修正：使用自定義子網域 + 正確的 STT 路徑
+      const url = `${AZURE_ENDPOINT}speech/recognition/conversation/cognitiveservices/v1?language=en-US`;
       
       const pronParams = { 
         "ReferenceText": text, 
@@ -126,7 +129,6 @@
         method: 'POST',
         headers: {
           'Ocp-Apim-Subscription-Key': AZURE_KEY,
-          // 強化版 Base64 編碼，確保中文字或特殊字元不會出錯
           'Pronunciation-Assessment': btoa(unescape(encodeURIComponent(JSON.stringify(pronParams)))),
           'Content-Type': 'audio/webm; codecs=opus',
           'Accept': 'application/json'
@@ -135,37 +137,26 @@
       });
 
       if (!response.ok) {
+        const status = response.status;
         const errText = await response.text();
-        throw new Error(`微軟拒絕了請求 (${response.status})`);
+        throw new Error(`微軟拒絕 (${status}): ${errText}`);
       }
 
       const resData = await response.json();
-
-      // --- 核心防呆邏輯：確保 NBest 裡面真的有東西 ---
       if (resData.RecognitionStatus === "Success" && resData.NBest && resData.NBest.length > 0) {
-        const bestResult = resData.NBest[0];
-        if (bestResult.PronunciationAssessment) {
-          return bestResult.PronunciationAssessment.AccuracyScore;
-        }
+        return resData.NBest[0].PronunciationAssessment.AccuracyScore;
       }
-
-      // 如果走到這裡，代表 RecognitionStatus 可能不是 Success，或者資料結構不全
-      let msg = "AI 聽到了，但無法評分。";
-      if (resData.RecognitionStatus === "NoMatch") msg += "\n原因：沒聽清楚你在說什麼。";
-      if (resData.RecognitionStatus === "InitialSilenceTimeout") msg += "\n原因：太安靜了，沒錄到聲音。";
-      
-      throw new Error(msg + "\n請錄大聲一點或錄久一點。");
+      throw new Error("AI 無法評分，請大聲唸清楚一點。");
     }
 
     function finishChallenge() {
       const avg = Math.round(total / words.length);
-      document.getElementById('studio').innerHTML = "<h3>挑戰完成！</h3><p>平均分數：" + avg + "</p><p>正在存入點數...</p>";
+      document.getElementById('studio').innerHTML = "<h3>挑戰完成！</h3>";
       fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}`)
         .then(() => {
-          alert("🎉 挑戰完成！即將回到點數首頁。");
+          alert("🎉 挑戰完成！");
           window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
-        })
-        .catch(err => alert("存點失敗：" + err));
+        });
     }
   </script>
 </body>
