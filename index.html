@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2487.2">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+    p.p3 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.0px 'Helvetica Neue'}
+    span.s1 {font: 12.0px Helvetica}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="UTF-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;瑪麗安口說挑戰室&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>:root { --primary-blue: #1e90ff; --marian-yellow: #ffa502; --marian-red: #ff4757; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #f0f2f5; touch-action: none; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.card { background: white; padding: 30px; border-radius: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.12); max-width: 400px; margin: 0 auto; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#record-btn { background: var(--marian-red); width: 120px; height: 120px; border-radius: 50%; border: 8px solid white; font-size: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin: 30px auto; touch-action: none; display: none; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#record-btn.active { transform: scale(0.9); background: #333; animation: pulse 1s infinite; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>@keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(255, 71, 87, 0.4); } 100% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); } }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-start { background: var(--primary-blue); color: white; padding: 20px 40px; border-radius: 18px; font-size: 20px; font-weight: bold; border: none; cursor: pointer; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#feedback { font-size: 24px; font-weight: bold; color: #2ed573; margin-top: 15px; }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div class="card"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="setup-zone"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;h2 style="color:var(--primary-blue);"&gt;歡迎來到口說挑戰！&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;p id="info-text"&gt;正在準備麥克風...&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button class="btn-start" id="start-btn" style="display:none;"&gt;我準備好了！&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="studio" style="display:none;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;p style="color:var(--primary-blue); font-weight:bold;"&gt;🎙️ 第 &lt;span id="idx"&gt;1&lt;/span&gt;/10 題&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;h1 id="word" style="font-size: 48px; color:#0d47a1; margin: 20px 0;"&gt;載入中...&lt;/h1&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button type="button" id="record-btn"&gt;🎤&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;p id="status"&gt;按住錄音，放開評分&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div id="feedback"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// --- ⚠️ 核心設定：請填入您的 GAS 網址 ---</p>
+<p class="p3"><span class="s1"><span class="Apple-converted-space">    </span>const GAS_URL = "</span>https://script.google.com/macros/s/AKfycbxHkA5LmIqBVuMEkaT1IcOarqMuEtw7HBX-BplhvOiDw_XCGiksPQotRb0qwftm2Lub/exec<span class="s1">";<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const AZURE_KEY = "3QzfGss1SpstM7DNIKKYtYDHEwCwB6rLhpKoqM1LGRI7QZjE4VptJQQJ99CCACYeBjFXJ3w3AAAaACOGvCso";</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const AZURE_REGION = "eastus";</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const params = new URLSearchParams(window.location.search);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const STUDENT_ID = params.get('id') || "S001";</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>let stream, mediaRecorder, chunks = [], words = [], idx = 0, total = 0;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 1. 初始化：請求麥克風並抓題目</p>
+<p class="p1"><span class="Apple-converted-space">    </span>window.onload = async () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>stream = await navigator.mediaDevices.getUserMedia({ audio: true });</p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('info-text').innerText = "麥克風已就緒！";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('start-btn').style.display = 'inline-block';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>} catch (e) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>alert("無法開啟麥克風，請檢查權限設定。");</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('start-btn').onclick = () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('setup-zone').style.display = 'none';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('studio').style.display = 'block';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// 向 GAS 抓題目</p>
+<p class="p1"><span class="Apple-converted-space">      </span>fetch(`${GAS_URL}?id=${STUDENT_ID}&amp;action=get_data`)</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.then(res =&gt; res.json())</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.then(data =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>words = data.words;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>renderWord();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function renderWord() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (idx &lt; words.length) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('idx').innerText = idx + 1;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('word').innerText = words[idx];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('record-btn').style.display = 'block';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('feedback').innerText = "";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('status').innerText = "按住錄音，放開評分";</p>
+<p class="p1"><span class="Apple-converted-space">      </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>finishChallenge();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 2. 錄音邏輯 (按住錄音)</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const rb = document.getElementById('record-btn');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>rb.onpointerdown = (e) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>e.preventDefault(); chunks = [];</p>
+<p class="p1"><span class="Apple-converted-space">      </span>mediaRecorder = new MediaRecorder(stream);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>mediaRecorder.ondataavailable = ev =&gt; chunks.push(ev.data);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>mediaRecorder.start();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>rb.classList.add('active');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('status').innerText = "聆聽中...";</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>rb.onpointerup = () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!mediaRecorder || mediaRecorder.state !== "recording") return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>mediaRecorder.stop();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>rb.classList.remove('active');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('status').innerText = "AI 評分中...";</p>
+<p class="p2"><span class="Apple-converted-space">      </span></p>
+<p class="p1"><span class="Apple-converted-space">      </span>mediaRecorder.onstop = async () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const audioBlob = new Blob(chunks, { type: 'audio/webm' });</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const reader = new FileReader();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>reader.readAsDataURL(audioBlob);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>reader.onloadend = async () =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const base64 = reader.result.split(',')[1];</p>
+<p class="p1"><span class="Apple-converted-space">          </span>// 呼叫 Azure API (前端直接呼叫速度最快)</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const score = await evaluateAzure(base64, words[idx]);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>document.getElementById('feedback').innerText = "得分：" + Math.round(score);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>total += score; idx++;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>setTimeout(renderWord, 1200);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>};</p>
+<p class="p1"><span class="Apple-converted-space">      </span>};</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function evaluateAzure(base64, text) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const url = `https://${AZURE_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US`;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const pronParams = { "ReferenceText": text, "GradingSystem": "HundredMark", "Granularity": "Phoneme", "Dimension": "Comprehensive" };</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const response = await fetch(url, {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>method: 'POST',</p>
+<p class="p1"><span class="Apple-converted-space">        </span>headers: {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>'Ocp-Apim-Subscription-Key': AZURE_KEY,</p>
+<p class="p1"><span class="Apple-converted-space">          </span>'Pronunciation-Assessment': btoa(JSON.stringify(pronParams)),</p>
+<p class="p1"><span class="Apple-converted-space">          </span>'Content-Type': 'audio/webm; codecs=opus'</p>
+<p class="p1"><span class="Apple-converted-space">        </span>},</p>
+<p class="p1"><span class="Apple-converted-space">        </span>body: atob(base64).split('').map(c =&gt; c.charCodeAt(0))</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const resData = await response.json();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>return resData.RecognitionStatus === "Success" ? resData.NBest[0].PronunciationAssessment.AccuracyScore : 0;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// 3. 結算並自動跳轉回點數頁面</p>
+<p class="p1"><span class="Apple-converted-space">    </span>function finishChallenge() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const avg = Math.round(total / words.length);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('studio').innerHTML = "&lt;h3&gt;挑戰完成！正在結算點數...&lt;/h3&gt;";</p>
+<p class="p2"><span class="Apple-converted-space">      </span></p>
+<p class="p1"><span class="Apple-converted-space">      </span>// 傳回 GAS 加分</p>
+<p class="p1"><span class="Apple-converted-space">      </span>fetch(`${GAS_URL}?id=${STUDENT_ID}&amp;action=add_score&amp;score=${avg}`)</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.then(() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>alert("🎉 點數已自動存入！即將跳回首頁。");</p>
+<p class="p1"><span class="Apple-converted-space">          </span>// 核心：自動飛回點數首頁</p>
+<p class="p1"><span class="Apple-converted-space">          </span>window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/script&gt;</p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>
