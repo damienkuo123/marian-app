@@ -34,11 +34,8 @@
   </div>
 
   <script>
-    // --- ⚠️ 最終修正版設定 ---
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxHkA5LmIqBVuMEkaT1IcOarqMuEtw7HBX-BplhvOiDw_XCGiksPQotRb0qwftm2Lub/exec"; 
     const AZURE_KEY = "7GrGGySZJ7wxugw35x4xgYx5IzIP9pd6eZL2Pqy5GOo8FhEoJhyTJQQJ99CCAC3pKaRXJ3w3AAAYACOGiIOL";
-    
-    // 修正：新版長金鑰必須使用 api.cognitive 網域，而非 stt.speech
     const AZURE_REGION = "eastasia"; 
 
     const params = new URLSearchParams(window.location.search);
@@ -62,7 +59,7 @@
       fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data`)
         .then(res => res.json())
         .then(data => {
-          words = data.words;
+          words = data.words || ["Hello"];
           renderWord();
         })
         .catch(err => alert("抓取題庫失敗：" + err));
@@ -107,15 +104,15 @@
             total += score; idx++;
             setTimeout(renderWord, 1200);
           } catch (e) {
-            alert("評分過程出錯：" + e);
-            document.getElementById('status').innerText = "請重錄一次";
+            alert(e.message);
+            document.getElementById('status').innerText = "請再試一次";
           }
         };
       };
     };
 
     async function evaluateAzure(arrayBuffer, text) {
-      // 這是針對「長金鑰」專用的全能型網址，絕對不會 404
+      // 使用更穩定的 API 端點
       const url = `https://${AZURE_REGION}.api.cognitive.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US`;
       
       const pronParams = { 
@@ -129,7 +126,8 @@
         method: 'POST',
         headers: {
           'Ocp-Apim-Subscription-Key': AZURE_KEY,
-          'Pronunciation-Assessment': btoa(JSON.stringify(pronParams)),
+          // 強化版 Base64 編碼，確保中文字或特殊字元不會出錯
+          'Pronunciation-Assessment': btoa(unescape(encodeURIComponent(JSON.stringify(pronParams)))),
           'Content-Type': 'audio/webm; codecs=opus',
           'Accept': 'application/json'
         },
@@ -137,17 +135,26 @@
       });
 
       if (!response.ok) {
-        const status = response.status;
         const errText = await response.text();
-        throw new Error(`Azure 拒絕 (${status}): ${errText}`);
+        throw new Error(`微軟拒絕了請求 (${response.status})`);
       }
 
       const resData = await response.json();
-      if (resData.RecognitionStatus === "Success") {
-        return resData.NBest[0].PronunciationAssessment.AccuracyScore;
-      } else {
-        throw new Error("AI 聽不清楚，狀態：" + resData.RecognitionStatus);
+
+      // --- 核心防呆邏輯：確保 NBest 裡面真的有東西 ---
+      if (resData.RecognitionStatus === "Success" && resData.NBest && resData.NBest.length > 0) {
+        const bestResult = resData.NBest[0];
+        if (bestResult.PronunciationAssessment) {
+          return bestResult.PronunciationAssessment.AccuracyScore;
+        }
       }
+
+      // 如果走到這裡，代表 RecognitionStatus 可能不是 Success，或者資料結構不全
+      let msg = "AI 聽到了，但無法評分。";
+      if (resData.RecognitionStatus === "NoMatch") msg += "\n原因：沒聽清楚你在說什麼。";
+      if (resData.RecognitionStatus === "InitialSilenceTimeout") msg += "\n原因：太安靜了，沒錄到聲音。";
+      
+      throw new Error(msg + "\n請錄大聲一點或錄久一點。");
     }
 
     function finishChallenge() {
