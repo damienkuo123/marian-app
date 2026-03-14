@@ -1,70 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>瑪麗安口說挑戰室 (Gemini版)</title>
-  <style>
-    :root { --primary-blue: #1e90ff; --marian-red: #ff4757; }
-    body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #f0f2f5; }
-    .card { background: white; padding: 30px; border-radius: 28px; box-shadow: 0 12px 40px rgba(0,0,0,0.12); max-width: 400px; margin: 0 auto; }
-    #record-btn { background: var(--marian-red); width: 120px; height: 120px; border-radius: 50%; border: 8px solid white; font-size: 50px; margin: 30px auto; display: none; touch-action: none; }
-    #record-btn.active { transform: scale(0.9); background: #333; animation: pulse 1s infinite; }
-    @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(255, 71, 87, 0.4); } 100% { box-shadow: 0 0 0 20px rgba(255, 71, 87, 0); } }
-    .btn-start { background: var(--primary-blue); color: white; padding: 20px 40px; border-radius: 18px; font-weight: bold; border: none; }
-  </style>
-</head>
-<body>
+let startTime; // 新增這行在變數區
 
-  <div class="card">
-    <div id="setup-zone">
-      <h2>歡迎來到 Gemini 挑戰室</h2>
-      <button class="btn-start" id="start-btn" style="display:none;">啟動麥克風</button>
-    </div>
-
-    <div id="studio" style="display:none;">
-      <p>🎙️ 第 <span id="idx">1</span> 題</p>
-      <h1 id="word" style="font-size: 48px; color:#0d47a1;">載入中...</h1>
-      <button type="button" id="record-btn">🎤</button>
-      <p id="status">按住錄音，放開評分</p>
-      <div id="feedback" style="font-size: 24px; font-weight: bold; color: #2ed573;"></div>
-    </div>
-  </div>
-
-  <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxHkA5LmIqBVuMEkaT1IcOarqMuEtw7HBX-BplhvOiDw_XCGiksPQotRb0qwftm2Lub/exec"; // 記得要用最新的部署網址
-    const params = new URLSearchParams(window.location.search);
-    const STUDENT_ID = params.get('id') || "S001";
-
-    let stream, mediaRecorder, chunks = [], words = [], idx = 0, total = 0;
-
-    window.onload = async () => {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      document.getElementById('start-btn').style.display = 'inline-block';
-    };
-
-    document.getElementById('start-btn').onclick = () => {
-      document.getElementById('setup-zone').style.display = 'none';
-      document.getElementById('studio').style.display = 'block';
-      fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data`)
-        .then(res => res.json())
-        .then(data => { words = data.words; renderWord(); });
-    };
-
-    function renderWord() {
-      if (idx < words.length) {
-        document.getElementById('idx').innerText = idx + 1;
-        document.getElementById('word').innerText = words[idx];
-        document.getElementById('record-btn').style.display = 'block';
-        document.getElementById('feedback').innerText = "";
-      } else {
-        finishChallenge();
-      }
-    }
-
-    const rb = document.getElementById('record-btn');
     rb.onpointerdown = (e) => {
-      e.preventDefault(); chunks = [];
+      e.preventDefault(); 
+      startTime = Date.now(); // 記錄開始時間
+      chunks = [];
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
       mediaRecorder.start();
@@ -72,37 +11,41 @@
     };
 
     rb.onpointerup = () => {
+      const duration = Date.now() - startTime;
+      if (duration < 800) { // 如果錄音短於 0.8 秒
+        alert("唸太快了，請錄久一點點喔！");
+        mediaRecorder.stop();
+        rb.classList.remove('active');
+        return;
+      }
+      
       mediaRecorder.stop();
       rb.classList.remove('active');
-      document.getElementById('status').innerText = "Gemini 老師評分中...";
+      document.getElementById('status').innerText = "Gemini 老師正在細聽...";
+      
       mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
         const reader = new FileReader();
-        reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
+        reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
           const base64 = reader.result.split(',')[1];
-          // 把音訊丟回 GAS 讓 GAS 去問 Gemini
           fetch(`${GAS_URL}?id=${STUDENT_ID}&action=evaluate_speech&word=${words[idx]}`, {
             method: 'POST',
             body: base64
           })
           .then(res => res.json())
           .then(data => {
-            document.getElementById('feedback').innerText = "得分：" + data.score;
-            total += data.score; idx++;
-            setTimeout(renderWord, 1200);
-          });
+            // 如果拿到 1 分，代表 AI 聽到了但沒辦法給分
+            if (data.score === 1) {
+              alert("AI 老師說：聽得不是很清楚，請對著麥克風大聲一點！");
+              document.getElementById('status').innerText = "請重錄一次";
+            } else {
+              document.getElementById('feedback').innerText = "得分：" + data.score;
+              total += data.score; idx++;
+              setTimeout(renderWord, 1200);
+            }
+          })
+          .catch(err => alert("通訊失敗：" + err));
         };
       };
     };
-
-    function finishChallenge() {
-      const avg = Math.round(total / words.length);
-      fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}`)
-        .then(() => {
-          alert("挑戰完成！回點數頁。");
-          window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
-        });
-    }
-  </script>
-</body>
-</html>
