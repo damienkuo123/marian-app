@@ -113,43 +113,42 @@
     };
 
 async function evaluateAzure(arrayBuffer, text) {
-  // 自動處理端點網址格式
-  let baseUrl = AZURE_ENDPOINT;
-  if (!baseUrl.endsWith('/')) baseUrl += '/';
-  
-  // 針對「全家桶型」金鑰的正確 API 路徑
-  const url = `${baseUrl}speech/recognition/conversation/cognitiveservices/v1?language=en-US`;
-  
-  const pronParams = { 
-    "ReferenceText": text, 
-    "GradingSystem": "HundredMark", 
-    "Granularity": "Phoneme", 
-    "Dimension": "Comprehensive" 
-  };
+      // 這是微軟語音辨識唯一認可的絕對路徑格式
+      // 既然你的資源在 East Asia，我們就鎖定這個網域
+      const url = `https://eastasia.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US`;
+      
+      const pronParams = { 
+        "ReferenceText": text, 
+        "GradingSystem": "HundredMark", 
+        "Granularity": "Phoneme", 
+        "Dimension": "Comprehensive" 
+      };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Ocp-Apim-Subscription-Key': AZURE_KEY,
-      'Pronunciation-Assessment': btoa(JSON.stringify(pronParams)),
-      'Content-Type': 'audio/webm; codecs=opus',
-      'Accept': 'application/json'
-    },
-    body: arrayBuffer
-  });
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          // 這裡直接填入你那串很長很長長的金鑰
+          'Ocp-Apim-Subscription-Key': "7GrGGySZJ7wxugw35x4xgYx5IzIP9pd6eZL2Pqy5GOo8FhEoJhyTJQQJ99CCAC3pKaRXJ3w3AAAYACOGiIOL",
+          'Pronunciation-Assessment': btoa(JSON.stringify(pronParams)),
+          'Content-Type': 'audio/webm; codecs=opus',
+          'Accept': 'application/json'
+        },
+        body: arrayBuffer
+      });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Azure 拒絕訪問 (${response.status}): ${errText}`);
-  }
+      if (!response.ok) {
+        const status = response.status;
+        const errText = await response.text();
+        throw new Error(`Azure 拒絕 (${status}): ${errText}`);
+      }
 
-  const resData = await response.json();
-  if (resData.RecognitionStatus === "Success") {
-    return resData.NBest[0].PronunciationAssessment.AccuracyScore;
-  } else {
-    throw new Error("AI 無法辨識音訊內容，狀態：" + resData.RecognitionStatus);
-  }
-}
+      const resData = await response.json();
+      if (resData.RecognitionStatus === "Success") {
+        return resData.NBest[0].PronunciationAssessment.AccuracyScore;
+      } else {
+        throw new Error("AI 聽不清楚，狀態：" + resData.RecognitionStatus);
+      }
+    }
 
     function finishChallenge() {
       const avg = Math.round(total / words.length);
