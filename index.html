@@ -57,6 +57,7 @@
     <div style="margin-top: 30px; display:flex; justify-content:center;">
       <button class="btn btn-nav" id="prev-btn">◀ 上一題</button>
       <button class="btn btn-nav" id="next-btn">下一題 ▶</button>
+      <button class="btn btn-nav" id="back-summary-btn" style="display:none; background:var(--marian-green); border-bottom:4px solid #1e8449;">返回結算頁</button>
     </div>
   </div>
 
@@ -120,8 +121,19 @@
     document.getElementById('record-btn').style.display = 'block';
     const fill = ((currentIndex + 1) / words.length) * 100;
     document.getElementById('progress-fill').style.width = fill + "%";
-    document.getElementById('prev-btn').disabled = currentIndex === 0;
-    document.getElementById('next-btn').innerText = currentIndex === words.length - 1 ? "查看結算" : "下一題 ▶";
+    
+    // 如果是在重唸模式
+    if (isReReading) {
+      document.getElementById('prev-btn').style.display = 'none';
+      document.getElementById('next-btn').style.display = 'none';
+      document.getElementById('back-summary-btn').style.display = 'inline-block';
+    } else {
+      document.getElementById('prev-btn').style.display = 'inline-block';
+      document.getElementById('next-btn').style.display = 'inline-block';
+      document.getElementById('back-summary-btn').style.display = 'none';
+      document.getElementById('prev-btn').disabled = currentIndex === 0;
+      document.getElementById('next-btn').innerText = currentIndex === words.length - 1 ? "查看結算" : "下一題 ▶";
+    }
   }
 
   const rb = document.getElementById('record-btn');
@@ -156,8 +168,7 @@
             scores[currentIndex] = data.score;
             document.getElementById('feedback').innerText = "得分：" + data.score;
             document.getElementById('status').innerText = "按住錄音，放開打分";
-            // 如果是從結算頁面回來重唸的，唸完自動跳回結算頁
-            if (isReReading) { setTimeout(showSummary, 1000); isReReading = false; }
+            // 修正：移除自動跳轉邏輯，讓學生手動點擊返回
           });
       };
     };
@@ -167,6 +178,12 @@
   document.getElementById('next-btn').onclick = () => {
     if (currentIndex < words.length - 1) { currentIndex++; renderWord(); } 
     else { showSummary(); }
+  };
+
+  // 返回結算頁按鈕邏輯
+  document.getElementById('back-summary-btn').onclick = () => {
+    isReReading = false;
+    showSummary();
   };
 
   function showSummary() {
