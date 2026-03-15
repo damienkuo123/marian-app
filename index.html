@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <title>瑪麗安口說系統</title>
+  <title>瑪麗安口說挑戰室</title>
   <style>
     :root { --primary-blue: #0066cc; --marian-yellow: #ff9900; --marian-red: #d63031; --marian-green: #27ae60; --dark-gray: #2d3436; --gold: #ffd700; }
     body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #eaeff2; margin: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -25,24 +25,29 @@
     .btn-re { background: var(--marian-red); font-size: 13px; padding: 6px 12px; border-radius: 8px; color: white; border: none; cursor: pointer; font-weight: bold; }
     #zh-display { font-size: 20px; color: #7f8c8d; margin: -10px 0 20px 0; font-weight: bold; }
 
-    /* ⚔️ 偵探外掛：對戰專用純淨樣式 */
-    #battle-arena { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #2c3e50 0%, #000 100%); z-index: 2000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .arena-p-name { font-weight: bold; color: var(--gold); font-size: 18px; }
-    .score-fill-battle { height: 100%; background: var(--gold); border-radius: 5px; transition: 0.5s; width: 0%; }
-    #battle-record-btn { width: 110px; height: 110px; border-radius: 50%; border: 6px solid white; background: var(--marian-red); font-size: 40px; color: white; cursor: pointer; outline: none; transition: 0.2s; margin: 0 auto; display: inline-block;}
-    #battle-record-btn.active { transform: scale(0.9); background: #333; box-shadow: 0 0 20px var(--marian-red); }
+    /* ⚔️ 偵探：史詩戰場 CSS 外掛 (絕不影響上方原版樣式) */
+    #battle-arena { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #2c3e50 0%, #050505 100%); z-index: 2000; color: white; display: flex; flex-direction: column; align-items: center; }
+    .round-dot { width: 16px; height: 16px; border-radius: 50%; background: #333; border: 2px solid #555; display: inline-block; }
+    .dot-me { background: var(--marian-green); border-color: #fff; box-shadow: 0 0 10px var(--marian-green); }
+    .dot-op { background: var(--marian-red); border-color: #fff; box-shadow: 0 0 10px var(--marian-red); }
+    
+    #battle-record-btn { width: 110px; height: 110px; border-radius: 50%; border: 6px solid white; background: var(--primary-blue); font-size: 40px; color: white; cursor: pointer; outline: none; transition: 0.2s; margin: 0 auto; display: inline-block;}
+    #battle-record-btn.active { transform: scale(0.9); background: #333; box-shadow: 0 0 20px var(--primary-blue); }
+
+    /* 衝擊感勝負彈窗 */
+    #impact-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; color: white; animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
   </style>
 </head>
 <body>
 
-<div class="card" id="main-card" style="display:none;">
+<div class="card" id="main-card">
   <div id="progress-container" class="progress-bar" style="display:none;"><div id="progress-fill" class="progress-fill"></div></div>
   <div id="setup-zone">
     <h2 id="title-text" style="color:var(--primary-blue);">🎙️ 瑪麗安口說挑戰</h2>
     <p id="info-text">正在開啟麥克風...</p>
-    <button class="btn" style="background:var(--primary-blue); font-size: 22px; padding: 18px 40px; border-bottom: 4px solid #003366; width: 100%; margin-bottom: 10px;" id="start-btn" style="display:none;">開始挑戰</button>
+    <button class="btn" style="background:var(--primary-blue); font-size: 22px; padding: 18px 40px; border-bottom: 4px solid #003366;" id="start-btn" style="display:none;">開始挑戰</button>
   </div>
-
   <div id="studio" style="display:none;">
     <p style="color:var(--primary-blue); font-weight:bold;">第 <span id="idx-display">1</span> / <span id="total-display">0</span> 題</p>
     <div style="display: flex; align-items: center; justify-content: center; margin: 15px 0;">
@@ -59,7 +64,6 @@
       <button class="btn btn-nav" id="back-summary-btn" style="display:none; background:var(--marian-green); border-bottom:4px solid #1e8449;">返回結算頁</button>
     </div>
   </div>
-
   <div id="summary" style="display:none;">
     <h2 id="summary-title" style="color:var(--primary-blue); margin-bottom:5px;">學習總結</h2>
     <div id="score-zone">
@@ -73,49 +77,61 @@
   </div>
 </div>
 
-<div id="battle-arena" style="display:none;">
-  <div style="position:absolute; top:20px; width:100%; display:flex; justify-content:space-around;">
-    <div>
-      <div id="p1-name" class="arena-p-name">Player 1</div>
-      <div style="width:120px; height:8px; background:#444; border-radius:4px; margin-top:5px;"><div id="p1-fill" class="score-fill-battle"></div></div>
-    </div>
-    <div style="font-size:24px; font-weight:900; color:var(--marian-red);">VS</div>
-    <div>
-      <div id="p2-name" class="arena-p-name">Player 2</div>
-      <div style="width:120px; height:8px; background:#444; border-radius:4px; margin-top:5px;"><div id="p2-fill" class="score-fill-battle"></div></div>
-    </div>
+<div id="battle-arena" style="display:none; position:relative;">
+  <div style="position:absolute; top:20px; width:100%; text-align:center;">
+    <div style="font-size:14px; color:#aaa; font-weight:bold; letter-spacing:2px;">OPPONENT</div>
+    <div id="op-name" style="font-size:28px; font-weight:900; color:var(--marian-red); margin-bottom:5px; text-shadow:0 0 10px rgba(214,48,49,0.5);">等待中...</div>
+    <div id="op-rounds" style="display:flex; justify-content:center; gap:8px;"></div>
   </div>
-  <div id="battle-stage" style="text-align:center; margin-top: 80px;">
-    <div id="round-num" style="color:#aaa; font-size: 18px;">Round 1 / 7</div>
-    <h1 id="target-word" style="font-size:52px; margin:20px 0; text-shadow:0 0 20px #fff;">載入戰場中...</h1>
-    <div id="battle-timer" style="font-size:56px; font-weight:bold; color:var(--marian-yellow);"></div>
-    <p id="battle-info" style="color:#888; font-size: 18px;">正在連接對手...</p>
+
+  <div id="battle-stage" style="margin-top: 160px; text-align:center; width:100%;">
+    <div id="round-num" style="color:#aaa; font-size: 18px; font-weight:bold; letter-spacing:2px;">ROUND 1 / 7</div>
+    <h1 id="target-word" style="font-size:56px; margin:20px 0; text-shadow:0 0 25px rgba(255,255,255,0.8);">連線戰場...</h1>
+    <div id="battle-timer" style="font-size:64px; font-weight:900; color:var(--gold); text-shadow:0 0 20px rgba(255,215,0,0.5);"></div>
+    <p id="battle-info" style="color:#888; font-size: 18px; margin-top:10px;">準備大開殺戒！</p>
   </div>
-  <div id="battle-controls" style="position:absolute; bottom:60px; width:100%; text-align:center; display:none;">
+
+  <div style="position:absolute; bottom:190px; width:100%; text-align:center;">
+    <div id="my-rounds" style="display:flex; justify-content:center; gap:8px; margin-bottom:5px;"></div>
+    <div id="my-name" style="font-size:28px; font-weight:900; color:var(--marian-green); text-shadow:0 0 10px rgba(39,174,96,0.5);">YOU</div>
+    <div style="font-size:14px; color:#aaa; font-weight:bold; letter-spacing:2px;">PLAYER</div>
+  </div>
+
+  <div id="battle-controls" style="position:absolute; bottom:40px; width:100%; text-align:center; display:none;">
     <button id="battle-record-btn" oncontextmenu="return false;">🎤</button>
-    <p style="color:#aaa; margin-top:10px;">按住錄音，放開提交</p>
+    <p style="color:#ccc; margin-top:15px; font-weight:bold;">按住錄音，放開開火</p>
   </div>
 </div>
 
+<div id="impact-overlay">
+  <div style="font-size:24px; color:#aaa; font-weight:bold; margin-bottom:10px;" id="impact-title">ROUND RESULT</div>
+  <h1 id="impact-result" style="font-size:72px; text-shadow:0 0 30px #fff; margin:0; text-transform:uppercase; line-height:1.2;">WIN!</h1>
+  <div style="font-size:56px; margin:30px 0; font-weight:900; display:flex; align-items:center; justify-content:center; gap:20px;">
+    <span id="impact-my-score" style="color:var(--marian-green);">0</span> 
+    <span style="font-size:30px; color:#888;">VS</span> 
+    <span id="impact-op-score" style="color:var(--marian-red);">0</span>
+  </div>
+  <p id="impact-subtitle" style="font-size:18px; color:#ccc;"></p>
+</div>
+
 <script>
+  // 🔗 換成最新專屬 GAS 網址
   const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec"; 
   const params = new URLSearchParams(window.location.search);
   const STUDENT_ID = params.get('id') || "S001";
   const TARGET_UNIT = params.get('unit') || "";
   const MODE = params.get('mode') || "challenge";
-  const ROOM_ID = params.get('roomId'); // 取得房號
+  
+  // ⚔️ 偵探：獲取對戰專用房號
+  const ROOM_ID = params.get('roomId');
 
-  // 共用音訊變數
-  let stream, mediaRecorder, chunks = [];
+  let stream, mediaRecorder, chunks = [], quizData = [], scores = [], currentIndex = 0, isReReading = false;
   let audioContext, analyser, dataArray, source, gradingInterval;
   let maxVolume = 0;
 
-  // 模式專屬變數
-  let quizData = [], scores = [], currentIndex = 0, isReReading = false;
-  let battleQuiz = [], currentBattleRound = 0, currentLimitTimer;
-
-  // 🚀 入口分流器 (Router)
+  // 🚦 偵探：路由分流控制
   window.onload = async () => {
+    if(MODE === 'review') document.getElementById('title-text').innerText = "📖 自由練習模式";
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -124,71 +140,310 @@
       source.connect(analyser);
       analyser.fftSize = 256;
       dataArray = new Uint8Array(analyser.frequencyBinCount);
-      
+
+      // 如果有對戰參數，切換到戰鬥引擎！
       if (MODE === 'battle' && ROOM_ID) {
-        // 進入對戰模式
+        document.getElementById('main-card').style.display = 'none';
         document.getElementById('battle-arena').style.display = 'block';
         fetchBattleDataAndStart();
       } else {
-        // 進入一般練習模式
-        if(MODE === 'review') document.getElementById('title-text').innerText = "📖 自由練習模式";
-        document.getElementById('main-card').style.display = 'block';
+        // 否則走原本的練習挑戰流
         document.getElementById('info-text').innerText = "麥克風已就緒";
         document.getElementById('start-btn').style.display = 'inline-block';
       }
     } catch (e) { alert("請開啟麥克風權限"); }
   };
 
-  // ==========================================
-  // ⚔️ 戰鬥引擎模式 (MODE = battle)
-  // ==========================================
+  // ========================================================
+  // 🔒 以下是您「完全一字不改」的舊有原版練習功能
+  // ========================================================
+  document.getElementById('start-btn').onclick = () => {
+    document.getElementById('info-text').innerText = "正在載入題目...";
+    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data&unit=${encodeURIComponent(TARGET_UNIT)}`)
+      .then(res => res.json()).then(data => {
+        if (!data.words || data.words.length === 0) {
+          alert("後台回傳題目為空，請檢查 Word_Bank。");
+          return;
+        }
+        quizData = data.words;
+        scores = new Array(quizData.length).fill(null);
+        document.getElementById('total-display').innerText = quizData.length;
+        document.getElementById('setup-zone').style.display = 'none';
+        document.getElementById('progress-container').style.display = 'block';
+        document.getElementById('studio').style.display = 'block';
+        renderWord();
+      })
+      .catch(err => {
+        alert("連線失敗！");
+        console.error(err);
+      });
+  };
+
+  function renderWord() {
+    const current = quizData[currentIndex];
+    document.getElementById('idx-display').innerText = currentIndex + 1;
+    document.getElementById('word-display').innerText = current.en;
+    document.getElementById('zh-display').innerText = current.zh;
+    document.getElementById('feedback').innerText = scores[currentIndex] !== null ? "得分：" + scores[currentIndex] : "";
+    document.getElementById('record-btn').style.display = 'block';
+    const fill = ((currentIndex + 1) / quizData.length) * 100;
+    document.getElementById('progress-fill').style.width = fill + "%";
+    
+    if (isReReading) {
+      document.getElementById('prev-btn').style.display = 'none';
+      document.getElementById('next-btn').style.display = 'none';
+      document.getElementById('back-summary-btn').style.display = 'inline-block';
+    } else {
+      document.getElementById('prev-btn').style.display = 'inline-block';
+      document.getElementById('next-btn').style.display = 'inline-block';
+      document.getElementById('back-summary-btn').style.display = 'none';
+      document.getElementById('prev-btn').disabled = currentIndex === 0;
+      document.getElementById('next-btn').innerText = currentIndex === quizData.length - 1 ? "查看結算" : "下一題 ▶";
+    }
+  }
+
+  const rb = document.getElementById('record-btn');
+  rb.onpointerdown = (e) => {
+    e.preventDefault();
+    document.getElementById('feedback').innerHTML = "";
+    maxVolume = 0;
+    chunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
+    mediaRecorder.start();
+    rb.classList.add('active');
+    document.getElementById('status').innerText = "正在錄音...";
+    document.getElementById('status').style.color = "var(--marian-red)";
+
+    const checkVolume = () => {
+      if (mediaRecorder.state === "recording") {
+        analyser.getByteFrequencyData(dataArray);
+        let values = 0;
+        for (let i = 0; i < dataArray.length; i++) values += dataArray[i];
+        let average = values / dataArray.length;
+        if (average > maxVolume) maxVolume = average;
+        requestAnimationFrame(checkVolume);
+      }
+    };
+    checkVolume();
+  };
+
+  rb.onpointerup = () => {
+    if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+    mediaRecorder.stop();
+    rb.classList.remove('active');
+    
+    console.log("本次錄音最高音量:", maxVolume);
+    if (maxVolume < 30) { 
+      document.getElementById('status').innerText = "太小聲或雜訊過多，請靠近麥克風大聲唸！";
+      document.getElementById('status').style.color = "var(--marian-red)";
+      return; 
+    }
+
+    let dots = 0;
+    document.getElementById('status').style.color = "var(--primary-blue)";
+    gradingInterval = setInterval(() => {
+      dots = (dots + 1) % 4;
+      document.getElementById('status').innerText = "老師評分中" + ".".repeat(dots);
+    }, 400);
+
+    mediaRecorder.onstop = () => {
+      const reader = new FileReader();
+      reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
+      reader.onloadend = () => {
+        const base64 = reader.result.split(',')[1];
+        fetch(`${GAS_URL}?action=evaluate_speech&word=${encodeURIComponent(quizData[currentIndex].en)}`, { method: 'POST', body: base64 })
+          .then(res => res.json()).then(data => {
+            clearInterval(gradingInterval);
+            scores[currentIndex] = data.score;
+            if(!window.feedbacks) window.feedbacks = [];
+            window.feedbacks[currentIndex] = data.feedback;
+            document.getElementById('feedback').innerHTML = `得分：${data.score}<br><span style="font-size:16px; color:#555; font-weight:normal;">${data.feedback}</span>`;
+            document.getElementById('status').innerText = "按住錄音，放開打分";
+            document.getElementById('status').style.color = "#636e72";
+          })
+          .catch(() => {
+            clearInterval(gradingInterval);
+            document.getElementById('status').innerText = "評分失敗，請重新錄音";
+          });
+      };
+    };
+  };
+
+  document.getElementById('play-btn').onclick = () => {
+    window.speechSynthesis.cancel();
+    const msg = new SpeechSynthesisUtterance(quizData[currentIndex].en);
+    msg.lang = 'en-US';
+    msg.rate = 0.9;
+    window.speechSynthesis.speak(msg);
+  };
+
+  document.getElementById('prev-btn').onclick = () => { if(currentIndex > 0){ currentIndex--; renderWord(); } };
+  document.getElementById('next-btn').onclick = () => {
+    if (currentIndex < quizData.length - 1) { currentIndex++; renderWord(); } 
+    else { showSummary(); }
+  };
+  document.getElementById('back-summary-btn').onclick = () => { isReReading = false; showSummary(); };
+
+  function showSummary() {
+    document.getElementById('studio').style.display = 'none';
+    document.getElementById('summary').style.display = 'block';
+    let sum = 0, count = 0;
+    const list = document.getElementById('word-list');
+    list.innerHTML = "";
+    quizData.forEach((item, i) => {
+      let s = scores[i] || 0;
+      let f = (window.feedbacks && window.feedbacks[i]) ? window.feedbacks[i] : "";
+      sum += s; count++;
+      list.innerHTML += `<tr><td><b style="color:#0d47a1">${item.en}</b><br><span style="color:#7f8c8d; font-size:14px">${item.zh}</span><br><p style="margin:5px 0; font-size:13px; color:#e67e22;">💡 ${f}</p><button class="btn-re" onclick="reRead(${i})">🔄 重唸</button></td><td><span class="score-badge">${s} 分</span></td></tr>`;
+    });
+    const avg = Math.round(sum / count);
+    document.getElementById('total-avg').innerText = avg;
+    const submitBtn = document.getElementById('submit-btn');
+    const lockMsg = document.getElementById('lock-msg');
+    const rewardHint = document.getElementById('reward-hint');
+    if (MODE === 'review') {
+      submitBtn.disabled = false;
+      submitBtn.style.backgroundColor = "var(--marian-green)";
+      submitBtn.innerText = "完成練習";
+      document.getElementById('score-zone').style.display = "none";
+      rewardHint.innerText = "練習模式不計入點數";
+      lockMsg.innerText = "";
+    } else {
+      if (avg >= 70) {
+        submitBtn.disabled = false;
+        submitBtn.style.backgroundColor = "#27ae60";
+        lockMsg.innerText = "";
+        let reward = avg >= 90 ? 50 : (avg >= 80 ? 30 : 10);
+        rewardHint.innerText = `🎁 可獲得：${reward} 點`;
+      } else {
+        submitBtn.disabled = true;
+        submitBtn.style.backgroundColor = "#636e72";
+        lockMsg.innerText = "❌ 平均需達 70 分才能領獎";
+      }
+    }
+  }
+
+  function reRead(i) { currentIndex = i; isReReading = true; document.getElementById('summary').style.display = 'none'; document.getElementById('studio').style.display = 'block'; renderWord(); }
+
+  document.getElementById('submit-btn').onclick = () => {
+    const avg = parseInt(document.getElementById('total-avg').innerText);
+    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`)
+      .then(() => { 
+        alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
+        window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; 
+      });
+  };
+
+  // ========================================================
+  // ⚔️ 偵探外掛：新增在下方的戰鬥室引擎模組
+  // ========================================================
+  let battleQuizArr = [], currentBattleRound = 0, currentLimitTimer;
+  let myTotalWins = 0, opTotalWins = 0;
+
+  function normalizeStr(val) { if (val === null || val === undefined) return ""; return String(val).replace(/(%20|\s)+/ig, "").toUpperCase(); }
+
   function fetchBattleDataAndStart() {
     fetch(`${GAS_URL}?action=get_battle_status&roomId=${ROOM_ID}`)
       .then(res => res.json())
       .then(data => {
         if(data.status === "NotFound") { alert("房間已失效"); window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; return; }
-        battleQuiz = data.quiz;
+        battleQuizArr = data.quiz;
         initArena();
       }).catch(err => alert("戰場連接失敗"));
   }
 
   function initArena() {
     currentBattleRound = 0;
-    updateArenaUI();
+    updateArenaUI(true);
     startRoundCountdown();
   }
 
-  function updateArenaUI() {
+  function renderDots(wins, isMe) {
+    let html = '';
+    const winClass = isMe ? 'dot-me' : 'dot-op';
+    for(let i=0; i<7; i++) {
+      if (i < wins) html += `<div class="round-dot ${winClass}"></div>`;
+      else html += '<div class="round-dot"></div>';
+    }
+    return html;
+  }
+
+  function updateArenaUI(isInit = false) {
     fetch(`${GAS_URL}?action=get_battle_status&roomId=${ROOM_ID}`)
       .then(res => res.json()).then(data => {
-        document.getElementById('p1-name').innerText = data.hostName;
-        document.getElementById('p2-name').innerText = data.guestName || "Waiting...";
-        const hSum = data.hostScores.reduce((a,b)=>a+b, 0), gSum = data.guestScores.reduce((a,b)=>a+b, 0);
-        document.getElementById('p1-fill').style.width = (hSum/700 * 100) + "%";
-        document.getElementById('p2-fill').style.width = (gSum/700 * 100) + "%";
+        const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
+        const myNameStr = isMeHost ? data.hostName : (data.guestName || "對手");
+        const opNameStr = isMeHost ? (data.guestName || "Waiting...") : data.hostName;
+        
+        document.getElementById('my-name').innerText = myNameStr;
+        document.getElementById('op-name').innerText = opNameStr;
+
+        const myScoresArr = isMeHost ? data.hostScores : data.guestScores;
+        const opScoresArr = isMeHost ? data.guestScores : data.hostScores;
+
+        myTotalWins = 0; opTotalWins = 0;
+        for(let i=0; i<currentBattleRound; i++) {
+           if(myScoresArr[i] > opScoresArr[i]) myTotalWins++;
+           else if(opScoresArr[i] > myScoresArr[i]) opTotalWins++;
+        }
+
+        document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
+        document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
       });
+  }
+
+  function showImpactOverlay(myNum, opNum, isFinal) {
+    const overlay = document.getElementById('impact-overlay');
+    const resText = document.getElementById('impact-result');
+    document.getElementById('impact-my-score').innerText = myNum;
+    document.getElementById('impact-op-score').innerText = opNum;
+    document.getElementById('impact-title').innerText = isFinal ? "FINAL RESULT" : "ROUND RESULT";
+    
+    let text = "", color = "", sub = "";
+    if (myNum > opNum) { 
+      text = isFinal ? "🏆 VICTORY" : "YOU WIN!"; 
+      color = "var(--marian-green)"; 
+      sub = isFinal ? "🎉 已自動加發 10 點戰鬥獎勵！" : "帥氣的一擊！";
+    } else if (myNum < opNum) { 
+      text = isFinal ? "DEFEAT..." : "YOU LOSE!"; 
+      color = "var(--marian-red)"; 
+      sub = isFinal ? "再接再厲，下次討回來！" : "被對手壓制了...";
+    } else { 
+      text = "DRAW!"; 
+      color = "var(--gold)"; 
+      sub = "勢均力敵！";
+    }
+    
+    resText.innerHTML = text; resText.style.color = color;
+    document.getElementById('impact-subtitle').innerText = sub;
+    overlay.style.display = 'flex';
   }
 
   function startRoundCountdown() {
     if (currentBattleRound >= 7) { 
-      document.getElementById('target-word').innerText = "戰鬥結束！";
-      document.getElementById('battle-info').innerText = "正在結算勝負與發放點數...";
-      setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 5000); // 結束後跳回 GAS 點數卡
+      document.getElementById('target-word').innerText = "結算中...";
+      document.getElementById('battle-info').innerText = "等待伺服器同步...";
+      setTimeout(() => {
+        showImpactOverlay(myTotalWins, opTotalWins, true);
+        setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 5000);
+      }, 1000);
       return; 
     }
     
-    let count = 5;
-    document.getElementById('round-num').innerText = `Round ${currentBattleRound + 1} / 7`;
+    let count = 3; 
+    document.getElementById('round-num').innerText = `ROUND ${currentBattleRound + 1} / 7`;
     document.getElementById('target-word').innerText = "READY?";
+    document.getElementById('battle-timer').innerText = "";
     document.getElementById('battle-controls').style.display = 'none';
     
     const timer = setInterval(() => {
-      count--;
       document.getElementById('battle-timer').innerText = count;
-      if (count <= 0) {
+      count--;
+      if (count < 0) {
         clearInterval(timer);
-        document.getElementById('target-word').innerText = battleQuiz[currentBattleRound].en;
-        document.getElementById('battle-timer').innerText = "GO!";
+        document.getElementById('target-word').innerText = battleQuizArr[currentBattleRound].en;
+        document.getElementById('battle-timer').innerText = "FIGHT!";
         document.getElementById('battle-controls').style.display = 'block';
         startRecordingSession();
       }
@@ -197,7 +452,7 @@
 
   function startRecordingSession() {
     let limit = 10;
-    document.getElementById('battle-info').innerText = "限時 10 秒錄音！";
+    document.getElementById('battle-info').innerText = "限時 10 秒發動攻擊！";
     currentLimitTimer = setInterval(() => {
       limit--;
       if (limit <= 0) { 
@@ -216,7 +471,7 @@
       mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
       mediaRecorder.start();
       battleRb.classList.add('active');
-      document.getElementById('battle-info').innerText = "正在錄音...";
+      document.getElementById('battle-info').innerText = "蓄力中...";
 
       const checkBattleVol = () => {
         if (mediaRecorder.state === "recording") {
@@ -235,15 +490,15 @@
       mediaRecorder.stop();
       battleRb.classList.remove('active');
       
-      if (maxVolume < 30) { document.getElementById('battle-info').innerText = "太小聲，本局 0 分！"; submitBattleScore(0); return; }
+      if (maxVolume < 30) { document.getElementById('battle-info').innerText = "太小聲，攻擊無效(0分)！"; submitBattleScore(0); return; }
 
-      document.getElementById('battle-info').innerText = "AI 老師評分中...";
+      document.getElementById('battle-info').innerText = "子彈飛行中 (評分中)...";
       mediaRecorder.onstop = () => {
         const reader = new FileReader();
         reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
         reader.onloadend = () => {
           const base64 = reader.result.split(',')[1];
-          fetch(`${GAS_URL}?action=evaluate_speech_battle&word=${encodeURIComponent(battleQuiz[currentBattleRound].en)}`, { method: 'POST', body: base64 })
+          fetch(`${GAS_URL}?action=evaluate_speech_battle&word=${encodeURIComponent(battleQuizArr[currentBattleRound].en)}`, { method: 'POST', body: base64 })
             .then(res => res.json()).then(data => submitBattleScore(data.score))
             .catch(() => submitBattleScore(0));
         };
@@ -252,7 +507,7 @@
   }
 
   function submitBattleScore(score) {
-    document.getElementById('battle-info').innerText = `得分：${score}！等待對手完成...`;
+    document.getElementById('battle-info').innerText = `您的火力：${score}！等待對手...`;
     document.getElementById('battle-controls').style.display = 'none';
     
     fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${ROOM_ID}&score=${score}`)
@@ -261,139 +516,24 @@
           fetch(`${GAS_URL}?action=get_battle_status&roomId=${ROOM_ID}`)
             .then(res => res.json()).then(data => {
               if (data.hostScores.length > currentBattleRound && data.guestScores.length > currentBattleRound) {
-                clearInterval(waitTimer); updateArenaUI(); currentBattleRound++;
-                setTimeout(startRoundCountdown, 2000);
+                clearInterval(waitTimer);
+                const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
+                const myLastSc = isMeHost ? data.hostScores[currentBattleRound] : data.guestScores[currentBattleRound];
+                const opLastSc = isMeHost ? data.guestScores[currentBattleRound] : data.hostScores[currentBattleRound];
+                
+                showImpactOverlay(myLastSc, opLastSc, false);
+                
+                setTimeout(() => {
+                  document.getElementById('impact-overlay').style.display = 'none';
+                  updateArenaUI(); 
+                  currentBattleRound++;
+                  startRoundCountdown(); 
+                }, 3500); 
               }
             });
-        }, 3000);
+        }, 2000);
       });
   }
-
-  // ==========================================
-  // 📖 一般練習引擎模式 (MODE = challenge / review)
-  // ==========================================
-  document.getElementById('start-btn').onclick = () => {
-    document.getElementById('info-text').innerText = "正在載入題目...";
-    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data&unit=${encodeURIComponent(TARGET_UNIT)}`)
-      .then(res => res.json()).then(data => {
-        if (!data.words || data.words.length === 0) { alert("題目為空"); return; }
-        quizData = data.words; scores = new Array(quizData.length).fill(null);
-        document.getElementById('total-display').innerText = quizData.length;
-        document.getElementById('setup-zone').style.display = 'none';
-        document.getElementById('progress-container').style.display = 'block';
-        document.getElementById('studio').style.display = 'block';
-        renderWord();
-      }).catch(err => { alert("連線失敗！"); console.error(err); });
-  };
-
-  function renderWord() {
-    const current = quizData[currentIndex];
-    document.getElementById('idx-display').innerText = currentIndex + 1;
-    document.getElementById('word-display').innerText = current.en;
-    document.getElementById('zh-display').innerText = current.zh;
-    document.getElementById('feedback').innerText = scores[currentIndex] !== null ? "得分：" + scores[currentIndex] : "";
-    document.getElementById('record-btn').style.display = 'block';
-    document.getElementById('progress-fill').style.width = (((currentIndex + 1) / quizData.length) * 100) + "%";
-    
-    if (isReReading) {
-      document.getElementById('prev-btn').style.display = 'none'; document.getElementById('next-btn').style.display = 'none';
-      document.getElementById('back-summary-btn').style.display = 'inline-block';
-    } else {
-      document.getElementById('prev-btn').style.display = 'inline-block'; document.getElementById('next-btn').style.display = 'inline-block';
-      document.getElementById('back-summary-btn').style.display = 'none';
-      document.getElementById('prev-btn').disabled = currentIndex === 0;
-      document.getElementById('next-btn').innerText = currentIndex === quizData.length - 1 ? "查看結算" : "下一題 ▶";
-    }
-  }
-
-  const rb = document.getElementById('record-btn');
-  if(rb) {
-    rb.onpointerdown = (e) => {
-      e.preventDefault(); document.getElementById('feedback').innerHTML = ""; maxVolume = 0; chunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
-      mediaRecorder.start();
-      rb.classList.add('active');
-      document.getElementById('status').innerText = "正在錄音..."; document.getElementById('status').style.color = "var(--marian-red)";
-
-      const checkVolume = () => {
-        if (mediaRecorder.state === "recording") {
-          analyser.getByteFrequencyData(dataArray);
-          let values = 0; for (let i = 0; i < dataArray.length; i++) values += dataArray[i];
-          let average = values / dataArray.length;
-          if (average > maxVolume) maxVolume = average;
-          requestAnimationFrame(checkVolume);
-        }
-      };
-      checkVolume();
-    };
-
-    rb.onpointerup = () => {
-      if (!mediaRecorder || mediaRecorder.state !== "recording") return;
-      mediaRecorder.stop(); rb.classList.remove('active');
-      
-      if (maxVolume < 30) { 
-        document.getElementById('status').innerText = "太小聲或雜訊過多，請靠近麥克風大聲唸！";
-        document.getElementById('status').style.color = "var(--marian-red)"; return; 
-      }
-
-      let dots = 0; document.getElementById('status').style.color = "var(--primary-blue)";
-      gradingInterval = setInterval(() => { dots = (dots + 1) % 4; document.getElementById('status').innerText = "老師評分中" + ".".repeat(dots); }, 400);
-
-      mediaRecorder.onstop = () => {
-        const reader = new FileReader();
-        reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          fetch(`${GAS_URL}?action=evaluate_speech&word=${encodeURIComponent(quizData[currentIndex].en)}`, { method: 'POST', body: base64 })
-            .then(res => res.json()).then(data => {
-              clearInterval(gradingInterval); scores[currentIndex] = data.score;
-              if(!window.feedbacks) window.feedbacks = []; window.feedbacks[currentIndex] = data.feedback;
-              document.getElementById('feedback').innerHTML = `得分：${data.score}<br><span style="font-size:16px; color:#555; font-weight:normal;">${data.feedback}</span>`;
-              document.getElementById('status').innerText = "按住錄音，放開打分"; document.getElementById('status').style.color = "#636e72";
-            }).catch(() => { clearInterval(gradingInterval); document.getElementById('status').innerText = "評分失敗，請重新錄音"; });
-        };
-      };
-    };
-  }
-
-  document.getElementById('play-btn').onclick = () => {
-    window.speechSynthesis.cancel();
-    const msg = new SpeechSynthesisUtterance(quizData[currentIndex].en);
-    msg.lang = 'en-US'; msg.rate = 0.9; window.speechSynthesis.speak(msg);
-  };
-
-  document.getElementById('prev-btn').onclick = () => { if(currentIndex > 0){ currentIndex--; renderWord(); } };
-  document.getElementById('next-btn').onclick = () => { if (currentIndex < quizData.length - 1) { currentIndex++; renderWord(); } else { showSummary(); } };
-  document.getElementById('back-summary-btn').onclick = () => { isReReading = false; showSummary(); };
-
-  function showSummary() {
-    document.getElementById('studio').style.display = 'none'; document.getElementById('summary').style.display = 'block';
-    let sum = 0, count = 0; const list = document.getElementById('word-list'); list.innerHTML = "";
-    quizData.forEach((item, i) => {
-      let s = scores[i] || 0, f = (window.feedbacks && window.feedbacks[i]) ? window.feedbacks[i] : "";
-      sum += s; count++;
-      list.innerHTML += `<tr><td><b style="color:#0d47a1">${item.en}</b><br><span style="color:#7f8c8d; font-size:14px">${item.zh}</span><br><p style="margin:5px 0; font-size:13px; color:#e67e22;">💡 ${f}</p><button class="btn-re" onclick="reRead(${i})">🔄 重唸</button></td><td><span class="score-badge">${s} 分</span></td></tr>`;
-    });
-    const avg = Math.round(sum / count); document.getElementById('total-avg').innerText = avg;
-    const submitBtn = document.getElementById('submit-btn'), lockMsg = document.getElementById('lock-msg'), rewardHint = document.getElementById('reward-hint');
-    if (MODE === 'review') {
-      submitBtn.disabled = false; submitBtn.style.backgroundColor = "var(--marian-green)"; submitBtn.innerText = "完成練習";
-      document.getElementById('score-zone').style.display = "none"; rewardHint.innerText = "練習模式不計入點數"; lockMsg.innerText = "";
-    } else {
-      if (avg >= 70) {
-        submitBtn.disabled = false; submitBtn.style.backgroundColor = "#27ae60"; lockMsg.innerText = "";
-        let reward = avg >= 90 ? 50 : (avg >= 80 ? 30 : 10); rewardHint.innerText = `🎁 可獲得：${reward} 點`;
-      } else { submitBtn.disabled = true; submitBtn.style.backgroundColor = "#636e72"; lockMsg.innerText = "❌ 平均需達 70 分才能領獎"; }
-    }
-  }
-  function reRead(i) { currentIndex = i; isReReading = true; document.getElementById('summary').style.display = 'none'; document.getElementById('studio').style.display = 'block'; renderWord(); }
-  
-  document.getElementById('submit-btn').onclick = () => {
-    const avg = parseInt(document.getElementById('total-avg').innerText);
-    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`)
-      .then(() => { alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; });
-  };
 </script>
 </body>
 </html>
