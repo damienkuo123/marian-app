@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <title>瑪麗安口說挑戰室</title>
   <style>
-    :root { --primary-blue: #0066cc; --marian-yellow: #ff9900; --marian-red: #d63031; --marian-green: #27ae60; --dark-gray: #2d3436; }
+    :root { --primary-blue: #0066cc; --marian-yellow: #ff9900; --marian-red: #d63031; --marian-green: #27ae60; --dark-gray: #2d3436; --gold: #ffd700; }
     body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #eaeff2; margin: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     .card { background: white; padding: 25px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-width: 400px; margin: 10px auto; border: 1px solid #ddd; }
     #record-btn { background: var(--marian-red); width: 110px; height: 110px; border-radius: 50%; border: 8px solid white; font-size: 45px; box-shadow: 0 6px 15px rgba(214, 48, 49, 0.4); margin: 20px auto; cursor: pointer; display: none; outline: none; }
@@ -24,16 +24,29 @@
     .score-badge { float: right; font-weight: bold; color: var(--primary-blue); font-size: 18px; }
     .btn-re { background: var(--marian-red); font-size: 13px; padding: 6px 12px; border-radius: 8px; color: white; border: none; cursor: pointer; font-weight: bold; }
     #zh-display { font-size: 20px; color: #7f8c8d; margin: -10px 0 20px 0; font-weight: bold; }
+
+    /* ⚔️ 偵探外掛：對戰室專用 CSS (完全獨立，不影響原本樣式) */
+    .btn-battle { background: linear-gradient(135deg, #2c3e50, #000); color: var(--gold); border: 1px solid var(--gold); margin-top: 15px; font-size: 18px; }
+    .diff-select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 10px; font-size: 16px; background: #fff; }
+    .room-item { background: white; padding: 15px; border-radius: 15px; margin: 10px 0; width: 100%; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd; box-sizing: border-box; }
+    #battle-arena { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #2c3e50 0%, #000 100%); z-index: 2000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .arena-p-name { font-weight: bold; color: var(--gold); font-size: 18px; }
+    .score-fill-battle { height: 100%; background: var(--gold); border-radius: 5px; transition: 0.5s; width: 0%; }
+    #battle-record-btn { width: 110px; height: 110px; border-radius: 50%; border: 6px solid white; background: var(--marian-red); font-size: 40px; color: white; cursor: pointer; outline: none; transition: 0.2s; margin: 0 auto; display: inline-block;}
+    #battle-record-btn.active { transform: scale(0.9); background: #333; box-shadow: 0 0 20px var(--marian-red); }
   </style>
 </head>
 <body>
-<div class="card">
+<div class="card" id="main-card">
   <div id="progress-container" class="progress-bar" style="display:none;"><div id="progress-fill" class="progress-fill"></div></div>
+  
   <div id="setup-zone">
     <h2 id="title-text" style="color:var(--primary-blue);">🎙️ 瑪麗安口說挑戰</h2>
     <p id="info-text">正在開啟麥克風...</p>
-    <button class="btn" style="background:var(--primary-blue); font-size: 22px; padding: 18px 40px; border-bottom: 4px solid #003366;" id="start-btn" style="display:none;">開始挑戰</button>
+    <button class="btn" style="background:var(--primary-blue); font-size: 22px; padding: 18px 40px; border-bottom: 4px solid #003366; width: 100%; margin-bottom: 10px;" id="start-btn" style="display:none;">開始挑戰</button>
+    <button class="btn btn-battle" id="enter-battle-btn" style="display:none; width: 100%;">⚔️ 進入口說對戰室</button>
   </div>
+
   <div id="studio" style="display:none;">
     <p style="color:var(--primary-blue); font-weight:bold;">第 <span id="idx-display">1</span> / <span id="total-display">0</span> 題</p>
     <div style="display: flex; align-items: center; justify-content: center; margin: 15px 0;">
@@ -50,6 +63,7 @@
       <button class="btn btn-nav" id="back-summary-btn" style="display:none; background:var(--marian-green); border-bottom:4px solid #1e8449;">返回結算頁</button>
     </div>
   </div>
+
   <div id="summary" style="display:none;">
     <h2 id="summary-title" style="color:var(--primary-blue); margin-bottom:5px;">學習總結</h2>
     <div id="score-zone">
@@ -61,10 +75,53 @@
     <button class="btn btn-finish" id="submit-btn" disabled>完成挑戰並領獎</button>
     <p id="lock-msg" style="color:var(--marian-red); font-size:14px; margin-top:10px; font-weight:bold;"></p>
   </div>
+
+  <div id="battle-lobby" style="display:none; width:100%; text-align:center;">
+    <h2 style="color:var(--primary-blue); margin-top:0;">⚔️ 對戰大廳</h2>
+    <p style="font-size:14px; color:#666;">跨班 PK，贏取 10 點獎勵！</p>
+    <div style="text-align:left; margin:15px 0;">
+      <label style="font-size:14px; font-weight:bold; color:#666;">選擇挑戰難度：</label>
+      <select id="diff-selector" class="diff-select">
+        <option value="E1">班級 E1 (基礎難度)</option>
+        <option value="E2">班級 E2 (進階難度)</option>
+      </select>
+      <button id="create-room-btn" class="btn" style="background:#f39c12; width:100%; border-bottom:4px solid #d35400;">建立對戰房間</button>
+    </div>
+    <div id="waiting-msg" style="display:none; color:var(--marian-red); font-weight:bold; margin-bottom:15px;">⏳ 房間已建立，等待挑戰者...</div>
+    <hr style="border:0; border-top:1px solid #eee;">
+    <h3 style="font-size:16px; margin-top:10px;">當前對戰列表</h3>
+    <div id="lobby-list" style="min-height:100px;">正在掃描對手...</div>
+    <button class="btn btn-gray" style="width:100%; margin-top:20px;" id="back-to-setup-btn">返回主頁</button>
+  </div>
+</div>
+
+<div id="battle-arena" style="display:none;">
+  <div style="position:absolute; top:20px; width:100%; display:flex; justify-content:space-around;">
+    <div>
+      <div id="p1-name" class="arena-p-name">Player 1</div>
+      <div style="width:120px; height:8px; background:#444; border-radius:4px; margin-top:5px;"><div id="p1-fill" class="score-fill-battle"></div></div>
+    </div>
+    <div style="font-size:24px; font-weight:900; color:var(--marian-red);">VS</div>
+    <div>
+      <div id="p2-name" class="arena-p-name">Player 2</div>
+      <div style="width:120px; height:8px; background:#444; border-radius:4px; margin-top:5px;"><div id="p2-fill" class="score-fill-battle"></div></div>
+    </div>
+  </div>
+  <div id="battle-stage" style="text-align:center; margin-top: 80px;">
+    <div id="round-num" style="color:#aaa; font-size: 18px;">Round 1 / 7</div>
+    <h1 id="target-word" style="font-size:52px; margin:20px 0; text-shadow:0 0 20px #fff;">READY?</h1>
+    <div id="battle-timer" style="font-size:56px; font-weight:bold; color:var(--marian-yellow);">5</div>
+    <p id="battle-info" style="color:#888; font-size: 18px;">準備開始戰鬥...</p>
+  </div>
+  <div id="battle-controls" style="position:absolute; bottom:60px; width:100%; text-align:center; display:none;">
+    <button id="battle-record-btn" oncontextmenu="return false;">🎤</button>
+    <p style="color:#aaa; margin-top:10px;">按住錄音，放開提交</p>
+  </div>
 </div>
 
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbziI4_b3WDoy4em5kXL75lDT4kx6ZwFTSVTBOWzaLCqcDQgk-e0t5JPERXs8jzOx9NJ/exec"; 
+  // 🔥 偵探核心修正：綁定最新的專用網址！
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec"; 
   const params = new URLSearchParams(window.location.search);
   const STUDENT_ID = params.get('id') || "S001";
   const TARGET_UNIT = params.get('unit') || "";
@@ -73,6 +130,9 @@
   let stream, mediaRecorder, chunks = [], quizData = [], scores = [], currentIndex = 0, isReReading = false;
   let audioContext, analyser, dataArray, source, gradingInterval;
   let maxVolume = 0;
+
+  // ⚔️ 對戰室專用變數
+  let lobbyTimer, battleStatusTimer, currentRoomId, battleQuiz = [], currentBattleRound = 0, currentLimitTimer;
 
   window.onload = async () => {
     if(MODE === 'review') document.getElementById('title-text').innerText = "📖 自由練習模式";
@@ -87,17 +147,19 @@
 
       document.getElementById('info-text').innerText = "麥克風已就緒";
       document.getElementById('start-btn').style.display = 'inline-block';
+      // 顯示對戰入口
+      if(MODE !== 'review') document.getElementById('enter-battle-btn').style.display = 'inline-block';
     } catch (e) { alert("請開啟麥克風權限"); }
   };
 
+  // ==========================================
+  // 📖 原本的練習模式邏輯 (完全不動)
+  // ==========================================
   document.getElementById('start-btn').onclick = () => {
     document.getElementById('info-text').innerText = "正在載入題目...";
     fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data&unit=${encodeURIComponent(TARGET_UNIT)}`)
       .then(res => res.json()).then(data => {
-        if (!data.words || data.words.length === 0) {
-          alert("後台回傳題目為空，請檢查 Word_Bank。");
-          return;
-        }
+        if (!data.words || data.words.length === 0) { alert("後台回傳題目為空，請檢查 Word_Bank。"); return; }
         quizData = data.words;
         scores = new Array(quizData.length).fill(null);
         document.getElementById('total-display').innerText = quizData.length;
@@ -105,11 +167,7 @@
         document.getElementById('progress-container').style.display = 'block';
         document.getElementById('studio').style.display = 'block';
         renderWord();
-      })
-      .catch(err => {
-        alert("連線失敗！");
-        console.error(err);
-      });
+      }).catch(err => { alert("連線失敗！"); console.error(err); });
   };
 
   function renderWord() {
@@ -139,8 +197,7 @@
   rb.onpointerdown = (e) => {
     e.preventDefault();
     document.getElementById('feedback').innerHTML = "";
-    maxVolume = 0;
-    chunks = [];
+    maxVolume = 0; chunks = [];
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
     mediaRecorder.start();
@@ -166,8 +223,6 @@
     mediaRecorder.stop();
     rb.classList.remove('active');
     
-// 🕵️ 偵探建議：將門檻提高到 18
-    // 如果安靜時環境音是 5-10，電視聲是 12-15，設定在 18 就能擋掉大部份干擾
     console.log("本次錄音最高音量:", maxVolume);
     if (maxVolume < 30) { 
       document.getElementById('status').innerText = "太小聲或雜訊過多，請靠近麥克風大聲唸！";
@@ -208,8 +263,7 @@
   document.getElementById('play-btn').onclick = () => {
     window.speechSynthesis.cancel();
     const msg = new SpeechSynthesisUtterance(quizData[currentIndex].en);
-    msg.lang = 'en-US';
-    msg.rate = 0.9;
+    msg.lang = 'en-US'; msg.rate = 0.9;
     window.speechSynthesis.speak(msg);
   };
 
@@ -234,41 +288,216 @@
     });
     const avg = Math.round(sum / count);
     document.getElementById('total-avg').innerText = avg;
-    const submitBtn = document.getElementById('submit-btn');
-    const lockMsg = document.getElementById('lock-msg');
-    const rewardHint = document.getElementById('reward-hint');
+    const submitBtn = document.getElementById('submit-btn'), lockMsg = document.getElementById('lock-msg'), rewardHint = document.getElementById('reward-hint');
     if (MODE === 'review') {
-      submitBtn.disabled = false;
-      submitBtn.style.backgroundColor = "var(--marian-green)";
-      submitBtn.innerText = "完成練習";
-      document.getElementById('score-zone').style.display = "none";
-      rewardHint.innerText = "練習模式不計入點數";
-      lockMsg.innerText = "";
+      submitBtn.disabled = false; submitBtn.style.backgroundColor = "var(--marian-green)"; submitBtn.innerText = "完成練習";
+      document.getElementById('score-zone').style.display = "none"; rewardHint.innerText = "練習模式不計入點數"; lockMsg.innerText = "";
     } else {
       if (avg >= 70) {
-        submitBtn.disabled = false;
-        submitBtn.style.backgroundColor = "#27ae60";
-        lockMsg.innerText = "";
+        submitBtn.disabled = false; submitBtn.style.backgroundColor = "#27ae60"; lockMsg.innerText = "";
         let reward = avg >= 90 ? 50 : (avg >= 80 ? 30 : 10);
         rewardHint.innerText = `🎁 可獲得：${reward} 點`;
       } else {
-        submitBtn.disabled = true;
-        submitBtn.style.backgroundColor = "#636e72";
-        lockMsg.innerText = "❌ 平均需達 70 分才能領獎";
+        submitBtn.disabled = true; submitBtn.style.backgroundColor = "#636e72"; lockMsg.innerText = "❌ 平均需達 70 分才能領獎";
       }
     }
   }
-
   function reRead(i) { currentIndex = i; isReReading = true; document.getElementById('summary').style.display = 'none'; document.getElementById('studio').style.display = 'block'; renderWord(); }
-
+  
   document.getElementById('submit-btn').onclick = () => {
     const avg = parseInt(document.getElementById('total-avg').innerText);
     fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`)
-      .then(() => { 
-        alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
-        window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; 
-      });
+      .then(() => { alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; });
   };
+
+  // ==========================================
+  // ⚔️ 偵探外掛：對戰大廳與戰鬥邏輯
+  // ==========================================
+  document.getElementById('enter-battle-btn').onclick = () => {
+    document.getElementById('setup-zone').style.display = 'none';
+    document.getElementById('battle-lobby').style.display = 'block';
+    refreshLobby();
+    lobbyTimer = setInterval(refreshLobby, 4000);
+  };
+  
+  document.getElementById('back-to-setup-btn').onclick = () => {
+    clearInterval(lobbyTimer);
+    document.getElementById('battle-lobby').style.display = 'none';
+    document.getElementById('setup-zone').style.display = 'block';
+  };
+
+  function refreshLobby() {
+    fetch(`${GAS_URL}?action=get_lobby`)
+      .then(res => res.json()).then(data => {
+        const container = document.getElementById('lobby-list');
+        if (!data || data.length === 0) { container.innerHTML = '<p style="color:#999; padding:20px;">目前沒有人發起對戰，快去建立一個吧！</p>'; return; }
+        container.innerHTML = data.map(room => `
+          <div class="room-item">
+            <div style="text-align:left;">
+              <b style="color:var(--primary-blue); font-size:16px;">${room.hostName}</b><br>
+              <span style="font-size:12px; color:#e67e22;">難度：${room.difficulty}</span>
+            </div>
+            <button class="btn btn-green" style="width:70px; padding:8px; font-size:13px; margin:0;" onclick="joinBattle('${room.roomId}')">挑戰</button>
+          </div>
+        `).join('');
+      }).catch(err => console.log("大廳掃描中..."));
+  }
+
+  document.getElementById('create-room-btn').onclick = () => {
+    const classId = document.getElementById('diff-selector').value;
+    document.getElementById('create-room-btn').disabled = true;
+    document.getElementById('create-room-btn').style.background = "#636e72";
+    document.getElementById('waiting-msg').style.display = 'block';
+    
+    fetch(`${GAS_URL}?action=create_battle&id=${STUDENT_ID}&classId=${classId}`)
+      .then(async res => {
+        const rawText = await res.text();
+        try {
+          const data = JSON.parse(rawText);
+          currentRoomId = data.roomId;
+          battleQuiz = data.quiz;
+          battleStatusTimer = setInterval(checkRoomStatus, 3000);
+        } catch(e) {
+          alert("後台發生錯誤：\n" + rawText);
+          document.getElementById('create-room-btn').disabled = false;
+          document.getElementById('waiting-msg').style.display = 'none';
+        }
+      }).catch(err => alert("網路連線失敗！"));
+  };
+
+  function joinBattle(roomId) {
+    clearInterval(lobbyTimer);
+    fetch(`${GAS_URL}?action=join_battle&id=${STUDENT_ID}&roomId=${roomId}`)
+      .then(res => res.json()).then(data => {
+        if (data.status === "Success") {
+          currentRoomId = roomId; battleQuiz = data.quiz; initArena();
+        } else { alert("房間已被其他人搶走或已關閉！"); refreshLobby(); lobbyTimer = setInterval(refreshLobby, 4000); }
+      });
+  }
+
+  function checkRoomStatus() {
+    fetch(`${GAS_URL}?action=get_battle_status&roomId=${currentRoomId}`)
+      .then(res => res.json()).then(data => {
+        if (data.status === "InGame") { clearInterval(battleStatusTimer); initArena(); }
+      });
+  }
+
+  function initArena() {
+    document.getElementById('main-card').style.display = 'none';
+    document.getElementById('battle-arena').style.display = 'block';
+    currentBattleRound = 0;
+    updateArenaUI();
+    startRoundCountdown();
+  }
+
+  function updateArenaUI() {
+    fetch(`${GAS_URL}?action=get_battle_status&roomId=${currentRoomId}`)
+      .then(res => res.json()).then(data => {
+        document.getElementById('p1-name').innerText = data.hostName;
+        document.getElementById('p2-name').innerText = data.guestName || "Waiting...";
+        const hSum = data.hostScores.reduce((a,b)=>a+b, 0), gSum = data.guestScores.reduce((a,b)=>a+b, 0);
+        document.getElementById('p1-fill').style.width = (hSum/700 * 100) + "%";
+        document.getElementById('p2-fill').style.width = (gSum/700 * 100) + "%";
+      });
+  }
+
+  function startRoundCountdown() {
+    if (currentBattleRound >= 7) { 
+      document.getElementById('target-word').innerText = "戰鬥結束！";
+      document.getElementById('battle-info').innerText = "正在結算勝負與發放點數...";
+      setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 5000);
+      return; 
+    }
+    
+    let count = 5;
+    document.getElementById('round-num').innerText = `Round ${currentBattleRound + 1} / 7`;
+    document.getElementById('target-word').innerText = "READY?";
+    document.getElementById('battle-controls').style.display = 'none';
+    
+    const timer = setInterval(() => {
+      count--;
+      document.getElementById('battle-timer').innerText = count;
+      if (count <= 0) {
+        clearInterval(timer);
+        document.getElementById('target-word').innerText = battleQuiz[currentBattleRound].en;
+        document.getElementById('battle-timer').innerText = "GO!";
+        document.getElementById('battle-controls').style.display = 'block';
+        startRecordingSession();
+      }
+    }, 1000);
+  }
+
+  function startRecordingSession() {
+    let limit = 10;
+    document.getElementById('battle-info').innerText = "限時 10 秒錄音！";
+    currentLimitTimer = setInterval(() => {
+      limit--;
+      if (limit <= 0) { 
+        clearInterval(currentLimitTimer);
+        if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); document.getElementById('battle-record-btn').classList.remove('active'); } 
+        else { submitBattleScore(0); }
+      }
+    }, 1000);
+  }
+
+  const brb = document.getElementById('battle-record-btn');
+  brb.onpointerdown = (e) => {
+    e.preventDefault(); maxVolume = 0; chunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
+    mediaRecorder.start();
+    brb.classList.add('active');
+    document.getElementById('battle-info').innerText = "正在錄音...";
+
+    const checkBattleVol = () => {
+      if (mediaRecorder.state === "recording") {
+        analyser.getByteFrequencyData(dataArray);
+        let vals = 0; for(let i=0; i<dataArray.length; i++) vals += dataArray[i];
+        if ((vals / dataArray.length) > maxVolume) maxVolume = vals / dataArray.length;
+        requestAnimationFrame(checkBattleVol);
+      }
+    };
+    checkBattleVol();
+  };
+
+  brb.onpointerup = () => {
+    if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+    clearInterval(currentLimitTimer);
+    mediaRecorder.stop();
+    brb.classList.remove('active');
+    
+    if (maxVolume < 30) { document.getElementById('battle-info').innerText = "太小聲，本局 0 分！"; submitBattleScore(0); return; }
+
+    document.getElementById('battle-info').innerText = "AI 老師評分中...";
+    mediaRecorder.onstop = () => {
+      const reader = new FileReader();
+      reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
+      reader.onloadend = () => {
+        const base64 = reader.result.split(',')[1];
+        fetch(`${GAS_URL}?action=evaluate_speech_battle&word=${encodeURIComponent(battleQuiz[currentBattleRound].en)}`, { method: 'POST', body: base64 })
+          .then(res => res.json()).then(data => submitBattleScore(data.score))
+          .catch(() => submitBattleScore(0));
+      };
+    };
+  };
+
+  function submitBattleScore(score) {
+    document.getElementById('battle-info').innerText = `得分：${score}！等待對手完成...`;
+    document.getElementById('battle-controls').style.display = 'none';
+    
+    fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${currentRoomId}&score=${score}`)
+      .then(() => {
+        const waitTimer = setInterval(() => {
+          fetch(`${GAS_URL}?action=get_battle_status&roomId=${currentRoomId}`)
+            .then(res => res.json()).then(data => {
+              if (data.hostScores.length > currentBattleRound && data.guestScores.length > currentBattleRound) {
+                clearInterval(waitTimer); updateArenaUI(); currentBattleRound++;
+                setTimeout(startRoundCountdown, 2000);
+              }
+            });
+        }, 3000);
+      });
+  }
 </script>
 </body>
 </html>
