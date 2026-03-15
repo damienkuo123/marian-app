@@ -320,7 +320,21 @@
       }).catch(err => alert("戰場連接失敗"));
   }
 
-  function initArena(roomId) { currentBattleRound = 0; updateArenaUI(roomId, true); startRoundCountdown(roomId); }
+  let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
+
+  function initArena(roomId) {
+    currentBattleRound = 0;
+    updateArenaUI(roomId, true);
+    startRoundCountdown(roomId);
+
+    // 🛡️ 偵探新增：進入戰場後，如果對手 60 秒內連第一局都沒送出分數，就判定逃跑！
+    opponentWaitTimer = setTimeout(() => {
+      if (currentBattleRound === 0) {
+         alert("對手連線中斷或已逃跑，對戰取消！");
+         window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
+      }
+    }, 65000); // 給 65 秒的緩衝
+  }
 
   function renderDots(wins, isMe) {
     let html = ''; const winClass = isMe ? 'dot-me' : 'dot-op';
@@ -465,13 +479,15 @@
   }
 
   function checkBothFinished(roomId) {
-    if(isChecking) return; // 🔒 如果上一次還沒問完，這次就不准問
+    if(isChecking) return; 
     isChecking = true;
     
     fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}`)
       .then(res => res.json()).then(data => {
         if (data.hostScores.length > currentBattleRound && data.guestScores.length > currentBattleRound) {
-          clearInterval(waitOpTimer); // 雙方都送出了，摧毀查詢計時器
+          clearInterval(waitOpTimer); 
+          if(opponentWaitTimer) clearTimeout(opponentWaitTimer); // 🛡️ 只要雙方成功交火第一局，就解除 60 秒掛網警報！
+          
           const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
           const myLastSc = isMeHost ? data.hostScores[currentBattleRound] : data.guestScores[currentBattleRound];
           const opLastSc = isMeHost ? data.guestScores[currentBattleRound] : data.hostScores[currentBattleRound];
@@ -482,7 +498,7 @@
             updateArenaUI(roomId); currentBattleRound++; startRoundCountdown(roomId); 
           }, 3500); 
         }
-        isChecking = false; // 🔒 解鎖
+        isChecking = false; 
       }).catch(() => { isChecking = false; });
   }
 </script>
