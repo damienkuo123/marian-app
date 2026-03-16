@@ -297,58 +297,70 @@
       });
   }
 
-  // 🛡️ 偵探：同步優化版 (雙向報到)
+// 🛡️ 偵探：同步優化版 (穩定計時器版)
   function initArena(roomId) {
     currentBattleRound = 0;
-    updateArenaUI(roomId, true);
-    
-    document.getElementById('target-word').innerText = "戰場同步中...";
-    document.getElementById('battle-timer').innerText = "60";
-    document.getElementById('battle-info').innerText = "正在等待對手報到...";
-    document.getElementById('battle-controls').style.visibility = 'hidden';
-    
-    // 🛡️ 第一步：發送「已入場」報到訊號
-    fetch(`${GAS_URL}?action=arena_ready&id=${STUDENT_ID}&roomId=${roomId}&t=${new Date().getTime()}`)
-      .then(res => res.json())
-      .then(data => {
-        // 如果報到完發現狀態已經是 Playing (代表對方早就在等你)，直接開打！
-        if (data.status === "Playing") {
-          startRoundCountdown(roomId);
-          return;
-        }
+    // 1. 先抓一次狀態，確保雙方 ID 已載入
+    fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
+      .then(res => res.json()).then(data => {
+        const amIHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
+        updateArenaUI(roomId, true);
+        
+        document.getElementById('target-word').innerText = "戰場同步中...";
+        document.getElementById('battle-info').innerText = "正在等待對手進入...";
+        document.getElementById('battle-controls').style.visibility = 'hidden';
+        
+        // 2. 發送報到訊號
+        fetch(`${GAS_URL}?action=arena_ready&id=${STUDENT_ID}&roomId=${roomId}&t=${new Date().getTime()}`)
+          .then(res => res.json()).then(readyData => {
+            if (readyData.status === "Playing") {
+              startRoundCountdown(roomId);
+              return;
+            }
 
-        // 🛡️ 第二步：如果還沒 Playing，開始每 2 秒輪詢一次
-        let waitCount = 60;
-        if(syncTimer) clearInterval(syncTimer);
-        syncTimer = setInterval(() => {
-          waitCount--;
-          document.getElementById('battle-timer').innerText = waitCount;
-          
-          fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
-            .then(res => res.json()).then(data => {
-              if (data.status === "Playing") {
+            // 3. 啟動計時器與輪詢
+            let waitCount = 60;
+            document.getElementById('battle-timer').innerText = waitCount;
+            
+            if(syncTimer) clearInterval(syncTimer);
+            syncTimer = setInterval(() => {
+              waitCount--;
+              document.getElementById('battle-timer').innerText = waitCount;
+              
+              // 4. 每兩秒確認一次「門開了沒」
+              if (waitCount % 2 === 0) {
+                fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
+                  .then(res => res.json()).then(statusData => {
+                    const s = statusData.status;
+                    // 關鍵：如果狀態變成了 Playing，或者我是房主且對方已到，或我是挑戰者且房主已到
+                    if (s === "Playing" || 
+                       (amIHost && s === "GuestEntered") || 
+                       (!amIHost && s === "HostEntered")) {
+                      
+                      clearInterval(syncTimer);
+                      startRoundCountdown(roomId);
+                    } else if (s === "Canceled") {
+                      clearInterval(syncTimer);
+                      alert("對戰已取消！");
+                      window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
+                    }
+                  }).catch(e => console.log("輪詢暫時中斷，重試中..."));
+              }
+
+              if (waitCount <= 0) {
                 clearInterval(syncTimer);
-                startRoundCountdown(roomId);
-              } else if (data.status === "Canceled") {
-                clearInterval(syncTimer);
-                alert("對手已離開戰場！");
+                alert("等待逾時，對戰解散。");
                 window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
               }
-            });
-
-          if (waitCount <= 0) {
-            clearInterval(syncTimer);
-            alert("等待超時，對戰自動取消。");
-            window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
-          }
-        }, 2000); // 輪詢頻率改為 2 秒一次，避免打架
+            }, 1000);
+          });
       });
 
-    // 🛡️ 第三步：掛網防呆 (65秒)
+    // 🛡️ 戰場內掛網防呆
     if(opponentWaitTimer) clearTimeout(opponentWaitTimer);
     opponentWaitTimer = setTimeout(() => {
-      if (currentBattleRound === 0) {
-         alert("對手無回應，對戰取消！");
+      if (currentBattleRound === 0 && !roundSubmitted) {
+         alert("連線不穩或對手離開，對戰取消！");
          window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
       }
     }, 65000); 
