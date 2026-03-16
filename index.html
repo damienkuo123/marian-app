@@ -141,7 +141,7 @@
   const MODE = params.get('mode') || "challenge";
   const ROOM_ID = params.get('roomId');
 
-  // 全域變數宣告 (只宣告這一次，絕對不重複)
+  // 全域變數宣告
   let stream, mediaRecorder, chunks = [], quizData = [], scores = [], currentIndex = 0, isReReading = false;
   let audioContext, analyser, dataArray, source, gradingInterval;
   let maxVolume = 0;
@@ -175,7 +175,6 @@
   window.onload = async () => {
     if (MODE === 'battle' && ROOM_ID) {
       try {
-        // 對戰模式也要開麥克風
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
@@ -187,7 +186,6 @@
         document.getElementById('main-card').style.display = 'none';
         document.body.classList.add('battle-active');
         document.getElementById('battle-arena').style.display = 'flex';
-        
         fetchBattleDataAndStart(ROOM_ID);
       } catch(err) { alert("請開啟麥克風權限才能對戰！"); }
     } else {
@@ -196,7 +194,7 @@
   };
 
   // =======================================================
-  // 🔒 原版練習功能 (保證不改)
+  // 🔒 原版練習功能
   // =======================================================
   document.getElementById('start-btn').onclick = () => {
     document.getElementById('info-text').innerText = "正在載入題目...";
@@ -284,9 +282,8 @@
   function reRead(i) { currentIndex = i; isReReading = true; document.getElementById('summary').style.display = 'none'; document.getElementById('studio').style.display = 'block'; renderWord(); }
   document.getElementById('submit-btn').onclick = () => { fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${document.getElementById('total-avg').innerText}&mode=${MODE}`).then(() => { alert("完成！"); window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; }); };
 
-
   // =======================================================
-  // ⚔️ 對戰室外掛引擎 (獨立運作)
+  // ⚔️ 對戰室外掛引擎
   // =======================================================
   function fetchBattleDataAndStart(roomId) {
     fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
@@ -297,53 +294,34 @@
       });
   }
 
-// 🛡️ 偵探：雙桶同步偵測 (不看 Status 文字，改看數據桶)
   function initArena(roomId) {
     currentBattleRound = 0;
-    
     document.getElementById('target-word').innerText = "戰場同步中...";
     document.getElementById('battle-timer').innerText = "60";
     document.getElementById('battle-info').innerText = "正在等待雙方就緒...";
     document.getElementById('battle-controls').style.visibility = 'hidden';
     
-    // 1. 先發送自己的「人在這」訊號 (-1)
     fetch(`${GAS_URL}?action=arena_ready&id=${STUDENT_ID}&roomId=${roomId}&t=${new Date().getTime()}`)
       .then(() => {
         let waitCount = 60;
         if(syncTimer) clearInterval(syncTimer);
-        
-        // 2. 開始監控兩個桶子
         syncTimer = setInterval(() => {
           waitCount--;
           document.getElementById('battle-timer').innerText = waitCount;
-          
           fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
             .then(res => res.json()).then(data => {
-              // 🚀 關鍵判斷：只要房主桶子有東西 且 挑戰者桶子也有東西
               if (data.hostScores.length > 0 && data.guestScores.length > 0) {
                 clearInterval(syncTimer);
-                // 進入戰場前，先更新一下名字 UI
                 updateArenaUI(roomId, true); 
                 startRoundCountdown(roomId);
               }
-
-              if (data.status === "Canceled") {
-                clearInterval(syncTimer);
-                alert("對戰已取消");
-                window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
-              }
+              if (data.status === "Canceled") { clearInterval(syncTimer); alert("對戰取消"); window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; }
             });
-
-          if (waitCount <= 0) {
-            clearInterval(syncTimer);
-            alert("等待超時");
-            window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
-          }
+          if (waitCount <= 0) { clearInterval(syncTimer); alert("等待超時"); window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; }
         }, 2000);
       });
   }
 
-  // 🛡️ 偵探：修正亮燈邏輯 (排除掉 -1 這個報到訊號)
   function updateArenaUI(roomId, isInit = false) {
     fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
       .then(res => res.json()).then(data => {
@@ -351,11 +329,8 @@
         document.getElementById('my-name').innerText = isMeHost ? data.hostName : (data.guestName || "挑戰者");
         document.getElementById('op-name').innerText = isMeHost ? (data.guestName || "對手") : data.hostName;
 
-        // 🛡️ 重要：過濾掉報到用的 -1
         const hS = data.hostScores.filter(s => s !== -1);
         const gS = data.guestScores.filter(s => s !== -1);
-        const myS = isMeHost ? hS : gS;
-        const opS = isMeHost ? gS : hS;
 
         myTotalWins = 0; opTotalWins = 0;
         const commonLen = Math.min(hS.length, gS.length);
@@ -368,14 +343,9 @@
       });
   }
 
-  // 🛡️ 偵探：亮燈改為 5 燈制，代表勝場數
   function renderDots(wins, isMe) {
-    let html = ''; 
-    const winClass = isMe ? 'dot-me' : 'dot-op';
-    for(let i=0; i<5; i++) { 
-      // 只要贏的局數超過目前的孔，就點亮
-      html += `<div class="round-dot ${i < wins ? winClass : ''}"></div>`;
-    } 
+    let html = ''; const winClass = isMe ? 'dot-me' : 'dot-op';
+    for(let i=0; i<5; i++) { html += `<div class="round-dot ${i < wins ? winClass : ''}"></div>`; } 
     return html;
   }
 
@@ -384,36 +354,13 @@
     if(currentLimitTimer) clearInterval(currentLimitTimer);
     if(waitOpTimer) clearInterval(waitOpTimer);
     
-    // 🛡️ 偵探修正：上限改為 10 題
     if (currentBattleRound >= 10) { 
-      setTimeout(() => {
-        showImpactOverlay(myTotalWins, opTotalWins, true);
-        setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 5000);
-      }, 1000); return; 
+       setTimeout(() => { showImpactOverlay(myTotalWins, opTotalWins, true); setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 5000); }, 1000);
+       return; 
     }
     
     let count = 3; roundSubmitted = false;
-    // 🛡️ 偵探修正：UI 顯示改為 10 局
     document.getElementById('round-num').innerText = `第 ${currentBattleRound + 1} 局 / 共 10 局`;
-    document.getElementById('target-word').innerText = "READY?";
-    document.getElementById('battle-timer').innerText = "";
-    document.getElementById('battle-controls').style.visibility = 'hidden';
-    
-    readyTimer = setInterval(() => {
-      document.getElementById('battle-timer').innerText = count;
-      count--;
-      if (count < 0) {
-        clearInterval(readyTimer);
-        document.getElementById('target-word').innerText = battleQuizArr[currentBattleRound].en;
-        document.getElementById('battle-timer').innerText = "";
-        document.getElementById('battle-controls').style.visibility = 'visible';
-        startRecordingBattle(roomId);
-      }
-    }, 1000);
-  }
-    
-    let count = 3; roundSubmitted = false;
-    document.getElementById('round-num').innerText = `第 ${currentBattleRound + 1} 局 / 共 7 局`;
     document.getElementById('target-word').innerText = "READY?";
     document.getElementById('battle-timer').innerText = "";
     document.getElementById('battle-controls').style.visibility = 'hidden';
@@ -440,11 +387,7 @@
       if (limit > 0) document.getElementById('battle-timer').innerText = limit;
       else {
         clearInterval(currentLimitTimer);
-        if (!roundSubmitted) {
-          roundSubmitted = true;
-          if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
-          submitBattleScore(roomId, 0);
-        }
+        if (!roundSubmitted) { roundSubmitted = true; if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop(); submitBattleScore(roomId, 0); }
       }
     }, 1000);
   }
@@ -463,7 +406,6 @@
       if (roundSubmitted || !mediaRecorder || mediaRecorder.state !== "recording") return;
       roundSubmitted = true; clearInterval(currentLimitTimer);
       mediaRecorder.stop(); battleBtn.classList.remove('active');
-      if (maxVolume < 30) { submitBattleScore(ROOM_ID, 0); return; }
       mediaRecorder.onstop = () => {
         const r = new FileReader(); r.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
         r.onloadend = () => {
@@ -478,7 +420,7 @@
     document.getElementById('battle-info').innerText = `得分：${score}，等待對手...`;
     document.getElementById('battle-controls').style.visibility = 'hidden';
     fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${score}&t=${new Date().getTime()}`)
-      .then(() => { waitOpTimer = setInterval(() => checkBoth(roomId), 2000); });
+      .then(() => { if(waitOpTimer) clearInterval(waitOpTimer); waitOpTimer = setInterval(() => checkBoth(roomId), 2000); });
   }
 
   function checkBoth(roomId) {
@@ -487,37 +429,24 @@
       .then(res => res.json()).then(data => {
         const hS = data.hostScores.filter(s => s !== -1);
         const gS = data.guestScores.filter(s => s !== -1);
-
         if (hS.length > currentBattleRound && gS.length > currentBattleRound) {
           clearInterval(waitOpTimer);
           const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
           const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
           const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
-          
-          // 重新計算累積勝場
           myTotalWins = 0; opTotalWins = 0;
           for(let i=0; i <= currentBattleRound; i++) {
              if(hS[i] > gS[i]) isMeHost ? myTotalWins++ : opTotalWins++;
              else if(gS[i] > hS[i]) isMeHost ? opTotalWins++ : myTotalWins++;
           }
-
-          // 🚀 五分制早收判定：有人 5 分或打滿 10 題
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
-          
-          showImpactOverlay(myS, opS, isFinal);
-          
+          showImpactOverlay(myS, opScore = opS, isFinal);
           setTimeout(() => {
             document.getElementById('impact-overlay').style.display = 'none';
             document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
             document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
-            
-            if (isFinal) {
-              // 贏了就滾回主頁領獎
-              setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 2500);
-            } else {
-              currentBattleRound++; 
-              startRoundCountdown(roomId); 
-            }
+            if (isFinal) { setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 2500); } 
+            else { currentBattleRound++; startRoundCountdown(roomId); }
           }, 3500);
         }
         isChecking = false;
