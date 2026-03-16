@@ -282,7 +282,7 @@
   function reRead(i) { currentIndex = i; isReReading = true; document.getElementById('summary').style.display = 'none'; document.getElementById('studio').style.display = 'block'; renderWord(); }
   document.getElementById('submit-btn').onclick = () => { const avg = parseInt(document.getElementById('total-avg').innerText); fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`).then(() => { alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; }); };
 
-  // =======================================================
+// =======================================================
   // ⚔️ 偵探外掛引擎：對戰室模組 (徹底封印時空暴走 Bug)
   // =======================================================
   let battleQuizArr = [], currentBattleRound = 0;
@@ -290,6 +290,8 @@
   let myTotalWins = 0, opTotalWins = 0;
   let roundSubmitted = false; // 🔒 每局的防重複送出鎖
   let isChecking = false; // 🔒 防重疊查詢鎖
+  let opponentWaitTimer = null; // 🛡️ 60 秒掛網偵測
+  let syncTimer = null; // 🛡️ 戰場同步偵測
 
   function normalizeStr(val) { if (val === null || val === undefined) return ""; return String(val).replace(/(%20|\s)+/ig, "").toUpperCase(); }
 
@@ -320,9 +322,6 @@
       }).catch(err => alert("戰場連接失敗"));
   }
 
-let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
-  let syncTimer = null; 
-
   // 🛡️ 偵探：60 秒等待對手同步機制
   function initArena(roomId) {
     currentBattleRound = 0;
@@ -334,14 +333,15 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
     document.getElementById('battle-controls').style.visibility = 'hidden';
     
     // 向後台宣告「我到了」
-    fetch(`${GAS_URL}?action=arena_ready&id=${STUDENT_ID}&roomId=${roomId}`);
+    fetch(`${GAS_URL}?action=arena_ready&id=${STUDENT_ID}&roomId=${roomId}&t=${new Date().getTime()}`);
     
     let waitCount = 60;
     syncTimer = setInterval(() => {
       waitCount--;
       document.getElementById('battle-timer').innerText = waitCount;
       
-      fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}`)
+      // 加上時間戳，打破瀏覽器快取
+      fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
         .then(res => res.json()).then(data => {
           if (data.status === "Playing") {
             clearInterval(syncTimer); // 雙方都到了，開打！
@@ -361,7 +361,6 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
       }
     }, 1000);
 
-    // 🛡️ 偵探新增：必須包在 initArena 裡面！
     // 進入戰場後，如果對手 65 秒內連第一局都沒送出分數，就判定逃跑！
     opponentWaitTimer = setTimeout(() => {
       if (currentBattleRound === 0) {
@@ -378,7 +377,8 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
   }
 
   function updateArenaUI(roomId, isInit = false) {
-    fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}`)
+    // 加上時間戳
+    fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
       .then(res => res.json()).then(data => {
         const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
         document.getElementById('my-name').innerText = isMeHost ? data.hostName : (data.guestName || "對手");
@@ -389,7 +389,6 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
 
         myTotalWins = 0; opTotalWins = 0;
         for(let i=0; i<currentBattleRound; i++) { 
-           // 🛡️ 只有大於對方才加分亮燈，平手皆不加
            if(myScoresArr[i] > opScoresArr[i]) myTotalWins++; 
            else if(opScoresArr[i] > myScoresArr[i]) opTotalWins++; 
         }
@@ -406,14 +405,13 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
     let text = "", color = "", sub = "";
     if (myNum > opNum) { text = isFinal ? "🏆 最終勝利" : "本局獲勝！"; color = "var(--marian-green)"; sub = isFinal ? "🎉 已自動加發 10 點戰鬥獎勵！" : "帥氣的一擊！"; } 
     else if (myNum < opNum) { text = isFinal ? "☠️ 挑戰失敗" : "本局敗北..."; color = "var(--marian-red)"; sub = isFinal ? "再接再厲，下次討回來！" : "被對手壓制了..."; } 
-    else { text = isFinal ? "🤝 最終平手" : "平局！"; color = "var(--gold)"; sub = "勢均力敵！"; }
+    else { text = isFinal ? "🤝 最終平手" : "平局！"; color = "var(--gold)"; sub = "雙方實力相當，皆不加分！"; }
     
     resText.innerHTML = text; resText.style.color = color; document.getElementById('impact-subtitle').innerText = sub;
     overlay.style.display = 'flex';
   }
 
   function startRoundCountdown(roomId) {
-    // 🛡️ 強制清空所有殘留的計時器
     if(readyTimer) clearInterval(readyTimer); 
     if(currentLimitTimer) clearInterval(currentLimitTimer);
     if(waitOpTimer) clearInterval(waitOpTimer);
@@ -429,7 +427,7 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
     }
     
     let count = 3; 
-    roundSubmitted = false; // 🔒 每局開始，解開防重複送出鎖
+    roundSubmitted = false; 
     document.getElementById('round-num').innerText = `第 ${currentBattleRound + 1} 局 / 共 7 局`;
     document.getElementById('target-word').innerText = "READY?";
     document.getElementById('battle-timer').innerText = "";
@@ -459,7 +457,7 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
       else { 
         clearInterval(currentLimitTimer);
         document.getElementById('battle-timer').innerText = "0";
-        if (!roundSubmitted) { // 🔒 時間到，如果還沒送出，系統強制代打送 0 分
+        if (!roundSubmitted) { 
           roundSubmitted = true;
           if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); document.getElementById('battle-record-btn').classList.remove('active'); } 
           else { submitBattleScore(roomId, 0); }
@@ -471,7 +469,7 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
   const battleRb = document.getElementById('battle-record-btn');
   if(battleRb) {
     battleRb.onpointerdown = (e) => {
-      if (roundSubmitted) return; // 🔒 防連點
+      if (roundSubmitted) return; 
       e.preventDefault(); maxVolume = 0; chunks = [];
       mediaRecorder = new MediaRecorder(stream); mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
       mediaRecorder.start(); battleRb.classList.add('active');
@@ -487,59 +485,7 @@ let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
 
     battleRb.onpointerup = () => {
       if (roundSubmitted || !mediaRecorder || mediaRecorder.state !== "recording") return;
-      roundSubmitted = true; // 🔒 確定有錄音，上鎖！
-      clearInterval(currentLimitTimer);
-      mediaRecorder.stop(); battleRb.classList.remove('active');
-      
-      if (maxVolume < 30) { document.getElementById('battle-info').innerText = "太小聲，攻擊無效(0分)！"; submitBattleScore(ROOM_ID, 0); return; }
-
-      document.getElementById('battle-info').innerText = "子彈飛行中 (評分中)...";
-      mediaRecorder.onstop = () => {
-        const reader = new FileReader(); reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          fetch(`${GAS_URL}?action=evaluate_speech_battle&word=${encodeURIComponent(battleQuizArr[currentBattleRound].en)}`, { method: 'POST', body: base64 })
-            .then(res => res.json()).then(data => submitBattleScore(ROOM_ID, data.score)).catch(() => submitBattleScore(ROOM_ID, 0));
-        };
-      };
-    };
-  }
-
-  function submitBattleScore(roomId, score) {
-    document.getElementById('battle-info').innerText = `您的火力：${score}！等待對手...`;
-    document.getElementById('battle-controls').style.visibility = 'hidden';
-    
-    fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${score}`)
-      .then(() => { 
-        if(waitOpTimer) clearInterval(waitOpTimer);
-        // 🛡️ 每 2 秒才問一次，避免網路塞車導致疊加
-        waitOpTimer = setInterval(() => checkBothFinished(roomId), 2000); 
-      }); 
-  }
-
-  function checkBothFinished(roomId) {
-    if(isChecking) return; 
-    isChecking = true;
-    
-    fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}`)
-      .then(res => res.json()).then(data => {
-        if (data.hostScores.length > currentBattleRound && data.guestScores.length > currentBattleRound) {
-          clearInterval(waitOpTimer); 
-          if(opponentWaitTimer) clearTimeout(opponentWaitTimer); // 🛡️ 只要雙方成功交火第一局，就解除 60 秒掛網警報！
-          
-          const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
-          const myLastSc = isMeHost ? data.hostScores[currentBattleRound] : data.guestScores[currentBattleRound];
-          const opLastSc = isMeHost ? data.guestScores[currentBattleRound] : data.hostScores[currentBattleRound];
-          
-          showImpactOverlay(myLastSc, opLastSc, false);
-          setTimeout(() => {
-            document.getElementById('impact-overlay').style.display = 'none';
-            updateArenaUI(roomId); currentBattleRound++; startRoundCountdown(roomId); 
-          }, 3500); 
-        }
-        isChecking = false; 
-      }).catch(() => { isChecking = false; });
-  }
+      roundSubmitted
 </script>
 </body>
 </html>
