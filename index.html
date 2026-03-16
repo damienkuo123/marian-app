@@ -351,29 +351,30 @@
         document.getElementById('my-name').innerText = isMeHost ? data.hostName : (data.guestName || "挑戰者");
         document.getElementById('op-name').innerText = isMeHost ? (data.guestName || "對手") : data.hostName;
 
-        // 過濾掉報到用的 -1，只留下真正的分數
-        const myS = (isMeHost ? data.hostScores : data.guestScores).filter(s => s !== -1);
-        const opS = (isMeHost ? data.guestScores : data.hostScores).filter(s => s !== -1);
+        // 🛡️ 重要：過濾掉報到用的 -1
+        const hS = data.hostScores.filter(s => s !== -1);
+        const gS = data.guestScores.filter(s => s !== -1);
+        const myS = isMeHost ? hS : gS;
+        const opS = isMeHost ? gS : hS;
 
         myTotalWins = 0; opTotalWins = 0;
-        // 只比對已經產生的局數
-        const roundsToCompare = Math.min(myS.length, opS.length);
-        for(let i=0; i < roundsToCompare; i++) { 
-           if(myS[i] > opS[i]) myTotalWins++; 
-           else if(opS[i] > myS[i]) opTotalWins++; 
+        const commonLen = Math.min(hS.length, gS.length);
+        for(let i=0; i < commonLen; i++) { 
+           if(hS[i] > gS[i]) isMeHost ? myTotalWins++ : opTotalWins++; 
+           else if(gS[i] > hS[i]) isMeHost ? opTotalWins++ : myTotalWins++; 
         }
         document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
         document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
       });
   }
 
+  // 🛡️ 偵探：亮燈改為 5 燈制，代表勝場數
   function renderDots(wins, isMe) {
     let html = ''; 
     const winClass = isMe ? 'dot-me' : 'dot-op';
-    // 💡 畫面上顯示 5 個圓圈，代表領先分數
     for(let i=0; i<5; i++) { 
-      if (i < wins) html += `<div class="round-dot ${winClass}"></div>`; 
-      else html += '<div class="round-dot"></div>'; 
+      // 只要贏的局數超過目前的孔，就點亮
+      html += `<div class="round-dot ${i < wins ? winClass : ''}"></div>`;
     } 
     return html;
   }
@@ -463,13 +464,42 @@
     if(isChecking) return; isChecking = true;
     fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
       .then(res => res.json()).then(data => {
-        if (data.hostScores.length > currentBattleRound && data.guestScores.length > currentBattleRound) {
+        // 過濾掉 -1 報到訊號
+        const hS = data.hostScores.filter(s => s !== -1);
+        const gS = data.guestScores.filter(s => s !== -1);
+
+        // 判斷當前這局雙方是否都已出分
+        if (hS.length > currentBattleRound && gS.length > currentBattleRound) {
           clearInterval(waitOpTimer);
           const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
-          const myS = isMeHost ? data.hostScores[currentBattleRound] : data.guestScores[currentBattleRound];
-          const opS = isMeHost ? data.guestScores[currentBattleRound] : data.hostScores[currentBattleRound];
-          showImpactOverlay(myS, opS, false);
-          setTimeout(() => { document.getElementById('impact-overlay').style.display = 'none'; updateArenaUI(roomId); currentBattleRound++; startRoundCountdown(roomId); }, 3500);
+          const myScore = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
+          const opScore = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
+          
+          // 計算目前的總勝場
+          myTotalWins = 0; opTotalWins = 0;
+          for(let i=0; i <= currentBattleRound; i++) {
+             if(hS[i] > gS[i]) isMeHost ? myTotalWins++ : opTotalWins++;
+             else if(gS[i] > hS[i]) isMeHost ? opTotalWins++ : myTotalWins++;
+          }
+
+          // 🚀 關鍵判斷：有人拿到 5 分，或是 10 題打完 (currentBattleRound 從 0 開始)
+          const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
+          
+          showImpactOverlay(myScore, opScore, isFinal);
+          
+          setTimeout(() => {
+            document.getElementById('impact-overlay').style.display = 'none';
+            // 更新 UI 上的燈號
+            document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
+            document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
+            
+            if (isFinal) {
+              setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 2500);
+            } else {
+              currentBattleRound++; 
+              startRoundCountdown(roomId); 
+            }
+          }, 3500);
         }
         isChecking = false;
       }).catch(() => isChecking = false);
