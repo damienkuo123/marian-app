@@ -322,10 +322,46 @@
 
   let opponentWaitTimer = null; // 🛡️ GitHub 戰場內的 60 秒掛網偵測
 
+  let syncTimer = null; 
+
+  // 🛡️ 偵探：60 秒等待對手同步機制
   function initArena(roomId) {
     currentBattleRound = 0;
     updateArenaUI(roomId, true);
-    startRoundCountdown(roomId);
+    
+    document.getElementById('target-word').innerText = "等待對手同步...";
+    document.getElementById('battle-timer').innerText = "60";
+    document.getElementById('battle-info').innerText = "連線中請勿跳出...";
+    document.getElementById('battle-controls').style.visibility = 'hidden';
+    
+    // 向後台宣告「我到了」
+    fetch(`${GAS_URL}?action=arena_ready&id=${STUDENT_ID}&roomId=${roomId}`);
+    
+    let waitCount = 60;
+    syncTimer = setInterval(() => {
+      waitCount--;
+      document.getElementById('battle-timer').innerText = waitCount;
+      
+      fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}`)
+        .then(res => res.json()).then(data => {
+          if (data.status === "Playing") {
+            clearInterval(syncTimer); // 雙方都到了，開打！
+            startRoundCountdown(roomId);
+          } else if (data.status === "Canceled") {
+            clearInterval(syncTimer);
+            alert("對手已離開或斷線，對戰取消！");
+            window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
+          }
+        });
+
+      if (waitCount <= 0) {
+        clearInterval(syncTimer);
+        fetch(`${GAS_URL}?action=cancel_battle&id=${STUDENT_ID}&roomId=${roomId}`);
+        alert("等待對手逾時 (超過60秒)，對戰已自動解散！");
+        window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
+      }
+    }, 1000);
+  }
 
     // 🛡️ 偵探新增：進入戰場後，如果對手 60 秒內連第一局都沒送出分數，就判定逃跑！
     opponentWaitTimer = setTimeout(() => {
@@ -353,7 +389,11 @@
         const opScoresArr = isMeHost ? data.guestScores : data.hostScores;
 
         myTotalWins = 0; opTotalWins = 0;
-        for(let i=0; i<currentBattleRound; i++) { if(myScoresArr[i] > opScoresArr[i]) myTotalWins++; else if(opScoresArr[i] > myScoresArr[i]) opTotalWins++; }
+        for(let i=0; i<currentBattleRound; i++) { 
+           // 🛡️ 只有大於對方才加分亮燈，平手皆不加
+           if(myScoresArr[i] > opScoresArr[i]) myTotalWins++; 
+           else if(opScoresArr[i] > myScoresArr[i]) opTotalWins++; 
+        }
         document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
         document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
       });
