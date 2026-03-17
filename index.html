@@ -505,7 +505,18 @@
     document.getElementById('impact-op-score').innerText = opNum;
     document.getElementById('impact-title').innerText = isFinal ? "最終結算" : "單局結果";
     let t = "", c = "";
-    if (myNum > opNum) { t = isFinal ? "🏆 最終勝利" : "獲勝！"; c = "#27ae60"; }
+    if (myNum > opNum) { 
+      let reward = "0";
+      // 🕵️ 偵探判斷對手名稱給獎勵
+      const opName = document.getElementById('op-name').innerText;
+      if (opName === "初階Ai") reward = "0";
+      else if (opName === "中階Ai") reward = "10";
+      else if (opName === "高階Ai") reward = "20";
+      else reward = "10"; // 預設真人對戰
+
+      t = isFinal ? `🏆 挑戰成功！獲得 ${reward} 點` : "獲勝！"; 
+      c = "#27ae60"; 
+    }
     else if (myNum < opNum) { t = isFinal ? "☠️ 挑戰失敗" : "敗北..."; c = "#e74c3c"; }
     else { t = "平手"; c = "#ffd700"; }
     const r = document.getElementById('impact-result'); r.innerText = t; r.style.color = c;
