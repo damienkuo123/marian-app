@@ -254,11 +254,15 @@
   </div>
 
   <div class="arena-section stage-zone">
-    <div style="text-align: center;">
+    <div style="text-align: center; width: 100%;">
       <div id="round-num" style="color:#a4b0be; font-size: 14px; font-weight:bold; margin-bottom:10px;">第 1 局 / 先得 5 分獲勝</div>
       <h1 id="target-word">準備中...</h1>
       <div id="battle-timer" style="font-size:40px; font-weight:900; color:#f6e58d; text-shadow: 0 0 15px rgba(246, 229, 141, 0.5); min-height: 50px;">60</div>
-      <p id="battle-info" style="color:#a4b0be; font-size:14px; margin-top:5px;">正在等待雙方就緒...</p>
+      
+      <div id="battle-info-container">
+        <div id="battle-info" style="color:#a4b0be; font-size:14px; margin-top:5px;">正在等待雙方就緒...</div>
+      </div>
+
     </div>
   </div>
 
@@ -821,24 +825,9 @@
         if (hS.length > currentBattleRound && gS.length > currentBattleRound) {
           clearInterval(waitOpTimer);
           
-          // 1. 判斷勝負並顯示畫面
           const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
           const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
           const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
-          
-          const arenaBg = document.getElementById('battle-arena');
-          const opCard = document.getElementById('op-card');
-          const myCard = document.getElementById('my-card');
-        
-          if (myS > opS) {
-              // 我贏了：對手卡片劇烈晃動，螢幕閃紅
-              opCard.classList.add('take-damage');
-              arenaBg.classList.add('screen-flash-red');
-          } else if (opS > myS) {
-              // 對手贏了：我的卡片劇烈晃動，螢幕閃紅
-              myCard.classList.add('take-damage');
-              arenaBg.classList.add('screen-flash-red');
-          }
         
           // 計算總局數勝負
           myTotalWins = 0; opTotalWins = 0;
@@ -846,28 +835,17 @@
               if(hS[i] > gS[i]) myTotalWins++; else if(gS[i] > hS[i]) opTotalWins++;
           }
 
-          // 🌟 關鍵修復：每次回合結束，正式把燈號更新到畫面上！
           document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
           document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
 
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
-          
-          // 💥 如果是最終勝利，徹底擊碎對手卡片！
-          if (isFinal && myTotalWins >= 5) {
-              opCard.classList.add('shatter-effect');
-          }
         
+          // 把控制權全部交給 showImpactOverlay 統一播放特效
           showImpactOverlay(myS, opS, isFinal);
         
-          // 🚀 核心修正：延遲時間內移除特效
+          // 🚀 核心修正：延遲時間內移除結算大門，但不強制移除碎裂狀態
           setTimeout(() => {
               document.getElementById('impact-overlay').classList.remove('active'); 
-              
-              // 清除所有戰鬥特效
-              opCard.classList.remove('take-damage');
-              myCard.classList.remove('take-damage');
-              arenaBg.classList.remove('screen-flash-red');
-              // 注意：shatter-effect 如果加了就不移除，讓他保持碎裂狀態直到跳轉
               
               if (isFinal) { 
                   window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; 
@@ -891,24 +869,33 @@
     
     const myCard = document.getElementById('my-card'); 
     const opCard = document.getElementById('op-card');
+    const arenaBg = document.getElementById('battle-arena');
 
-    // 先清除上一局殘留的動畫
-    if(myCard) myCard.className = "card-entity"; 
-    if(opCard) opCard.className = "card-entity";
+    // 🚀 安全清除法：精準移除特效 Class，而不是暴力的覆蓋，並觸發瀏覽器重繪
+    const animations = ['winner-attack', 'loser-shatter', 'take-damage', 'screen-flash-red'];
+    if(myCard) myCard.classList.remove(...animations); 
+    if(opCard) opCard.classList.remove(...animations);
+    if(arenaBg) arenaBg.classList.remove('screen-flash-red');
+    
+    // 強制瀏覽器 Reflow (這樣同一個動畫才能在下一局重播)
+    void myCard.offsetWidth;
+    void opCard.offsetWidth;
 
     if (myNum > opNum) { 
       t = isFinal ? "🏆 挑戰成功！" : "獲勝！"; 
       c = "#27ae60"; 
-      // 🌟 燃特效：我方獲勝，我方撞擊
+      // 🌟 我贏了：我方突進，對手受擊(震動)或最終碎裂
       if(myCard) myCard.classList.add('winner-attack');
-      if(opCard && isFinal) opCard.classList.add('loser-shatter'); 
+      if(opCard) opCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage'); 
+      if(arenaBg) arenaBg.classList.add('screen-flash-red');
     }
     else if (myNum < opNum) { 
       t = isFinal ? "☠️ 挑戰失敗" : "敗北..."; 
       c = "#e74c3c"; 
-      // 🌟 燃特效：對手獲勝，對手撞擊
+      // 🌟 對手贏了：對手突進，我方受擊(震動)或最終碎裂
       if(opCard) opCard.classList.add('winner-attack');
-      if(myCard && isFinal) myCard.classList.add('loser-shatter');
+      if(myCard) myCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage');
+      if(arenaBg) arenaBg.classList.add('screen-flash-red');
     }
     else { 
       t = "平手"; 
@@ -917,8 +904,6 @@
     
     const r = document.getElementById('impact-result'); 
     r.innerText = t; r.style.color = c;
-    
-    // 開門！
     o.classList.add('active');
   }
   // =======================================================
