@@ -74,16 +74,17 @@
     /* 🎴 實體卡片設計 (自適應縮放) */
     .arena-section { z-index: 10; width: 100%; display: flex; flex-direction: column; align-items: center; }
     
-    /* 🎴 實體卡片設計 (改成橫式，並適應你的 16:9 圖片) */
     .card-entity {
-      width: 95vw; /* 佔據螢幕絕大部分寬度 */
-      max-width: 500px; /* 電腦版最大寬度 */
-      aspect-ratio: 16 / 9; /* 👉 關鍵：改成你的橫圖比例！ */
+      height: 22vh; /* 嚴格限制高度佔比，絕對不把畫面撐破 */
+      min-height: 120px;
+      max-height: 180px;
+      aspect-ratio: 16 / 9; /* 保持橫式滿版 */
+      width: auto;
+      max-width: 95vw; /* 確保不會超出螢幕寬度 */
       
       background-size: cover; 
-      background-position: center center; /* 置中顯示 */
+      background-position: center center; 
       background-repeat: no-repeat;
-      
       border-radius: 12px; 
       border: 3px solid #576574; 
       box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.2);
@@ -138,50 +139,51 @@
       100% { box-shadow: 0 0 50px #26de81, inset 0 0 25px #26de81; border-color: #ff4757; transform: translateY(-5px); }
     }
 
-    /* 贏家攻擊動畫：稍微後退後，快速突進 */
-    @keyframes attack-strike {
-      0% { transform: scale(1) translateY(0); }
-      20% { transform: scale(0.9) translateY(20px); } /* 蓄力後退 */
-      50% { transform: scale(1.2) translateY(-100px); filter: drop-shadow(0 0 20px rgba(255, 50, 0, 0.8)); z-index: 10; } /* 衝擊！ */
-      100% { transform: scale(1) translateY(0); z-index: 1; }
+    /* 💎 螢光得分字體 (用來取代原本的倒數計時) */
+    .neon-score {
+      font-size: 38px;
+      font-weight: 900;
+      color: #0fb9b1;
+      text-shadow: 0 0 10px rgba(15, 185, 177, 0.8), 0 0 20px rgba(15, 185, 177, 0.5), 0 0 30px #fff;
+      animation: pop-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      display: inline-block;
+      margin: 0;
+    }
+    @keyframes pop-up { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    /* 🛡️ 鎖死中央區域高度，倒數與分數共用同一個籠子 */
+    #battle-timer-container {
+      height: 55px; /* 固定高度，切換文字時絕不推擠版面 */
+      display: flex; justify-content: center; align-items: center;
+    }
+    #battle-timer { margin: 0; } 
+
+    /* ✨ 魔法攻擊動畫 (贏家發光蓄力) */
+    @keyframes magic-cast {
+      0% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); }
+      30% { transform: scale(0.95); filter: brightness(1.5) drop-shadow(0 0 20px #0fb9b1); }
+      50% { transform: scale(1.05); filter: brightness(2) drop-shadow(0 0 40px #26de81); z-index: 10; }
+      100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; }
+    }
+    .winner-cast { animation: magic-cast 0.6s ease-out forwards; }
+
+    /* 💥 能量光球 (疊加在贏家卡片上射出) */
+    .winner-cast::after {
+      content: ''; position: absolute; top: 50%; left: 50%; width: 80px; height: 80px;
+      background: radial-gradient(circle, #fff 0%, #26de81 40%, transparent 80%);
+      border-radius: 50%; transform: translate(-50%, -50%) scale(0);
+      opacity: 1; z-index: 100; pointer-events: none;
     }
     
-    .winner-attack {
-      animation: attack-strike 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    }
+    /* 向上射擊 (我方贏) / 向下射擊 (對手贏) */
+    .blast-up::after { animation: blast-upward 0.4s 0.2s ease-in forwards; }
+    @keyframes blast-upward { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -200px) scale(2.5); opacity: 0; } }
 
-    /* 🩸 燃特效：受擊晃動與閃紅光 */
-    @keyframes shakeDamage {
-      0% { transform: translate(0, 0) rotate(0deg); filter: drop-shadow(0 0 0 transparent); }
-      20% { transform: translate(-10px, 10px) rotate(-3deg); filter: drop-shadow(0 0 30px #eb3b5a); }
-      40% { transform: translate(10px, -10px) rotate(3deg); filter: drop-shadow(0 0 30px #eb3b5a); }
-      60% { transform: translate(-10px, -5px) rotate(-2deg); filter: drop-shadow(0 0 30px #eb3b5a); }
-      80% { transform: translate(10px, 5px) rotate(2deg); filter: drop-shadow(0 0 30px #eb3b5a); }
-      100% { transform: translate(0, 0) rotate(0deg); filter: drop-shadow(0 0 0 transparent); }
-    }
-    .take-damage { animation: shakeDamage 0.5s ease-in-out; }
+    .blast-down::after { animation: blast-downward 0.4s 0.2s ease-in forwards; }
+    @keyframes blast-downward { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, 200px) scale(2.5); opacity: 0; } }
 
-    /* 全螢幕受擊紅閃 */
-    .screen-flash-red { animation: flashRed 0.4s 2; }
-    @keyframes flashRed { 0% { box-shadow: inset 0 0 0 transparent; } 50% { box-shadow: inset 0 0 100px rgba(235, 59, 90, 0.8); } 100% { box-shadow: inset 0 0 0 transparent; } }
-
-    /* 💥 燃特效：最終碎裂 */
-    .shatter-effect { animation: shatter 1s forwards; }
-    @keyframes shatter {
-      0% { transform: scale(1); opacity: 1; filter: blur(0); }
-      50% { transform: scale(1.2) rotate(15deg); filter: blur(5px); opacity: 0.8; }
-      100% { transform: scale(0) rotate(45deg); opacity: 0; filter: blur(20px); }
-    }
-    /* 💥 燃特效：最終碎裂 */
-    @keyframes shatter-destroy {
-      0% { transform: scale(1) rotate(0deg); filter: blur(0px) brightness(1); opacity: 1; }
-      20% { transform: scale(1.1) rotate(-5deg); filter: brightness(2); } /* 爆裂前的高光 */
-      100% { 
-        transform: scale(0.5) rotate(20deg) translateY(200px); /* 往下掉 */
-        filter: blur(10px) brightness(0); /* 變暗變模糊 */
-        opacity: 0; 
-      }
-    }
+    /* 🩸 受擊動畫 (加上 0.3s 延遲，等光球飛到才抖動) */
+    .take-damage { animation: shakeDamage 0.5s 0.3s ease-in-out; }
     
     .loser-shatter {
       animation: shatter-destroy 0.6s ease-in forwards;
@@ -255,14 +257,14 @@
 
   <div class="arena-section stage-zone">
     <div style="text-align: center; width: 100%;">
-      <div id="round-num" style="color:#a4b0be; font-size: 14px; font-weight:bold; margin-bottom:10px;">第 1 局 / 先得 5 分獲勝</div>
-      <h1 id="target-word">準備中...</h1>
-      <div id="battle-timer" style="font-size:40px; font-weight:900; color:#f6e58d; text-shadow: 0 0 15px rgba(246, 229, 141, 0.5); min-height: 50px;">60</div>
+      <div id="round-num" style="color:#a4b0be; font-size: 14px; font-weight:bold; margin-bottom:5px;">第 1 局 / 先得 5 分獲勝</div>
+      <h1 id="target-word" style="margin-bottom: 5px;">準備中...</h1>
       
-      <div id="battle-info-container">
-        <div id="battle-info" style="color:#a4b0be; font-size:14px; margin-top:5px;">正在等待雙方就緒...</div>
+      <div id="battle-timer-container">
+        <div id="battle-timer" style="font-size:40px; font-weight:900; color:#f6e58d; text-shadow: 0 0 15px rgba(246, 229, 141, 0.5);">60</div>
       </div>
-
+      
+      <div id="battle-info" style="color:#a4b0be; font-size:14px; margin-top:5px;">正在等待雙方就緒...</div>
     </div>
   </div>
 
@@ -789,31 +791,23 @@
   }
 
   function submitBattleScore(roomId, score) {
-  // 1. 確保停止 10 秒倒數計時器
-  if (currentLimitTimer) clearInterval(currentLimitTimer);
-  
-  // 2. 清空畫面上卡住的倒數數字
-  document.getElementById('battle-timer').innerText = ""; 
+    if (currentLimitTimer) clearInterval(currentLimitTimer);
+    
+    // 隱藏錄音按鈕
+    document.getElementById('battle-controls').style.visibility = 'hidden';
 
-  // 3. 隱藏錄音按鈕
-  document.getElementById('battle-controls').style.visibility = 'hidden';
+    // 🌟 將分數直接填入原本「倒數計時」的位子，套用螢光動畫
+    document.getElementById('battle-timer').innerHTML = `<span class="neon-score">得分：${score}</span>`;
+    
+    // 下方的提示文字改為等待
+    document.getElementById('battle-info').innerText = "等待對手...";
 
-  // 4. 🌟 燃特效：把分數變超大、變金色，並加上彈跳動畫
-  document.getElementById('battle-info').innerHTML = `
-    <div style="font-size: 4rem; font-weight: 900; color: #FFD700; text-shadow: 0 4px 10px rgba(0,0,0,0.8); animation: pop-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
-      得分：${score}
-    </div>
-    <br>
-    <span style="color:#aaa; font-size: 16px;">等待對手...</span>
-  `;
-
-  // 傳送分數給後端
-  fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${score}&t=${new Date().getTime()}`)
-    .then(() => { 
-      if(waitOpTimer) clearInterval(waitOpTimer); 
-      waitOpTimer = setInterval(() => checkBoth(roomId), 2000); 
-    });
-}
+    fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${score}&t=${new Date().getTime()}`)
+      .then(() => { 
+        if(waitOpTimer) clearInterval(waitOpTimer); 
+        waitOpTimer = setInterval(() => checkBoth(roomId), 2000); 
+      });
+  }
 
   function checkBoth(roomId) {
     if(isChecking) return; isChecking = true;
@@ -871,29 +865,29 @@
     const opCard = document.getElementById('op-card');
     const arenaBg = document.getElementById('battle-arena');
 
-    // 🚀 安全清除法：精準移除特效 Class，而不是暴力的覆蓋，並觸發瀏覽器重繪
-    const animations = ['winner-attack', 'loser-shatter', 'take-damage', 'screen-flash-red'];
+    // 🚀 清除上一局的動畫標籤
+    const animations = ['winner-cast', 'blast-up', 'blast-down', 'loser-shatter', 'take-damage', 'screen-flash-red'];
     if(myCard) myCard.classList.remove(...animations); 
     if(opCard) opCard.classList.remove(...animations);
     if(arenaBg) arenaBg.classList.remove('screen-flash-red');
     
-    // 強制瀏覽器 Reflow (這樣同一個動畫才能在下一局重播)
+    // 強制重繪 (讓下一局動畫能正常觸發)
     void myCard.offsetWidth;
     void opCard.offsetWidth;
 
     if (myNum > opNum) { 
       t = isFinal ? "🏆 挑戰成功！" : "獲勝！"; 
       c = "#27ae60"; 
-      // 🌟 我贏了：我方突進，對手受擊(震動)或最終碎裂
-      if(myCard) myCard.classList.add('winner-attack');
+      // 🌟 我贏了：我方蓄力並「向上」射出光球，對手受擊(抖動)或最終碎裂
+      if(myCard) { myCard.classList.add('winner-cast', 'blast-up'); }
       if(opCard) opCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage'); 
       if(arenaBg) arenaBg.classList.add('screen-flash-red');
     }
     else if (myNum < opNum) { 
       t = isFinal ? "☠️ 挑戰失敗" : "敗北..."; 
       c = "#e74c3c"; 
-      // 🌟 對手贏了：對手突進，我方受擊(震動)或最終碎裂
-      if(opCard) opCard.classList.add('winner-attack');
+      // 🌟 對手贏了：對手蓄力並「向下」射出光球，我方受擊(抖動)或最終碎裂
+      if(opCard) { opCard.classList.add('winner-cast', 'blast-down'); }
       if(myCard) myCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage');
       if(arenaBg) arenaBg.classList.add('screen-flash-red');
     }
