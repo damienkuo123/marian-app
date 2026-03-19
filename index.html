@@ -273,33 +273,47 @@
     }
   }
 
-  // 🛡️ 修復：防止重複觸發與分數亂跳
+// 🛡️ 錄音狀態鎖，防止重複點擊與分數打架
+  let isGrading = false; 
+
   const rb = document.getElementById('record-btn');
   if(rb) {
     rb.onpointerdown = (e) => {
+      if(isGrading) return; // 如果正在評分，不准點
       e.preventDefault(); 
       document.getElementById('feedback').innerHTML = ""; 
       maxVolume = 0; chunks = [];
+      
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
       
-      // 🛑 關鍵：在這裡定義 onstop，確保一個 recorder 只會跑一次評分
       mediaRecorder.onstop = () => {
+        isGrading = true; // 鎖定狀態
+        rb.style.opacity = "0.5";
+        
         const reader = new FileReader();
         reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
         reader.onloadend = () => {
           const base64 = reader.result.split(',')[1];
+          // 發送請求前，確保舊的計時器被清乾淨
+          if (gradingInterval) clearInterval(gradingInterval);
+          
           fetch(`${GAS_URL}?action=evaluate_speech&word=${encodeURIComponent(quizData[currentIndex].en)}`, { method: 'POST', body: base64 })
             .then(res => res.json()).then(data => {
-              if (gradingInterval) clearInterval(gradingInterval); // 停止動畫
+              clearInterval(gradingInterval);
               scores[currentIndex] = data.score;
               if(!window.feedbacks) window.feedbacks = [];
               window.feedbacks[currentIndex] = data.feedback;
+              
               document.getElementById('feedback').innerHTML = `得分：${data.score}<br><small>${data.feedback}</small>`;
-              document.getElementById('status').innerText = "按住錄音，放開打分";
+              document.getElementById('status').innerText = "評分完成！";
+              isGrading = false; // 解鎖
+              rb.style.opacity = "1";
             }).catch(() => {
-              if (gradingInterval) clearInterval(gradingInterval);
-              document.getElementById('status').innerText = "評分失敗";
+              clearInterval(gradingInterval);
+              document.getElementById('status').innerText = "評分失敗，請重試";
+              isGrading = false; // 解鎖
+              rb.style.opacity = "1";
             });
         };
       };
@@ -314,13 +328,8 @@
       if (!mediaRecorder || mediaRecorder.state !== "recording") return;
       mediaRecorder.stop(); 
       rb.classList.remove('active');
+      if (maxVolume < 30) { document.getElementById('status').innerText = "太小聲了！"; return; }
       
-      if (maxVolume < 30) { 
-        document.getElementById('status').innerText = "太小聲了！"; 
-        return; 
-      }
-      
-      if (gradingInterval) clearInterval(gradingInterval);
       let dots = 0;
       gradingInterval = setInterval(() => { 
         dots = (dots + 1) % 4; 
@@ -341,12 +350,10 @@
     const list = document.getElementById('word-list');
     list.innerHTML = "";
 
-    // 🛡️ 安全巡檢：確保每一題都有正確渲染
     quizData.forEach((item, i) => {
       let s = scores[i] || 0;
       let f = (window.feedbacks && window.feedbacks[i]) ? window.feedbacks[i] : "尚未錄音";
-      sum += s; 
-      count++;
+      sum += s; count++;
       list.innerHTML += `<tr><td><b style="color:#0d47a1">${item.en}</b><br><span style="color:#7f8c8d; font-size:14px">${item.zh}</span><br><p style="margin:5px 0; font-size:13px; color:#e67e22;">💡 ${f}</p><button class="btn-re" onclick="reRead(${i})">🔄 重唸</button></td><td><span class="score-badge">${s} 分</span></td></tr>`;
     });
 
@@ -357,15 +364,14 @@
     const lockMsg = document.getElementById('lock-msg');
     const rewardHint = document.getElementById('reward-hint');
 
-    // 🚀 關鍵解鎖邏輯
     if (MODE === 'review') {
-      submitBtn.disabled = false;
+      submitBtn.removeAttribute('disabled');
       submitBtn.style.backgroundColor = "var(--marian-green)";
       submitBtn.innerText = "完成練習";
-      rewardHint.innerText = "練習模式不計入點數";
     } else {
-      // 只要平均大於等於 70 就強制開啟按鈕
       if (avg >= 70) {
+        // 🚀 強制解除禁用，確保手機端能點
+        submitBtn.removeAttribute('disabled');
         submitBtn.disabled = false;
         submitBtn.style.opacity = "1";
         submitBtn.style.pointerEvents = "auto";
@@ -374,12 +380,34 @@
         let reward = avg >= 90 ? 50 : (avg >= 80 ? 30 : 10);
         rewardHint.innerText = `🎁 可獲得：${reward} 點`;
       } else {
-        submitBtn.disabled = true;
+        submitBtn.setAttribute('disabled', 'true');
         submitBtn.style.backgroundColor = "#636e72"; 
         lockMsg.innerText = "❌ 平均需達 70 分才能領獎";
         rewardHint.innerText = "";
       }
     }
+
+    // 🚀 重新綁定點擊事件，防止因之前報錯而失效
+    submitBtn.onclick = handleClaimReward;
+  }
+
+  // 分離出的領獎邏輯
+  function handleClaimReward() {
+    const btn = document.getElementById('submit-btn');
+    const avg = parseInt(document.getElementById('total-avg').innerText);
+    
+    btn.innerText = "正在儲存中...";
+    btn.style.pointerEvents = "none";
+
+    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`)
+      .then(() => { 
+        alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
+        window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; 
+      }).catch(() => {
+        alert("連線不穩，請再試一次！");
+        btn.innerText = "完成挑戰並領獎";
+        btn.style.pointerEvents = "auto";
+      });
   }
   function reRead(i) { currentIndex = i; isReReading = true; document.getElementById('summary').style.display = 'none'; document.getElementById('studio').style.display = 'block'; renderWord(); }
   document.getElementById('submit-btn').onclick = () => {
