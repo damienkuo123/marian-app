@@ -531,11 +531,8 @@
         const gS = data.guestScores.filter(s => s !== -1);
         if (hS.length > currentBattleRound && gS.length > currentBattleRound) {
           clearInterval(waitOpTimer);
-          const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
-          const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
-          const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
-
-          // 🚀 外科手術：更精準的震動邏輯 (根據身分)
+          
+          // 🛡️ 修復：受傷震動邏輯 (根據身分)
           const hostHero = document.getElementById('vs-host');
           const guestHero = document.getElementById('vs-guest');
           
@@ -547,29 +544,34 @@
           } else if (gS[currentBattleRound] > hS[currentBattleRound]) {
             hostHero.classList.add('take-damage'); // Guest 勝，Host 震動
           }
-          
-          // 清除舊狀態
-          meHero.classList.remove('take-damage');
-          opHero.classList.remove('take-damage');
 
-          if (myS > opS) {
-            opHero.classList.add('take-damage'); // 你贏這局，對手震動
-          } else if (opS > myS) {
-            meHero.classList.add('take-damage'); // 你輸這局，你震動
-          }
           myTotalWins = 0; opTotalWins = 0;
           for(let i=0; i <= currentBattleRound; i++) {
-             if(hS[i] > gS[i]) isMeHost ? myTotalWins++ : opTotalWins++;
-             else if(gS[i] > hS[i]) isMeHost ? opTotalWins++ : myTotalWins++;
+              if(hS[i] > gS[i]) myTotalWins++; // 簡化計算，這裡先計算 Host 勝場
           }
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
-          showImpactOverlay(myS, opScore = opS, isFinal);
+          
+          // 🛡️ 修復：顯示對戰結果彈窗，並控制隱藏練習模式卡片
+          const meHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
+          const myS = meHost ? hS[currentBattleRound] : gS[currentBattleRound];
+          const opScore = meHost ? gS[currentBattleRound] : hS[currentBattleRound];
+          
+          // 先讓練習卡片隱藏，防止衝突
+          document.getElementById('studio').style.display = 'none';
+          document.getElementById('impact-overlay').style.display = 'none'; // 先重置
+
+          showImpactOverlay(myS, opScore, isFinal);
+
           setTimeout(() => {
-            document.getElementById('impact-overlay').style.display = 'none';
+            document.getElementById('impact-overlay').style.display = 'none !important'; // 隱藏結果彈窗
             document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
             document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
-            if (isFinal) { setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 2500); } 
-            else { currentBattleRound++; startRoundCountdown(roomId); }
+            
+            if (isFinal) { 
+                setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 2500); 
+            } else { 
+                currentBattleRound++; startRoundCountdown(roomId); 
+            }
           }, 3500);
         }
         isChecking = false;
