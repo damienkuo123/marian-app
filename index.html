@@ -89,14 +89,14 @@
 </div>
 
 <div id="battle-arena">
-  <div id="arena-divide-line"></div>
   <div class="vs-container">
     <div id="vs-host" class="vs-hero"></div>
     <div class="vs-mid">VS</div>
     <div id="vs-guest" class="vs-hero"></div>
   </div>
+  <div id="arena-divide-line"></div>
 
-  <div class="arena-section">
+  <div class="arena-section opponent-zone">
     <div style="font-size:12px; color:#aaa; font-weight:bold; letter-spacing:2px;">對手 OPPONENT</div>
     <div id="op-name" class="arena-p-name" style="color:var(--marian-red);">連線中...</div>
     <div id="op-rounds" style="display:flex; justify-content:center; gap:8px;"></div>
@@ -104,8 +104,9 @@
 
   <div class="arena-section stage-zone">
     <div id="round-num" style="color:#aaa; font-size: 14px; font-weight:bold;">第 1 局 / 先得 5 分獲勝</div>
-    <h1 id="target-word" style="font-size:11vw; margin:10px 0; text-shadow: 0 0 20px #000;">READY?</h1>
-    <div id="battle-timer" style="font-size:15vw; font-weight:900; color:var(--gold);">60</div>
+    <h1 id="target-word" style="font-size:11vw; margin:10px 0; text-shadow: 0 0 20px #000;">準備中...</h1>
+    <div id="battle-timer" style="font-size:15vw; font-weight:900; color:var(--gold); min-height:80px;">60</div>
+    <p id="battle-info" style="color:#888;">正在等待雙方就緒...</p>
   </div>
 
   <div class="arena-section player-zone">
@@ -411,15 +412,20 @@
         document.getElementById('my-name').innerText = isMeHost ? data.hostName : (data.guestName || "挑戰者");
         document.getElementById('op-name').innerText = isMeHost ? (data.guestName || "對手") : data.hostName;
 
-        const vh = document.getElementById('vs-host');
-        const vg = document.getElementById('vs-guest');
-        if(data.hostImg) vh.style.backgroundImage = `url('${data.hostImg}')`;
-        if(data.guestImg) vg.style.backgroundImage = `url('${data.guestImg}')`;
-        if (data.guestId === "AI_BOT") vg.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
+        // ✅ 修正名稱為 hostHero / guestHero 與 HTML 對齊
+        const hostHero = document.getElementById('vs-host');
+        const guestHero = document.getElementById('vs-guest');
+        
+        if(data.hostImg) hostHero.style.backgroundImage = `url('${data.hostImg}')`;
+        if(data.guestImg) guestHero.style.backgroundImage = `url('${data.guestImg}')`;
+        
+        // AI 特殊立繪
+        if (data.guestId === "AI_BOT") guestHero.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
 
-        // 啟動視覺滑入
+        // 啟動動畫
         document.getElementById('battle-arena').classList.add('battle-ready');
 
+        // 更新點點
         const hS = data.hostScores.filter(s => s !== -1);
         const gS = data.guestScores.filter(s => s !== -1);
         myTotalWins = 0; opTotalWins = 0;
@@ -431,7 +437,7 @@
         document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
         document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
       });
-  } // ✅ 括號補回來了！
+  }
 
   function renderDots(wins, isMe) {
     let html = ''; const winClass = isMe ? 'dot-me' : 'dot-op';
