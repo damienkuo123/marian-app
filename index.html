@@ -541,9 +541,19 @@
           const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
           const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
           const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
-          // 🚀 外科手術：受傷震動邏輯
-          const meHero = document.getElementById('hero-me');
-          const opHero = document.getElementById('hero-op');
+
+          // 🚀 外科手術：更精準的震動邏輯 (根據身分)
+          const hostHero = document.getElementById('vs-host');
+          const guestHero = document.getElementById('vs-guest');
+          
+          hostHero.classList.remove('take-damage');
+          guestHero.classList.remove('take-damage');
+
+          if (hS[currentBattleRound] > gS[currentBattleRound]) {
+            guestHero.classList.add('take-damage'); // Host 勝，Guest 震動
+          } else if (gS[currentBattleRound] > hS[currentBattleRound]) {
+            hostHero.classList.add('take-damage'); // Guest 勝，Host 震動
+          }
           
           // 清除舊狀態
           meHero.classList.remove('take-damage');
