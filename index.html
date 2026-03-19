@@ -45,17 +45,30 @@
       margin: 0 auto;
     }
     
-    /* 🌌 戰場背景：暗黑漸層 + 完美適應 Safari */
+    /* 🌌 戰場背景：鎖死高度，完美適應 Safari (使用 dvh 與 safe-area) */
     #battle-arena { 
       position: fixed; top: 0; left: 0; width: 100vw; 
-      /* 關鍵修改：使用 height: 100% 配合 position: fixed，避免 Safari 工具列遮擋 */
-      height: 100%; 
+      height: 100dvh; /* 關鍵：dvh 會自動避開 Safari 底部工具列 */
       background: radial-gradient(circle at 50% 50%, #1c2331 0%, #0b0f19 100%) !important; 
       z-index: 2000; display: none; flex-direction: column; 
       justify-content: space-between; align-items: center; 
-      padding: 2vh 15px; /* 稍微縮小上下 padding */
+      /* 加入蘋果安全區域 (Safe Area) 設定 */
+      padding: max(2vh, env(safe-area-inset-top)) 15px max(2vh, env(safe-area-inset-bottom));
       box-sizing: border-box; 
-      overflow: hidden; /* 防止整個畫面亂滾動 */
+      overflow: hidden; /* 鎖死畫面，絕對不讓它往下滾動 */
+    }
+
+    /* 🛡️ 新增：把分數文字關在固定高度的籠子裡，不准往下擠！ */
+    #battle-info-container {
+      height: 90px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+
+    /* 🎤 科技感錄音按鈕 */
+    #battle-controls { 
+      margin-top: 1vh; 
+      margin-bottom: max(2vh, env(safe-area-inset-bottom)); /* 確保按鈕懸浮在安全區之上 */
+      z-index: 20; 
     }
 
     /* 🎴 實體卡片設計 (自適應縮放) */
@@ -100,13 +113,7 @@
     .stage-zone { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; margin: 1vh 0; }
     #target-word { font-size: 8vw; text-transform: uppercase; letter-spacing: 2px; color: #f1f2f6; text-shadow: 0 0 15px rgba(255,255,255,0.5), 0px 4px 0px #576574; margin: 0; text-align: center; }
     #battle-timer { font-size: 38px; font-weight: 900; color: #f6e58d; text-shadow: 0 0 15px rgba(246, 229, 141, 0.5); min-height: 45px; }
-    
-    /* 🎤 科技感錄音按鈕 (拉開與底部的距離，確保好按) */
-    #battle-controls { 
-      margin-top: 1vh; 
-      margin-bottom: 4vh; /* 增加下方空間，讓它在 Safari 絕對能按到 */
-      z-index: 20; /* 確保按鈕在最上層 */
-    }
+  
     #battle-record-btn {
       width: 75px; height: 75px; border-radius: 50%; font-size: 30px; cursor: pointer;
       background: linear-gradient(145deg, #2d3436, #1e272b);
