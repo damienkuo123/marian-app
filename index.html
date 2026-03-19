@@ -55,6 +55,34 @@
 
     #impact-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; color: white; animation: fadeIn 0.3s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    /* ⚔️ 戰場巨型立繪 CSS */
+    .hero-portrait {
+      position: absolute; bottom: 0; width: 70%; height: 60vh;
+      background-size: contain; background-repeat: no-repeat;
+      z-index: 1; opacity: 0.5; pointer-events: none; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s;
+    }
+    /* 你在左邊，對手在右邊 */
+    #hero-me { left: -15%; background-position: left bottom; transform: translateX(-100%); }
+    #hero-op { right: -15%; background-position: right bottom; transform: translateX(100%) scaleX(-1); } /* 對手鏡像反轉 */
+    
+    /* 進場動畫狀態 */
+    .battle-ready #hero-me { transform: translateX(0); opacity: 0.6; }
+    .battle-ready #hero-op { transform: translateX(0) scaleX(-1); opacity: 0.6; }
+
+    /* 💥 受傷震動效果 */
+    .take-damage { animation: shake 0.5s infinite; filter: sepia(1) saturate(10000%) hue-rotate(-50deg) brightness(1.5) !important; opacity: 1 !important; }
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) scaleX(-1); }
+      20% { transform: translate(-3px, 0px) scaleX(-1); }
+      40% { transform: translate(3px, 2px) scaleX(-1); }
+      60% { transform: translate(-3px, 1px) scaleX(-1); }
+      80% { transform: translate(-1px, -1px) scaleX(-1); }
+      100% { transform: translate(1px, -2px) scaleX(-1); }
+    }
+    
+    /* 確保文字不會被擋住 */
+    .stage-zone { position: relative; z-index: 10; }
+    .arena-p-name, .round-dot { position: relative; z-index: 10; }
   </style>
 </head>
 <body>
@@ -96,6 +124,9 @@
 </div>
 
 <div id="battle-arena">
+  <div id="hero-me" class="hero-portrait"></div>
+  <div id="hero-op" class="hero-portrait"></div>
+
   <div class="arena-section opponent-zone">
     <div style="font-size:12px; color:#aaa; font-weight:bold; letter-spacing:2px;">對手 OPPONENT</div>
     <div id="op-name" class="arena-p-name" style="color:var(--marian-red); text-shadow: 0 0 10px rgba(214,48,49,0.5);">連線中...</div>
@@ -372,6 +403,19 @@
         document.getElementById('my-name').innerText = isMeHost ? data.hostName : (data.guestName || "挑戰者");
         document.getElementById('op-name').innerText = isMeHost ? (data.guestName || "對手") : data.hostName;
 
+        // 🚀 外科手術：載入英雄立繪
+        const meImg = isMeHost ? data.hostImg : data.guestImg;
+        const opImg = isMeHost ? data.guestImg : data.hostImg;
+        
+        if (meImg) document.getElementById('hero-me').style.backgroundImage = `url('${meImg}')`;
+        if (opImg) document.getElementById('hero-op').style.backgroundImage = `url('${opImg}')`;
+        
+        // 如果對手是 AI，給他一張帥氣的預設機器人圖 (可選)
+        if (data.guestId === "AI_BOT") document.getElementById('hero-op').style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
+
+        // 啟動進場滑入動畫
+        document.getElementById('battle-arena').classList.add('battle-ready');
+
         const hS = data.hostScores.filter(s => s !== -1);
         const gS = data.guestScores.filter(s => s !== -1);
 
@@ -480,6 +524,19 @@
           const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
           const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
           const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
+          // 🚀 外科手術：受傷震動邏輯
+          const meHero = document.getElementById('hero-me');
+          const opHero = document.getElementById('hero-op');
+          
+          // 清除舊狀態
+          meHero.classList.remove('take-damage');
+          opHero.classList.remove('take-damage');
+
+          if (myS > opS) {
+            opHero.classList.add('take-damage'); // 你贏這局，對手震動
+          } else if (opS > myS) {
+            meHero.classList.add('take-damage'); // 你輸這局，你震動
+          }
           myTotalWins = 0; opTotalWins = 0;
           for(let i=0; i <= currentBattleRound; i++) {
              if(hS[i] > gS[i]) isMeHost ? myTotalWins++ : opTotalWins++;
