@@ -58,13 +58,24 @@
     /* 🎴 實體卡片設計 (自適應縮放) */
     .arena-section { z-index: 10; width: 100%; display: flex; flex-direction: column; align-items: center; }
     
+    /* 🎴 實體卡片設計 (自適應縮放，變得更大更燃) */
     .card-entity {
-      height: 22vh; min-height: 120px; max-height: 170px; /* 根據螢幕高度自動縮放 */
-      aspect-ratio: 3 / 4; /* 保持卡片完美比例 */
-      background-size: cover; background-position: center; background-repeat: no-repeat;
-      border-radius: 8px; border: 3px solid #576574; 
+      /* 移除原本的 height: 22vh; 改用 width 來撐滿畫面 */
+      width: 42vw; /* 佔據螢幕寬度的 42%，讓雙方卡片夠大 */
+      min-width: 140px; 
+      max-width: 280px; /* 限制最大寬度，避免電腦螢幕上失控 */
+      height: auto; 
+      aspect-ratio: 3 / 4; /* 保持立繪的完美比例 */
+      
+      background-size: cover; 
+      background-position: center top; /* 確保角色的頭部不會被裁掉 */
+      background-repeat: no-repeat;
+      
+      border-radius: 12px; 
+      border: 3px solid #576574; 
       box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.2);
-      position: relative; transition: all 0.3s ease;
+      position: relative; 
+      transition: all 0.3s ease;
       border-image: linear-gradient(135deg, #a4b0be 0%, #2f3640 50%, #a4b0be 100%) 1;
     }
 
@@ -252,7 +263,7 @@
 
 <div id="impact-overlay">
   <div style="font-size:24px; color:#aaa; font-weight:bold; margin-bottom:10px;" id="impact-title">局數結算</div>
-  <h1 id="impact-result" style="font-size:64px; text-shadow:0 0 30px #fff; margin:0; line-height:1.2;">獲勝！</h1>
+  <h1 id="impact-result" style="font-size:64px; text-shadow: 0 4px 15px rgba(0,0,0,0.8), 0 0 5px rgba(0,0,0,0.5); margin:0; line-height:1.2;">獲勝！</h1>
   <div style="font-size:56px; margin:30px 0; font-weight:900; display:flex; align-items:center; justify-content:center; gap:20px;">
     <span id="impact-my-score" style="color:var(--marian-green);">0</span> 
     <span style="font-size:30px; color:#888;">VS</span> 
@@ -760,11 +771,31 @@
   }
 
   function submitBattleScore(roomId, score) {
-    document.getElementById('battle-info').innerText = `得分：${score}，等待對手...`;
-    document.getElementById('battle-controls').style.visibility = 'hidden';
-    fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${score}&t=${new Date().getTime()}`)
-      .then(() => { if(waitOpTimer) clearInterval(waitOpTimer); waitOpTimer = setInterval(() => checkBoth(roomId), 2000); });
-  }
+  // 1. 確保停止 10 秒倒數計時器
+  if (currentLimitTimer) clearInterval(currentLimitTimer);
+  
+  // 2. 清空畫面上卡住的倒數數字
+  document.getElementById('battle-timer').innerText = ""; 
+
+  // 3. 隱藏錄音按鈕
+  document.getElementById('battle-controls').style.visibility = 'hidden';
+
+  // 4. 🌟 燃特效：把分數變超大、變金色，並加上彈跳動畫
+  document.getElementById('battle-info').innerHTML = `
+    <div style="font-size: 4rem; font-weight: 900; color: #FFD700; text-shadow: 0 4px 10px rgba(0,0,0,0.8); animation: pop-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
+      得分：${score}
+    </div>
+    <br>
+    <span style="color:#aaa; font-size: 16px;">等待對手...</span>
+  `;
+
+  // 傳送分數給後端
+  fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${score}&t=${new Date().getTime()}`)
+    .then(() => { 
+      if(waitOpTimer) clearInterval(waitOpTimer); 
+      waitOpTimer = setInterval(() => checkBoth(roomId), 2000); 
+    });
+}
 
   function checkBoth(roomId) {
     if(isChecking) return; isChecking = true;
