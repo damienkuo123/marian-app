@@ -693,13 +693,23 @@
       e.preventDefault(); maxVolume = 0; chunks = [];
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
-      mediaRecorder.start(); battleBtn.classList.add('active');
+      mediaRecorder.start(); 
+      battleBtn.classList.add('active');
+      
+      // 🚀 新增：觸發玩家卡片本體的「魔力爆發」特效！
+      document.getElementById('my-card').classList.add('charging-mana');
+
       const check = () => { if (mediaRecorder && mediaRecorder.state === "recording") { analyser.getByteFrequencyData(dataArray); let v = 0; for(let i=0; i<dataArray.length; i++) v += dataArray[i]; if((v/dataArray.length) > maxVolume) maxVolume = v/dataArray.length; requestAnimationFrame(check); } }; check();
     };
     battleBtn.onpointerup = () => {
       if (roundSubmitted || !mediaRecorder || mediaRecorder.state !== "recording") return;
       roundSubmitted = true; clearInterval(currentLimitTimer);
-      mediaRecorder.stop(); battleBtn.classList.remove('active');
+      mediaRecorder.stop(); 
+      battleBtn.classList.remove('active');
+      
+      // 🚀 新增：解除魔力爆發
+      document.getElementById('my-card').classList.remove('charging-mana');
+
       mediaRecorder.onstop = () => {
         const r = new FileReader(); r.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
         r.onloadend = () => {
@@ -751,6 +761,11 @@
           for(let i=0; i <= currentBattleRound; i++) {
               if(hS[i] > gS[i]) myTotalWins++; else if(gS[i] > hS[i]) opTotalWins++;
           }
+
+          // 🌟 關鍵修復：每次回合結束，正式把燈號更新到畫面上！
+          document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
+          document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
+
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
           
           // 💥 如果是最終勝利，徹底擊碎對手卡片！
