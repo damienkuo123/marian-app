@@ -273,34 +273,59 @@
     }
   }
 
+  // 🛡️ 修復：防止重複觸發與分數亂跳
   const rb = document.getElementById('record-btn');
   if(rb) {
     rb.onpointerdown = (e) => {
-      e.preventDefault(); document.getElementById('feedback').innerHTML = ""; maxVolume = 0; chunks = [];
+      e.preventDefault(); 
+      document.getElementById('feedback').innerHTML = ""; 
+      maxVolume = 0; chunks = [];
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
-      mediaRecorder.start(); rb.classList.add('active');
-      document.getElementById('status').innerText = "正在錄音...";
-      const checkVol = () => { if (mediaRecorder.state === "recording") { analyser.getByteFrequencyData(dataArray); let v = 0; for (let i = 0; i < dataArray.length; i++) v += dataArray[i]; if ((v / dataArray.length) > maxVolume) maxVolume = (v / dataArray.length); requestAnimationFrame(checkVol); } }; checkVol();
-    };
-    rb.onpointerup = () => {
-      if (!mediaRecorder || mediaRecorder.state !== "recording") return;
-      mediaRecorder.stop(); rb.classList.remove('active');
-      if (maxVolume < 30) { document.getElementById('status').innerText = "太小聲了！"; return; }
-      let dots = 0; gradingInterval = setInterval(() => { dots = (dots + 1) % 4; document.getElementById('status').innerText = "老師評分中" + ".".repeat(dots); }, 400);
+      
+      // 🛑 關鍵：在這裡定義 onstop，確保一個 recorder 只會跑一次評分
       mediaRecorder.onstop = () => {
-        const reader = new FileReader(); reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
+        const reader = new FileReader();
+        reader.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
         reader.onloadend = () => {
           const base64 = reader.result.split(',')[1];
           fetch(`${GAS_URL}?action=evaluate_speech&word=${encodeURIComponent(quizData[currentIndex].en)}`, { method: 'POST', body: base64 })
             .then(res => res.json()).then(data => {
-              clearInterval(gradingInterval); scores[currentIndex] = data.score;
-              if(!window.feedbacks) window.feedbacks = []; window.feedbacks[currentIndex] = data.feedback;
+              if (gradingInterval) clearInterval(gradingInterval); // 停止動畫
+              scores[currentIndex] = data.score;
+              if(!window.feedbacks) window.feedbacks = [];
+              window.feedbacks[currentIndex] = data.feedback;
               document.getElementById('feedback').innerHTML = `得分：${data.score}<br><small>${data.feedback}</small>`;
               document.getElementById('status').innerText = "按住錄音，放開打分";
-            }).catch(() => { clearInterval(gradingInterval); document.getElementById('status').innerText = "評分失敗"; });
+            }).catch(() => {
+              if (gradingInterval) clearInterval(gradingInterval);
+              document.getElementById('status').innerText = "評分失敗";
+            });
         };
       };
+
+      mediaRecorder.start(); 
+      rb.classList.add('active');
+      document.getElementById('status').innerText = "正在錄音...";
+      const checkVol = () => { if (mediaRecorder.state === "recording") { analyser.getByteFrequencyData(dataArray); let v = 0; for (let i = 0; i < dataArray.length; i++) v += dataArray[i]; if ((v / dataArray.length) > maxVolume) maxVolume = (v / dataArray.length); requestAnimationFrame(checkVol); } }; checkVol();
+    };
+
+    rb.onpointerup = () => {
+      if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+      mediaRecorder.stop(); 
+      rb.classList.remove('active');
+      
+      if (maxVolume < 30) { 
+        document.getElementById('status').innerText = "太小聲了！"; 
+        return; 
+      }
+      
+      if (gradingInterval) clearInterval(gradingInterval);
+      let dots = 0;
+      gradingInterval = setInterval(() => { 
+        dots = (dots + 1) % 4; 
+        document.getElementById('status').innerText = "老師評分中" + ".".repeat(dots); 
+      }, 400);
     };
   }
 
@@ -316,40 +341,42 @@
     const list = document.getElementById('word-list');
     list.innerHTML = "";
 
+    // 🛡️ 安全巡檢：確保每一題都有正確渲染
     quizData.forEach((item, i) => {
       let s = scores[i] || 0;
       let f = (window.feedbacks && window.feedbacks[i]) ? window.feedbacks[i] : "尚未錄音";
-      sum += s; count++;
-      // 🛡️ 恢復清單中的詳細回饋與顏色
+      sum += s; 
+      count++;
       list.innerHTML += `<tr><td><b style="color:#0d47a1">${item.en}</b><br><span style="color:#7f8c8d; font-size:14px">${item.zh}</span><br><p style="margin:5px 0; font-size:13px; color:#e67e22;">💡 ${f}</p><button class="btn-re" onclick="reRead(${i})">🔄 重唸</button></td><td><span class="score-badge">${s} 分</span></td></tr>`;
     });
 
-    const avg = Math.round(sum / count);
+    const avg = count > 0 ? Math.round(sum / count) : 0;
     document.getElementById('total-avg').innerText = avg;
 
     const submitBtn = document.getElementById('submit-btn');
     const lockMsg = document.getElementById('lock-msg');
     const rewardHint = document.getElementById('reward-hint');
 
+    // 🚀 關鍵解鎖邏輯
     if (MODE === 'review') {
       submitBtn.disabled = false;
       submitBtn.style.backgroundColor = "var(--marian-green)";
       submitBtn.innerText = "完成練習";
-      document.getElementById('score-zone').style.display = "none";
       rewardHint.innerText = "練習模式不計入點數";
-      lockMsg.innerText = "";
     } else {
-      document.getElementById('score-zone').style.display = "block";
+      // 只要平均大於等於 70 就強制開啟按鈕
       if (avg >= 70) {
         submitBtn.disabled = false;
-        submitBtn.style.backgroundColor = "#27ae60"; // 恢復及格綠
+        submitBtn.style.opacity = "1";
+        submitBtn.style.pointerEvents = "auto";
+        submitBtn.style.backgroundColor = "#27ae60"; 
         lockMsg.innerText = "";
         let reward = avg >= 90 ? 50 : (avg >= 80 ? 30 : 10);
-        rewardHint.innerText = `🎁 可獲得：${reward} 點`; // 恢復點數預告
+        rewardHint.innerText = `🎁 可獲得：${reward} 點`;
       } else {
         submitBtn.disabled = true;
-        submitBtn.style.backgroundColor = "#636e72"; // 恢復不及格灰
-        lockMsg.innerText = "❌ 平均需達 70 分才能領獎"; // 恢復警告
+        submitBtn.style.backgroundColor = "#636e72"; 
+        lockMsg.innerText = "❌ 平均需達 70 分才能領獎";
         rewardHint.innerText = "";
       }
     }
