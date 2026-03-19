@@ -25,25 +25,125 @@
     .btn-re { background: var(--marian-red); font-size: 13px; padding: 6px 12px; border-radius: 8px; color: white; border: none; cursor: pointer; font-weight: bold; }
     #zh-display { font-size: 20px; color: #7f8c8d; margin: -10px 0 20px 0; font-weight: bold; }
 
-      /* ⚔️ 史詩戰場最終校正：確保層級與隱藏 */
-    #battle-arena { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle, #1a2a3a 0%, #000 100%) !important; z-index: 2000; color: white; display: none; overflow: hidden; flex-direction: column; justify-content: space-between; padding: 4vh 15px; box-sizing: border-box; }
+     /* 1. 合併後的變數區 */
+    :root { 
+      --primary-blue: #0066cc; 
+      --marian-yellow: #ff9900; 
+      --marian-red: #d63031; 
+      --marian-green: #27ae60; 
+      --dark-gray: #2d3436;
+      --cyan-energy: #00f2fe;
+      --red-energy: #ff0844;
+      --gold-glory: #f9d423;
+      --glass: rgba(255, 255, 255, 0.1);
+      --metal-border: linear-gradient(135deg, #a8adad 0%, #4e5452 50%, #a8adad 100%);
+    }
     
-    .vs-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-    .vs-hero { position: absolute; width: 85%; height: 60vh; background-size: contain; background-repeat: no-repeat; transition: 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0; }
-    #vs-host { bottom: -2vh; left: -10%; background-position: left bottom; transform: translateX(-120%); }
-    #vs-guest { top: calc(38% - 55vh); right: -10%; background-position: right bottom; transform: translateX(120%); }
-    .battle-ready #vs-host, .battle-ready #vs-guest { transform: translateX(0); opacity: 0.6; }
-  
-    /* 🛑 結算大門樣式：預設隱藏，有 .active 才出現 */
-  #impact-overlay { 
-    display: none; 
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-    background: rgba(0,0,0,0.9); z-index: 9999; 
-    flex-direction: column; justify-content: center; align-items: center; color: white; 
-  }
-  #impact-overlay.active { 
-    display: flex; 
-  }
+    /* 2. 更新結算畫面樣式：改為磨砂玻璃感 */
+    #impact-overlay { 
+      display: none; 
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+      background: rgba(0,0,0,0.85); 
+      backdrop-filter: blur(15px); /* 磨砂玻璃關鍵 */
+      z-index: 9999; 
+      flex-direction: column; justify-content: center; align-items: center; color: white; 
+    }
+    #impact-overlay.active { display: flex; }
+    
+    /* 🌙 暗色質感背景 */
+    #battle-arena {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at center, #1a1a2e 0%, #020205 100%);
+      display: none; flex-direction: column; overflow: hidden;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    /* 🌌 微光電路底紋 */
+    #battle-arena::before {
+      content: ""; position: absolute; width: 200%; height: 200%;
+      background-image: 
+        radial-gradient(var(--cyan-energy) 1px, transparent 0),
+        linear-gradient(90deg, rgba(0,242,254,0.03) 1px, transparent 0),
+        linear-gradient(rgba(0,242,254,0.03) 1px, transparent 0);
+      background-size: 40px 40px, 80px 80px, 80px 80px;
+      opacity: 0.2; animation: bgMove 60s linear infinite;
+    }
+    
+    @keyframes bgMove { from { transform: translate(-25%, -25%); } to { transform: translate(0, 0); } }
+    
+    /* 🃏 實體卡片樣式 */
+    .card-physical {
+      width: 180px; height: 260px;
+      border: 4px solid; border-image: var(--metal-border) 1;
+      background-size: cover; background-position: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.1);
+      border-radius: 8px; position: relative; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 5;
+    }
+    
+    /* 🟢 玩家能量流 (Mana) */
+    .mana-gathering {
+      box-shadow: 0 0 30px var(--cyan-energy);
+      border-color: var(--cyan-energy) !important;
+      animation: tremor 0.1s infinite;
+    }
+    
+    @keyframes tremor {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      50% { transform: translate(-1px, -1px) rotate(0.5deg); }
+      100% { transform: translate(1px, -1px) rotate(-0.5deg); }
+    }
+    
+    /* 💎 晶亮質感 Dots */
+    .round-dot {
+      width: 12px; height: 12px; background: rgba(255,255,255,0.1);
+      transform: rotate(45deg); border: 1px solid rgba(255,255,255,0.3);
+      transition: all 0.5s;
+    }
+    .dot-me.active {
+      background: var(--cyan-energy); box-shadow: 0 0 15px var(--cyan-energy);
+      transform: rotate(45deg) scale(1.2); border: none;
+    }
+    .dot-op.active {
+      background: var(--red-energy); box-shadow: 0 0 15px var(--red-energy);
+    }
+    
+    /* 💥 能量碰撞粒子 */
+    .mana-ball {
+      position: absolute; width: 40px; height: 40px; border-radius: 50%;
+      filter: blur(5px); z-index: 99; transition: transform 0.8s ease-in;
+    }
+    
+    /* 🟥 受擊震動與閃紅 */
+    .take-damage { animation: shakeDamage 0.5s bold; filter: brightness(1.5) sepia(1) saturate(5) hue-rotate(-50deg); }
+    @keyframes shakeDamage {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-15px); }
+      40%, 80% { transform: translateX(15px); }
+    }
+    
+    /* 🎇 碎裂消失 */
+    .shatter {
+      animation: shatterOut 0.8s forwards;
+    }
+    @keyframes shatterOut {
+      0% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+      100% { opacity: 0; transform: scale(1.2); clip-path: polygon(10% 10%, 30% 0, 50% 20%, 100% 10%, 80% 60%, 100% 100%, 50% 80%, 0 100%, 20% 50%); }
+    }
+    
+    /* 🔘 科技感錄音鈕 */
+    #battle-record-btn {
+      width: 90px; height: 90px; background: var(--glass);
+      border: 3px solid var(--metal-border); border-radius: 50%;
+      backdrop-filter: blur(10px); color: white; font-size: 30px;
+      cursor: pointer; position: relative;
+    }
+    #battle-record-btn.active::after {
+      content: ""; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
+      border: 2px solid var(--cyan-energy); border-radius: 50%;
+      animation: ringRotate 1s linear infinite;
+    }
+    @keyframes ringRotate { from { transform: rotate(0deg); opacity: 1; } to { transform: rotate(360deg); opacity: 0.5; } }
   </style>
 </head>
 <body>
@@ -94,30 +194,26 @@
 </div>
 
 <div id="battle-arena">
-  <div class="vs-container">
-    <div id="vs-host" class="vs-hero"></div>
-    <div class="vs-mid">VS</div>
-    <div id="vs-guest" class="vs-hero"></div>
-  </div>
-  <div id="arena-divide-line"></div>
-
-  <div class="arena-section opponent-zone">
-    <div style="font-size:12px; color:#aaa; font-weight:bold; letter-spacing:2px;">對手 OPPONENT</div>
-    <div id="op-name" class="arena-p-name" style="color:var(--marian-red);">連線中...</div>
-    <div id="op-rounds" style="display:flex; justify-content:center; gap:8px;"></div>
+  <div class="arena-section opponent-zone" style="margin-top: 5vh; flex-direction: column; align-items: center; display: flex;">
+    <div id="op-rounds" style="display:flex; gap:12px; margin-bottom: 15px;"></div>
+    <div id="vs-guest" class="card-physical"></div>
+    <div id="op-name" style="margin-top: 10px; font-weight: bold; letter-spacing: 1px; color: var(--red-energy);">OPPONENT</div>
   </div>
 
-  <div class="arena-section stage-zone">
-    <div id="round-num" style="color:#aaa; font-size: 14px; font-weight:bold;">第 1 局 / 先得 5 分獲勝</div>
-    <h1 id="target-word" style="font-size:11vw; margin:10px 0; text-shadow: 0 0 20px #000;">準備中...</h1>
-    <div id="battle-timer" style="font-size:15vw; font-weight:900; color:var(--gold); min-height:80px;">60</div>
-    <p id="battle-info" style="color:#888;">正在等待雙方就緒...</p>
+  <div class="arena-section stage-zone" style="position: relative; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+    <div id="round-num" style="color: rgba(255,255,255,0.4); font-size: 14px; margin-bottom: 20px;">ROUND 1</div>
+    <h1 id="target-word" style="font-size: 48px; color: white; text-shadow: 0 0 20px rgba(255,255,255,0.5); z-index: 10;">READY?</h1>
+    <div id="battle-timer" style="font-size: 60px; font-weight: 900; color: var(--gold-glory); position: absolute;"></div>
+    
+    <div id="mana-anchor" style="position: absolute; width: 100%; height: 100%; pointer-events: none;"></div>
   </div>
 
-  <div class="arena-section player-zone">
-    <div id="my-rounds" style="display:flex; justify-content:center; gap:8px; margin-bottom:5px;"></div>
-    <div id="my-name" class="arena-p-name" style="color:var(--marian-green);">YOU</div>
-    <div id="battle-controls">
+  <div class="arena-section player-zone" style="margin-bottom: 5vh; flex-direction: column; align-items: center; display: flex;">
+    <div id="my-name" style="margin-bottom: 10px; font-weight: bold; letter-spacing: 1px; color: var(--cyan-energy);">YOU</div>
+    <div id="vs-host" class="card-physical"></div>
+    <div id="my-rounds" style="display:flex; gap:12px; margin-top: 15px;"></div>
+    
+    <div id="battle-controls" style="margin-top: 20px;">
       <button id="battle-record-btn" oncontextmenu="return false;">🎤</button>
     </div>
   </div>
@@ -194,6 +290,21 @@
       await originalOnload();
     }
   };
+  
+  // 確保對戰錄音按鈕具備 Mana 粒子集結感
+const battleBtnElem = document.getElementById('battle-record-btn');
+if(battleBtnElem) {
+  battleBtnElem.addEventListener('pointerdown', () => {
+    // 玩家卡片發光 + 顫動
+    document.getElementById('vs-host').classList.add('mana-gathering');
+  });
+  
+  battleBtnElem.addEventListener('pointerup', () => {
+    // 釋放能量
+    document.getElementById('vs-host').classList.remove('mana-gathering');
+  });
+}
+  
   // 🛡️ 補齊缺失器官：對戰傳送門與圖片加載邏輯
   function showPortal() {
     const portal = document.getElementById('battle-portal-overlay');
@@ -522,11 +633,67 @@
       });
   }
 
-  function renderDots(wins, isMe) {
-    let html = ''; const winClass = isMe ? 'dot-me' : 'dot-op';
-    for(let i=0; i<5; i++) { html += `<div class="round-dot ${i < wins ? winClass : ''}"></div>`; } 
-    return html;
+  // 修改 renderDots 函數
+function renderDots(wins, isMe) {
+  let html = '';
+  for(let i=0; i<5; i++) {
+    const activeClass = i < wins ? 'active' : '';
+    html += `<div class="round-dot ${isMe ? 'dot-me' : 'dot-op'} ${activeClass}"></div>`;
   }
+  return html;
+}
+
+// 錄音時加入能量聚集特效
+const battleBtn = document.getElementById('battle-record-btn');
+battleBtn.addEventListener('pointerdown', () => {
+  document.getElementById('vs-host').classList.add('mana-gathering');
+});
+battleBtn.addEventListener('pointerup', () => {
+  document.getElementById('vs-host').classList.remove('mana-gathering');
+});
+
+// 新增碰撞動畫函數
+function playCollision(myScore, opScore, callback) {
+  const anchor = document.getElementById('mana-anchor');
+  const target = document.getElementById('target-word').getBoundingClientRect();
+  
+  // 建立玩家能量球
+  const myBall = document.createElement('div');
+  myBall.className = 'mana-ball';
+  myBall.style.background = 'var(--cyan-energy)';
+  myBall.style.bottom = '10%'; myBall.style.left = '45%';
+  anchor.appendChild(myBall);
+
+  // 建立對手能量球
+  const opBall = document.createElement('div');
+  opBall.className = 'mana-ball';
+  opBall.style.background = 'var(--red-energy)';
+  opBall.style.top = '10%'; opBall.style.left = '45%';
+  anchor.appendChild(opBall);
+
+  // 動畫衝向中間
+  setTimeout(() => {
+    myBall.style.transform = `translateY(-${window.innerHeight/2.5}px) scale(1.5)`;
+    opBall.style.transform = `translateY(${window.innerHeight/2.5}px) scale(1.5)`;
+  }, 100);
+
+  // 碰撞瞬間
+  setTimeout(() => {
+    anchor.innerHTML = ""; // 清除球
+    // 如果我贏了
+    if (myScore > opScore) {
+       document.getElementById('vs-guest').classList.add('take-damage');
+       setTimeout(() => document.getElementById('vs-guest').classList.remove('take-damage'), 600);
+    } else if (opScore > myScore) {
+       document.getElementById('vs-host').classList.add('take-damage');
+       setTimeout(() => document.getElementById('vs-host').classList.remove('take-damage'), 600);
+    }
+    if(callback) callback();
+  }, 900);
+}
+
+// 在 checkBoth 判斷完分數後呼叫：
+// playCollision(myS, opS, () => { showImpactOverlay(myS, opS, isFinal); });
 
   function startRoundCountdown(roomId) {
     if(readyTimer) clearInterval(readyTimer);
@@ -606,54 +773,61 @@
   }
 
   function checkBoth(roomId) {
-    if(isChecking) return; isChecking = true;
-    fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
-      .then(res => res.json()).then(data => {
-        const hS = data.hostScores.filter(s => s !== -1);
-        const gS = data.guestScores.filter(s => s !== -1);
+  if (isChecking) return; 
+  isChecking = true;
+  
+  fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
+    .then(res => res.json()).then(data => {
+      const hS = data.hostScores.filter(s => s !== -1);
+      const gS = data.guestScores.filter(s => s !== -1);
 
-        if (hS.length > currentBattleRound && gS.length > currentBattleRound) {
-          clearInterval(waitOpTimer);
-          
-          // 1. 判斷勝負並顯示畫面
-          const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
-          const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
-          const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
-          
-          // 震動特效
-          if (myS > opS) document.getElementById('vs-guest').classList.add('take-damage');
-          else if (opS > myS) document.getElementById('vs-host').classList.add('take-damage');
-
-          // 計算總局數勝負
+      // 當雙方這一局的分數都出來了
+      if (hS.length > currentBattleRound && gS.length > currentBattleRound) {
+        clearInterval(waitOpTimer);
+        
+        const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
+        const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
+        const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
+        
+        // 1. 先執行「碰撞動畫」
+        playCollision(myS, opS, () => {
+          // 2. 碰撞完後，計算總體勝負進度
           myTotalWins = 0; opTotalWins = 0;
           for(let i=0; i <= currentBattleRound; i++) {
-              if(hS[i] > gS[i]) myTotalWins++; else if(gS[i] > hS[i]) opTotalWins++;
+              if(hS[i] > gS[i]) isMeHost ? myTotalWins++ : opTotalWins++; 
+              else if(gS[i] > hS[i]) isMeHost ? opTotalWins++ : myTotalWins++;
           }
+          
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
           
+          // 3. 顯示單局/最終結算文字
           showImpactOverlay(myS, opS, isFinal);
 
-          // 🚀 核心修正：3.5 秒後準時「撤掉」獲勝畫面並進入下一題
+          // 4. 如果是最終結局，執行碎裂動畫
+          if (isFinal) {
+            if (myTotalWins >= 5) {
+               document.getElementById('vs-guest').classList.add('shatter');
+            } else {
+               document.getElementById('vs-host').classList.add('shatter');
+            }
+          }
+
+          // 5. 停留 3.5 秒後進入下一局或結束
           setTimeout(() => {
-            // 關鍵：使用 classList 移除畫面
-            document.getElementById('impact-overlay').classList.remove('active'); 
-            
-            // 移除震動特效
-            document.getElementById('vs-host').classList.remove('take-damage');
-            document.getElementById('vs-guest').classList.remove('take-damage');
-            
-            if (isFinal) { 
-              window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; 
-            } else { 
-              // 跳下一題
-              currentBattleRound++; 
-              startRoundCountdown(roomId); 
+            document.getElementById('impact-overlay').classList.remove('active');
+            if (isFinal) {
+              window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
+            } else {
+              currentBattleRound++;
+              updateArenaUI(roomId); // 更新點點亮度
+              startRoundCountdown(roomId);
             }
           }, 3500);
-        }
-        isChecking = false;
-      }).catch(() => isChecking = false);
-  }
+        });
+      }
+      isChecking = false;
+    }).catch(() => isChecking = false);
+}
 
   function showImpactOverlay(myNum, opNum, isFinal) {
     const o = document.getElementById('impact-overlay');
