@@ -135,7 +135,21 @@
     .ultimate-word { color: #f1c40f !important; text-shadow: 0 0 20px #f1c40f, 0 0 40px #f1c40f !important; animation: word-pulse 0.5s infinite alternate; }
     .ultimate-record-btn { background: linear-gradient(145deg, #e67e22, #f39c12) !important; border: 4px solid #fff !important; box-shadow: 0 0 30px #f1c40f, inset 0 0 15px #f1c40f !important; }
     
-    /* 💥 雙重金色光球 */
+    /* 💬 大招文字浮出框 */
+    #skill-popup {
+      position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 28px; font-weight: 900; z-index: 3000; white-space: nowrap;
+      pointer-events: none; opacity: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    }
+    .popup-anim { animation: skillPop 2s forwards; }
+    @keyframes skillPop {
+      0% { opacity: 0; transform: translate(-50%, 0px) scale(0.5); }
+      15% { opacity: 1; transform: translate(-50%, -30px) scale(1.2); }
+      80% { opacity: 1; transform: translate(-50%, -30px) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -60px) scale(0.8); }
+    }
+
+    /* 💥 雙重金色光球 (大招成功專用：一前一後發射) */
     .blast-ultimate::before, .blast-ultimate::after {
       content: ''; position: absolute; top: 50%; left: 50%; width: 90px; height: 90px;
       background: radial-gradient(circle, #fff 0%, #f1c40f 40%, transparent 80%);
@@ -157,6 +171,10 @@
     /* 🌟 攻擊蓄力與射擊特效 */
     .cast-me { animation: magic-cast-me 0.8s ease-out forwards; }
     @keyframes magic-cast-me { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; } 40% { transform: scale(1.05); filter: brightness(1.8) drop-shadow(0 0 40px #0fb9b1); z-index: 10; } }
+
+    /* 🌟 大招專屬：發射前金色蓄力 */
+    .cast-me-ult { animation: magic-cast-ult 0.8s ease-out forwards; }
+    @keyframes magic-cast-ult { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; } 40% { transform: scale(1.05); filter: brightness(2) drop-shadow(0 0 40px #f1c40f); z-index: 10; } }
 
     .cast-op { animation: magic-cast-op 0.8s ease-out forwards; }
     @keyframes magic-cast-op { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; } 40% { transform: scale(1.05); filter: brightness(1.8) drop-shadow(0 0 40px #eb3b5a); z-index: 10; } }
@@ -270,6 +288,8 @@
 </div>
 
 <div id="battle-arena">
+  <div id="skill-popup"></div>
+  
   <div class="arena-section opponent-zone">
     <div id="op-card" class="card-entity"></div>
     <div class="glass-panel">
@@ -823,10 +843,16 @@
     const bBtn = document.getElementById('battle-record-btn');
     if(bBtn) bBtn.classList.remove('active', 'ult-active');
 
+    // 🚀 在這裡將大招分數偽裝送出 (加 1000)
+    let finalScore = score;
+    if (isUltimateMode) {
+        finalScore = score + 1000;
+    }
+
     document.getElementById('battle-timer').innerHTML = `<span class="neon-score">得分：${score}</span>`;
     document.getElementById('battle-info').innerText = "等待對手...";
 
-    fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${score}&t=${new Date().getTime()}`)
+    fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${finalScore}&t=${new Date().getTime()}`)
       .then(() => { 
         if(waitOpTimer) clearInterval(waitOpTimer); 
         waitOpTimer = setInterval(() => checkBoth(roomId), 2000); 
@@ -842,12 +868,24 @@
     if(damageLevel >= 4) cardElement.classList.add('dmg-4');
   }
 
-  function triggerBattleAnimations(myNum, opNum, isFinal, myTotalWins, opTotalWins) {
+  // 🚀 文字彈窗產生器
+  function showSkillPopup(text, color) {
+      const popup = document.getElementById('skill-popup');
+      if(!popup) return;
+      popup.innerText = text;
+      popup.style.color = color;
+      popup.style.textShadow = `0 4px 10px rgba(0,0,0,0.8), 0 0 20px ${color}`;
+      popup.classList.remove('popup-anim');
+      void popup.offsetWidth; // 觸發重繪
+      popup.classList.add('popup-anim');
+  }
+
+  function triggerBattleAnimations(myNum, opNum, isFinal, myTotalWins, opTotalWins, isMyUlt) {
     const myCard = document.getElementById('my-card'); 
     const opCard = document.getElementById('op-card');
     const arenaBg = document.getElementById('battle-arena');
 
-    const animations = ['cast-me', 'cast-op', 'blast-up', 'blast-down', 'blast-ultimate', 'loser-shatter', 'take-damage', 'screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold', 'winner-glory'];
+    const animations = ['cast-me', 'cast-me-ult', 'cast-op', 'blast-up', 'blast-down', 'blast-ultimate', 'loser-shatter', 'take-damage', 'screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold', 'winner-glory'];
     if(myCard) myCard.classList.remove(...animations); 
     if(opCard) opCard.classList.remove(...animations);
     if(arenaBg) arenaBg.classList.remove('screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold');
@@ -856,9 +894,10 @@
 
     if (myNum > opNum) { 
       if(myCard) {
-        if (isUltimateMode) {
-            myCard.classList.add('cast-me', 'blast-ultimate'); 
+        if (isMyUlt) {
+            myCard.classList.add('cast-me-ult', 'blast-ultimate'); 
             if(arenaBg) arenaBg.classList.add('screen-flash-gold');
+            showSkillPopup("👊 技能重擊 +2 燈！", "#f1c40f");
         } else {
             myCard.classList.add('cast-me', 'blast-up'); 
             if(arenaBg) arenaBg.classList.add('screen-flash-cyan'); 
@@ -868,12 +907,21 @@
       if(opCard) opCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage'); 
     }
     else if (myNum < opNum) { 
+      if (isMyUlt) {
+          showSkillPopup("❌ 技能被打斷...", "#e74c3c");
+      }
       if(opCard) {
         opCard.classList.add('cast-op', 'blast-down'); 
         if(isFinal) setTimeout(() => opCard.classList.add('winner-glory'), 800);
       }
       if(myCard) myCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage');
       if(arenaBg) arenaBg.classList.add('screen-flash-red'); 
+    }
+    else {
+      // 平手時的判定
+      if (isMyUlt) {
+          showSkillPopup("⚠️ 技能被抵銷 (平手)", "#f39c12");
+      }
     }
 
     updateCardDamage(myCard, opTotalWins);
@@ -895,12 +943,34 @@
           clearInterval(waitOpTimer);
           
           const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
-          const myS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
-          const opS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
+          const rawMyS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
+          const rawOpS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
+
+          // 🚀 關鍵解碼：還原被加上 1000 分的大招分數
+          const myUltThisRound = rawMyS > 500;
+          const opUltThisRound = rawOpS > 500;
+
+          const myS = myUltThisRound ? rawMyS - 1000 : rawMyS;
+          const opS = opUltThisRound ? rawOpS - 1000 : rawOpS;
         
           myTotalWins = 0; opTotalWins = 0;
+          
+          // 重新計算勝負，大招成功者該局獲得 2 勝
           for(let i=0; i <= currentBattleRound; i++) {
-              if(hS[i] > gS[i]) myTotalWins++; else if(gS[i] > hS[i]) opTotalWins++;
+              let rawM = isMeHost ? hS[i] : gS[i];
+              let rawO = isMeHost ? gS[i] : hS[i];
+              
+              let isMU = rawM > 500;
+              let isOU = rawO > 500;
+              
+              let finalM = isMU ? rawM - 1000 : rawM;
+              let finalO = isOU ? rawO - 1000 : rawO;
+
+              if(finalM > finalO) {
+                  myTotalWins += (isMU ? 2 : 1);
+              } else if(finalO > finalM) {
+                  opTotalWins += (isOU ? 2 : 1);
+              }
           }
 
           document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
@@ -908,7 +978,7 @@
 
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
         
-          triggerBattleAnimations(myS, opS, isFinal, myTotalWins, opTotalWins);
+          triggerBattleAnimations(myS, opS, isFinal, myTotalWins, opTotalWins, myUltThisRound);
         
           setTimeout(() => {
               document.getElementById('impact-overlay').classList.remove('active'); 
