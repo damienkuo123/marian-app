@@ -25,30 +25,21 @@
     .btn-re { background: var(--marian-red); font-size: 13px; padding: 6px 12px; border-radius: 8px; color: white; border: none; cursor: pointer; font-weight: bold; }
     #zh-display { font-size: 20px; color: #7f8c8d; margin: -10px 0 20px 0; font-weight: bold; }
 
-    /* 🛡️ 傳送門彈窗 (修正偏左上角問題) */
+    /* 🛡️ 傳送門彈窗 */
     #battle-portal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.95); /* 極深色背景 */
-      z-index: 9999; 
-      /* display: none; 先保留 inline style 的控制 */
-      flex-direction: column;
-      align-items: center; 
-      justify-content: center; /* 垂直置中 */
-      backdrop-filter: blur(10px);
+      background: rgba(0, 0, 0, 0.95); z-index: 9999; flex-direction: column;
+      align-items: center; justify-content: center; backdrop-filter: blur(10px);
     }
-    
     .portal-box {
       width: 85%; max-width: 320px; text-align: center; color: white;
       padding: 30px; border: 2px solid var(--gold); border-radius: 30px;
-      box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-      /* 確保內容置中 */
-      margin: 0 auto;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); margin: 0 auto;
     }
-    
-    /* 🌌 戰場背景：鎖死高度，完美適應 Safari (使用 dvh 與 safe-area) */
+
+    /* 🌌 戰場背景：鎖死高度，完美適應 Safari */
     #battle-arena { 
-      position: fixed; top: 0; left: 0; width: 100vw; 
-      height: 100dvh; /* 關鍵：dvh 會自動避開 Safari 底部工具列 */
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; 
       background: radial-gradient(circle at 50% 50%, #1c2331 0%, #0b0f19 100%) !important; 
       z-index: 2000; display: none; flex-direction: column; 
       justify-content: space-between; align-items: center; 
@@ -56,24 +47,19 @@
       box-sizing: border-box; overflow: hidden; 
     }
 
-    /* 🛡️ 新增：把分數文字關在固定高度的籠子裡，不准往下擠！ */
-    #battle-info-container {
-      height: 90px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-    }
+    #battle-info-container { height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
     /* 🚀 修復錄音與技能按鈕佈局 (採用 Flex 垂直置中排列) */
     .player-zone { position: relative; padding-bottom: 120px; width: 100%; display: flex; flex-direction: column; align-items: center; }
     
     #battle-controls { 
-      position: absolute; bottom: 10px; left: 0; right: 0; 
+      position: absolute; bottom: 10px; left: 0; right: 0; width: 100%;
       display: flex; flex-direction: column; align-items: center; justify-content: flex-end; 
-      z-index: 50; visibility: hidden; 
+      z-index: 50; visibility: hidden; gap: 15px; 
     }
 
-    /* 👊 技能重擊按鈕 (浮在錄音上方) */
+    /* 👊 技能重擊按鈕 */
     #skill-btn {
-      margin-bottom: 15px; /* 與麥克風保持距離 */
       background: linear-gradient(135deg, #f39c12, #e74c3c); color: white; 
       border: 2px solid #f1c40f; border-radius: 20px;
       padding: 8px 25px; font-size: 16px; font-weight: 900; 
@@ -91,14 +77,25 @@
       display: flex; justify-content: center; align-items: center; flex-shrink: 0;
     }
     
-    /* 按鈕發光特效 */
     #battle-record-btn.active { transform: scale(0.9); animation: manaCharge 0.5s infinite alternate; border-color: #26de81; }
     @keyframes manaCharge { 0% { box-shadow: 0 0 10px #0fb9b1, 0 0 20px #0fb9b1; } 100% { box-shadow: 0 0 30px #26de81, 0 0 60px #26de81; } }
     
     #battle-record-btn.ult-active { transform: scale(0.9); animation: ultManaCharge 0.5s infinite alternate; border-color: #fff; }
     @keyframes ultManaCharge { 0% { box-shadow: 0 0 20px #f1c40f, 0 0 30px #f1c40f; } 100% { box-shadow: 0 0 50px #f39c12, 0 0 80px #fff; } }
 
-    /* 🌟 一般錄音：卡片本體爆發 (青藍色) - 拔除 @keyframes 內的 !important 解決失效 Bug */
+    /* 🎴 實體卡片設計 */
+    .arena-section { z-index: 10; width: 100%; display: flex; flex-direction: column; align-items: center; }
+    .card-entity {
+      height: 17vh; min-height: 100px; max-height: 150px; 
+      aspect-ratio: 16 / 9; width: auto; max-width: 95vw; 
+      background-size: cover; background-position: center center; background-repeat: no-repeat;
+      border-radius: 12px; border: 3px solid #576574; 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.2);
+      position: relative; z-index: 5; transition: all 0.4s ease;
+      overflow: hidden; 
+    }
+
+    /* 🌟 一般錄音：卡片本體爆發 (青藍色) */
     .card-entity.charging-mana { border-color: #0fb9b1 !important; animation: cardChargePulse 0.5s infinite alternate; z-index: 25; }
     @keyframes cardChargePulse {
       0% { box-shadow: 0 0 15px #0fb9b1, inset 0 0 15px #0fb9b1; transform: translateY(0px); }
@@ -112,128 +109,95 @@
       100% { box-shadow: 0 0 60px #f39c12, 0 0 80px #fff, inset 0 0 40px #f39c12; transform: translateY(-5px); }
     }
 
+    /* 磨砂玻璃資訊面板 */
+    .glass-panel {
+      background: rgba(30, 39, 46, 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+      padding: 8px 20px; margin-top: -20px; 
+      position: relative; z-index: 20; display: flex; flex-direction: column; align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 80%; max-width: 400px; 
+    }
+
+    /* 點點與文字區 */
+    .rounds-container { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+    .round-dot { width: 14px; height: 14px; border-radius: 50%; background: #2f3542; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); border: 1px solid #57606f; transition: 0.3s; }
+    .dot-me { background: #0fb9b1; box-shadow: 0 0 15px #0fb9b1, inset 0 0 5px #fff; border-color: #fff; } 
+    .dot-op { background: #eb3b5a; box-shadow: 0 0 15px #eb3b5a, inset 0 0 5px #fff; border-color: #fff; } 
+
+    /* ⚔️ 中間交戰區 */
+    .stage-zone { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; margin: 1vh 0; max-height: 35vh; }
+    #target-word { font-size: 8vw; text-transform: uppercase; letter-spacing: 2px; color: #f1f2f6; text-shadow: 0 0 15px rgba(255,255,255,0.5), 0px 4px 0px #576574; margin: 0 0 5px 0; text-align: center; transition: 0.3s; }
+    #battle-timer-container { height: 55px; display: flex; justify-content: center; align-items: center; }
+    #battle-timer { font-size: 38px; font-weight: 900; color: #f6e58d; text-shadow: 0 0 15px rgba(246, 229, 141, 0.5); margin: 0; min-height: 45px; }
+
     /* 🌈 大招狀態的視覺統整 */
     .ultimate-mode-bg { background: radial-gradient(circle at 50% 50%, #4a3600 0%, #0b0f19 100%) !important; }
     .ultimate-word { color: #f1c40f !important; text-shadow: 0 0 20px #f1c40f, 0 0 40px #f1c40f !important; animation: word-pulse 0.5s infinite alternate; }
     .ultimate-record-btn { background: linear-gradient(145deg, #e67e22, #f39c12) !important; border: 4px solid #fff !important; box-shadow: 0 0 30px #f1c40f, inset 0 0 15px #f1c40f !important; }
     
-    /* 💥 雙重金色光球 (大招成功專用：一前一後發射) */
+    /* 💥 雙重金色光球 */
     .blast-ultimate::before, .blast-ultimate::after {
       content: ''; position: absolute; top: 50%; left: 50%; width: 90px; height: 90px;
       background: radial-gradient(circle, #fff 0%, #f1c40f 40%, transparent 80%);
       border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 1; z-index: 100; pointer-events: none;
     }
     .blast-ultimate::before { animation: blast-upward 0.4s 0.2s ease-in forwards; }
-    .blast-ultimate::after { animation: blast-upward 0.4s 0.4s ease-in forwards; } /* 第二顆延遲0.2s射出 */
+    .blast-ultimate::after { animation: blast-upward 0.4s 0.4s ease-in forwards; } 
     
     .screen-flash-gold { animation: flashGold 0.6s 0.8s 2; }
     @keyframes flashGold { 0%, 100% { box-shadow: inset 0 0 0 transparent; } 50% { box-shadow: inset 0 0 150px rgba(241, 196, 15, 0.9); } }
-    
-    .ultimate-record-btn {
-      background: linear-gradient(145deg, #e67e22, #f39c12) !important;
-      border: 4px solid #fff !important;
-      box-shadow: 0 0 30px #f1c40f, inset 0 0 15px #f1c40f !important;
-    }
 
-    /* 大招錄音時的黃金卡片發光 */
-    .ultimate-charging { animation: ultCardCharge 0.5s infinite alternate !important; outline: none !important; }
-    @keyframes ultCardCharge {
-      0% { box-shadow: 0 0 20px #f1c40f, inset 0 0 20px #f1c40f !important; border-color: #f1c40f !important; transform: translateY(0px); }
-      100% { box-shadow: 0 0 60px #f39c12, 0 0 80px #fff, inset 0 0 40px #f39c12 !important; border-color: #fff !important; transform: translateY(-5px); }
-    }
-
-    /* 💎 螢光得分字體 (用來取代原本的倒數計時) */
     .neon-score {
-      font-size: 38px;
-      font-weight: 900;
-      color: #0fb9b1;
+      font-size: 38px; font-weight: 900; color: #0fb9b1;
       text-shadow: 0 0 10px rgba(15, 185, 177, 0.8), 0 0 20px rgba(15, 185, 177, 0.5), 0 0 30px #fff;
-      animation: pop-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-      display: inline-block;
-      margin: 0;
+      animation: pop-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; display: inline-block; margin: 0;
     }
     @keyframes pop-up { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-    /* 🛡️ 鎖死中央區域高度，倒數與分數共用同一個籠子 */
-    #battle-timer-container {
-      height: 55px; /* 固定高度，切換文字時絕不推擠版面 */
-      display: flex; justify-content: center; align-items: center;
-    }
-    #battle-timer { margin: 0; } 
-
-    /* 🌟 我方攻擊：青藍色蓄力 */
+    /* 🌟 攻擊蓄力與射擊特效 */
     .cast-me { animation: magic-cast-me 0.8s ease-out forwards; }
-    @keyframes magic-cast-me {
-      0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; }
-      40% { transform: scale(1.05); filter: brightness(1.8) drop-shadow(0 0 40px #0fb9b1); z-index: 10; }
-    }
+    @keyframes magic-cast-me { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; } 40% { transform: scale(1.05); filter: brightness(1.8) drop-shadow(0 0 40px #0fb9b1); z-index: 10; } }
 
-    /* 🌟 對手攻擊：紅色蓄力 */
     .cast-op { animation: magic-cast-op 0.8s ease-out forwards; }
-    @keyframes magic-cast-op {
-      0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; }
-      40% { transform: scale(1.05); filter: brightness(1.8) drop-shadow(0 0 40px #eb3b5a); z-index: 10; }
-    }
+    @keyframes magic-cast-op { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; } 40% { transform: scale(1.05); filter: brightness(1.8) drop-shadow(0 0 40px #eb3b5a); z-index: 10; } }
 
-    /* 💥 向上射擊 (我方贏 / 青藍光球) */
     .blast-up::after {
       content: ''; position: absolute; top: 50%; left: 50%; width: 90px; height: 90px;
       background: radial-gradient(circle, #fff 0%, #0fb9b1 40%, transparent 80%);
       border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 1; z-index: 100; pointer-events: none;
-      animation: blast-upward 0.5s 0.3s ease-in forwards; /* 0.3s射出，0.8s擊中 */
+      animation: blast-upward 0.5s 0.3s ease-in forwards; 
     }
-    @keyframes blast-upward { 
-      0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 
-      100% { transform: translate(-50%, -65vh) scale(3); opacity: 0; } 
-    }
+    @keyframes blast-upward { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -65vh) scale(3); opacity: 0; } }
 
-    /* 💥 向下射擊 (對手贏 / 紅色光球) */
     .blast-down::after {
       content: ''; position: absolute; top: 50%; left: 50%; width: 90px; height: 90px;
       background: radial-gradient(circle, #fff 0%, #eb3b5a 40%, transparent 80%);
       border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 1; z-index: 100; pointer-events: none;
-      animation: blast-downward 0.5s 0.3s ease-in forwards; /* 0.3s射出，0.8s擊中 */
+      animation: blast-downward 0.5s 0.3s ease-in forwards; 
     }
-    @keyframes blast-downward { 
-      0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 
-      100% { transform: translate(-50%, 65vh) scale(3); opacity: 0; } 
-    }
+    @keyframes blast-downward { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, 65vh) scale(3); opacity: 0; } }
 
-    /* 🩸 戰損碎裂系統 (利用偽元素畫裂痕) */
-    .card-entity::before {
-      content: ''; position: absolute; top:0; left:0; right:0; bottom:0;
-      border-radius: 10px; pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 15;
-    }
+    /* 🩸 戰損碎裂系統 */
+    .card-entity::before { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 10px; pointer-events: none; opacity: 0; transition: opacity 0.5s; z-index: 15; }
     .dmg-1 { border-color: #f1c40f !important; }
     .dmg-1::before { opacity: 0.6; background: linear-gradient(35deg, transparent 49%, rgba(255,255,255,0.8) 49.5%, transparent 50%); }
-    
     .dmg-2 { border-color: #e67e22 !important; box-shadow: inset 0 0 20px rgba(230, 126, 34, 0.5) !important; filter: saturate(0.8); }
     .dmg-2::before { opacity: 0.8; background: linear-gradient(35deg, transparent 49%, rgba(255,255,255,0.8) 49.5%, transparent 50%), linear-gradient(-55deg, transparent 49%, rgba(255,255,255,0.8) 49.5%, transparent 50%); }
-    
     .dmg-3 { border-color: #e74c3c !important; box-shadow: inset 0 0 40px rgba(231, 76, 60, 0.6) !important; filter: saturate(0.6) contrast(1.2); }
     .dmg-3::before { opacity: 1; background: linear-gradient(35deg, transparent 49%, rgba(255,255,255,0.9) 49.5%, transparent 50%), linear-gradient(-55deg, transparent 49%, rgba(255,255,255,0.9) 49.5%, transparent 50%), linear-gradient(15deg, transparent 49%, rgba(255,255,255,0.9) 49.5%, transparent 50%); }
-    
     .dmg-4 { border: 3px dashed #c0392b !important; box-shadow: inset 0 0 60px rgba(192, 57, 43, 0.8) !important; filter: grayscale(0.5) sepia(0.5) hue-rotate(-30deg); }
     .dmg-4::before { opacity: 1; background: linear-gradient(35deg, transparent 49%, #fff 49.5%, transparent 50%), linear-gradient(-55deg, transparent 49%, #fff 49.5%, transparent 50%), linear-gradient(15deg, transparent 49%, #fff 49.5%, transparent 50%), linear-gradient(-80deg, transparent 49%, #fff 49.5%, transparent 50%); }
 
-    /* 🩸 受擊動畫 (精準定錨在 0.8s 擊中瞬間) */
+    /* 🩸 受擊動畫 */
     .take-damage { animation: shakeDamage 0.5s 0.8s ease-in-out; }
-    @keyframes shakeDamage {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      20% { transform: translate(-15px, 15px) rotate(-4deg); }
-      40% { transform: translate(15px, -15px) rotate(4deg); }
-      60% { transform: translate(-10px, -5px) rotate(-2deg); }
-      80% { transform: translate(10px, 5px) rotate(2deg); }
-    }
+    @keyframes shakeDamage { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 20% { transform: translate(-15px, 15px) rotate(-4deg); } 40% { transform: translate(15px, -15px) rotate(4deg); } 60% { transform: translate(-10px, -5px) rotate(-2deg); } 80% { transform: translate(10px, 5px) rotate(2deg); } }
 
-    /* 全螢幕閃光 (對應攻擊方顏色，定錨 0.8s) */
     .screen-flash-cyan { animation: flashCyan 0.5s 0.8s 2; }
     @keyframes flashCyan { 0%, 100% { box-shadow: inset 0 0 0 transparent; } 50% { box-shadow: inset 0 0 150px rgba(15, 185, 177, 0.9); } }
-    
     .screen-flash-red { animation: flashRed 0.5s 0.8s 2; }
     @keyframes flashRed { 0%, 100% { box-shadow: inset 0 0 0 transparent; } 50% { box-shadow: inset 0 0 150px rgba(235, 59, 90, 0.9); } }
 
-    /* 🔥 終極爆炸消失 (定錨 0.8s，爆炸、焦黑、飛出) */
+    /* 🔥 終極爆炸消失 */
     .loser-shatter { animation: shatter-destroy 1.2s 0.8s ease-out forwards; }
     @keyframes shatter-destroy {
       0% { transform: scale(1); filter: brightness(1); opacity: 1; }
@@ -243,14 +207,13 @@
       100% { transform: scale(0.2) rotate(45deg) translateY(300px); filter: blur(20px); opacity: 0; } 
     }
 
-    /* 🏆 最終勝利的耀眼光芒 (加冕黃金特效) */
+    /* 🏆 最終勝利的耀眼光芒 */
     .winner-glory { animation: glory-shine 1.5s ease-in-out infinite alternate !important; border: 4px solid #f1c40f !important; z-index: 30 !important; }
     @keyframes glory-shine {
       0% { box-shadow: 0 0 20px #f1c40f, inset 0 0 20px #f1c40f; transform: translateY(0); filter: brightness(1.2); }
       100% { box-shadow: 0 0 60px #f1c40f, 0 0 100px #f1c40f, inset 0 0 40px #f1c40f; transform: translateY(-10px); filter: brightness(1.5); }
     }
 
-    /* 🏆 結算大門優化 (移除模糊遮擋，讓背後特效透出來) */
     #impact-overlay { 
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
       background: rgba(11, 15, 25, 0.5); 
@@ -322,7 +285,7 @@
       <h1 id="target-word" style="margin-bottom: 5px;">準備中...</h1>
       
       <div id="battle-timer-container">
-        <div id="battle-timer" style="font-size:40px; font-weight:900; color:#f6e58d; text-shadow: 0 0 15px rgba(246, 229, 141, 0.5);">60</div>
+        <div id="battle-timer">60</div>
       </div>
       
       <div id="battle-info" style="color:#a4b0be; font-size:14px; margin-top:5px;">正在等待雙方就緒...</div>
@@ -355,7 +318,6 @@
 </div>
 
 <script>
-  // 🔗 您的最新專用 GAS 網址
   const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
   const params = new URLSearchParams(window.location.search);
   const STUDENT_ID = params.get('id') || "S001";
@@ -363,15 +325,13 @@
   const MODE = params.get('mode') || "challenge";
   const ROOM_ID = params.get('roomId');
 
-  // 全域變數宣告 (加上技能變數)
   let stream, mediaRecorder, chunks = [], quizData = [], scores = [], currentIndex = 0, isReReading = false;
   let audioContext, analyser, dataArray, source, gradingInterval;
   let maxVolume = 0;
   
-  let hasUsedSkill = false; // 紀錄大招是否用過
-  let isUltimateMode = false; // 紀錄當下是否暴走
+  let hasUsedSkill = false; 
+  let isUltimateMode = false; 
 
-  // 對戰室專用變數
   let battleQuizArr = [], currentBattleRound = 0;
   let readyTimer = null, currentLimitTimer = null, waitOpTimer = null, syncTimer = null; 
   let myTotalWins = 0, opTotalWins = 0;
@@ -379,26 +339,18 @@
 
   function normalizeStr(val) { if (!val) return ""; return String(val).replace(/(%20|\s)+/ig, "").toUpperCase(); }
 
-  // 👊 啟動大招技能
   function activateSkill() {
     if (hasUsedSkill) return;
     hasUsedSkill = true;
     isUltimateMode = true;
-
-    // 隱藏技能按鈕
     document.getElementById('skill-btn').style.display = 'none';
-
-    // 畫面進入暴走狀態
     document.getElementById('battle-arena').classList.add('ultimate-mode-bg');
     document.getElementById('target-word').classList.add('ultimate-word');
-    
-    // 按鈕切換成拳頭
     const rb = document.getElementById('battle-record-btn');
     rb.classList.add('ultimate-record-btn');
     rb.innerHTML = "👊";
   }
 
-  // 📝 儲存原版啟動邏輯
   const originalOnload = async () => {
     if(MODE === 'review') document.getElementById('title-text').innerText = "📖 自由練習模式";
     try {
@@ -409,27 +361,21 @@
       source.connect(analyser);
       analyser.fftSize = 256;
       dataArray = new Uint8Array(analyser.frequencyBinCount);
-
       document.getElementById('info-text').innerText = "麥克風已就緒";
       document.getElementById('start-btn').style.display = 'inline-block';
     } catch (e) { alert("請開啟麥克風權限"); }
   };
 
-  // 🚪 核心路由入口
   window.onload = async () => {
     if (MODE === 'battle' && ROOM_ID) {
-      // 🛡️ 強制隱藏所有練習模式的卡片
       document.getElementById('main-card').style.display = 'none';
       document.getElementById('impact-overlay').classList.remove('active');
-      
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
         source = audioContext.createMediaStreamSource(stream);
         source.connect(analyser);
-        
-        // 啟動傳送門
         showPortal();
       } catch(err) { alert("請開啟麥克風權限才能對戰！"); }
     } else {
@@ -437,30 +383,24 @@
     }
   };
   
-  // 🛡️ 補齊缺失器官：對戰傳送門與圖片加載邏輯
   function showPortal() {
     const portal = document.getElementById('battle-portal-overlay');
     portal.style.display = 'flex';
     let pCount = 60;
     
-    // 啟動 60 秒進入倒數
     const pTimer = setInterval(() => {
       pCount--;
       document.getElementById('portal-countdown').innerText = pCount;
       if(pCount <= 0) { clearInterval(pTimer); location.reload(); }
     }, 1000);
 
-    // 去後端抓圖片與名字
     fetch(`${GAS_URL}?action=get_battle_status&roomId=${ROOM_ID}&t=${new Date().getTime()}`)
       .then(res => res.json()).then(data => {
         document.getElementById('vs-names-portal').innerText = `${data.hostName} VS ${data.guestName || "等待對手中..."}`;
-        
-        // 🚀 修正：對齊新的卡片 ID (op-card, my-card) 並判斷身分
         const isMeHost = (normalizeStr(STUDENT_ID) === normalizeStr(data.hostId));
         const myCard = document.getElementById('my-card');
         const opCard = document.getElementById('op-card');
 
-        // 根據身分塞入對應的立繪背景
         if (isMeHost) {
             if(data.hostImg && myCard) myCard.style.backgroundImage = `url('${data.hostImg}')`;
             if(data.guestImg && opCard) opCard.style.backgroundImage = `url('${data.guestImg}')`;
@@ -469,23 +409,19 @@
             if(data.hostImg && opCard) opCard.style.backgroundImage = `url('${data.hostImg}')`;
         }
         
-        // AI 補位
         if (!isMeHost && data.hostId === "AI_BOT" && opCard) opCard.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
         if (isMeHost && data.guestId === "AI_BOT" && opCard) opCard.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
 
-        // 定義傳送按鈕點擊後的動作
         window.portalJump = () => {
           clearInterval(pTimer);
           portal.style.display = 'none';
           document.getElementById('battle-arena').style.display = 'flex';
-          // 啟動圖片滑入動畫
           setTimeout(() => { document.getElementById('battle-arena').classList.add('battle-ready'); }, 100);
           fetchBattleDataAndStart(ROOM_ID);
         };
       }).catch(err => {
         console.error("Portal Error:", err);
         document.getElementById('vs-names-portal').innerText = "連線稍有延遲，請直接進入";
-        // 容錯機制：即使抓取資料失敗，也要把按鈕綁上去，讓學生能強行破門進入
         window.portalJump = () => {
           clearInterval(pTimer);
           portal.style.display = 'none';
@@ -495,9 +431,6 @@
       });
   }
 
-  // =======================================================
-  // 🔒 原版練習功能
-  // =======================================================
   document.getElementById('start-btn').onclick = () => {
     document.getElementById('info-text').innerText = "正在載入題目...";
     fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data&unit=${encodeURIComponent(TARGET_UNIT)}`)
@@ -533,7 +466,6 @@
     }
   }
 
-  // 🛡️ 狀態鎖與標記
   let isGrading = false; 
   let tooQuietFlag = false; 
 
@@ -543,23 +475,20 @@
       if(isGrading) return;
       e.preventDefault(); 
       document.getElementById('feedback').innerHTML = ""; 
-      maxVolume = 0; chunks = []; tooQuietFlag = false; // 重置標記
+      maxVolume = 0; chunks = []; tooQuietFlag = false;
       
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
       
       mediaRecorder.onstop = () => {
-        // 🚀 關鍵：如果剛剛判斷太小聲，這裡直接斷開，不准進 fetch
         if (tooQuietFlag) {
           isGrading = false;
           rb.style.opacity = "1";
           return; 
         }
-
         isGrading = true;
         rb.style.opacity = "0.5";
         
-        // 🚀 切換顯示：老師評分中動畫
         if (gradingInterval) clearInterval(gradingInterval);
         let dots = 0;
         gradingInterval = setInterval(() => { 
@@ -599,14 +528,12 @@
     rb.onpointerup = () => {
       if (!mediaRecorder || mediaRecorder.state !== "recording") return;
       rb.classList.remove('active');
-      
-      // 🚀 先檢查音量，如果太小聲，設下攔截標記
       if (maxVolume < 30) { 
         tooQuietFlag = true; 
         document.getElementById('status').innerText = "太小聲了，再大聲點！";
-        mediaRecorder.stop(); // 雖然呼叫 stop，但 stop 裡的 fetch 會被 Flag 擋住
+        mediaRecorder.stop();
       } else {
-        mediaRecorder.stop(); // 正常執行 fetch
+        mediaRecorder.stop();
       }
     };
   }
@@ -643,7 +570,6 @@
       submitBtn.innerText = "完成練習";
     } else {
       if (avg >= 70) {
-        // 🚀 強制解除禁用，確保手機端能點
         submitBtn.removeAttribute('disabled');
         submitBtn.disabled = false;
         submitBtn.style.opacity = "1";
@@ -659,12 +585,9 @@
         rewardHint.innerText = "";
       }
     }
-
-    // 🚀 重新綁定點擊事件，防止因之前報錯而失效
     submitBtn.onclick = handleClaimReward;
   }
 
-  // 分離出的領獎邏輯
   function handleClaimReward() {
     const btn = document.getElementById('submit-btn');
     const avg = parseInt(document.getElementById('total-avg').innerText);
@@ -673,18 +596,15 @@
     btn.style.pointerEvents = "none";
     btn.style.backgroundColor = "#95a5a6";
 
-    // 🚀 優化後的送出指令
     const finalUrl = `${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`;
-    
-    fetch(finalUrl, { mode: 'no-cors' }) // 使用 no-cors 解決大部分 GAS 送出失敗問題
+    fetch(finalUrl, { mode: 'no-cors' })
       .then(() => { 
         alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
         window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; 
       }).catch(err => {
-        // 如果 fetch 還是失敗，使用後備方案：直接用瀏覽器打開連結 (隱藏式)
         console.log("Fetch 失敗，啟動備案...", err);
         const img = new Image();
-        img.src = finalUrl; // 這是最古老但最有效的跨域傳送方式
+        img.src = finalUrl;
         setTimeout(() => {
           alert("🎉 挑戰完成！");
           window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
@@ -697,7 +617,6 @@
     const avg = parseInt(document.getElementById('total-avg').innerText);
     fetch(`${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`)
       .then(() => { 
-        // 🛡️ 恢復原本溫暖的提示文字
         alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
         window.location.href = `${GAS_URL}?id=${STUDENT_ID}`; 
       });
@@ -722,10 +641,7 @@
     document.getElementById('round-num').innerText = "規則：先得 5 分者勝";
     document.getElementById('battle-info').innerText = "正在等待雙方就緒...";
     
-    // 🚀 關鍵修復：在準備時強制隱藏面板，防止偷按！
     document.getElementById('battle-controls').style.visibility = 'hidden';
-    
-    // 🚀 手術 1：先抓圖並啟動立繪動畫，不用等同步完成
     updateArenaUI(roomId, true);
 
     fetch(`${GAS_URL}?action=arena_ready&id=${STUDENT_ID}&roomId=${roomId}&t=${new Date().getTime()}`)
@@ -738,7 +654,6 @@
           
           fetch(`${GAS_URL}?action=get_battle_status&roomId=${roomId}&t=${new Date().getTime()}`)
             .then(res => res.json()).then(data => {
-              // 🚀 手術 2：更寬鬆的就緒判斷，只要雙方都有資料就開打
               if (data.hostScores && data.guestScores && data.hostScores.length > 0 && data.guestScores.length > 0) {
                 clearInterval(syncTimer);
                 startRoundCountdown(roomId);
@@ -758,7 +673,6 @@
         document.getElementById('my-name').innerText = isMeHost ? data.hostName : (data.guestName || "挑戰者");
         document.getElementById('op-name').innerText = isMeHost ? (data.guestName || "對手") : data.hostName;
 
-        // 👇 替換成新的邏輯：直接判斷誰是對手、誰是我
         const myCard = document.getElementById('my-card');
         const opCard = document.getElementById('op-card');
         
@@ -770,14 +684,11 @@
             if(data.hostImg) opCard.style.backgroundImage = `url('${data.hostImg}')`;
         }
         
-        // AI 特殊立繪邏輯
-        if (!isMeHost && data.hostId === "AI_BOT") opCard.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
-        if (isMeHost && data.guestId === "AI_BOT") opCard.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
+        if (!isMeHost && data.hostId === "AI_BOT" && opCard) opCard.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
+        if (isMeHost && data.guestId === "AI_BOT" && opCard) opCard.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
 
-        // 啟動動畫
         document.getElementById('battle-arena').classList.add('battle-ready');
 
-        // 更新點點
         const hS = data.hostScores.filter(s => s !== -1);
         const gS = data.guestScores.filter(s => s !== -1);
         myTotalWins = 0; opTotalWins = 0;
@@ -809,7 +720,6 @@
     
     let count = 3; roundSubmitted = false;
     
-    // 🚀 終極修復：回合開始時，強制洗掉卡片身上殘留的所有動畫標籤，防止「亂動 Bug」！
     const myCard = document.getElementById('my-card');
     const opCard = document.getElementById('op-card');
     const arenaBg = document.getElementById('battle-arena');
@@ -818,7 +728,6 @@
     if(opCard) opCard.classList.remove(...allAnims);
     if(arenaBg) arenaBg.classList.remove('screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold');
 
-    // 🚀 重置大招狀態
     isUltimateMode = false;
     arenaBg.classList.remove('ultimate-mode-bg');
     document.getElementById('target-word').classList.remove('ultimate-word');
@@ -826,7 +735,6 @@
     rb.classList.remove('ultimate-record-btn');
     rb.innerHTML = "🎤";
 
-    // 判斷技能按鈕是否顯示
     const skillBtn = document.getElementById('skill-btn');
     if (skillBtn) skillBtn.style.display = hasUsedSkill ? 'none' : 'block';
 
@@ -873,8 +781,6 @@
       mediaRecorder.start(); 
       
       const myCard = document.getElementById('my-card');
-      
-      // 🚀 精準判斷：按鈕和卡片同步發出對應顏色的光芒！
       if (isUltimateMode) {
           battleBtn.classList.add('ult-active');
           if(myCard) myCard.classList.add('ultimate-charging');
@@ -891,10 +797,7 @@
       roundSubmitted = true; clearInterval(currentLimitTimer);
       mediaRecorder.stop(); 
       
-      // 🚀 清除按鈕動畫 (只要寫一次就好)
       battleBtn.classList.remove('active', 'ult-active');
-      
-      // 🚀 清除卡片動畫 (只要寫一次就好)
       const myCard = document.getElementById('my-card');
       if (myCard) {
           myCard.classList.remove('charging-mana', 'ultimate-charging');
@@ -913,16 +816,13 @@
   function submitBattleScore(roomId, score) {
     if (currentLimitTimer) clearInterval(currentLimitTimer);
     
-    // 隱藏錄音按鈕與技能按鈕面板
     document.getElementById('battle-controls').style.visibility = 'hidden';
 
-    // 🚀 強制清除所有發光特效，保證下回合乾乾淨淨
     const myCard = document.getElementById('my-card');
     if(myCard) myCard.classList.remove('charging-mana', 'ultimate-charging');
     const bBtn = document.getElementById('battle-record-btn');
     if(bBtn) bBtn.classList.remove('active', 'ult-active');
 
-    // 將分數填入倒數計時的位子
     document.getElementById('battle-timer').innerHTML = `<span class="neon-score">得分：${score}</span>`;
     document.getElementById('battle-info').innerText = "等待對手...";
 
@@ -933,7 +833,6 @@
       });
   }
 
-  // 🩸 卡片戰損處理函數
   function updateCardDamage(cardElement, damageLevel) {
     if(!cardElement) return;
     cardElement.classList.remove('dmg-1', 'dmg-2', 'dmg-3', 'dmg-4');
@@ -943,13 +842,11 @@
     if(damageLevel >= 4) cardElement.classList.add('dmg-4');
   }
 
-  // 🎬 動畫發動機
   function triggerBattleAnimations(myNum, opNum, isFinal, myTotalWins, opTotalWins) {
     const myCard = document.getElementById('my-card'); 
     const opCard = document.getElementById('op-card');
     const arenaBg = document.getElementById('battle-arena');
 
-    // 🚀 清除所有可能殘留的動畫
     const animations = ['cast-me', 'cast-op', 'blast-up', 'blast-down', 'blast-ultimate', 'loser-shatter', 'take-damage', 'screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold', 'winner-glory'];
     if(myCard) myCard.classList.remove(...animations); 
     if(opCard) opCard.classList.remove(...animations);
@@ -957,19 +854,15 @@
     
     void myCard.offsetWidth; void opCard.offsetWidth;
 
-    // 發動攻擊！
     if (myNum > opNum) { 
       if(myCard) {
-        // 🌟 判斷是否為大招攻擊成功
         if (isUltimateMode) {
-            myCard.classList.add('cast-me', 'blast-ultimate'); // 射出雙重金光球
+            myCard.classList.add('cast-me', 'blast-ultimate'); 
             if(arenaBg) arenaBg.classList.add('screen-flash-gold');
         } else {
-            myCard.classList.add('cast-me', 'blast-up'); // 一般青藍光球
+            myCard.classList.add('cast-me', 'blast-up'); 
             if(arenaBg) arenaBg.classList.add('screen-flash-cyan'); 
         }
-        
-        // 🏆 最終勝利光芒
         if(isFinal) setTimeout(() => myCard.classList.add('winner-glory'), 800);
       }
       if(opCard) opCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage'); 
@@ -983,7 +876,6 @@
       if(arenaBg) arenaBg.classList.add('screen-flash-red'); 
     }
 
-    // 更新戰損狀態
     updateCardDamage(myCard, opTotalWins);
     updateCardDamage(opCard, myTotalWins);
 
@@ -1016,10 +908,8 @@
 
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
         
-          // 呼叫動畫發動機
           triggerBattleAnimations(myS, opS, isFinal, myTotalWins, opTotalWins);
         
-          // 🚀 結算畫面停留時間相應拉長 (1.6s 特效 + 2s 停留 = 3.6s 換局)
           setTimeout(() => {
               document.getElementById('impact-overlay').classList.remove('active'); 
               if (isFinal) { 
@@ -1047,13 +937,11 @@
     if (myNum > opNum) { 
       t = isFinal ? "🏆 挑戰成功！" : "獲勝！"; 
       c = "#27ae60"; 
-      // 🏆 最終勝利：我方卡片加冕黃金閃耀！
       if(isFinal && myCard) myCard.classList.add('winner-glory');
     }
     else if (myNum < opNum) { 
       t = isFinal ? "☠️ 挑戰失敗" : "敗北..."; 
       c = "#e74c3c"; 
-      // 🏆 對手獲勝：對手卡片加冕黃金閃耀！
       if(isFinal && opCard) opCard.classList.add('winner-glory');
     }
     else { 
@@ -1063,39 +951,27 @@
     
     const r = document.getElementById('impact-result'); 
     r.innerText = t; r.style.color = c;
-    o.classList.add('active'); // 秀出黑屏
+    o.classList.add('active'); 
   }
-  // =======================================================
-  // 🚀 瑪麗安「全域刷卡攔截器」：解決學生中途離開、隨時換人問題
-  // =======================================================
+
   let nfcBuffer = "";
   document.addEventListener('keydown', function(e) {
-    // 判斷是否為數字鍵 (YP210 噴出的通常是數字)
     if (!isNaN(e.key)) {
       nfcBuffer += e.key;
     }
-
-    // 當讀卡機噴完 ID 帶入 Enter 時觸發
     if (e.key === 'Enter') {
-      if (nfcBuffer.length > 3) { // 確保不是誤觸
+      if (nfcBuffer.length > 3) { 
         console.log("偵測到學生刷卡，準備強制跳轉：" + nfcBuffer);
-        
-        // 強制跳轉回你的 GAS 跳板，由 GAS 重新查表
-        // 注意：這裡必須使用你的 GAS 完整連結
         const gatekeeperUrl = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
-        
-        // 動作：直接把目前的網頁換掉，帶入 cardId 參數
         window.location.href = gatekeeperUrl + "?cardId=" + nfcBuffer;
       }
-      nfcBuffer = ""; // 清空緩衝區
+      nfcBuffer = ""; 
     }
   });
 
-  // 💡 小提醒：如果 3 分鐘沒人動，自動回到「請刷卡」入口畫面 (選配)
   let idleTimer;
   const resetIdleTimer = () => {
     clearTimeout(idleTimer);
-    // 180000 毫秒 = 3 分鐘
     idleTimer = setTimeout(() => {
       window.location.href = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
     }, 180000);
