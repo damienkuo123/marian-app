@@ -906,14 +906,16 @@
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
       mediaRecorder.start(); 
-      battleBtn.classList.add('active');
       
-      // 🚀 判斷是否為大招模式，給予不同顏色的發光！
       const myCard = document.getElementById('my-card');
+      
+      // 🚀 精準判斷大招或一般攻擊，分別套用正確的動畫！
       if (isUltimateMode) {
-          myCard.classList.add('ultimate-charging');
+          battleBtn.classList.add('ult-active');
+          if(myCard) myCard.classList.add('ultimate-charging');
       } else {
-          myCard.classList.add('charging-mana');
+          battleBtn.classList.add('active');
+          if(myCard) myCard.classList.add('charging-mana');
       }
 
       const check = () => { if (mediaRecorder && mediaRecorder.state === "recording") { analyser.getByteFrequencyData(dataArray); let v = 0; for(let i=0; i<dataArray.length; i++) v += dataArray[i]; if((v/dataArray.length) > maxVolume) maxVolume = v/dataArray.length; requestAnimationFrame(check); } }; check();
@@ -923,13 +925,14 @@
       if (roundSubmitted || !mediaRecorder || mediaRecorder.state !== "recording") return;
       roundSubmitted = true; clearInterval(currentLimitTimer);
       mediaRecorder.stop(); 
-      battleBtn.classList.remove('active');
       
-      // 🚀 解除所有發光狀態
+      // 🚀 清除按鈕動畫
+      battleBtn.classList.remove('active', 'ult-active');
+      
+      // 🚀 清除卡片動畫
       const myCard = document.getElementById('my-card');
       if (myCard) {
-          myCard.classList.remove('charging-mana');
-          myCard.classList.remove('ultimate-charging');
+          myCard.classList.remove('charging-mana', 'ultimate-charging');
       }
 
       mediaRecorder.onstop = () => {
