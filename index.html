@@ -104,52 +104,59 @@
     #battle-timer-container { height: 55px; display: flex; justify-content: center; align-items: center; }
     #battle-timer { font-size: 38px; font-weight: 900; color: #f6e58d; text-shadow: 0 0 15px rgba(246, 229, 141, 0.5); margin: 0; min-height: 45px; }
   
-    /* 🚀 修復錄音與技能按鈕佈局 (疊加式排列) */
-    .player-zone { position: relative; padding-bottom: 90px; }
+    /* 🚀 修復錄音與技能按鈕佈局 (疊加式排列，保證絕對置中) */
+    .player-zone { position: relative; padding-bottom: 120px; }
     #battle-controls { 
-      position: absolute; bottom: 0; left: 0; width: 100%; height: 90px; 
-      z-index: 50; display: flex; justify-content: center; align-items: flex-end; 
-      padding-bottom: 10px; 
+      position: absolute; bottom: 0; left: 0; width: 100%; height: 100px; 
+      z-index: 50; display: flex; justify-content: center; align-items: center; 
     }
 
     #battle-record-btn {
       width: 75px; height: 75px; border-radius: 50%; font-size: 30px; cursor: pointer;
       background: linear-gradient(145deg, #2d3436, #1e272b); border: 3px solid #0fb9b1; color: white; outline: none;
       box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 2px 5px rgba(255,255,255,0.1); transition: all 0.2s;
-      z-index: 51; flex-shrink: 0;
+      z-index: 51; flex-shrink: 0; display: flex; justify-content: center; align-items: center;
     }
-    #battle-record-btn.active { transform: scale(0.9); border-color: #26de81; }
+    
+    /* 一般錄音按鈕特效 */
+    #battle-record-btn.active { transform: scale(0.9); animation: manaCharge 0.5s infinite alternate; border-color: #26de81; }
+    @keyframes manaCharge { 0% { box-shadow: 0 0 10px #0fb9b1, 0 0 20px #0fb9b1; } 100% { box-shadow: 0 0 30px #26de81, 0 0 60px #26de81; } }
+    
+    /* 大招錄音按鈕特效 */
+    #battle-record-btn.ult-active { transform: scale(0.9); animation: ultManaCharge 0.5s infinite alternate; border-color: #fff; }
+    @keyframes ultManaCharge { 0% { box-shadow: 0 0 20px #f1c40f, 0 0 30px #f1c40f; } 100% { box-shadow: 0 0 50px #f39c12, 0 0 80px #fff; } }
 
-    /* 👊 技能重擊按鈕 (恢復長條形，置中懸浮於錄音按鈕正上方) */
+    /* 👊 技能重擊按鈕 (長條形，置中懸浮於錄音按鈕正上方) */
     #skill-btn {
-      position: absolute; bottom: 95px; left: 50%; transform: translateX(-50%);
+      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
       background: linear-gradient(135deg, #f39c12, #e74c3c); color: white; 
       border: 2px solid #f1c40f; border-radius: 20px;
       padding: 8px 25px; font-size: 16px; font-weight: 900; 
       box-shadow: 0 5px 15px rgba(231, 76, 60, 0.5); cursor: pointer;
       z-index: 40; transition: all 0.3s; animation: float-btn 2s infinite ease-in-out;
-      white-space: nowrap; /* 確保字不會換行 */
+      white-space: nowrap;
     }
     #skill-btn:active { transform: translateX(-50%) scale(0.9); }
     @keyframes float-btn { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -5px); box-shadow: 0 10px 20px rgba(231, 76, 60, 0.8); } }
 
-    /* 🌟 一般錄音：卡片本體爆發 (青藍色) - 加上 !important 強制覆蓋戰損邊框 */
-    .charging-mana { animation: cardCharge 0.5s infinite alternate !important; outline: none !important; }
-    @keyframes cardCharge {
-      0% { box-shadow: 0 0 15px #0fb9b1, inset 0 0 15px #0fb9b1 !important; border-color: #0fb9b1 !important; transform: translateY(0px); }
-      100% { box-shadow: 0 0 50px #26de81, inset 0 0 25px #26de81 !important; border-color: #26de81 !important; transform: translateY(-5px); }
+    /* 🌟 一般錄音：卡片本體爆發 (青藍色) - 拔除 @keyframes 裡的 !important 修復失效問題 */
+    .charging-mana { outline: 4px solid #0fb9b1; animation: cardChargePulse 0.5s infinite alternate; z-index: 25; }
+    @keyframes cardChargePulse {
+      0% { outline-color: #0fb9b1; outline-offset: 2px; box-shadow: 0 0 20px #0fb9b1, inset 0 0 15px #0fb9b1; transform: translateY(0px); }
+      100% { outline-color: #26de81; outline-offset: 10px; box-shadow: 0 0 50px #26de81, inset 0 0 25px #26de81; transform: translateY(-5px); }
     }
 
-    /* 🌟 大招錄音：黃金卡片爆發 */
-    .ultimate-charging { animation: ultCardCharge 0.5s infinite alternate !important; outline: none !important; }
+    /* 🌟 大招錄音：黃金卡片爆發 (金色) */
+    .ultimate-charging { outline: 4px solid #f1c40f; animation: ultCardCharge 0.5s infinite alternate; z-index: 25; }
     @keyframes ultCardCharge {
-      0% { box-shadow: 0 0 20px #f1c40f, inset 0 0 20px #f1c40f !important; border-color: #f1c40f !important; transform: translateY(0px); }
-      100% { box-shadow: 0 0 60px #f39c12, 0 0 80px #fff, inset 0 0 40px #f39c12 !important; border-color: #fff !important; transform: translateY(-5px); }
+      0% { outline-color: #f1c40f; outline-offset: 2px; box-shadow: 0 0 30px #f1c40f, inset 0 0 20px #f1c40f; transform: translateY(0px); }
+      100% { outline-color: #fff; outline-offset: 12px; box-shadow: 0 0 70px #f39c12, 0 0 80px #fff, inset 0 0 40px #f39c12; transform: translateY(-5px); }
     }
 
     /* 🌈 大招狀態的視覺統整 */
     .ultimate-mode-bg { background: radial-gradient(circle at 50% 50%, #4a3600 0%, #0b0f19 100%) !important; }
     .ultimate-word { color: #f1c40f !important; text-shadow: 0 0 20px #f1c40f, 0 0 40px #f1c40f !important; animation: word-pulse 0.5s infinite alternate; }
+    .ultimate-record-btn { background: linear-gradient(145deg, #e67e22, #f39c12) !important; border: 4px solid #fff !important; box-shadow: 0 0 30px #f1c40f, inset 0 0 15px #f1c40f !important; }
     
     /* 💥 雙重金色光球 (大招成功專用：一前一後發射) */
     .blast-ultimate::before, .blast-ultimate::after {
