@@ -83,11 +83,11 @@
     #battle-record-btn.ult-active { transform: scale(0.9); animation: ultManaCharge 0.5s infinite alternate; border-color: #fff; }
     @keyframes ultManaCharge { 0% { box-shadow: 0 0 20px #f1c40f, 0 0 30px #f1c40f; } 100% { box-shadow: 0 0 50px #f39c12, 0 0 80px #fff; } }
 
-    /* 🎴 實體卡片設計 */
+    /* 🎴 實體卡片設計 (改成 2816x1271 比例，變得更寬) */
     .arena-section { z-index: 10; width: 100%; display: flex; flex-direction: column; align-items: center; }
     .card-entity {
       height: 17vh; min-height: 100px; max-height: 150px; 
-      aspect-ratio: 16 / 9; width: auto; max-width: 95vw; 
+      aspect-ratio: 2816 / 1271; width: auto; max-width: 95vw; 
       background-size: cover; background-position: center center; background-repeat: no-repeat;
       border-radius: 12px; border: 3px solid #576574; 
       box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.2);
@@ -158,6 +158,15 @@
     .blast-ultimate::before { animation: blast-upward 0.4s 0.2s ease-in forwards; }
     .blast-ultimate::after { animation: blast-upward 0.4s 0.4s ease-in forwards; } 
     
+    /* 💥 對手的大招光球 (向下) */
+    .blast-ultimate-down::before, .blast-ultimate-down::after {
+      content: ''; position: absolute; top: 50%; left: 50%; width: 90px; height: 90px;
+      background: radial-gradient(circle, #fff 0%, #f1c40f 40%, transparent 80%);
+      border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 1; z-index: 100; pointer-events: none;
+    }
+    .blast-ultimate-down::before { animation: blast-downward 0.4s 0.2s ease-in forwards; }
+    .blast-ultimate-down::after { animation: blast-downward 0.4s 0.4s ease-in forwards; } 
+
     .screen-flash-gold { animation: flashGold 0.6s 0.8s 2; }
     @keyframes flashGold { 0%, 100% { box-shadow: inset 0 0 0 transparent; } 50% { box-shadow: inset 0 0 150px rgba(241, 196, 15, 0.9); } }
 
@@ -178,6 +187,9 @@
 
     .cast-op { animation: magic-cast-op 0.8s ease-out forwards; }
     @keyframes magic-cast-op { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; } 40% { transform: scale(1.05); filter: brightness(1.8) drop-shadow(0 0 40px #eb3b5a); z-index: 10; } }
+
+    .cast-op-ult { animation: magic-cast-op-ult 0.8s ease-out forwards; }
+    @keyframes magic-cast-op-ult { 0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); z-index: 1; } 40% { transform: scale(1.05); filter: brightness(2) drop-shadow(0 0 40px #f1c40f); z-index: 10; } }
 
     .blast-up::after {
       content: ''; position: absolute; top: 50%; left: 50%; width: 90px; height: 90px;
@@ -242,31 +254,20 @@
     /* ========================================= */
     /* 🗡️ 大招立繪切入 (Cut-in) 系統 CSS */
     /* ========================================= */
-    #cutin-overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
-      z-index: 9000; pointer-events: none; overflow: hidden;
-    }
+    #cutin-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; z-index: 9000; pointer-events: none; overflow: hidden; }
     #cutin-overlay.active { display: block; }
-    
-    #cutin-bg {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      opacity: 0; 
-    }
+    #cutin-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; }
     .active #cutin-bg { animation: cutinFade 1.5s forwards; }
-
-    /* 極速集中線特效 */
+    
     #cutin-lines {
       position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-      background: repeating-radial-gradient(circle at center, transparent 0, transparent 4px, rgba(255,255,255,0.1) 5px, rgba(255,255,255,0.1) 6px);
-      opacity: 0;
+      background: repeating-radial-gradient(circle at center, transparent 0, transparent 4px, rgba(255,255,255,0.1) 5px, rgba(255,255,255,0.1) 6px); opacity: 0;
     }
     .active #cutin-lines { animation: speedlines 0.2s linear infinite, cutinFade 1.5s forwards; }
     @keyframes speedlines { 0% { transform: scale(1); } 100% { transform: scale(1.5); } }
 
-    /* 角色立繪撕裂滑入 */
     #cutin-char {
-      position: absolute; top: 50%; left: 100%; width: 150vw; height: 40vh;
-      transform: translateY(-50%);
+      position: absolute; top: 50%; left: 100%; width: 150vw; height: 40vh; transform: translateY(-50%);
       background-size: contain; background-repeat: no-repeat; background-position: center;
     }
     .active #cutin-char { animation: charSlide 1.5s cubic-bezier(0.1, 0.8, 0.1, 1) forwards; }
@@ -277,7 +278,6 @@
       100% { left: -100%; transform: translate(-50%, -50%) skewX(15deg); opacity: 0; }
     }
 
-    /* 震撼文字 */
     #cutin-text {
       position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%) scale(0);
       font-size: 45px; font-weight: 900; font-style: italic; white-space: nowrap;
@@ -291,27 +291,26 @@
     }
     @keyframes cutinFade { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
 
-    /* 🎨 主題分類 (火/科技/魔法) */
     .theme-fire #cutin-bg { background: radial-gradient(circle, #b33939 0%, #000 80%); }
     .theme-fire #cutin-text { color: #ff5252; text-shadow: 0 0 20px #ff5252, 0 5px 15px #000; }
     .theme-fire #cutin-char { filter: drop-shadow(0 0 20px #ff5252) saturate(1.5); }
-
     .theme-tech #cutin-bg { background: radial-gradient(circle, #0652DD 0%, #000 80%); }
     .theme-tech #cutin-text { color: #00d2d3; text-shadow: 0 0 20px #00d2d3, 0 5px 15px #000; }
-    .theme-tech #cutin-char { filter: drop-shadow(0 0 20px #00d2d3) hue-rotate(90deg); } /* 用色相旋轉製造科技干擾感 */
-
+    .theme-tech #cutin-char { filter: drop-shadow(0 0 20px #00d2d3) hue-rotate(90deg); }
     .theme-magic #cutin-bg { background: radial-gradient(circle, #10ac84 0%, #000 80%); }
     .theme-magic #cutin-text { color: #1dd1a1; text-shadow: 0 0 20px #1dd1a1, 0 5px 15px #000; }
     .theme-magic #cutin-char { filter: drop-shadow(0 0 20px #1dd1a1); }
   </style>
 </head>
 <body>
+
 <div id="cutin-overlay">
   <div id="cutin-bg"></div>
   <div id="cutin-lines"></div>
   <div id="cutin-char"></div>
   <div id="cutin-text">SKILL ACTIVATED</div>
 </div>
+
 <div class="card" id="main-card">
   <div id="progress-container" class="progress-bar" style="display:none;"><div id="progress-fill" class="progress-fill"></div></div>
   <div id="setup-zone">
@@ -492,11 +491,11 @@
         const opCard = document.getElementById('op-card');
 
         if (isMeHost) {
-            if(data.hostImg && myCard) myCard.style.backgroundImage = `url('${data.hostImg}')`;
-            if(data.guestImg && opCard) opCard.style.backgroundImage = `url('${data.guestImg}')`;
+            if(data.hostImg) myCard.style.backgroundImage = `url('${data.hostImg}')`;
+            if(data.guestImg) opCard.style.backgroundImage = `url('${data.guestImg}')`;
         } else {
-            if(data.guestImg && myCard) myCard.style.backgroundImage = `url('${data.guestImg}')`;
-            if(data.hostImg && opCard) opCard.style.backgroundImage = `url('${data.hostImg}')`;
+            if(data.guestImg) myCard.style.backgroundImage = `url('${data.guestImg}')`;
+            if(data.hostImg) opCard.style.backgroundImage = `url('${data.hostImg}')`;
         }
         
         if (!isMeHost && data.hostId === "AI_BOT" && opCard) opCard.style.backgroundImage = `url('https://cdn-icons-png.flaticon.com/512/4712/4712139.png')`;
@@ -908,31 +907,24 @@
       const overlay = document.getElementById('cutin-overlay');
       const char = document.getElementById('cutin-char');
       
-      // 擷取角色的圖案
       char.style.backgroundImage = avatarUrl;
       
-      // 隨機抽一個主題 (🔥火 / ⚡科技 / 🍃魔法)
       const themes = ['theme-fire', 'theme-tech', 'theme-magic'];
       const randomTheme = themes[Math.floor(Math.random() * themes.length)];
       
-      // 套用主題並開播
       overlay.className = randomTheme; 
       overlay.classList.add('active');
 
-      // 1.5 秒後關閉動畫，還原戰場
       setTimeout(() => {
           overlay.classList.remove('active');
       }, 1500);
   }
 
-  // 🚀 替換原本的 submitBattleScore
   function submitBattleScore(roomId, score) {
     if (currentLimitTimer) clearInterval(currentLimitTimer);
     
-    // 隱藏錄音按鈕與技能按鈕面板
     document.getElementById('battle-controls').style.visibility = 'hidden';
 
-    // 強制清除所有發光特效，保證下回合乾乾淨淨
     const myCard = document.getElementById('my-card');
     if(myCard) myCard.classList.remove('charging-mana', 'ultimate-charging');
     const bBtn = document.getElementById('battle-record-btn');
@@ -940,24 +932,22 @@
 
     // 🚀 大招機制判斷
     let finalScore = score;
-    let delayTime = 0; // 預設零延遲
+    let delayTime = 0; 
 
     if (isUltimateMode) {
-        finalScore = score + 1000; // 偽裝分數送出 (+1000)
-        delayTime = 1500; // 給大招動畫 1.5 秒的表演時間
+        finalScore = score + 1000; 
+        delayTime = 1500; 
         
-        // 抓取我方卡片的背景圖片，丟給大招動畫播放器！
         let myAvatarUrl = myCard.style.backgroundImage;
-        playCutinAnimation(myAvatarUrl);
+        // playCutinAnimation(myAvatarUrl); 
+        // 👇 我已經把這個播放器移到下方的觸發器了！讓對手等到成績出來才播放
     }
 
-    // 🚀 延遲顯示得分 (如果沒開大招，delayTime是0，會瞬間顯示)
     setTimeout(() => {
         document.getElementById('battle-timer').innerHTML = `<span class="neon-score">得分：${score}</span>`;
         document.getElementById('battle-info').innerText = "等待對手...";
-    }, delayTime);
+    }, 0); 
 
-    // 同步發送分數給伺服器 (這個不用等，直接送，讓對手早點收到)
     fetch(`${GAS_URL}?action=submit_battle_score&id=${STUDENT_ID}&roomId=${roomId}&score=${finalScore}&t=${new Date().getTime()}`)
       .then(() => { 
         if(waitOpTimer) clearInterval(waitOpTimer); 
@@ -974,7 +964,6 @@
     if(damageLevel >= 4) cardElement.classList.add('dmg-4');
   }
 
-  // 🚀 文字彈窗產生器
   function showSkillPopup(text, color) {
       const popup = document.getElementById('skill-popup');
       if(!popup) return;
@@ -982,60 +971,81 @@
       popup.style.color = color;
       popup.style.textShadow = `0 4px 10px rgba(0,0,0,0.8), 0 0 20px ${color}`;
       popup.classList.remove('popup-anim');
-      void popup.offsetWidth; // 觸發重繪
+      void popup.offsetWidth; 
       popup.classList.add('popup-anim');
   }
 
-  function triggerBattleAnimations(myNum, opNum, isFinal, myTotalWins, opTotalWins, isMyUlt) {
+  function triggerBattleAnimations(myNum, opNum, isFinal, myTotalWins, opTotalWins, isMyUlt, isOpUlt) {
     const myCard = document.getElementById('my-card'); 
     const opCard = document.getElementById('op-card');
     const arenaBg = document.getElementById('battle-arena');
 
-    const animations = ['cast-me', 'cast-me-ult', 'cast-op', 'blast-up', 'blast-down', 'blast-ultimate', 'loser-shatter', 'take-damage', 'screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold', 'winner-glory'];
+    // 清除特效
+    const animations = ['cast-me', 'cast-me-ult', 'cast-op', 'cast-op-ult', 'blast-up', 'blast-down', 'blast-ultimate', 'blast-ultimate-down', 'loser-shatter', 'take-damage', 'screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold', 'winner-glory'];
     if(myCard) myCard.classList.remove(...animations); 
     if(opCard) opCard.classList.remove(...animations);
     if(arenaBg) arenaBg.classList.remove('screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold');
-    
     void myCard.offsetWidth; void opCard.offsetWidth;
 
-    if (myNum > opNum) { 
-      if(myCard) {
-        if (isMyUlt) {
-            myCard.classList.add('cast-me-ult', 'blast-ultimate'); 
-            if(arenaBg) arenaBg.classList.add('screen-flash-gold');
-            showSkillPopup("👊 技能重擊 +2 燈！", "#f1c40f");
-        } else {
-            myCard.classList.add('cast-me', 'blast-up'); 
-            if(arenaBg) arenaBg.classList.add('screen-flash-cyan'); 
-        }
-        if(isFinal) setTimeout(() => myCard.classList.add('winner-glory'), 800);
-      }
-      if(opCard) opCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage'); 
-    }
-    else if (myNum < opNum) { 
-      if (isMyUlt) {
-          showSkillPopup("❌ 技能被打斷...", "#e74c3c");
-      }
-      if(opCard) {
-        opCard.classList.add('cast-op', 'blast-down'); 
-        if(isFinal) setTimeout(() => opCard.classList.add('winner-glory'), 800);
-      }
-      if(myCard) myCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage');
-      if(arenaBg) arenaBg.classList.add('screen-flash-red'); 
-    }
-    else {
-      // 平手時的判定
-      if (isMyUlt) {
-          showSkillPopup("⚠️ 技能被抵銷 (平手)", "#f39c12");
-      }
+    // 🚀 大招切入動畫判斷 (等成績出來，確定誰贏了再播動畫)
+    let delayBeforeAttack = 0;
+    if (myNum > opNum && isMyUlt) {
+        playCutinAnimation(myCard.style.backgroundImage);
+        delayBeforeAttack = 1500; // 等待 1.5 秒大招播完
+    } else if (opNum > myNum && isOpUlt) {
+        playCutinAnimation(opCard.style.backgroundImage);
+        delayBeforeAttack = 1500;
     }
 
-    updateCardDamage(myCard, opTotalWins);
-    updateCardDamage(opCard, myTotalWins);
-
+    // 🚀 等大招播完後，才開始射出光球和顯示彈窗！
     setTimeout(() => {
-      showImpactOverlay(myNum, opNum, isFinal);
-    }, 1600); 
+        if (myNum > opNum) { 
+          if(myCard) {
+            if (isMyUlt) {
+                myCard.classList.add('cast-me-ult', 'blast-ultimate'); 
+                if(arenaBg) arenaBg.classList.add('screen-flash-gold');
+                showSkillPopup("👊 技能重擊 +2 燈！", "#f1c40f");
+            } else {
+                myCard.classList.add('cast-me', 'blast-up'); 
+                if(arenaBg) arenaBg.classList.add('screen-flash-cyan'); 
+            }
+            if(isFinal) setTimeout(() => myCard.classList.add('winner-glory'), 800);
+          }
+          if(opCard) opCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage'); 
+        }
+        else if (myNum < opNum) { 
+          if (isMyUlt) {
+              showSkillPopup("❌ 技能被打斷...", "#e74c3c");
+          }
+          if(opCard) {
+            if (isOpUlt) {
+                opCard.classList.add('cast-op-ult', 'blast-ultimate-down'); 
+                if(arenaBg) arenaBg.classList.add('screen-flash-gold');
+                // 對手開大招贏了，可以顯示這個警告
+                showSkillPopup("⚠️ 對手發動技能重擊！", "#e74c3c");
+            } else {
+                opCard.classList.add('cast-op', 'blast-down'); 
+                if(arenaBg) arenaBg.classList.add('screen-flash-red'); 
+            }
+            if(isFinal) setTimeout(() => opCard.classList.add('winner-glory'), 800);
+          }
+          if(myCard) myCard.classList.add(isFinal ? 'loser-shatter' : 'take-damage');
+        }
+        else {
+          if (isMyUlt) {
+              showSkillPopup("⚠️ 技能被抵銷 (平手)", "#f39c12");
+          }
+        }
+
+        updateCardDamage(myCard, opTotalWins);
+        updateCardDamage(opCard, myTotalWins);
+
+        // 在光球攻擊動畫播完後，顯示結算黑屏
+        setTimeout(() => {
+          showImpactOverlay(myNum, opNum, isFinal);
+        }, 1600); 
+
+    }, delayBeforeAttack); // 這個 timeout 確保大招切入動畫播完才射出光球
   }
 
   function checkBoth(roomId) {
@@ -1052,7 +1062,6 @@
           const rawMyS = isMeHost ? hS[currentBattleRound] : gS[currentBattleRound];
           const rawOpS = isMeHost ? gS[currentBattleRound] : hS[currentBattleRound];
 
-          // 🚀 關鍵解碼：還原被加上 1000 分的大招分數
           const myUltThisRound = rawMyS > 500;
           const opUltThisRound = rawOpS > 500;
 
@@ -1061,7 +1070,6 @@
         
           myTotalWins = 0; opTotalWins = 0;
           
-          // 重新計算勝負，大招成功者該局獲得 2 勝
           for(let i=0; i <= currentBattleRound; i++) {
               let rawM = isMeHost ? hS[i] : gS[i];
               let rawO = isMeHost ? gS[i] : hS[i];
@@ -1084,8 +1092,13 @@
 
           const isFinal = (myTotalWins >= 5 || opTotalWins >= 5 || currentBattleRound >= 9);
         
-          triggerBattleAnimations(myS, opS, isFinal, myTotalWins, opTotalWins, myUltThisRound);
+          // 呼叫發動機 (包含大招切入動畫判斷)
+          triggerBattleAnimations(myS, opS, isFinal, myTotalWins, opTotalWins, myUltThisRound, opUltThisRound);
         
+          // 🚀 動態計算換局時間：如果有人成功觸發大招，要多等 1.5 秒
+          let delayBeforeAttack = ( (myS > opS && myUltThisRound) || (opS > myS && opUltThisRound) ) ? 1500 : 0;
+          let totalWaitTime = delayBeforeAttack + 3600; 
+
           setTimeout(() => {
               document.getElementById('impact-overlay').classList.remove('active'); 
               if (isFinal) { 
@@ -1094,7 +1107,7 @@
                   currentBattleRound++; 
                   startRoundCountdown(roomId); 
               }
-          }, 3600);
+          }, totalWaitTime);
         }
         isChecking = false;
       }).catch(() => isChecking = false);
