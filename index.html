@@ -882,19 +882,29 @@
       mediaRecorder.start(); 
       battleBtn.classList.add('active');
       
-      // 🚀 新增：觸發玩家卡片本體的「魔力爆發」特效！
-      document.getElementById('my-card').classList.add('charging-mana');
+      // 🚀 判斷是否為大招模式，給予不同顏色的發光！
+      const myCard = document.getElementById('my-card');
+      if (isUltimateMode) {
+          myCard.classList.add('ultimate-charging');
+      } else {
+          myCard.classList.add('charging-mana');
+      }
 
       const check = () => { if (mediaRecorder && mediaRecorder.state === "recording") { analyser.getByteFrequencyData(dataArray); let v = 0; for(let i=0; i<dataArray.length; i++) v += dataArray[i]; if((v/dataArray.length) > maxVolume) maxVolume = v/dataArray.length; requestAnimationFrame(check); } }; check();
     };
+
     battleBtn.onpointerup = () => {
       if (roundSubmitted || !mediaRecorder || mediaRecorder.state !== "recording") return;
       roundSubmitted = true; clearInterval(currentLimitTimer);
       mediaRecorder.stop(); 
       battleBtn.classList.remove('active');
       
-      // 🚀 新增：解除魔力爆發
-      document.getElementById('my-card').classList.remove('charging-mana');
+      // 🚀 解除所有發光狀態
+      const myCard = document.getElementById('my-card');
+      if (myCard) {
+          myCard.classList.remove('charging-mana');
+          myCard.classList.remove('ultimate-charging');
+      }
 
       mediaRecorder.onstop = () => {
         const r = new FileReader(); r.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
@@ -909,14 +919,17 @@
   function submitBattleScore(roomId, score) {
     if (currentLimitTimer) clearInterval(currentLimitTimer);
     
-    // 隱藏錄音按鈕
+    // 隱藏控制面板
     document.getElementById('battle-controls').style.visibility = 'hidden';
 
-    // 🚀 安全清除：把錄音發光強制拿掉，保證下一局還能觸發
+    // 🚀 強制清除所有發光特效，保證下回合正常
     const myCard = document.getElementById('my-card');
-    if(myCard) myCard.classList.remove('charging-mana');
+    if(myCard) {
+        myCard.classList.remove('charging-mana');
+        myCard.classList.remove('ultimate-charging');
+    }
 
-    // 🌟 將分數填入
+    // 將分數填入倒數計時的位子
     document.getElementById('battle-timer').innerHTML = `<span class="neon-score">得分：${score}</span>`;
     document.getElementById('battle-info').innerText = "等待對手...";
 
