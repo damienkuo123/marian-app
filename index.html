@@ -575,30 +575,30 @@
     #gacha-subtitle { font-size: 15px; color: #dcdde1; letter-spacing: 2px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
     #picks-left { color: #f1c40f; font-size: 24px; font-weight: 900; text-shadow: 0 0 10px #f1c40f; margin: 0 5px; }
 
-    /* 抽獎卡片網格 */
-    .gacha-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 600px; z-index: 10; transform: rotateX(5deg); transition: all 0.5s; }
+    /* 抽獎卡片網格：🚀 移除 rotateX 避免破壞 fixed 置中 */
+    .gacha-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 600px; z-index: 10; transition: all 0.5s; }
     
-    /* 🚀 破除結界 1：當進入聚焦模式時，拔除網格的 3D 傾斜，釋放 fixed 元素 */
-    #gacha-overlay.focus-mode .gacha-grid { transform: none !important; }
+    /* 🚀 隱形關閉背景 */
+    #gacha-close-backdrop { display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; z-index: 500; cursor: pointer; }
+    #gacha-overlay.focus-mode #gacha-close-backdrop { display: block; }
     
-    /* 🚀 破除結界 2：只模糊「沒有被選中」的替身，絕對不影響中央卡片 */
+    /* 只模糊「沒有被選中」的替身 */
     #gacha-overlay.focus-mode .gacha-card-wrapper:not(.has-focus) { opacity: 0.2; pointer-events: none; filter: blur(6px); transition: all 0.5s; }
 
     /* 卡片佔位符替身 */
     .gacha-card-wrapper { position: relative; aspect-ratio: 5/7; width: 100%; perspective: 1000px; }
     
-    /* 🚀 破除結界 3：拔除聚焦替身的 3D 透視限制 */
     #gacha-overlay.focus-mode .gacha-card-wrapper.has-focus { perspective: none !important; z-index: 1000; }
 
     /* 🃏 卡片本體 */
     .gacha-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1; }
     
-    /* 🚀 真正的霸氣滿版展開！ */
+    /* 🚀 真正的霸氣滿版展開！絕不偏移！ */
     .gacha-card.focused { 
       position: fixed !important; top: 50% !important; left: 50% !important; 
       transform: translate(-50%, -50%) !important; 
       width: 85vw !important; max-width: 360px !important; 
-      height: auto !important; aspect-ratio: 5/7 !important; /* 維持完美比例 */
+      height: auto !important; aspect-ratio: 5/7 !important; 
       z-index: 9999 !important; cursor: default; 
       box-shadow: 0 30px 80px rgba(0,0,0,0.9), 0 0 50px rgba(0,210,211,0.3) !important;
     }
@@ -617,7 +617,7 @@
     
     .unlock-ui { display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; opacity: 0; transform: scale(0.8); transition: all 0.5s; pointer-events: none; }
     .gacha-card.focused .unlock-ui { display: flex; opacity: 1; transform: scale(1); pointer-events: auto; }
-    .gacha-card.focused .gacha-front::before { opacity: 0.1; } /* 放大時背景雷射減弱 */
+    .gacha-card.focused .gacha-front::before { opacity: 0.1; }
 
     .unlock-hint { font-size: 14px; color: #a4b0be; letter-spacing: 2px; margin-bottom: 10px; }
     .unlock-word { font-size: 40px; font-weight: 900; color: #00d2d3; text-shadow: 0 0 20px rgba(0,210,211,0.8); margin-bottom: 25px; letter-spacing: 2px; text-transform: uppercase; }
@@ -812,6 +812,7 @@
   
 <div id="gacha-overlay">
   
+  <div id="gacha-close-backdrop" onclick="cancelFocus()"></div>
   <div id="gacha-header">
     <h2 id="gacha-title">🎉 戰鬥勝利 🎉</h2>
     <p id="gacha-subtitle">剩餘開啟次數：<span id="picks-left">0</span> 次</p>
@@ -1770,7 +1771,7 @@
       focusedCardIndex = -1;
   }
 
-  // 綁定錄音解鎖邏輯
+  // 綁定錄音解鎖邏輯 (🚀 拔除本地音量阻礙)
   function bindVoiceLock(index) {
       const btn = document.getElementById(`lock-btn-${index}`);
       const status = document.getElementById(`lock-status-${index}`);
@@ -1780,69 +1781,56 @@
           if (isGachaRecording || cardData.flipped) return;
           e.preventDefault();
           
-          // 🚀 關鍵修復：喚醒休眠的 iOS AudioContext！
-          if (audioContext && audioContext.state === 'suspended') {
-              audioContext.resume();
-          }
+          if (audioContext && audioContext.state === 'suspended') audioContext.resume();
 
           isGachaRecording = true;
-          gachaChunks = [];
-          gachaMaxVolume = 0;
+          // 🚀 直接共用主程式的全局變數，最穩定！
+          chunks = [];
           
           btn.classList.add('recording');
           status.innerText = "聆聽中...";
           status.style.color = "#eb3b5a";
 
-          gachaMediaRecorder = new MediaRecorder(stream);
-          gachaMediaRecorder.ondataavailable = ev => gachaChunks.push(ev.data);
-          gachaMediaRecorder.start();
-
-          // 音量偵測
-          const checkVol = () => { 
-              if (gachaMediaRecorder && gachaMediaRecorder.state === "recording") { 
-                  analyser.getByteFrequencyData(dataArray); 
-                  let v = 0; for(let i=0; i<dataArray.length; i++) v += dataArray[i]; 
-                  if((v/dataArray.length) > gachaMaxVolume) gachaMaxVolume = v/dataArray.length; 
-                  requestAnimationFrame(checkVol); 
-              } 
-          }; 
-          checkVol();
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.ondataavailable = ev => chunks.push(ev.data);
+          mediaRecorder.start();
       };
 
       btn.onpointerup = () => {
           if (!isGachaRecording) return;
           isGachaRecording = false;
           btn.classList.remove('recording');
-          gachaMediaRecorder.stop();
 
-          // 🚀 關鍵修復：大幅降低音量門檻 (從 30 降到 5)，避免設備收音太嚴苛
-          if (gachaMaxVolume < 5) {
-              status.innerText = "太小聲了，請大聲唸！";
-              status.style.color = "#f1c40f";
-              return;
+          if (mediaRecorder && mediaRecorder.state === "recording") {
+              mediaRecorder.stop();
           }
 
           status.innerText = "驗證密語中...";
           status.style.color = "#00d2d3";
 
-          gachaMediaRecorder.onstop = () => {
+          mediaRecorder.onstop = () => {
+              // 🚀 如果完全沒收到音訊檔
+              if (chunks.length === 0) {
+                  status.innerText = "未收到聲音，請再試一次";
+                  status.style.color = "#e74c3c";
+                  return;
+              }
+
               const r = new FileReader();
-              r.readAsDataURL(new Blob(gachaChunks, { type: 'audio/webm' }));
+              r.readAsDataURL(new Blob(chunks, { type: 'audio/webm' }));
               r.onloadend = () => {
-                  // 將音檔傳給 AI 驗證 (借用 evaluate_speech，只要分數 > 50 就給過)
                   fetch(`${GAS_URL}?action=evaluate_speech&word=${encodeURIComponent(cardData.word)}`, { method: 'POST', body: r.result.split(',')[1] })
                   .then(res => res.json()).then(data => {
                       if (data.score >= 50) {
                           status.innerText = "封印解除！";
                           status.style.color = "#26de81";
-                          triggerReveal(index); // 🚀 觸發爆發翻牌動畫
+                          triggerReveal(index); 
                       } else {
-                          status.innerText = "密語錯誤，請再試一次";
+                          status.innerText = "密語錯誤，請重唸！";
                           status.style.color = "#e74c3c";
                       }
                   }).catch(() => {
-                      // 網路錯誤直接給過（佛心機制）
-                      status.innerText = "封印解除！(連線異常優待)";
+                      status.innerText = "封印解除！(連線優待)";
                       triggerReveal(index);
                   });
               };
