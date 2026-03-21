@@ -674,6 +674,36 @@
     #gacha-won-list { margin: 25px 0; font-size: 24px; font-weight: bold; color: #f1c40f; line-height: 2; letter-spacing: 2px; }
     .btn-claim { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; border: none; padding: 15px 40px; font-size: 18px; font-weight: 900; border-radius: 30px; letter-spacing: 4px; box-shadow: 0 10px 20px rgba(243,156,18,0.4); cursor: pointer; transition: 0.3s; width: 100%; }
     .btn-claim:active { transform: scale(0.95); }
+
+    /* ========================================= */
+    /* 🌈 頂級互動 3D 全息閃卡反光鍍膜 (Holo-Foil) */
+    /* ========================================= */
+    .holo-layer {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: inherit; 
+      pointer-events: none; /* 絕對不阻擋任何點擊 */
+      z-index: 12; /* 蓋在角色圖上，但在戰損特效下 */
+      
+      /* 🚀 閃卡核心漸層：結合白光反光與七彩霓虹色 */
+      background: linear-gradient(
+        115deg, 
+        transparent 20%, 
+        rgba(255, 255, 255, 0.7) 25%, 
+        transparent 30%, 
+        rgba(0, 212, 255, 0.6) 45%, 
+        rgba(255, 0, 128, 0.6) 55%, 
+        transparent 70%, 
+        rgba(255, 255, 255, 0.7) 75%, 
+        transparent 80%
+      );
+      background-size: 300% 300%;
+      background-position: 50% 50%;
+      
+      /* 🚀 靈魂魔法：將色彩暴力增值融入立繪底圖中 */
+      mix-blend-mode: color-dodge; 
+      opacity: 0; /* 預設隱藏，手指摸上去才發光 */
+      transition: opacity 0.3s ease;
+    }
   </style>
 </head>
 <body>
@@ -1239,6 +1269,9 @@
         }
         document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
         document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
+
+        // 🚀 加上這行：等 UI 渲染完畢後，綁定 3D 互動閃卡事件！
+        setTimeout(() => { initInteractiveHoloCards(); }, 500);
       });
   }
 
@@ -1911,6 +1944,74 @@
             window.location.href = `${GAS_URL}?id=${STUDENT_ID}`;
         });
     };
+  }
+  // =======================================================
+  // 🌈 頂級 3D 互動閃卡引擎 (追蹤手指與滑鼠)
+  // =======================================================
+  function initInteractiveHoloCards() {
+      // 找到對戰畫面的兩張卡片
+      const cards = [document.getElementById('my-card'), document.getElementById('op-card')];
+      
+      cards.forEach(card => {
+          if(!card) return;
+          
+          // 如果卡片裡面還沒有全息膜，幫它加一層
+          if(!card.querySelector('.holo-layer')) {
+              const holo = document.createElement('div');
+              holo.className = 'holo-layer';
+              card.appendChild(holo);
+          }
+          
+          const holoLayer = card.querySelector('.holo-layer');
+
+          // --- 觸控與滑鼠互動核心 ---
+          const handleInteract = (e) => {
+              // ⚠️ 如果卡片正在播放攻擊、受傷、大招等動畫，就暫時不給摸，避免動畫衝突
+              if(card.classList.contains('blast-up') || card.classList.contains('take-damage') || card.classList.contains('loser-shatter') || card.classList.contains('blast-ultimate')) return;
+
+              const rect = card.getBoundingClientRect();
+              
+              // 取得手指或滑鼠的座標
+              const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+              const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+              
+              // 計算點擊位置相對於卡片左上角的 X, Y
+              const x = clientX - rect.left;
+              const y = clientY - rect.top;
+              
+              // 找出卡片的正中心點
+              const centerX = rect.width / 2;
+              const centerY = rect.height / 2;
+              
+              // 🚀 物理計算：根據點擊位置遠離中心的程度，計算傾斜角度 (最大 ±15 度)
+              const rotateX = ((y - centerY) / centerY) * -15; 
+              const rotateY = ((x - centerX) / centerX) * 15;
+              
+              // 切換成極短的 transition，讓卡片無延遲緊跟手指
+              card.style.transition = 'transform 0.1s ease-out';
+              card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+              
+              // 🚀 光影計算：讓反光漸層跟著手指位置跑！
+              const bgX = (x / rect.width) * 100;
+              const bgY = (y / rect.height) * 100;
+              holoLayer.style.backgroundPosition = `${bgX}% ${bgY}%`;
+              holoLayer.style.opacity = '1'; // 摸下去瞬間爆發光芒
+          };
+
+          // 手指離開時，恢復原狀
+          const handleRelease = () => {
+              // 恢復平滑的 Q 彈回彈動畫
+              card.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+              card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+              holoLayer.style.opacity = '0'; // 光芒消退
+          };
+
+          // 綁定所有事件 (同時支援電腦滑鼠與手機觸控)
+          card.addEventListener('mousemove', handleInteract);
+          card.addEventListener('mouseleave', handleRelease);
+          card.addEventListener('touchmove', handleInteract, {passive: true});
+          card.addEventListener('touchend', handleRelease);
+      });
   }
 </script>
 </body>
