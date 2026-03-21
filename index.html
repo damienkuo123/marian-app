@@ -26,22 +26,22 @@
     #zh-display { font-size: 20px; color: #7f8c8d; margin: -10px 0 20px 0; font-weight: bold; }
 
     /* ========================================= */
-    /* 🚀 傳送門：頂級 3D 全息對峙 Loading 畫面 (重磅重疊版) */
+    /* 🚀 傳送門：頂級 3D 全息對峙 Loading 畫面 (終極隔離防擋版) */
     /* ========================================= */
     #battle-portal-overlay {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      /* 🚀 使用 dvh (動態視窗高度)，確保在 Safari 工具列展開時也不會被遮擋 */
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; 
       background: rgba(5, 10, 15, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-      z-index: 9999; flex-direction: column; align-items: center; justify-content: space-between; 
-      /* 🚀 Safari 底部安全區修復：自動偵測螢幕底部工具列，並把按鈕往上頂 */
-      padding: max(40px, env(safe-area-inset-top)) 0 max(40px, calc(env(safe-area-inset-bottom) + 30px));
-      box-sizing: border-box; overflow: hidden;
+      z-index: 9999; flex-direction: column; align-items: center; justify-content: center; /* 改為 center，統一佈局 */
+      padding: 0; box-sizing: border-box; overflow: hidden;
       perspective: 1200px;
     }
 
-    /* 頂部倒數計時與提示容器 */
+    /* 頂部倒數計時與提示容器 (絕對定位於上方) */
     .portal-timer-modern {
+      position: absolute; top: max(40px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 20;
+      z-index: 20; width: 100%;
     }
     .portal-hint {
       font-size: 14px; font-weight: bold; color: #a4b0be; letter-spacing: 2px;
@@ -52,18 +52,20 @@
       letter-spacing: 8px;
     }
 
-    /* 對戰卡片對峙區 */
+    /* 對戰卡片對峙區 (使用 Flexbox Gap 確保絕對隔離) */
     .portal-clash-container {
-      position: relative; width: 100%; flex: 1; max-width: 900px; 
-      display: flex; align-items: center; justify-content: center;
+      position: relative; width: 100%; max-width: 900px; 
+      display: flex; align-items: center; justify-content: center; gap: 20px; /* 🚀 強制兩張卡片保持 20px 的間距！ */
       transform-style: preserve-3d;
+      margin-top: 20px; /* 微調位置 */
     }
 
-    /* 🛡️ 恢復霸氣的寬大直立卡片！ */
+    /* 🛡️ 卡片本體：限制寬度，確保不會互相擠壓 */
     .portal-card {
-      position: absolute; 
-      width: 42vw; height: 60vh; /* 🚀 恢復大氣比例 */
-      max-width: 280px; max-height: 420px; 
+      /* 🚀 移除 absolute，讓 Flexbox 接管佈局！ */
+      position: relative; 
+      width: 40vw; height: 55vh; 
+      max-width: 260px; max-height: 400px; 
       background: rgba(255, 255, 255, 0.1); 
       border-radius: 20px; 
       box-shadow: 
@@ -75,11 +77,8 @@
       display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 25px;
       opacity: 0;
       transform-style: preserve-3d;
+      flex-shrink: 0; /* 防止被擠壓變形 */
     }
-
-    /* 🚀 景深設定：我方卡片在上一層 (z-index: 2)，對手在下一層 (z-index: 1) */
-    #portal-my-card { z-index: 2; }
-    #portal-op-card { z-index: 1; }
 
     /* 姓名條 */
     .portal-name-tag {
@@ -90,31 +89,30 @@
       text-shadow: 0 0 10px rgba(255,255,255,0.5);
     }
 
-    /* 🚀 動態進場：刻意讓卡片在中間交錯重疊，並加上前後景深 */
+    /* 🚀 動態進場：因為使用了 Flexbox，位移量可以大幅縮小，動畫會更乾淨 */
     .clash-in-my { animation: slide-in-my 1s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
     @keyframes slide-in-my {
-      0% { transform: translateX(-100vw) translateY(50px) rotateY(45deg) rotateZ(-15deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
-      /* 🚀 我方：偏左一點、放大一點、疊在最上層 */
-      100% { transform: translateX(-20%) translateY(10px) rotateY(20deg) rotateZ(-6deg) scale(1.05); opacity: 1; filter: brightness(1) blur(0px); } 
+      0% { transform: translateX(-50vw) translateY(50px) rotateY(45deg) rotateZ(-15deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
+      /* 🚀 最終狀態：不再需要大位移，保持傾斜即可 */
+      100% { transform: translateX(0) translateY(0) rotateY(15deg) rotateZ(-5deg) scale(1); opacity: 1; filter: brightness(1) blur(0px); } 
     }
 
     .clash-in-op { animation: slide-in-op 1s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
     @keyframes slide-in-op {
-      0% { transform: translateX(100vw) translateY(-50px) rotateY(-45deg) rotateZ(15deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
-      /* 🚀 對手：偏右一點、縮小一點、稍微調暗製造後方景深 */
-      100% { transform: translateX(20%) translateY(-10px) rotateY(-20deg) rotateZ(6deg) scale(0.95); opacity: 1; filter: brightness(0.8) blur(0px); } 
+      0% { transform: translateX(50vw) translateY(-50px) rotateY(-45deg) rotateZ(15deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
+      /* 🚀 最終狀態：不再需要大位移，保持傾斜即可 */
+      100% { transform: translateX(0) translateY(0) rotateY(-15deg) rotateZ(5deg) scale(1); opacity: 1; filter: brightness(1) blur(0px); } 
     }
 
-    /* ✨ VS 疊在正中央：自帶深色光暈背景，保證字體不被吃掉 */
+    /* ✨ VS 疊在正中央防護罩 */
     .portal-vs-spark {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
       width: 140px; height: 140px;
       display: flex; justify-content: center; align-items: center;
       font-size: 55px; font-weight: 900; font-style: italic; color: #fff;
-      /* 🚀 神奇的防護罩：放射狀黑色漸層，邊緣透明 */
-      background: radial-gradient(circle, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0) 70%);
+      background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 70%);
       text-shadow: 0 0 10px #000, 0 0 20px #f39c12, 0 0 40px #f1c40f, 0 0 80px #e67e22;
-      z-index: 20; opacity: 0; letter-spacing: 2px;
+      z-index: 20; opacity: 0; letter-spacing: 2px; pointer-events: none; /* 防止擋住點擊 */
     }
     .spark-active { animation: portal-vs-pop 0.6s 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     @keyframes portal-vs-pop {
@@ -122,19 +120,23 @@
       100% { transform: translate(-50%, -50%) scale(1); opacity: 1; filter: blur(0px); }
     }
 
-    /* 🚀 高級毛玻璃「進入戰場」按鈕 */
-    .portal-btn-hidden { opacity: 0; transform: translateY(30px); pointer-events: none; }
-    .portal-btn-show { opacity: 1; pointer-events: auto; transform: translateY(0); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    /* 🚀 高級毛玻璃「進入戰場」按鈕 (絕對定位於底部，確保不被遮擋) */
+    .portal-btn-hidden { opacity: 0; transform: translateX(-50%) translateY(30px); pointer-events: none; }
+    .portal-btn-show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     
     .btn-cyber {
+      position: absolute; /* 🚀 絕對定位 */
+      bottom: max(40px, env(safe-area-inset-bottom)); /* 🚀 距離底部永遠保持安全距離 */
+      left: 50%;
       background: rgba(255,255,255,0.1); color: white;
       font-size: 18px; font-weight: bold; letter-spacing: 6px; padding: 18px 45px;
       border: 1px solid rgba(255,255,255,0.3); border-radius: 30px; cursor: pointer;
       backdrop-filter: blur(10px); box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       text-transform: uppercase; transition: 0.3s;
+      white-space: nowrap; /* 防止按鈕文字折行 */
     }
     .btn-cyber:hover { background: rgba(255,255,255,0.2); box-shadow: 0 0 20px rgba(0, 210, 211, 0.6); border-color: #00d2d3; }
-    .btn-cyber:active { transform: scale(0.95); }
+    .btn-cyber:active { transform: translateX(-50%) scale(0.95); } /* 🚀 修正 active 時的位移 */
 
     /* ========================================= */
     /* 對戰頁面 */
