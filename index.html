@@ -257,84 +257,76 @@
       background: rgba(10, 15, 20, 0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px);
       z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white; 
       transition: all 0.5s ease; overflow: hidden;
-      perspective: 1200px; /* 🚀 啟動 3D 視角，讓卡片有立體空間感 */
+      perspective: 1200px; /* 🚀 啟動 3D 視角 */
     }
     #impact-overlay.active { display: flex; background: rgba(5, 10, 15, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
     #impact-overlay.fade-out { opacity: 0; backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
 
-    /* 🛡️ 3D 全息投影卡片舞台 (UI 全部裝在裡面！) */
+    /* 🛡️ 3D 全息投影卡片舞台 */
     #impact-stand-stage {
       position: relative; width: 90vw; height: 75vh; max-width: 500px;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.1); /* 稍微提亮背板 */
       border-radius: 25px; 
       box-shadow: 
         20px 30px 50px rgba(0,0,0,0.8), 
-        inset 3px 3px 5px rgba(255,255,255,0.3), 
-        inset -3px -3px 5px rgba(0,0,0,0.5), 
-        0 0 0 1px rgba(255,255,255,0.15); 
+        inset 3px 3px 5px rgba(255,255,255,0.4), 
+        inset -3px -3px 5px rgba(0,0,0,0.3), 
+        0 0 0 1px rgba(255,255,255,0.2); 
       overflow: hidden; z-index: 1; 
       display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 0;
       transform-style: preserve-3d;
       
       background-size: cover; background-repeat: no-repeat; background-position: center top;
-      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 95%);
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 95%);
-      
-      /* 預設隱藏在畫面外，防呆 */
       transform: translate(150%, 100%) scale(0.5); opacity: 0;
+      /* 🚀 已經將 mask-image 刪除，立繪絕對不會再變黑了！ */
     }
     
-    /* 🚀 我方勝利 (Win/Draw)：滑入與緩飄的無縫銜接 */
-    .theme-win.active #impact-stand-stage { 
-      /* 外層改用 linear，避免在關鍵影格切換時重新加速 */
-      animation: card-enter-win 3s linear forwards; 
-    }
-    .theme-win.fade-out #impact-stand-stage { 
-      animation: card-exit-win 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
-    }
+    /* 🚀 我方單局勝利 (Win)：滑入與緩飄 */
+    .theme-win.active #impact-stand-stage { animation: card-enter-win 3s linear forwards; }
+    .theme-win.fade-out #impact-stand-stage { animation: card-exit-win 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
     @keyframes card-enter-win {
-      0% { 
-        transform: translate(100%, 100%) rotateZ(-25deg) rotateY(30deg) rotateX(20deg) scale(0.6); 
-        opacity: 0; filter: brightness(3) blur(10px); 
-        /* 第一段衝刺：在這裡套用減速曲線，讓它在 25% 時完美減速到緩飄的初速 */
-        animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1); 
-      }
-      25% { 
-        transform: translate(2%, 2%) rotateZ(-12deg) rotateY(5deg) rotateX(2deg) scale(1.02); 
-        opacity: 1; filter: brightness(1) blur(0px); 
-        /* 第二段緩飄：改用 linear，保持等速漂浮直到 100% 結束 */
-        animation-timing-function: linear; 
-      }
-      100% { 
-        transform: translate(-5%, -5%) rotateZ(-15deg) rotateY(0deg) rotateX(0deg) scale(1.05); 
-      }
+      0% { transform: translate(100%, 100%) rotateZ(-25deg) rotateY(30deg) rotateX(20deg) scale(0.6); opacity: 0; filter: brightness(2.5) blur(10px); animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1); }
+      25% { transform: translate(2%, 2%) rotateZ(-12deg) rotateY(5deg) rotateX(2deg) scale(1.02); opacity: 1; filter: brightness(1.1) blur(0px); animation-timing-function: linear; }
+      100% { transform: translate(-5%, -5%) rotateZ(-15deg) rotateY(0deg) rotateX(0deg) scale(1.05); filter: brightness(1.1) blur(0px); opacity: 1; }
+    }
+    @keyframes card-exit-win {
+      0% { transform: translate(-5%, -5%) rotateZ(-15deg) rotateY(0deg) rotateX(0deg) scale(1.05); opacity: 1; }
+      100% { transform: translate(-150%, -100%) rotateZ(-30deg) rotateY(-20deg) rotateX(-20deg) scale(0.5); opacity: 0; filter: brightness(2) blur(10px); }
     }
 
-    /* 🚀 對手勝利 (Lose)：同理修正頓挫感 */
-    .theme-lose.active #impact-stand-stage { 
-      animation: card-enter-lose 3s linear forwards; 
-    }
-    .theme-lose.fade-out #impact-stand-stage { 
-      animation: card-exit-lose 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
-    }
+    /* 🚀 對手單局勝利 (Lose)：滑入與緩飄 */
+    .theme-lose.active #impact-stand-stage { animation: card-enter-lose 3s linear forwards; }
+    .theme-lose.fade-out #impact-stand-stage { animation: card-exit-lose 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
     @keyframes card-enter-lose {
-      0% { 
-        transform: translate(-100%, -100%) rotateZ(15deg) rotateY(-30deg) rotateX(-20deg) scale(0.6); 
-        opacity: 0; filter: brightness(3) blur(10px); 
-        /* 衝刺減速 */
-        animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1);
-      }
-      25% { 
-        transform: translate(-2%, -2%) rotateZ(-8deg) rotateY(-5deg) rotateX(-2deg) scale(1.02); 
-        opacity: 1; filter: brightness(1) blur(0px); 
-        /* 緩飄等速 */
-        animation-timing-function: linear;
-      }
-      100% { 
-        transform: translate(5%, 5%) rotateZ(-10deg) rotateY(0deg) rotateX(0deg) scale(1.05); 
-      }
+      0% { transform: translate(-100%, -100%) rotateZ(15deg) rotateY(-30deg) rotateX(-20deg) scale(0.6); opacity: 0; filter: brightness(2.5) blur(10px); animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1); }
+      25% { transform: translate(-2%, -2%) rotateZ(-8deg) rotateY(-5deg) rotateX(-2deg) scale(1.02); opacity: 1; filter: brightness(1.1) blur(0px); animation-timing-function: linear; }
+      100% { transform: translate(5%, 5%) rotateZ(-10deg) rotateY(0deg) rotateX(0deg) scale(1.05); filter: brightness(1.1) blur(0px); opacity: 1; }
+    }
+    @keyframes card-exit-lose {
+      0% { transform: translate(5%, 5%) rotateZ(-10deg) rotateY(0deg) rotateX(0deg) scale(1.05); opacity: 1; }
+      100% { transform: translate(150%, 100%) rotateZ(5deg) rotateY(20deg) rotateX(20deg) scale(0.5); opacity: 0; filter: brightness(2) blur(10px); }
+    }
+
+    /* 👑 最終決戰 (Final Match)：神級 3D 翻轉進場 */
+    .is-final.active #impact-stand-stage {
+      animation: final-card-enter 3s linear forwards !important;
+      box-shadow: 0 0 60px rgba(241, 196, 15, 0.5), inset 0 0 30px rgba(255,255,255,0.6);
+      border: 3px solid rgba(241, 196, 15, 0.8);
+    }
+    .is-final.fade-out #impact-stand-stage {
+      animation: final-card-exit 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    }
+
+    @keyframes final-card-enter {
+      0% { transform: scale(0) rotateY(720deg) rotateZ(10deg); opacity: 0; filter: brightness(3) blur(20px); animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1); }
+      25% { transform: scale(1.05) rotateY(0deg) rotateZ(0deg); opacity: 1; filter: brightness(1.15) blur(0px); animation-timing-function: linear; }
+      100% { transform: scale(1.1) rotateY(5deg) rotateZ(-2deg); filter: brightness(1.15) blur(0px); opacity: 1; }
+    }
+    @keyframes final-card-exit {
+      0% { transform: scale(1.1) rotateY(5deg) rotateZ(-2deg); opacity: 1; }
+      100% { transform: translateY(-100%) scale(1.5) rotateX(45deg); opacity: 0; filter: brightness(3) blur(15px); }
     }
 
     /* ✨ 掃過立繪的流光特效 */
@@ -346,7 +338,7 @@
     .active #impact-stand-stage::after { animation: light-sweep 1.2s 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
     @keyframes light-sweep { 0% { left: -150%; } 100% { left: 150%; } }
 
-    /* 內容層：反向扭曲，抵銷舞台歪斜，創造偽 3D 感 */
+    /* 內容層：反向扭曲 */
     #impact-content { 
       position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; 
       width: 100%; height: 100%; justify-content: space-between;
@@ -357,7 +349,7 @@
     .active #impact-subtitle { animation: fade-down 0.5s 0.5s forwards; }
     @keyframes fade-down { to { opacity: 1; transform: translateY(0); } }
     
-    /* ☄️ 狂暴砸字 (已修正模糊 Bug) */
+    /* ☄️ 狂暴砸字 */
     #impact-result { 
       font-size: 80px; font-weight: 900; letter-spacing: 15px; margin: -20px 0 0 0; text-transform: uppercase; 
       opacity: 0; transform: scale(3) rotate(-10deg); 
@@ -369,11 +361,19 @@
       100% { opacity: 1; transform: scale(1) rotate(0deg); filter: blur(0px); letter-spacing: 6px; } 
     }
 
+    /* 👑 最終決戰專屬砸字 */
+    .is-final.active #impact-result { animation: final-text-slam 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important; }
+    @keyframes final-text-slam {
+      0% { opacity: 0; transform: scale(5) translateY(-50px) rotateX(90deg); filter: blur(20px); letter-spacing: 50px; }
+      50% { opacity: 1; transform: scale(0.8) translateY(0) rotateX(0deg); filter: blur(0px); letter-spacing: 2px; }
+      100% { opacity: 1; transform: scale(1) rotateX(0deg); letter-spacing: 10px; }
+    }
+
     .result-win { color: #fff; text-shadow: 0 0 15px rgba(0, 210, 211, 0.8), 0 0 40px rgba(0, 210, 211, 0.6), 0 0 80px rgba(0, 210, 211, 0.4); }
     .result-lose { color: #fff; text-shadow: 0 0 15px rgba(255, 107, 107, 0.8), 0 0 40px rgba(255, 107, 107, 0.6), 0 0 80px rgba(255, 107, 107, 0.4); }
     .result-draw { color: #fff; text-shadow: 0 0 15px rgba(241, 196, 15, 0.8), 0 0 40px rgba(241, 196, 15, 0.6), 0 0 80px rgba(241, 196, 15, 0.4); }
 
-    /* 🥊 分數版完美貼合卡片底部 */
+    /* 🥊 分數版 */
     .impact-score-board {
       display: flex; align-items: center; justify-content: center; gap: 25px; 
       background: rgba(0, 0, 0, 0.6); padding: 15px 40px; border-radius: 20px;
@@ -1272,16 +1272,17 @@
       }).catch(() => isChecking = false);
   }
 
-  // 🚀 重新打造的顯示畫面函數，吃進去圖片 URL 並套用全息立繪樣式
+  // 🚀 重新打造的顯示畫面函數，支援最終決戰 (Final Match) 的神級展現
   function showImpactOverlay(myNum, opNum, isFinal, myImgUrl, opImgUrl) {
     const o = document.getElementById('impact-overlay');
     const r = document.getElementById('impact-result'); 
     const sub = document.getElementById('impact-subtitle');
     const standStage = document.getElementById('impact-stand-stage'); 
 
-    // 清除所有舊狀態與主題
+    // 清除舊狀態
     r.className = '';
-    o.classList.remove('fade-out', 'active', 'theme-win', 'theme-lose'); 
+    // 🚀 清除所有的 class，確保乾淨啟動
+    o.classList.remove('fade-out', 'active', 'theme-win', 'theme-lose', 'is-final'); 
     standStage.style.backgroundImage = 'none';
     void o.offsetWidth; // 強制重繪
 
@@ -1290,23 +1291,28 @@
     document.getElementById('impact-op-score').innerText = opNum;
     sub.innerText = isFinal ? "FINAL MATCH RESULT" : "ROUND RESULT";
     
+    // 👑 如果是拿到 5 分的最終決戰，加上專屬的 is-final 標籤！
+    if (isFinal) {
+        o.classList.add('is-final');
+    }
+
     // 判定勝負與霸氣背景展現
     if (myNum > opNum) { 
       r.innerText = isFinal ? "VICTORY" : "WIN"; 
       r.classList.add('result-win');
-      o.classList.add('theme-win'); // 🚀 觸發我方勝利動畫方向
+      o.classList.add('theme-win'); // 觸發我方勝利動畫方向
       if (myImgUrl) standStage.style.backgroundImage = `url('${myImgUrl}')`; 
     }
     else if (myNum < opNum) { 
       r.innerText = isFinal ? "DEFEAT" : "LOSE"; 
       r.classList.add('result-lose');
-      o.classList.add('theme-lose'); // 🚀 觸發對手勝利動畫方向
+      o.classList.add('theme-lose'); // 觸發對手勝利動畫方向
       if (opImgUrl) standStage.style.backgroundImage = `url('${opImgUrl}')`; 
     }
     else { 
       r.innerText = "DRAW"; 
       r.classList.add('result-draw');
-      o.classList.add('theme-win'); // 平手借用贏家方向
+      o.classList.add('theme-win'); 
     }
     
     o.classList.add('active'); 
