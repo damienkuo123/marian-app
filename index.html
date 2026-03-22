@@ -913,6 +913,46 @@
   };
 
   window.onload = async () => {
+    // 🚀 開發者測試外掛：直接進入高階 AI 抽獎畫面
+    if (MODE === 'test_gacha') {
+        document.getElementById('main-card').style.display = 'none';
+        document.getElementById('battle-portal-overlay').style.display = 'none';
+        document.getElementById('battle-arena').style.display = 'none';
+        document.body.style.background = '#050914'; // 切換成暗色背景
+        
+        // 塞入假單字庫，以防錄音解鎖時報錯
+        battleQuizArr = [{en: "APPLE"}, {en: "MAGIC"}, {en: "HERO"}];
+        
+        try {
+            // 1. 預先開啟麥克風權限 (抽卡語音鎖需要)
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            
+            // 2. 向後端請求玩家當前的角色資料 (利用你既有的 get_data API)
+            let res = await fetch(`${GAS_URL}?action=get_data&id=${STUDENT_ID}`);
+            let data = await res.json();
+            
+            // 解析解鎖角色 (相容你後端可能的回傳名稱)
+            let avatarsStr = data.unlockedAvatars || data.avatars || data.UnlockedAvatars || "";
+            window.myUnlockedAvatars = avatarsStr.split(',').map(s => s.trim()).filter(s => s !== "");
+            
+            console.log("測試模式啟動！目前擁有角色：", window.myUnlockedAvatars);
+            
+        } catch(e) {
+            console.log("無法獲取麥克風或玩家資料，以空裝態進入測試", e);
+            window.myUnlockedAvatars = [];
+        }
+        
+        // 3. 直接觸發高階 AI 勝利的抽獎 (3次機會)
+        initGacha("高階Ai");
+        setTimeout(() => { initInteractiveHoloCards(); }, 500);
+        return; // 終止後續載入，攔截戰鬥流程
+    }
+
+    // --- 原本的正常載入邏輯 ---
     if (MODE === 'battle' && ROOM_ID) {
       document.getElementById('main-card').style.display = 'none';
       document.getElementById('impact-overlay').classList.remove('active');
