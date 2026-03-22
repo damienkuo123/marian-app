@@ -1248,16 +1248,19 @@
         window.myTheme = isMeHost ? data.hostTheme : data.guestTheme;
         window.opTheme = isMeHost ? data.guestTheme : data.hostTheme;
 
-        const myCard = document.getElementById('my-card');
-        const opCard = document.getElementById('op-card');
-        
-        if (isMeHost) {
-            if(data.hostImg) myCard.style.backgroundImage = `url('${data.hostImg}')`;
-            if(data.guestImg) opCard.style.backgroundImage = `url('${data.guestImg}')`;
+        // 🚀 關鍵新增：在這裡取得玩家目前已經擁有的角色！
+        // 假設後端傳來的 data 裡面有 hostUnlocked / guestUnlocked (這需要你後端有傳)
+        // 如果後端沒傳，我們就先宣告一個空的，等一下在抽獎邏輯裡面我們做「即時」的防重複
+        if (isMeHost && data.hostUnlocked) {
+             window.myUnlockedAvatars = data.hostUnlocked.split(',').map(s => s.trim());
+        } else if (!isMeHost && data.guestUnlocked) {
+             window.myUnlockedAvatars = data.guestUnlocked.split(',').map(s => s.trim());
         } else {
-            if(data.guestImg) myCard.style.backgroundImage = `url('${data.guestImg}')`;
-            if(data.hostImg) opCard.style.backgroundImage = `url('${data.hostImg}')`;
+             // 備用方案：如果後端沒給，至少先初始化為空陣列
+             window.myUnlockedAvatars = window.myUnlockedAvatars || []; 
         }
+        
+        // ... (以下保持不變) ...
 
         document.getElementById('battle-arena').classList.add('battle-ready');
 
@@ -1918,17 +1921,25 @@
           
           if (prizeToAdd.type === 'avatar') {
               const charId = prizeToAdd.value;
-              // 假設前端有紀錄解鎖列表 (如果沒有，預設當作新角色，交給後端把關防呆)
-              const alreadyOwned = (window.myUnlockedAvatars || []).includes(charId);
               
-              if (alreadyOwned) {
-                  prizeToAdd.realLabel = `(重複轉點) ${characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label}`;
+              // 1. 檢查「原本的帳號」是否已經有這個角色
+              const alreadyOwnedInAccount = (window.myUnlockedAvatars || []).includes(charId);
+              // 2. 檢查「這次抽獎的前幾抽」是否已經抽到這個角色
+              const alreadyGotInThisGacha = window.wonAvatars.includes(charId);
+              
+              if (alreadyOwnedInAccount || alreadyGotInThisGacha) {
+                  // 重複了！轉換成補償點數
+                  const charName = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
+                  // 💡 結算顯示明確的補償文字
+                  prizeToAdd.realLabel = `(重複) ${charName} → 轉為 500 點補償`; 
                   window.wonPoints += 500; // 補償 500 點
               } else {
+                  // 新角色
                   prizeToAdd.realLabel = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
-                  window.wonAvatars.push(charId); 
+                  window.wonAvatars.push(charId); // 記錄下來，防止這局再抽到
               }
           } else {
+              // 點數獎勵
               window.wonPoints += prizeToAdd.value; 
               prizeToAdd.realLabel = prizeToAdd.label;
           }
@@ -1938,6 +1949,7 @@
           gachaPicksLeft--;
           document.getElementById('picks-left').innerText = gachaPicksLeft;
 
+          // ... (後續結算邏輯保持不變) ...
           if (gachaPicksLeft <= 0) {
               isGachaResolving = true;
               document.getElementById('gacha-subtitle').innerHTML = "<span style='color:#e74c3c'>次數已用盡！</span>";
