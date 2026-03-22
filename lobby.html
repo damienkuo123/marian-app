@@ -1,1 +1,401 @@
 
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>瑪麗安傳說大廳</title>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --gold: #f1c40f;
+      --panel-bg: rgba(30, 39, 46, 0.85);
+    }
+    body, html {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: var(--bg-color); font-family: -apple-system, sans-serif;
+      color: white; overflow: hidden;
+      /* 充滿科技感的暗色網格背景 */
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    /* 🔝 頂部資訊列 */
+    header {
+      padding: max(20px, env(safe-area-inset-top)) 20px 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+      z-index: 100; position: relative;
+    }
+    .user-info h2 { margin: 0; font-size: 18px; color: var(--gold); letter-spacing: 2px; }
+    .user-points { font-size: 24px; font-weight: 900; color: #00d2d3; text-shadow: 0 0 10px rgba(0,210,211,0.5); }
+
+    /* 🏷️ 動態標籤與角色名稱區 */
+    .hero-info-zone {
+      text-align: center; margin-top: 10px; min-height: 80px; z-index: 10; position: relative;
+    }
+    .badges { display: flex; justify-content: center; gap: 10px; margin-bottom: 8px; }
+    .badge {
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 900; letter-spacing: 1px;
+      border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px);
+    }
+    /* 稀有度顏色 */
+    .badge.rarity-N { color: #bdc3c7; border-color: #bdc3c7; background: rgba(189,195,199,0.1); }
+    .badge.rarity-R { color: #3498db; border-color: #3498db; background: rgba(52,152,219,0.1); }
+    .badge.rarity-SR { color: #9b59b6; border-color: #9b59b6; background: rgba(155,89,182,0.1); }
+    .badge.rarity-SSR { color: #f1c40f; border-color: #f1c40f; background: rgba(241,196,15,0.1); box-shadow: 0 0 10px rgba(241,196,15,0.5); }
+    .badge.category { color: #2ecc71; border-color: #2ecc71; background: rgba(46,204,113,0.1); }
+    
+    .hero-name { font-size: 32px; font-weight: 900; letter-spacing: 4px; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.8); transition: 0.3s; }
+
+    /* 🖼️ 第一區：Cover Flow 畫廊 */
+    .gallery-container {
+      position: relative; width: 100%; height: 50vh; margin-top: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    
+    /* 中央裝備掃描框 */
+    .center-target-box {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 260px; height: 364px; /* 5:7 比例 */
+      border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 20px;
+      pointer-events: none; z-index: 0; transition: 0.3s;
+    }
+    .center-target-box::after {
+      content: 'EQUIP SLOT'; position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.3); font-size: 12px; font-weight: bold; letter-spacing: 4px;
+    }
+    .center-target-box.is-equipped { border: 2px solid var(--gold); box-shadow: 0 0 20px rgba(241,196,15,0.3); }
+
+    /* 橫向滾動軌道 */
+    .carousel-track {
+      display: flex; gap: 40px; overflow-x: auto; width: 100%; padding: 50px calc(50vw - 130px);
+      scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      align-items: center; z-index: 5; perspective: 1000px;
+    }
+    .carousel-track::-webkit-scrollbar { display: none; }
+
+    /* 🃏 Poke-Holo 神級卡牌架構 */
+    .holo-card-wrapper {
+      scroll-snap-align: center; flex-shrink: 0;
+      width: 260px; height: 364px; perspective: 1000px;
+    }
+    
+    .holo-card {
+      width: 100%; height: 100%; position: relative; border-radius: 18px;
+      transform-style: preserve-3d; transition: transform 0.1s ease-out;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8); cursor: grab;
+      
+      /* 預設環境變數 (給 JS 操控) */
+      --pointer-x: 50%; --pointer-y: 50%;
+      --pointer-from-center: 0;
+      --rotate-x: 0deg; --rotate-y: 0deg;
+      transform: rotateX(var(--rotate-x)) rotateY(var(--rotate-y)) scale3d(1, 1, 1);
+    }
+    .holo-card:active { cursor: grabbing; }
+
+    /* 卡面底圖 */
+    .card__bg {
+      position: absolute; inset: 0; border-radius: inherit; background-size: cover; background-position: center;
+      border: 2px solid #333; z-index: 1; transform: translateZ(0px); /* 逼迫建立 3D 層 */
+    }
+
+    /* 光影反射層 (Glare) */
+    .card__glare {
+      position: absolute; inset: 0; border-radius: inherit; z-index: 3; pointer-events: none;
+      background: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0,0%,100%,0.8) 10%, hsla(0,0%,100%,0.6) 20%, hsla(0,0%,0%,0.6) 90%);
+      mix-blend-mode: overlay; opacity: calc(var(--pointer-from-center) * 0.8);
+    }
+
+    /* ✨ 依照稀有度客製化的雷射閃光層 (Shine) */
+    .card__shine {
+      position: absolute; inset: 0; border-radius: inherit; z-index: 4; pointer-events: none;
+      mix-blend-mode: color-dodge; opacity: 0; transition: opacity 0.3s;
+    }
+    .holo-card:hover .card__shine { opacity: 1; }
+
+    /* 【R卡 - Cosmos Holo 宇宙星鑽】 */
+    .holo-card[data-rarity="R"] .card__shine {
+      background: 
+        radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), rgba(255,255,255,0.8) 0%, transparent 40%),
+        repeating-linear-gradient(45deg, transparent, rgba(0, 212, 255, 0.4) 10%, rgba(255, 0, 128, 0.4) 20%, transparent 30%);
+      background-size: 200% 200%; background-position: var(--pointer-x) var(--pointer-y);
+      mix-blend-mode: color-dodge;
+    }
+
+    /* 【SR卡 - Trainer Full Art 金屬光澤】 */
+    .holo-card[data-rarity="SR"] .card__shine {
+      background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.7) 30%, transparent 40%, rgba(255, 215, 0, 0.5) 60%, transparent 80%);
+      background-size: 300% 300%; background-position: var(--pointer-x) var(--pointer-y);
+      mix-blend-mode: hard-light; filter: brightness(1.2) contrast(1.5);
+    }
+    .holo-card[data-rarity="SR"] .card__bg { border-color: #bdc3c7; }
+
+    /* 【SSR卡 - VMAX 極致炫彩浮雕】 */
+    .holo-card[data-rarity="SSR"] .card__shine {
+      background: 
+        linear-gradient(115deg, transparent 20%, rgba(255,255,255,0.9) 25%, transparent 30%, rgba(0, 212, 255, 0.8) 45%, rgba(255, 0, 128, 0.8) 55%, transparent 70%),
+        repeating-linear-gradient(90deg, rgba(255,0,0,0.2), rgba(255,255,0,0.2), rgba(0,255,0,0.2), rgba(0,255,255,0.2), rgba(0,0,255,0.2), rgba(255,0,255,0.2), rgba(255,0,0,0.2));
+      background-size: 400% 400%, 200% 200%; background-position: var(--pointer-x) var(--pointer-y), center;
+      mix-blend-mode: color-dodge; filter: saturate(1.5) brightness(1.2);
+    }
+    .holo-card[data-rarity="SSR"] .card__bg { border: 2px solid var(--gold); box-shadow: inset 0 0 20px rgba(241,196,15,0.5); }
+
+    /* 🔘 底部按鈕區 */
+    .action-zone {
+      position: absolute; bottom: max(30px, env(safe-area-inset-bottom)); left: 0; width: 100%;
+      display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 50;
+    }
+    
+    .btn-equip {
+      background: linear-gradient(135deg, #27ae60, #1e8449); color: white; border: none;
+      padding: 15px 50px; font-size: 18px; font-weight: bold; border-radius: 30px; letter-spacing: 2px;
+      box-shadow: 0 10px 20px rgba(39, 174, 96, 0.4); cursor: pointer; transition: 0.3s;
+    }
+    .btn-equip:active { transform: scale(0.95); }
+    .btn-equip.is-equipped { background: #576574; box-shadow: none; cursor: default; }
+    
+    .btn-shop {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white;
+      padding: 10px 30px; border-radius: 20px; font-size: 14px; cursor: pointer; backdrop-filter: blur(5px);
+    }
+
+    /* 提示訊息 */
+    #toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--gold); color: #000; padding: 10px 25px; border-radius: 20px;
+      font-weight: bold; font-size: 14px; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast">裝備成功！</div>
+
+  <header>
+    <div class="user-info">
+      <h2 id="header-name">連線中...</h2>
+      <div class="user-points" id="header-points">0 PTS</div>
+    </div>
+    <button class="btn-shop" onclick="alert('第二區：毛玻璃商店開發中！')">🛒 兌換角色</button>
+  </header>
+
+  <div class="hero-info-zone">
+    <div class="badges">
+      <div id="badge-rarity" class="badge rarity-N">讀取中</div>
+      <div id="badge-category" class="badge category">讀取中</div>
+    </div>
+    <h1 id="hero-name" class="hero-name">讀取中...</h1>
+  </div>
+
+  <div class="gallery-container">
+    <div id="target-box" class="center-target-box"></div>
+    <div class="carousel-track" id="carousel">
+      </div>
+  </div>
+
+  <div class="action-zone">
+    <button id="equip-btn" class="btn-equip" onclick="equipCurrentCharacter()">裝備此角色</button>
+  </div>
+
+  <script>
+    // ⚠️ 替換成你的 GAS URL
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
+    const params = new URLSearchParams(window.location.search);
+    const STUDENT_ID = params.get('id') || "S001";
+
+    // 🚀 資料庫：所有角色資產 (加上稀有度與分類)
+    const characterAssets = {
+      'A001': { name: '新手劍士', img: 'https://cdn-icons-png.flaticon.com/512/4712/4712139.png', rarity: 'N', category: '一般' }, 
+      'A002': { name: '艾多 Aldo', img: 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/Aldo.webp', rarity: 'SR', category: '一般' },
+      'A003': { name: '菲利克斯 Felix', img: 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/Felix.webp', rarity: 'SSR', category: '限定' },
+      'A004': { name: '咕嚕 Glou-Glou', img: 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/Glou-Glou.webp', rarity: 'R', category: '活動' }
+    };
+
+    let userUnlocked = [];
+    let userEquipped = "";
+    let userPoints = 0;
+    let currentCenteredId = ""; 
+
+    // 1. 初始化載入：直接抓取個人資料
+    async function initLobby() {
+      try {
+        const res = await fetch(`${GAS_URL}?action=get_profile&id=${STUDENT_ID}`);
+        const data = await res.json();
+        
+        // 假設後端 get_profile 未來有回傳 points 和 name，這裡先寫死防呆
+        document.getElementById('header-name').innerText = STUDENT_ID;
+        userPoints = data.points || 1500; // 模擬點數
+        document.getElementById('header-points').innerText = `${userPoints} PTS`;
+
+        userUnlocked = (data.unlocked || "A001").split(',').map(s => s.trim());
+        userEquipped = data.equipped || "A001"; // 需確認後端有無回傳 equipped
+        
+        renderCarousel();
+      } catch (e) {
+        alert("連線失敗，請重新整理");
+      }
+    }
+
+    // 2. 渲染畫廊
+    function renderCarousel() {
+      const carousel = document.getElementById('carousel');
+      carousel.innerHTML = "";
+
+      userUnlocked.forEach(id => {
+        if (!characterAssets[id]) return;
+        const char = characterAssets[id];
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'holo-card-wrapper';
+        wrapper.setAttribute('data-id', id);
+        
+        // 植入神級 CSS 結構與 data-rarity
+        wrapper.innerHTML = `
+          <div class="holo-card" data-rarity="${char.rarity}">
+            <div class="card__bg" style="background-image: url('${char.img}')"></div>
+            <div class="card__glare"></div>
+            <div class="card__shine"></div>
+          </div>
+        `;
+        carousel.appendChild(wrapper);
+      });
+
+      initHoloEngine();
+      initScrollSpy();
+      
+      // 自動捲動到已裝備的角色
+      setTimeout(() => {
+        const equippedWrapper = document.querySelector(`.holo-card-wrapper[data-id="${userEquipped}"]`);
+        if (equippedWrapper) {
+          equippedWrapper.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+        }
+      }, 500);
+    }
+
+    // 3. 滾動偵測 (IntersectionObserver) - 決定目前在正中央的是誰
+    function initScrollSpy() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          // 當卡片進入中央區域
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute('data-id');
+            updateCenterInfo(id);
+          }
+        });
+      }, {
+        root: document.getElementById('carousel'),
+        rootMargin: '0px -50% 0px -50%', // 只觀察正中央的一條線
+        threshold: 0
+      });
+
+      document.querySelectorAll('.holo-card-wrapper').forEach(card => observer.observe(card));
+    }
+
+    // 4. 更新上方資訊與裝備按鈕狀態
+    function updateCenterInfo(id) {
+      currentCenteredId = id;
+      const char = characterAssets[id];
+      if(!char) return;
+
+      // 更新名稱與標籤
+      document.getElementById('hero-name').innerText = char.name;
+      
+      const rBadge = document.getElementById('badge-rarity');
+      rBadge.className = `badge rarity-${char.rarity}`;
+      rBadge.innerText = char.rarity;
+
+      document.getElementById('badge-category').innerText = char.category;
+
+      // 更新按鈕狀態
+      const btn = document.getElementById('equip-btn');
+      const targetBox = document.getElementById('target-box');
+      
+      if (id === userEquipped) {
+        btn.innerText = "✅ 已裝備";
+        btn.className = "btn-equip is-equipped";
+        targetBox.classList.add('is-equipped');
+      } else {
+        btn.innerText = "裝備此角色";
+        btn.className = "btn-equip";
+        targetBox.classList.remove('is-equipped');
+      }
+    }
+
+    // 5. 點擊裝備事件 (防抖寫法，手動觸發)
+    function equipCurrentCharacter() {
+      if (currentCenteredId === userEquipped) return; // 已經裝備了
+      
+      const btn = document.getElementById('equip-btn');
+      btn.innerText = "連線中...";
+      btn.classList.add('is-equipped');
+
+      // 呼叫 GAS 後端儲存 (利用原本的 equip_avatar API)
+      fetch(`${GAS_URL}?action=equip_avatar&id=${STUDENT_ID}&avatarId=${currentCenteredId}`)
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            userEquipped = currentCenteredId;
+            updateCenterInfo(currentCenteredId); // 重新整理按鈕狀態
+            showToast("裝備成功！");
+          }
+        });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.opacity = 1; t.style.transform = 'translate(-50%, 0)';
+      setTimeout(() => { t.style.opacity = 0; t.style.transform = 'translate(-50%, -20px)'; }, 2000);
+    }
+
+    // =======================================================
+    // 🌈 Poke-Holo 純粹 3D 互動引擎 (改寫精華版)
+    // =======================================================
+    function initHoloEngine() {
+      document.querySelectorAll('.holo-card').forEach(card => {
+        let bounds;
+        
+        function rotateToMouse(e) {
+          // 支援滑鼠與觸控
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          
+          if (!bounds) bounds = card.getBoundingClientRect();
+          
+          const mouseX = clientX - bounds.left;
+          const mouseY = clientY - bounds.top;
+          const leftX = mouseX / bounds.width;
+          const topY = mouseY / bounds.height;
+          const center = { x: leftX - 0.5, y: topY - 0.5 };
+          const distance = Math.sqrt(center.x**2 + center.y**2);
+
+          // 更新 CSS 變數，觸發雷射光與 3D 傾斜
+          card.style.setProperty('--pointer-x', `${leftX * 100}%`);
+          card.style.setProperty('--pointer-y', `${topY * 100}%`);
+          card.style.setProperty('--pointer-from-center', clamp(distance * 2, 0, 1));
+          card.style.setProperty('--rotate-x', `${center.y * -15}deg`);
+          card.style.setProperty('--rotate-y', `${center.x * 15}deg`);
+        }
+
+        card.addEventListener('pointerenter', () => { bounds = card.getBoundingClientRect(); card.style.transition = "none"; });
+        card.addEventListener('pointermove', rotateToMouse);
+        card.addEventListener('pointerleave', () => {
+          card.style.transition = "transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+          card.style.setProperty('--rotate-x', '0deg');
+          card.style.setProperty('--rotate-y', '0deg');
+          card.style.setProperty('--pointer-from-center', '0');
+        });
+      });
+    }
+
+    function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
+
+    // 啟動！
+    window.onload = initLobby;
+
+  </script>
+</body>
+</html>
