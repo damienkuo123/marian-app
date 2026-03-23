@@ -1173,39 +1173,15 @@
         const myName = isMeHost ? data.hostName : (data.guestName || STUDENT_ID);
         const opName = isMeHost ? (data.guestName || "挑戰者") : data.hostName;
 
-        // 🚀 終極精準比對引擎：加入「自動解碼」與「去空白」雙重防護！
-        let myRarity = 'N', opRarity = 'N', myMask = '', opMask = '';
-        
-        // 輔助函數：安全解碼並去除前後空白，消除 %20 和空格的誤差
-        const cleanUrl = (url) => {
-            if (!url) return '';
-            try { return decodeURIComponent(url).trim(); } 
-            catch(e) { return url.trim(); }
-        };
-
-        if (window.characterAssets) {
-            const safeMyImg = cleanUrl(myImgUrl);
-            const safeOpImg = cleanUrl(opImgUrl);
-
-            Object.values(window.characterAssets).forEach(char => {
-               const safeCharImg = cleanUrl(char.img);
-               
-               // 1. 只要解碼後的網址一樣，就絕對命中！
-               if(safeCharImg && safeCharImg === safeMyImg) { 
-                   // 2. 用 trim() 確保從 Google Sheet 抓下來的稀有度沒有多餘的隱形空白！
-                   myRarity = char.rarity ? String(char.rarity).trim() : 'N'; 
-                   myMask = char.mask ? String(char.mask).trim() : ''; 
-               }
-               if(safeCharImg && safeCharImg === safeOpImg) { 
-                   opRarity = char.rarity ? String(char.rarity).trim() : 'N'; 
-                   opMask = char.mask ? String(char.mask).trim() : ''; 
-               }
-            });
-        }
+        // 🚀 終極解法：放棄網址比對！直接從後端拿現成的稀有度跟遮罩！
+        const myRarity = isMeHost ? data.hostRarity : data.guestRarity;
+        const opRarity = isMeHost ? data.guestRarity : data.hostRarity;
+        const myMask = isMeHost ? data.hostMask : data.guestMask;
+        const opMask = isMeHost ? data.guestMask : data.hostMask;
 
         // 🚀 套用我方特效
         const myCardEl = document.getElementById('portal-my-card');
-        myCardEl.setAttribute('data-rarity', myRarity);
+        myCardEl.setAttribute('data-rarity', myRarity || 'N');
         if (myMask) {
             myCardEl.classList.add('masked');
             myCardEl.style.setProperty('--mask', myMask.includes('url(') ? myMask : `url('${myMask}')`);
@@ -1215,13 +1191,14 @@
 
         // 🚀 套用對手特效
         const opCardEl = document.getElementById('portal-op-card');
-        opCardEl.setAttribute('data-rarity', opRarity);
+        opCardEl.setAttribute('data-rarity', opRarity || 'N');
         if (opMask) {
             opCardEl.classList.add('masked');
             opCardEl.style.setProperty('--mask', opMask.includes('url(') ? opMask : `url('${opMask}')`);
         } else {
             opCardEl.classList.remove('masked');
         }
+
 
         // 填入卡片背景圖與姓名 Tag
         if(myImgUrl) document.getElementById('portal-my-bg').style.backgroundImage = `url('${myImgUrl}')`;
