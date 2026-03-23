@@ -1020,7 +1020,17 @@
         source.connect(analyser);
         analyser.fftSize = 256;
         dataArray = new Uint8Array(analyser.frequencyBinCount);
-        showPortal();
+        
+        // 🚀 載入戰場前，先偷抓全服大廳的角色圖鑑資料！
+        fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`)
+          .then(res => res.json())
+          .then(data => {
+            window.characterAssets = data.assets || {}; // 存入全域變數
+            showPortal();
+          }).catch(err => {
+            console.log("圖鑑載入失敗，使用預設", err);
+            showPortal();
+          });
       } catch(err) { alert("請開啟麥克風權限才能對戰！"); }
     } else {
       await originalOnload();
