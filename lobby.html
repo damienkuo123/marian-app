@@ -273,29 +273,30 @@
     .btn-back { background: rgba(255,255,255,0.1); color: white; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); }
     .btn-battle { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; border: 1px solid #ff7979; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
-    /* 🚀 補丁2-1：畫廊房間的滑動設定 */
+    /* 🚀 修復 1：讓畫廊能真正被「推開」 */
     #armory-view {
       position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
-      /* 使用極致平滑的阻尼曲線 (iOS 原生手感) */
-      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
+      /* 改用標準的 ease 曲線，與 battle-view 保持一致，避免速度差導致破綻 */
+      transition: transform 0.4s ease, opacity 0.4s ease;
       will-change: transform, opacity;
     }
-    /* 當戰場進來時，畫廊往左退 40% 並微微變暗 (視差效果) */
     #armory-view.slide-out {
-      transform: translateX(-40vw);
-      opacity: 0;
+      /* 往左退一半，且微微變暗，這就是原生 App 常用的視差效果！ */
+      transform: translateX(-50vw);
+      opacity: 0.2;
       pointer-events: none;
     }
 
-    /* 🚀 補丁2-2：戰場視圖 (拔除果凍回彈，解決露餡 Bug) */
+    /* 🚀 修復 2：拔掉會導致露餡的 cubic-bezier 回彈 */
     #battle-view {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
       background: var(--bg-color);
       background-image: radial-gradient(circle at 50% 0%, #34495e 0%, #0a0e17 100%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
       background-size: 100% 100%, 30px 30px, 30px 30px;
       z-index: 8000; display: flex; flex-direction: column;
-      /* 改用無回彈的 0.25, 1, 0.5, 1 曲線 */
-      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.4s;
+      
+      /* 關鍵！改為最標準的 ease-out，滑進來就穩穩停住，絕不回彈！ */
+      transition: transform 0.4s ease-out, visibility 0.4s;
       transform: translateX(100%);
       pointer-events: none; 
       visibility: hidden;   
