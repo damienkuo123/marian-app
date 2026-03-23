@@ -1166,22 +1166,17 @@
         const myName = isMeHost ? data.hostName : (data.guestName || STUDENT_ID);
         const opName = isMeHost ? (data.guestName || "挑戰者") : data.hostName;
 
-        // 🚀 終極精準比對引擎：直接比對乾淨的 URL 網址，保證 100% 命中特效！
+        // 🚀 終極精準比對引擎：放棄多餘解碼，原封不動直接比對圖片網址！
         let myRarity = 'N', opRarity = 'N', myMask = '', opMask = '';
         
         if (window.characterAssets) {
-            // 清理網址：解碼 %20 並去掉 ? 後面的參數，確保比對精準
-            const baseMy = myImgUrl ? decodeURIComponent(myImgUrl).split('?')[0].trim() : '';
-            const baseOp = opImgUrl ? decodeURIComponent(opImgUrl).split('?')[0].trim() : '';
-
             Object.values(window.characterAssets).forEach(char => {
-               const baseChar = char.img ? decodeURIComponent(char.img).split('?')[0].trim() : '';
-               
-               if(baseChar && baseChar === baseMy) { 
+               // 只要網址的字串一模一樣，就 100% 絕對命中！
+               if(char.img && myImgUrl && char.img.trim() === myImgUrl.trim()) { 
                    myRarity = char.rarity || 'N'; 
                    myMask = char.mask || ''; 
                }
-               if(baseChar && baseChar === baseOp) { 
+               if(char.img && opImgUrl && char.img.trim() === opImgUrl.trim()) { 
                    opRarity = char.rarity || 'N'; 
                    opMask = char.mask || ''; 
                }
