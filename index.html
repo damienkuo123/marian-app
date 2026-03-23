@@ -1173,15 +1173,31 @@
         const myName = isMeHost ? data.hostName : (data.guestName || STUDENT_ID);
         const opName = isMeHost ? (data.guestName || "挑戰者") : data.hostName;
 
-        // 🚀 終極解法：放棄網址比對！直接從後端拿現成的稀有度跟遮罩！
-        const myRarity = isMeHost ? data.hostRarity : data.guestRarity;
-        const opRarity = isMeHost ? data.guestRarity : data.hostRarity;
-        const myMask = isMeHost ? data.hostMask : data.guestMask;
-        const opMask = isMeHost ? data.guestMask : data.hostMask;
+        // 🚀 終極自給自足引擎：自己去圖鑑庫裡面挖出 Rarity 和 Mask！
+        let myRarity = 'N', opRarity = 'N', myMask = '', opMask = '';
+        
+        if (window.characterAssets) {
+            // 安全解碼並去除雜訊
+            const cleanUrl = (url) => url ? decodeURIComponent(url).split('?')[0].trim() : '';
+            const mySafeUrl = cleanUrl(myImgUrl);
+            const opSafeUrl = cleanUrl(opImgUrl);
 
-        // 🚀 套用我方特效
+            Object.values(window.characterAssets).forEach(char => {
+               const charSafeUrl = cleanUrl(char.img);
+               if(charSafeUrl && charSafeUrl === mySafeUrl) { 
+                   myRarity = (char.rarity || 'N').trim(); 
+                   myMask = (char.mask || '').trim(); 
+               }
+               if(charSafeUrl && charSafeUrl === opSafeUrl) { 
+                   opRarity = (char.rarity || 'N').trim(); 
+                   opMask = (char.mask || '').trim(); 
+               }
+            });
+        }
+
+        // 🚀 強制寫入我方特效
         const myCardEl = document.getElementById('portal-my-card');
-        myCardEl.setAttribute('data-rarity', myRarity || 'N');
+        myCardEl.dataset.rarity = myRarity; // 使用 dataset 寫法更安全
         if (myMask) {
             myCardEl.classList.add('masked');
             myCardEl.style.setProperty('--mask', myMask.includes('url(') ? myMask : `url('${myMask}')`);
@@ -1189,9 +1205,9 @@
             myCardEl.classList.remove('masked');
         }
 
-        // 🚀 套用對手特效
+        // 🚀 強制寫入對手特效
         const opCardEl = document.getElementById('portal-op-card');
-        opCardEl.setAttribute('data-rarity', opRarity || 'N');
+        opCardEl.dataset.rarity = opRarity;
         if (opMask) {
             opCardEl.classList.add('masked');
             opCardEl.style.setProperty('--mask', opMask.includes('url(') ? opMask : `url('${opMask}')`);
@@ -1199,12 +1215,12 @@
             opCardEl.classList.remove('masked');
         }
 
-
         // 填入卡片背景圖與姓名 Tag
         if(myImgUrl) document.getElementById('portal-my-bg').style.backgroundImage = `url('${myImgUrl}')`;
         if(opImgUrl) document.getElementById('portal-op-bg').style.backgroundImage = `url('${opImgUrl}')`;
         document.getElementById('portal-my-name').innerText = myName;
         document.getElementById('portal-op-name').innerText = opName;
+        
 
 
         // 🚀 資料載入完畢，觸發史詩級「卡牌滑入對峙」動畫！
