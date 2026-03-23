@@ -63,10 +63,9 @@
     .hero-name { font-size: 32px; font-weight: 900; letter-spacing: 4px; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
 
     /* =======================================================
-       🚀 優化：裝備槽放大 (Equip Slot)
-       比卡片(250x348)大一圈，設定為 280x388
+       🚀 優化：裝備槽放大 (Equip Slot) 且強制撐滿空間！
        ======================================================= */
-    .gallery-container { position: relative; width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; }
+    .gallery-container { position: relative; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; }
     .center-target-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 388px; border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 25px; pointer-events: none; z-index: 0; transition: 0.3s; }
     .center-target-box::after { content: 'EQUIP SLOT'; position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 14px; font-weight: bold; letter-spacing: 4px; transition: 0.3s; }
     .center-target-box.is-equipped { border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(241,196,15,0.4), inset 0 0 20px rgba(241,196,15,0.2); }
@@ -273,10 +272,10 @@
     .btn-back { background: rgba(255,255,255,0.1); color: white; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); }
     .btn-battle { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; border: 1px solid #ff7979; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
-    /* 🚀 修復 1：讓畫廊能真正被「推開」 */
+    /* 🚀 修復 1：讓畫廊能真正被「推開」，並鎖死垂直骨架防止讀取時跳動！ */
     #armory-view {
       position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
-      /* 改用標準的 ease 曲線，與 battle-view 保持一致，避免速度差導致破綻 */
+      display: flex; flex-direction: column; overflow: hidden; /* 加入這行鎖定結構 */
       transition: transform 0.4s ease, opacity 0.4s ease;
       will-change: transform, opacity;
     }
@@ -993,7 +992,7 @@
 
     // 6. 建立 AI 房間並倒數 5 秒
     function startAiChallenge(level) {
-      if(level === '活動戰場') return alert("活動尚未開啟！");
+      // 🚀 已經拔除 alert 阻擋，讓活動戰場也能進入 5 秒傳送倒數！
       if(aiTimerInterval) return;
       
       const overlay = document.getElementById('ai-countdown-overlay');
