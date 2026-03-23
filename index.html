@@ -2061,55 +2061,68 @@
     };
   }
   // =======================================================
-  // 🌈 頂級 3D 互動閃卡引擎 (追蹤手指與滑鼠)
+  // 🌈 頂級 3D 互動閃卡引擎 (正宗 Poke-Holo 移植版)
   // =======================================================
   function initInteractiveHoloCards() {
-      // 🚀 一次抓取「Portal 畫面」和「對戰畫面」的所有卡片！
-      const cards = document.querySelectorAll('.portal-card, .card-entity');
+      // 🚀 精準抓取 Portal 傳送門的兩張大卡片
+      const cards = document.querySelectorAll('#portal-my-card, #portal-op-card');
       
       cards.forEach(card => {
-          if(!card) return;
-          
-          if(!card.querySelector('.holo-layer')) {
-              const holo = document.createElement('div');
-              holo.className = 'holo-layer';
-              card.appendChild(holo);
+          let bounds;
+          let ticking = false;
+
+          function updateCard(x, y) {
+              const leftX = x / bounds.width;
+              const topY = y / bounds.height;
+              const center = { x: leftX - 0.5, y: topY - 0.5 };
+              const distance = Math.sqrt(center.x**2 + center.y**2);
+
+              card.style.setProperty('--pointer-x', `${leftX * 100}%`);
+              card.style.setProperty('--pointer-y', `${topY * 100}%`);
+              card.style.setProperty('--pointer-from-center', Math.min(Math.max(distance * 2, 0), 1));
+              card.style.setProperty('--pointer-from-top', topY);
+              card.style.setProperty('--pointer-from-left', leftX);
+              
+              card.style.setProperty('--rotate-x', `${center.y * -20}deg`); 
+              card.style.setProperty('--rotate-y', `${center.x * 20}deg`);
+              ticking = false;
           }
-          const holoLayer = card.querySelector('.holo-layer');
-
-          const handleInteract = (e) => {
-              if(card.classList.contains('blast-up') || card.classList.contains('take-damage') || card.classList.contains('loser-shatter') || card.classList.contains('blast-ultimate')) return;
-
-              const rect = card.getBoundingClientRect();
+          
+          function rotateToMouse(e) {
+              if (!bounds) bounds = card.getBoundingClientRect();
               const clientX = e.touches ? e.touches[0].clientX : e.clientX;
               const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-              const x = clientX - rect.left;
-              const y = clientY - rect.top;
-              const centerX = rect.width / 2;
-              const centerY = rect.height / 2;
+              const mouseX = clientX - bounds.left;
+              const mouseY = clientY - bounds.top;
               
-              const rotateX = ((y - centerY) / centerY) * -15; 
-              const rotateY = ((x - centerX) / centerX) * 15;
-              
-              card.style.transition = 'transform 0.1s ease-out';
-              card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
-              
-              const bgX = (x / rect.width) * 100;
-              const bgY = (y / rect.height) * 100;
-              holoLayer.style.backgroundPosition = `${bgX}% ${bgY}%`;
-              holoLayer.style.opacity = '1'; 
-          };
+              if (!ticking) {
+                  requestAnimationFrame(() => updateCard(mouseX, mouseY));
+                  ticking = true;
+              }
+          }
 
-          const handleRelease = () => {
-              card.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-              card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
-              holoLayer.style.opacity = '0'; 
-          };
+          function resetTilt() {
+              card.style.transition = "transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+              card.style.setProperty('--rotate-x', '0deg');
+              card.style.setProperty('--rotate-y', '0deg');
+              card.style.setProperty('--pointer-from-center', '0.5'); // 預設給一點環境反光
+              card.style.setProperty('--pointer-x', '50%');
+              card.style.setProperty('--pointer-y', '50%');
+              setTimeout(() => { card.style.transition = "none"; }, 500);
+          }
 
-          card.addEventListener('mousemove', handleInteract);
-          card.addEventListener('mouseleave', handleRelease);
-          card.addEventListener('touchmove', handleInteract, {passive: true});
-          card.addEventListener('touchend', handleRelease);
+          function startInteraction() {
+              bounds = card.getBoundingClientRect(); 
+              card.style.transition = "none"; 
+          }
+
+          card.addEventListener('pointerenter', startInteraction);
+          card.addEventListener('pointermove', rotateToMouse);
+          card.addEventListener('pointerleave', resetTilt);
+          
+          card.addEventListener('touchstart', startInteraction, {passive: true});
+          card.addEventListener('touchmove', rotateToMouse, {passive: true});
+          card.addEventListener('touchend', resetTilt);
       });
   }
 </script>
