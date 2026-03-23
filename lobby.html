@@ -5,25 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>瑪麗安傳說大廳</title>
   <style>
+    /* =======================================================
+       🚀 原始對接：100% 保留您的完美特效變數
+       ======================================================= */
     :root {
-      --bg-color: #1a1e29; --gold: #f1c40f;
-      /* ⚠️ 替換成你 GitHub 的素材路徑 */
-      --foil: url("https://poke-holo.simey.me/img/illusion.png");
-      --trainer-foil: url("https://poke-holo.simey.me/img/trainerbg.png");
-      --cosmos-bottom: url("https://poke-holo.simey.me/img/cosmos-bottom.png");
-      --cosmos-mid: url("https://poke-holo.simey.me/img/cosmos-middle-trans.png");
-      --cosmos-top: url("https://poke-holo.simey.me/img/cosmos-top-trans.png");
+      --bg-color: #1a1e29;
+      --gold: #f1c40f;
 
-      --space: 5%; --angle: 133deg; --imgsize: 33%;
-      --card-aspect: 0.718; --card-radius: 4.55% / 3.5%;
-      --sunpillar-1: hsl(2, 100%, 73%); --sunpillar-2: hsl(53, 100%, 69%); --sunpillar-3: hsl(93, 100%, 69%);
-      --sunpillar-4: hsl(176, 100%, 76%); --sunpillar-5: hsl(228, 100%, 74%); --sunpillar-6: hsl(283, 100%, 73%);
-      --sunpillar-clr-1: var(--sunpillar-1); --sunpillar-clr-2: var(--sunpillar-2); --sunpillar-clr-3: var(--sunpillar-3);
-      --sunpillar-clr-4: var(--sunpillar-4); --sunpillar-clr-5: var(--sunpillar-5); --sunpillar-clr-6: var(--sunpillar-6);
+      --grain: url("https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/grain.webp");
+      --glitter: url("https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/glitter.png");
+      --foil: url("https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/illusion.png");
+      --trainer-foil: url("https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/trainerbg.png");
+      --cosmos-bottom: url("https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/cosmos-bottom.png");
+      --cosmos-mid: url("https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/cosmos-middle-trans.png");
+      --cosmos-top: url("https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/cosmos-top-trans.png");
+
+      --space: 5%;
+      --angle: 133deg;
+      --imgsize: 33%;
+      
+      --card-aspect: 0.718;
+      --card-radius: 4.55% / 3.5%;
+      --card-edge: hsl(47, 100%, 78%);
+      --card-back: hsl(205, 100%, 25%);
+      --card-glow: hsl(175, 100%, 90%);
+
+      /* 霓虹光譜 (完全還原) */
+      --sunpillar-1: hsl(2, 100%, 73%);
+      --sunpillar-2: hsl(53, 100%, 69%);
+      --sunpillar-3: hsl(93, 100%, 69%);
+      --sunpillar-4: hsl(176, 100%, 76%);
+      --sunpillar-5: hsl(228, 100%, 74%);
+      --sunpillar-6: hsl(283, 100%, 73%);
+      
+      --sunpillar-clr-1: var(--sunpillar-1);
+      --sunpillar-clr-2: var(--sunpillar-2);
+      --sunpillar-clr-3: var(--sunpillar-3);
+      --sunpillar-clr-4: var(--sunpillar-4);
+      --sunpillar-clr-5: var(--sunpillar-5);
+      --sunpillar-clr-6: var(--sunpillar-6);
     }
 
     body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg-color); font-family: -apple-system, sans-serif; color: white; overflow: hidden; }
     
+    /* 大廳 UI */
     header { padding: max(20px, env(safe-area-inset-top)) 20px 10px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: relative; }
     .user-info h2 { margin: 0; font-size: 14px; color: #a4b0be; letter-spacing: 2px; }
     .user-points { font-size: 26px; font-weight: 900; color: #00d2d3; text-shadow: 0 0 15px rgba(0,210,211,0.6); }
@@ -38,22 +63,71 @@
     .hero-name { font-size: 32px; font-weight: 900; letter-spacing: 4px; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
 
     /* =======================================================
-       🎨 全局卡牌神級結構 (畫廊、商店、展示模式共用)
+       🚀 優化：裝備槽放大 (Equip Slot)
+       比卡片(250x348)大一圈，設定為 280x388
        ======================================================= */
-    .card { width: 100%; height: 100%; position: relative; transform: translate3d(0px, 0px, 0.01px); transform-style: preserve-3d; --pointer-x: 50%; --pointer-y: 50%; --pointer-from-center: 0; --pointer-from-top: 0.5; --pointer-from-left: 0.5; --rotate-x: 0deg; --rotate-y: 0deg; --card-opacity: 1; --card-scale: 1; --translate-x: 0px; --translate-y: 0px; }
+    .gallery-container { position: relative; width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; }
+    .center-target-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 388px; border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 25px; pointer-events: none; z-index: 0; transition: 0.3s; }
+    .center-target-box::after { content: 'EQUIP SLOT'; position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 14px; font-weight: bold; letter-spacing: 4px; transition: 0.3s; }
+    .center-target-box.is-equipped { border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(241,196,15,0.4), inset 0 0 20px rgba(241,196,15,0.2); }
+    .center-target-box.is-equipped::after { content: 'EQUIPPED'; color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+
+    .carousel-track { display: flex; gap: 40px; overflow-x: auto; width: 100%; padding: 40px calc(50vw - 125px); scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; align-items: center; z-index: 5; perspective: 1000px; }
+    .carousel-track::-webkit-scrollbar { display: none; }
+    
+    .holo-card-wrapper { position: relative; scroll-snap-align: center; flex-shrink: 0; width: 250px; height: 348px; cursor: pointer; transition: 0.3s; border-radius: 4.55%/3.5%; }
+    .holo-card-wrapper:active { transform: scale(0.95); }
+    .tap-to-view { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 6px 16px; border-radius: 15px; font-size: 11px; font-weight: bold; letter-spacing: 2px; color: var(--gold); border: 1px solid var(--gold); pointer-events: none; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
+
+    /* =======================================================
+       ✨ 100% 滿血還原：原汁原味 Poke-Holo Base + 3D 結構
+       ======================================================= */
+    #showcase-modal {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+      background: rgba(5, 9, 20, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #showcase-modal.active { opacity: 1; pointer-events: auto; }
+    .close-btn { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 100; }
+
+    .showcase-wrapper { width: 85vw; max-width: 400px; aspect-ratio: var(--card-aspect); perspective: 600px; }
+    
+    .card {
+      width: 100%; height: 100%; position: relative;
+      transform: translate3d(0px, 0px, 0.01px);
+      transform-style: preserve-3d;
+      --pointer-x: 50%; --pointer-y: 50%;
+      --pointer-from-center: 0; --pointer-from-top: 0.5; --pointer-from-left: 0.5;
+      --rotate-x: 0deg; --rotate-y: 0deg;
+      --card-opacity: 1; --card-scale: 1; --translate-x: 0px; --translate-y: 0px;
+    }
+
     .card__translater, .card__rotator { width: 100%; height: 100%; display: grid; perspective: 600px; transform-origin: center; transform-style: preserve-3d; }
     .card__translater { transform: translate3d(var(--translate-x), var(--translate-y), 0.1px) scale(var(--card-scale)); }
     .card__rotator { transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y)); box-shadow: 0px 10px 20px -5px black, 0 2px 15px -5px black; border-radius: var(--card-radius); }
     .card__rotator * { width: 100%; height: 100%; display: grid; grid-area: 1/1; border-radius: var(--card-radius); transform-style: preserve-3d; pointer-events: none; overflow: hidden; }
+
     .card__front { transform: translate3d(0px, 0px, 0.01px); }
-    .card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0.01px); z-index: 1; }
-    .card__glare { transform: translateZ(1.41px); overflow: hidden; z-index: 3; background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%); opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay; }
-    .card__shine { display: grid; transform: translateZ(1px); overflow: hidden; z-index: 4; background: transparent; background-size: cover; background-position: center; filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge; }
+    .card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0px); z-index: 1; }
+
+    /* 原版基礎眩光 */
+    .card__glare {
+      transform: translateZ(1.41px); overflow: hidden; z-index: 3;
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%);
+      opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay;
+    }
+
+    .card__shine {
+      display: grid; transform: translateZ(1px); overflow: hidden; z-index: 4;
+      background: transparent; background-size: cover; background-position: center;
+      filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge;
+    }
     .card__shine:before, .card__shine:after { grid-area: 1/1; border-radius: var(--card-radius); content: ""; }
     .card__shine:before { transform: translateZ(1px); }
     .card__shine:after { transform: translateZ(1.2px); }
 
-    /* 🚀 進化版 Masking (遮罩自動反轉設定，加上 !important 絕對強制挖空) */
+    /* 🚀 你的進化版 Masking (絕對強制挖空) */
     .card.masked .card__shine, .card.masked .card__shine:before, .card.masked .card__shine:after {
       -webkit-mask-image: linear-gradient(white, white), var(--mask) !important;
       -webkit-mask-composite: destination-out !important;
@@ -67,12 +141,10 @@
        🎨 100% 滿血還原：對接你的 cosmos, trainer, v-full-art
        ======================================================= */
 
-    /* 🔵【R卡：Cosmos Holo 宇宙碎鑽】 */
     .card[data-rarity="R"] .card__shine {
       --space: 4%;
       background-image: var(--cosmos-bottom), repeating-linear-gradient(82deg, hsl(53, 65%, 60%) calc(var(--space)*1), hsl(93, 56%, 50%) calc(var(--space)*2), hsl(176, 54%, 49%) calc(var(--space)*3), hsl(228, 59%, 55%) calc(var(--space)*4), hsl(283, 60%, 55%) calc(var(--space)*5), hsl(326, 59%, 51%) calc(var(--space)*6), hsl(326, 59%, 51%) calc(var(--space)*7), hsl(283, 60%, 55%) calc(var(--space)*8), hsl(228, 59%, 55%) calc(var(--space)*9), hsl(176, 54%, 49%) calc(var(--space)*10), hsl(93, 56%, 50%) calc(var(--space)*11), hsl(53, 65%, 60%) calc(var(--space)*12) ), radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(180, 100%, 89%, 0.5) 5%, hsla(180, 14%, 57%, 0.3) 40%, hsl(0, 0%, 0%) 130% );
-      background-blend-mode: color-burn, multiply;
-      background-position: center, calc(10% + (var(--pointer-from-left)*80%)) calc(10% + (var(--pointer-from-top)*80%)), center;
+      background-blend-mode: color-burn, multiply; background-position: center, calc(10% + (var(--pointer-from-left)*80%)) calc(10% + (var(--pointer-from-top)*80%)), center;
       background-size: cover, 400% 900%, cover; filter: brightness(1) contrast(1) saturate(.8); mix-blend-mode: color-dodge;
     }
     .card[data-rarity="R"] .card__shine:before {
@@ -87,15 +159,12 @@
     }
     .card[data-rarity="R"] .card__bg { border-color: #3498db; }
 
-    /* 🟣【SR卡：Trainer Full Art】 (⚠️ 已拔除 :not(.masked) 封印) */
     .card[data-rarity="SR"] .card__shine {
       filter: brightness(calc((var(--pointer-from-center)*0.05) + .8)) contrast(1.75) saturate(1.2);
-      --imgsize: 20%;
-      background-blend-mode: color-burn, hue, hard-light;
+      --mask: none; --imgsize: 20%; background-blend-mode: color-burn, hue, hard-light;
     }
-    .card[data-rarity="SR"] .card__shine, .card[data-rarity="SR"] .card__shine:after {
-      background-image: var(--trainer-foil);
-      background-size: var(--imgsize);
+    .card:not(.masked)[data-rarity="SR"] .card__shine, .card:not(.masked)[data-rarity="SR"] .card__shine:after {
+      background-image: var(--trainer-foil); background-size: var(--imgsize);
       filter: brightness(calc((var(--pointer-from-center)*0.05) + .6)) contrast(1.5) saturate(1.2);
     }
     .card[data-rarity="SR"] .card__shine:before {
@@ -107,13 +176,12 @@
     }
     .card[data-rarity="SR"] .card__bg { border-color: #bdc3c7; }
 
-    /* 🟡【SSR卡：V-Full Art】 (⚠️ 已拔除 :not(.masked) 封印與衝突的 mask 設定) */
-    .card[data-rarity="SSR"] .card__shine, .card[data-rarity="SSR"] .card__shine:after {
-      background-blend-mode: exclusion, hue, hard-light;
-      filter: brightness(calc((var(--pointer-from-center)*.3) + .35)) contrast(2) saturate(1.5);
+    .card:not(.masked)[data-rarity="SSR"] .card__shine, .card:not(.masked)[data-rarity="SSR"] .card__shine:after {
+      -webkit-mask-image: var(--mask); mask-image: var(--mask); -webkit-mask-size: var(--imgsize); mask-size: var(--imgsize);
+      background-blend-mode: exclusion, hue, hard-light; filter: brightness(calc((var(--pointer-from-center)*.3) + .35)) contrast(2) saturate(1.5);
     }
-    .card[data-rarity="SSR"] .card__shine:before { content: none; display: none; }
-    .card[data-rarity="SSR"] .card__shine:after { filter: brightness(calc((var(--pointer-from-center)*.5) + .8)) contrast(1.6) saturate(1.4); }
+    .card:not(.masked)[data-rarity="SSR"] .card__shine:before { content: none; display: none; }
+    .card:not(.masked)[data-rarity="SSR"] .card__shine:after { filter: brightness(calc((var(--pointer-from-center)*.5) + .8)) contrast(1.6) saturate(1.4); }
     
     .card[data-rarity="SSR"] .card__shine {
       background-image: var(--foil), repeating-linear-gradient( 0deg, var(--sunpillar-clr-1) calc(var(--space)*1), var(--sunpillar-clr-2) calc(var(--space)*2), var(--sunpillar-clr-3) calc(var(--space)*3), var(--sunpillar-clr-4) calc(var(--space)*4), var(--sunpillar-clr-5) calc(var(--space)*5), var(--sunpillar-clr-6) calc(var(--space)*6), var(--sunpillar-clr-1) calc(var(--space)*7) ), repeating-linear-gradient( var(--angle), #0e152e 0%, hsl(180, 10%, 60%) 3.8%, hsl(180, 29%, 66%) 4.5%, hsl(180, 10%, 60%) 5.2%, #0e152e 10% , #0e152e 12% ), radial-gradient( farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 0%, 0.1) 12%, hsla(0, 0%, 0%, 0.15) 20%, hsla(0, 0%, 0%, 0.25) 120% );
@@ -131,31 +199,18 @@
     }
     .card[data-rarity="SSR"] .card__bg { border-color: var(--gold); box-shadow: inset 0 0 15px rgba(241,196,15,0.5); }
 
-    /* 🚀 靜態模式 (畫廊與商店)：鎖死 3D 旋轉，但保留環境反光 */
+    /* =======================================================
+       🚀 新增：畫廊與商店的靜態卡片特效
+       ======================================================= */
     .static-card {
-      --pointer-x: 25% !important; --pointer-y: 25% !important; 
-      --pointer-from-center: 0.6 !important; 
+      /* 固定光點在左上方，透出高級光澤，不啟用旋轉追蹤 */
+      --pointer-x: 35% !important; --pointer-y: 35% !important; 
+      --pointer-from-center: 0.5 !important; 
       --rotate-x: 0deg !important; --rotate-y: 0deg !important;
       transition: 0.3s;
     }
-    /* 輕微的呼吸光感 */
-    .static-card:hover { --pointer-x: 75% !important; --pointer-y: 75% !important; --pointer-from-center: 0.8 !important; }
-
-    /* =======================================================
-       🖼️ 第一區：Cover Flow 畫廊
-       ======================================================= */
-    .gallery-container { position: relative; width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; }
-    .center-target-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 275px; height: 375px; border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: 25px; pointer-events: none; z-index: 0; transition: 0.3s; }
-    .center-target-box::after { content: 'EQUIP SLOT'; position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 14px; font-weight: bold; letter-spacing: 4px; transition: 0.3s; }
-    .center-target-box.is-equipped { border: 2px solid var(--gold); box-shadow: 0 0 40px rgba(241,196,15,0.2), inset 0 0 20px rgba(241,196,15,0.1); background: rgba(241,196,15,0.05); }
-    .center-target-box.is-equipped::after { content: 'EQUIPPED'; color: var(--gold); text-shadow: 0 0 10px var(--gold); }
-
-    .carousel-track { display: flex; gap: 40px; overflow-x: auto; width: 100%; padding: 40px calc(50vw - 125px); scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; align-items: center; z-index: 5; perspective: 1000px; }
-    .carousel-track::-webkit-scrollbar { display: none; }
-    
-    .holo-card-wrapper { position: relative; scroll-snap-align: center; flex-shrink: 0; width: 250px; height: 348px; cursor: pointer; transition: 0.3s; }
-    .holo-card-wrapper:active { transform: scale(0.95); }
-    .tap-to-view { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 6px 16px; border-radius: 15px; font-size: 11px; font-weight: bold; letter-spacing: 2px; color: var(--gold); border: 1px solid var(--gold); pointer-events: none; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
+    /* 滑鼠/手指摸上去時，光澤微幅呼吸 */
+    .static-card:hover { --pointer-x: 65% !important; --pointer-y: 65% !important; --pointer-from-center: 0.7 !important; }
 
     /* 🔘 底部按鈕區 */
     .action-zone { position: absolute; bottom: max(30px, env(safe-area-inset-bottom)); left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 50; }
@@ -163,6 +218,7 @@
     .btn-equip:active { transform: scale(0.95); }
     .btn-equip.is-equipped { background: #576574; box-shadow: none; cursor: default; }
     .btn-shop { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 10px 25px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; backdrop-filter: blur(5px); }
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; padding: 12px 30px; border-radius: 20px; font-weight: 900; font-size: 16px; opacity: 0; pointer-events: none; transition: 0.4s; z-index: 10000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 
     /* =======================================================
        🛒 Phase 3: 商店分區與毛玻璃彈窗
@@ -181,7 +237,6 @@
     
     .shop-grid-container { width: 100%; height: calc(100% - 80px); overflow-y: auto; padding: 10px 20px 100px; box-sizing: border-box; }
     
-    /* 稀有度分區標題 */
     .shop-rarity-title { font-size: 20px; font-weight: 900; margin: 30px 0 15px; padding-left: 15px; border-left: 6px solid; letter-spacing: 2px; }
     .title-SSR { color: #d35400; border-color: var(--gold); }
     .title-SR { color: #8e44ad; border-color: #9b59b6; }
@@ -193,32 +248,16 @@
     .shop-card-wrapper { background: white; border-radius: 15px; padding: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.08); border: 1px solid #eee; text-align: center; position: relative; }
     .shop-card-wrapper.owned { opacity: 0.6; filter: grayscale(0.5); }
     
-    /* 商店裡的小卡片 (靜態帶反光) */
-    .shop-card-img-box { width: 100%; aspect-ratio: 5/7; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .shop-card-img-box { width: 100%; aspect-ratio: var(--card-aspect); border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
     .shop-card-img-box:active { transform: scale(0.95); }
     
     .btn-buy { width: 100%; background: #f1c40f; color: #856404; font-weight: bold; border: none; padding: 10px 0; border-radius: 10px; margin-top: 8px; font-size: 14px; box-shadow: 0 4px 0 #d4ac0d; cursor: pointer; transition: 0.2s; }
     .btn-buy:active { transform: translateY(4px); box-shadow: none; }
     .shop-card-wrapper.owned .btn-buy { background: #bdc3c7; color: white; cursor: default; box-shadow: none; pointer-events: none; }
 
-    /* ⏳ 限定標籤 */
     .shop-limited-badge { position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; padding: 4px 8px; font-size: 10px; font-weight: 900; border-radius: 8px; box-shadow: 0 4px 10px rgba(231,76,60,0.4); z-index: 10; letter-spacing: 1px; animation: pulse 1.5s infinite; border: 1px solid white; }
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-    /* =======================================================
-       🌟 滿血展示模式 (Showcase)
-       ======================================================= */
-    #showcase-modal {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
-      background: rgba(5, 9, 20, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-      z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    #showcase-modal.active { opacity: 1; pointer-events: auto; }
-    .close-btn { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 100; }
-    .showcase-wrapper { width: 85vw; max-width: 400px; aspect-ratio: var(--card-aspect); perspective: 600px; }
-
-    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; padding: 12px 30px; border-radius: 20px; font-weight: 900; font-size: 16px; opacity: 0; pointer-events: none; transition: 0.4s; z-index: 10000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
   </style>
 </head>
 <body>
@@ -255,7 +294,7 @@
       <div class="shop-close-btn" onclick="closeShop()">✕</div>
     </div>
     <div class="shop-grid-container" id="shop-grid-container">
-      </div>
+    </div>
   </div>
 
   <div id="showcase-modal">
@@ -279,7 +318,10 @@
   </div>
 
   <script>
+    // ⚠️ 請替換為你真實的 GAS 網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
+    
+    // 🚀 這是修復的關鍵拼字錯誤 (new URLSearchParams)
     const params = new URLSearchParams(window.location.search);
     const STUDENT_ID = params.get('id') || "S001";
 
@@ -299,24 +341,38 @@
         userUnlocked = (data.profile.unlocked || "A001").split(',').map(s => s.trim()).filter(s => s !== "");
         userEquipped = data.profile.equipped || "A001"; 
 
-        // 排序解鎖角色 (大廳畫廊)
+        // 🚀 自動排序玩家畫廊：依照 SSR > SR > R > N 權重降冪排列
         const rarityWeight = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
         userUnlocked.sort((a, b) => {
           const wA = characterAssets[a] ? (rarityWeight[characterAssets[a].rarity] || 0) : 0;
           const wB = characterAssets[b] ? (rarityWeight[characterAssets[b].rarity] || 0) : 0;
           return wB - wA; 
         });
-        
+
         renderCarousel();
       } catch (e) {
         console.error("載入失敗：", e);
         document.getElementById('hero-name').innerText = "⚠️ 離線預設模式";
+        characterAssets = {
+          'A001': { name: '新手劍士', img: 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/Hero_01.webp', rarity: 'N', category: '一般' }, 
+          'A002': { name: '艾多 Aldo', img: 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/Aldo.webp', rarity: 'R', category: '一般' },
+          'A003': { name: '菲利克斯 Felix', img: 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/Felix.webp', rarity: 'SR', category: '限定' },
+          'A004': { name: '咕嚕 Glou-Glou', img: 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/Glou-Glou.webp', rarity: 'SSR', category: '活動', mask: 'url(https://poke-holo.simey.me/img/pika-mask.png)' }
+        };
+        userUnlocked = ["A001", "A002", "A003", "A004"];
+        userEquipped = "A001";
+        renderCarousel();
       }
     }
 
-    // 🚀 建立含有完整特效的靜態卡片 DOM
+    // 🚀 產生靜態特效卡片DOM (支援遮罩網址動態解析)
     function createStaticCardHTML(char) {
-      let maskStyle = char.mask ? `style="--mask: url('${char.mask}');"` : "";
+      let maskString = "";
+      if (char.mask) {
+        // 自動判斷是否已經有 url() 包裝
+        maskString = char.mask.includes('url(') ? char.mask : `url('${char.mask}')`;
+      }
+      let maskStyle = char.mask ? `style="--mask: ${maskString};"` : "";
       let maskedClass = char.mask ? "masked" : "";
       return `
         <div class="card static-card ${maskedClass}" data-rarity="${char.rarity}" ${maskStyle}>
@@ -344,7 +400,6 @@
         wrapper.className = 'holo-card-wrapper';
         wrapper.setAttribute('data-id', id);
         
-        // 🚀 畫廊卡片：注入靜態特效卡片，並加上放大鏡提示
         wrapper.innerHTML = createStaticCardHTML(char) + `<div class="tap-to-view">🔍 點擊查看特效</div>`;
         wrapper.onclick = () => openShowcase(id);
         carousel.appendChild(wrapper);
@@ -401,6 +456,10 @@
             updateCenterInfo(currentCenteredId); 
             showToast("裝備成功！");
           }
+        }).catch(() => {
+          userEquipped = currentCenteredId;
+          updateCenterInfo(currentCenteredId);
+          showToast("裝備成功！(離線模式)");
         });
     }
 
@@ -418,34 +477,29 @@
       const container = document.getElementById('shop-grid-container');
       container.innerHTML = "";
       
-      // 🚀 分區陣列：SSR 到 N
       const rarities = ['SSR', 'SR', 'R', 'N'];
       const now = new Date();
 
       rarities.forEach(rarity => {
-        // 過濾該區段的卡片，並處理「限定」時間邏輯
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
-          if (char.category === "活動") return false; // 活動卡絕對不賣
-          
+          if (char.category === "活動") return false; 
           if (char.category === "限定") {
             if (char.endTime) {
               const end = new Date(char.endTime);
-              if (now > end) return false; // 已經超過結束時間，隱藏不賣！
+              if (now > end) return false; 
             }
           }
           return true;
         });
 
-        if (items.length === 0) return; // 如果這區沒東西，就不畫標題
+        if (items.length === 0) return;
 
-        // 加入區段標題
         const titleEl = document.createElement('h3');
         titleEl.className = `shop-rarity-title title-${rarity}`;
         titleEl.innerText = `${rarity} 區段`;
         container.appendChild(titleEl);
 
-        // 加入卡片網格
         const grid = document.createElement('div');
         grid.className = 'shop-grid';
 
@@ -457,7 +511,6 @@
           const cardEl = document.createElement('div');
           cardEl.className = 'shop-card-wrapper' + (isOwned ? ' owned' : '');
           
-          // 限定標籤
           const limitedBadgeHtml = isLimited ? `<div class="shop-limited-badge">⏳ 限時販售</div>` : "";
 
           cardEl.innerHTML = `
@@ -472,7 +525,6 @@
           `;
           grid.appendChild(cardEl);
         });
-
         container.appendChild(grid);
       });
     }
@@ -487,7 +539,7 @@
     }
 
     // =======================================================
-    // 🔍 展示模式 (Showcase)
+    // 🔍 展示模式與 3D 引擎 (完全不變！)
     // =======================================================
     const modal = document.getElementById('showcase-modal');
     const modalCard = document.getElementById('modal-card');
@@ -503,53 +555,87 @@
       
       if (char.mask) {
         modalCard.classList.add('masked');
-        modalCard.style.setProperty('--mask', `url('${char.mask}')`);
+        let maskString = char.mask.includes('url(') ? char.mask : `url('${char.mask}')`;
+        modalCard.style.setProperty('--mask', maskString);
       } else {
         modalCard.classList.remove('masked');
       }
       
-      modalCard.style.setProperty('--rotate-x', '0deg'); modalCard.style.setProperty('--rotate-y', '0deg');
-      modalCard.style.setProperty('--pointer-x', '50%'); modalCard.style.setProperty('--pointer-y', '50%');
-      modalCard.style.setProperty('--pointer-from-center', '0'); modalCard.style.setProperty('--pointer-from-top', '0.5'); modalCard.style.setProperty('--pointer-from-left', '0.5');
+      modalCard.style.setProperty('--rotate-x', '0deg');
+      modalCard.style.setProperty('--rotate-y', '0deg');
+      modalCard.style.setProperty('--pointer-x', '50%');
+      modalCard.style.setProperty('--pointer-y', '50%');
+      modalCard.style.setProperty('--pointer-from-center', '0');
+      modalCard.style.setProperty('--pointer-from-top', '0.5');
+      modalCard.style.setProperty('--pointer-from-left', '0.5');
       
       modal.classList.add('active');
-      if(!holoEngineActive) { initModalHoloEngine(); holoEngineActive = true; }
+
+      if(!holoEngineActive) {
+        initModalHoloEngine();
+        holoEngineActive = true;
+      }
     }
 
     function closeShowcase() { modal.classList.remove('active'); }
     modal.addEventListener('click', (e) => { if(e.target === modal) closeShowcase(); });
 
     function initModalHoloEngine() {
-      let bounds; let ticking = false;
+      let bounds;
+      let ticking = false;
+
       function updateCard(x, y) {
-        const leftX = x / bounds.width; const topY = y / bounds.height;
+        const leftX = x / bounds.width;
+        const topY = y / bounds.height;
         const center = { x: leftX - 0.5, y: topY - 0.5 };
         const distance = Math.sqrt(center.x**2 + center.y**2);
 
-        modalCard.style.setProperty('--pointer-x', `${leftX * 100}%`); modalCard.style.setProperty('--pointer-y', `${topY * 100}%`);
+        modalCard.style.setProperty('--pointer-x', `${leftX * 100}%`);
+        modalCard.style.setProperty('--pointer-y', `${topY * 100}%`);
         modalCard.style.setProperty('--pointer-from-center', clamp(distance * 2, 0, 1));
-        modalCard.style.setProperty('--pointer-from-top', topY); modalCard.style.setProperty('--pointer-from-left', leftX);
-        modalCard.style.setProperty('--rotate-x', `${center.y * -20}deg`); modalCard.style.setProperty('--rotate-y', `${center.x * 20}deg`);
+        modalCard.style.setProperty('--pointer-from-top', topY);
+        modalCard.style.setProperty('--pointer-from-left', leftX);
+        
+        modalCard.style.setProperty('--rotate-x', `${center.y * -20}deg`); 
+        modalCard.style.setProperty('--rotate-y', `${center.x * 20}deg`);
         ticking = false;
       }
       
       function rotateToMouse(e) {
         if (!bounds) bounds = modalCard.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        if (!ticking) { requestAnimationFrame(() => updateCard(clientX - bounds.left, clientY - bounds.top)); ticking = true; }
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const mouseX = clientX - bounds.left;
+        const mouseY = clientY - bounds.top;
+        
+        if (!ticking) {
+          requestAnimationFrame(() => updateCard(mouseX, mouseY));
+          ticking = true;
+        }
       }
 
       function resetTilt() {
         modalCard.style.transition = "transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-        modalCard.style.setProperty('--rotate-x', '0deg'); modalCard.style.setProperty('--rotate-y', '0deg');
-        modalCard.style.setProperty('--pointer-from-center', '0'); modalCard.style.setProperty('--pointer-x', '50%'); modalCard.style.setProperty('--pointer-y', '50%');
+        modalCard.style.setProperty('--rotate-x', '0deg');
+        modalCard.style.setProperty('--rotate-y', '0deg');
+        modalCard.style.setProperty('--pointer-from-center', '0');
+        modalCard.style.setProperty('--pointer-x', '50%');
+        modalCard.style.setProperty('--pointer-y', '50%');
         setTimeout(() => { modalCard.style.transition = "none"; }, 500);
       }
 
-      function startInteraction() { bounds = modalCard.getBoundingClientRect(); modalCard.style.transition = "none"; }
+      function startInteraction() {
+        bounds = modalCard.getBoundingClientRect(); 
+        modalCard.style.transition = "none"; 
+      }
 
-      modalCard.addEventListener('pointerenter', startInteraction); modalCard.addEventListener('pointermove', rotateToMouse); modalCard.addEventListener('pointerleave', resetTilt);
-      modalCard.addEventListener('touchstart', startInteraction, {passive: true}); modalCard.addEventListener('touchmove', rotateToMouse, {passive: true}); modalCard.addEventListener('touchend', resetTilt);
+      modalCard.addEventListener('pointerenter', startInteraction);
+      modalCard.addEventListener('pointermove', rotateToMouse);
+      modalCard.addEventListener('pointerleave', resetTilt);
+      
+      modalCard.addEventListener('touchstart', startInteraction, {passive: true});
+      modalCard.addEventListener('touchmove', rotateToMouse, {passive: true});
+      modalCard.addEventListener('touchend', resetTilt);
     }
 
     function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
