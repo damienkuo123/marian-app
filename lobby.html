@@ -125,14 +125,16 @@
        🎭 終極遮罩系統 (Mask System)
        只要加上 .masked，光澤層就會被精準裁切！
        ======================================================= */
-    .card.masked .card__shine, 
-    .card.masked .card__shine:before, 
-    .card.masked .card__shine:after,
-    .card.masked .card__glare {
-      -webkit-mask-image: var(--mask); mask-image: var(--mask);
+    /* 🚀 進化版 Masking (遮罩自動反轉設定) */
+    .card.masked .card__shine, .card.masked .card__shine:before, .card.masked .card__shine:after {
+      /* 先畫一層純白底，然後利用 destination-out 把 var(--mask) 所在的位置「挖空」 */
+      -webkit-mask-image: linear-gradient(white, white), var(--mask);
+      -webkit-mask-composite: destination-out;
+      mask-image: linear-gradient(white, white), var(--mask);
+      mask-composite: exclude;
+      
       -webkit-mask-size: cover; mask-size: cover;
       -webkit-mask-position: center center; mask-position: center center;
-      -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
     }
 
     /* =======================================================
