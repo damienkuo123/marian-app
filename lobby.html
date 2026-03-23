@@ -478,7 +478,7 @@
             <div class="diff-btn" onclick="selectDifficulty(this, 'E5')">E5</div>
           </div>
           
-          <button class="btn-primary-large" onclick="alert('建立戰場！')">開啟 1v1 真人戰場</button>
+          <button class="btn-create-room" onclick="createBattleRoom()">開啟 1v1 真人戰場</button>
 
           <div class="radar-title">
             <span>📡 附近戰場掃描中...</span>
@@ -1016,17 +1016,22 @@
     // ⚔️ 視圖切換邏輯 (英雄整備室 <--> 戰鬥指揮中心)
     // =======================================================
     function goToBattleRoom() {
-      // 戰鬥房間往左滑入
       document.getElementById('battle-view').classList.add('active');
-      // 畫廊房間往左退開並變暗
       document.getElementById('armory-view').classList.add('slide-out');
+      
+      // 🚀 進入房間時，立刻掃描一次，並開啟每 4 秒自動掃描
+      refreshLobby();
+      if(lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+      lobbyRefreshTimer = setInterval(refreshLobby, 4000);
     }
 
     function goBackToArmory() {
-      // 戰鬥房間往右滑走
       document.getElementById('battle-view').classList.remove('active');
-      // 畫廊房間回歸原位
       document.getElementById('armory-view').classList.remove('slide-out');
+      
+      // 🚀 離開房間時，關閉雷達以節省資源，並取消自己開好的房間
+      if(lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+      if(currentRoomId) cancelMyRoom(false);
     }
 
     function goBackToGAS() {
