@@ -79,25 +79,50 @@
       letter-spacing: 8px;
     }
 
-    /* 對戰卡片對峙區 (縮小一點間隙，把空間還給卡片) */
+    /* 對戰卡片對峙區 (改為絕對定位的錯位交疊佈局) */
     .portal-clash-container {
-      position: relative; width: 100%; max-width: 900px; 
-      display: flex; align-items: center; justify-content: center; 
-      gap: 12px; /* 🚀 間距縮小到 12px，確保分開但畫面緊湊 */
-      transform-style: preserve-3d;
-      margin-top: 20px; 
+      position: relative; width: 100%; max-width: 500px; height: 60vh; max-height: 600px;
+      margin: 15px auto; transform-style: preserve-3d;
     }
 
     /* ========================================= */
     /* 🚀 頂級全息卡牌架構 (從 Lobby 完美移植) */
     /* ========================================= */
     .portal-card-wrapper {
-      position: relative; 
-      width: 42vw; /* 稍微留一點餘裕，避免兩張卡片太擠 */
-      max-width: 320px; 
-      aspect-ratio: var(--card-aspect); /* 🚀 絕對關鍵：用完美的卡牌比例，取代寫死的 height! */
-      perspective: 800px; /* 增加一點透視感，轉起來更立體 */
-      flex-shrink: 0; opacity: 0;
+      position: absolute; /* 🚀 解除 Flex 拘束，允許任意重疊！ */
+      width: 55vw; max-width: 280px; /* 卡片放大 */
+      aspect-ratio: var(--card-aspect);
+      perspective: 1000px; opacity: 0;
+    }
+
+    /* 🚀 我方卡片：從左上角強勢壓入 */
+    #portal-my-wrapper { top: 0; left: 2%; z-index: 5; }
+
+    /* 🚀 對手卡片：在右下角沉穩迎擊 */
+    #portal-op-wrapper { bottom: 0; right: 2%; z-index: 2; }
+
+    /* 🚀 動態進場：強烈錯位與傾斜對峙感 */
+    .clash-in-my { animation: slide-in-my 1s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
+    @keyframes slide-in-my {
+      0% { transform: translate(-30vw, -50px) rotateY(45deg) rotateZ(-20deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
+      100% { transform: translate(10%, 5%) rotateY(15deg) rotateZ(-10deg) scale(1.05); opacity: 1; filter: brightness(1) blur(0px); } 
+    }
+
+    .clash-in-op { animation: slide-in-op 1s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
+    @keyframes slide-in-op {
+      0% { transform: translate(30vw, 50px) rotateY(-45deg) rotateZ(20deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
+      100% { transform: translate(-10%, -5%) rotateY(-15deg) rotateZ(10deg) scale(1.05); opacity: 1; filter: brightness(1) blur(0px); } 
+    }
+
+    /* ✨ VS 疊在正中央防護罩 (確保壓在所有卡片之上) */
+    .portal-vs-spark {
+      position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%) scale(0);
+      width: 140px; height: 140px;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 55px; font-weight: 900; font-style: italic; color: #fff;
+      background: radial-gradient(circle, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 70%);
+      text-shadow: 0 0 10px #000, 0 0 20px #f39c12, 0 0 40px #f1c40f, 0 0 80px #e67e22;
+      z-index: 20; opacity: 0; letter-spacing: 2px; pointer-events: none;
     }
     
     .card {
@@ -148,32 +173,6 @@
     .card[data-rarity="SSR"] .card__bg { border-color: var(--gold); box-shadow: inset 0 0 15px rgba(241,196,15,0.5); }
 
     
-
-    /* 🚀 動態進場：因為使用了 Flexbox，位移量可以大幅縮小，動畫會更乾淨 */
-    .clash-in-my { animation: slide-in-my 1s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
-    @keyframes slide-in-my {
-      0% { transform: translateX(-50vw) translateY(50px) rotateY(45deg) rotateZ(-15deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
-      /* 🚀 最終狀態：不再需要大位移，保持傾斜即可 */
-      100% { transform: translateX(0) translateY(0) rotateY(15deg) rotateZ(-5deg) scale(1); opacity: 1; filter: brightness(1) blur(0px); } 
-    }
-
-    .clash-in-op { animation: slide-in-op 1s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
-    @keyframes slide-in-op {
-      0% { transform: translateX(50vw) translateY(-50px) rotateY(-45deg) rotateZ(15deg) scale(0.8); opacity: 0; filter: brightness(2) blur(10px); }
-      /* 🚀 最終狀態：不再需要大位移，保持傾斜即可 */
-      100% { transform: translateX(0) translateY(0) rotateY(-15deg) rotateZ(5deg) scale(1); opacity: 1; filter: brightness(1) blur(0px); } 
-    }
-
-    /* ✨ VS 疊在正中央防護罩 */
-    .portal-vs-spark {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-      width: 140px; height: 140px;
-      display: flex; justify-content: center; align-items: center;
-      font-size: 55px; font-weight: 900; font-style: italic; color: #fff;
-      background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 70%);
-      text-shadow: 0 0 10px #000, 0 0 20px #f39c12, 0 0 40px #f1c40f, 0 0 80px #e67e22;
-      z-index: 20; opacity: 0; letter-spacing: 2px; pointer-events: none; /* 防止擋住點擊 */
-    }
     .spark-active { animation: portal-vs-pop 0.6s 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     @keyframes portal-vs-pop {
       0% { transform: translate(-50%, -50%) scale(3); opacity: 0; filter: blur(10px); }
