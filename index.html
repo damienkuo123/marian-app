@@ -1382,66 +1382,6 @@
     return html;
   }
 
-  // 🚀 倒數與準備階段
-  function startRoundCountdown(roomId) {
-    if(readyTimer) clearInterval(readyTimer);
-    if(currentLimitTimer) clearInterval(currentLimitTimer);
-    if(waitOpTimer) clearInterval(waitOpTimer);
-    
-    if (currentBattleRound >= 10) { 
-       setTimeout(() => { showImpactOverlay(myTotalWins, opTotalWins, true); setTimeout(() => window.location.href = `${GAS_URL}?id=${STUDENT_ID}`, 5000); }, 1000);
-       return; 
-    }
-    
-    let count = 3; roundSubmitted = false;
-    
-    const myCard = document.getElementById('my-card');
-    const opCard = document.getElementById('op-card');
-    const arenaBg = document.getElementById('battle-arena');
-
-    // 🚀 清除上一回合的殘影
-    if(myCard) myCard.classList.remove('charging-mana', 'ultimate-charging', 'winner-glory', 'loser-shatter', 'take-damage');
-    if(opCard) opCard.classList.remove('charging-mana', 'ultimate-charging', 'winner-glory', 'loser-shatter', 'take-damage');
-    if(arenaBg) arenaBg.classList.remove('screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold');
-
-    isUltimateMode = false;
-    arenaBg.classList.remove('ultimate-mode-bg');
-    document.getElementById('target-word').classList.remove('ultimate-word');
-    const rb = document.getElementById('battle-record-btn');
-    rb.classList.remove('ultimate-record-btn');
-    rb.innerHTML = "🎤";
-
-    const skillBtn = document.getElementById('skill-btn');
-    if (skillBtn) skillBtn.style.display = hasUsedSkill ? 'none' : 'block';
-
-    document.getElementById('round-num').innerText = `第 ${currentBattleRound + 1} 局 / 先得 5 分獲勝`;
-    document.getElementById('target-word').innerText = "READY?";
-    
-    // 恢復計時器容器顯示
-    document.getElementById('battle-timer-container').style.display = 'flex';
-    document.getElementById('battle-timer').innerText = "";
-    document.getElementById('battle-timer').classList.remove('neon-score'); // 清除上一局得分樣式
-    
-    // 隱藏控制台
-    document.getElementById('battle-controls').style.visibility = 'hidden';
-    document.getElementById('battle-info').innerText = "等待雙方就緒...";
-    
-    readyTimer = setInterval(() => {
-      document.getElementById('battle-timer').innerText = count;
-      count--;
-      if (count < 0) {
-        clearInterval(readyTimer);
-        document.getElementById('target-word').innerText = battleQuizArr[currentBattleRound].en;
-        document.getElementById('battle-timer').innerText = "10";
-        document.getElementById('battle-info').innerText = "限時發動攻擊！";
-        
-        // 顯示錄音按鈕疊加在卡片上！
-        document.getElementById('battle-controls').style.visibility = 'visible';
-        
-        startRecordingBattle(roomId);
-      }
-    }, 1000);
-  }
 
   function startRecordingBattle(roomId) {
     let limit = 10;
@@ -1646,9 +1586,10 @@
         document.getElementById('battle-timer').innerText = "";
         
         // 隱藏倒數計時，顯示錄音按鈕
-        document.getElementById('battle-timer-container').style.display = 'none';
+        // 隱藏倒數計時，顯示控制台
+        document.getElementById('battle-timer-container').style.display = 'flex';
+        document.getElementById('battle-controls').style.display = 'flex'; // 從 hidden 改為 flex 確保排版
         document.getElementById('battle-controls').style.visibility = 'visible';
-        document.getElementById('battle-info').innerText = "限時 10 秒發動攻擊！";
         
         startRecordingBattle(roomId);
       }
