@@ -1429,22 +1429,45 @@
         window.myTheme = isMeHost ? data.hostTheme : data.guestTheme;
         window.opTheme = isMeHost ? data.guestTheme : data.hostTheme;
 
-        // 🚀 關鍵新增：在這裡取得玩家目前已經擁有的角色！
-        // 假設後端傳來的 data 裡面有 hostUnlocked / guestUnlocked (這需要你後端有傳)
-        // 如果後端沒傳，我們就先宣告一個空的，等一下在抽獎邏輯裡面我們做「即時」的防重複
-        if (isMeHost && data.hostUnlocked) {
-             window.myUnlockedAvatars = data.hostUnlocked.split(',').map(s => s.trim());
-        } else if (!isMeHost && data.guestUnlocked) {
-             window.myUnlockedAvatars = data.guestUnlocked.split(',').map(s => s.trim());
-        } else {
-             // 備用方案：如果後端沒給，至少先初始化為空陣列
-             window.myUnlockedAvatars = window.myUnlockedAvatars || []; 
-        }
-        
-        // ... (以下保持不變) ...
+        // 取得雙方圖片網址
+        const myImgUrl = isMeHost ? data.hostImg : data.guestImg;
+        const opImgUrl = isMeHost ? data.guestImg : data.hostImg;
+
+        // 取得雙方 Rarity 和 Mask
+        const finalMyRarity = isMeHost ? (data.hostRarity || 'N') : (data.guestRarity || 'N');
+        const finalOpRarity = isMeHost ? (data.guestRarity || 'N') : (data.hostRarity || 'N');
+        const finalMyMask = isMeHost ? (data.hostMask || '') : (data.guestMask || '');
+        const finalOpMask = isMeHost ? (data.guestMask || '') : (data.hostMask || '');
+
+        // 存為全域變數供結算畫面使用
+        window.currentMyRarity = finalMyRarity; window.currentMyMask = finalMyMask;
+        window.currentOpRarity = finalOpRarity; window.currentOpMask = finalOpMask;
+
+        // 🚀 寫入我方戰場卡片 (套用 3D 結構的背景)
+        const myCardEl = document.getElementById('my-card');
+        const myCardBg = document.getElementById('my-card-bg');
+        if (myCardBg && myImgUrl) myCardBg.style.backgroundImage = `url('${myImgUrl}')`;
+        myCardEl.setAttribute('data-rarity', finalMyRarity);
+        if (finalMyMask) {
+            myCardEl.classList.add('masked');
+            myCardEl.style.setProperty('--mask', finalMyMask.includes('url(') ? finalMyMask : `url('${finalMyMask}')`);
+        } else { myCardEl.classList.remove('masked'); }
+
+        // 🚀 寫入對手戰場卡片
+        const opCardEl = document.getElementById('op-card');
+        const opCardBg = document.getElementById('op-card-bg');
+        let finalOpBg = opImgUrl;
+        if (data.guestId === "AI_BOT") finalOpBg = 'https://cdn-icons-png.flaticon.com/512/4712/4712139.png';
+        if (opCardBg && finalOpBg) opCardBg.style.backgroundImage = `url('${finalOpBg}')`;
+        opCardEl.setAttribute('data-rarity', finalOpRarity);
+        if (finalOpMask) {
+            opCardEl.classList.add('masked');
+            opCardEl.style.setProperty('--mask', finalOpMask.includes('url(') ? finalOpMask : `url('${finalOpMask}')`);
+        } else { opCardEl.classList.remove('masked'); }
 
         document.getElementById('battle-arena').classList.add('battle-ready');
 
+        // 更新圓點分數
         const hS = data.hostScores.filter(s => s !== -1);
         const gS = data.guestScores.filter(s => s !== -1);
         myTotalWins = 0; opTotalWins = 0;
@@ -1456,7 +1479,7 @@
         document.getElementById('my-rounds').innerHTML = renderDots(myTotalWins, true);
         document.getElementById('op-rounds').innerHTML = renderDots(opTotalWins, false);
 
-        // 🚀 加上這行：等 UI 渲染完畢後，綁定 3D 互動閃卡事件！
+        // 啟動互動引擎 (把場上所有的 card 都掃描一次)
         setTimeout(() => { initInteractiveHoloCards(); }, 500);
       });
   }
