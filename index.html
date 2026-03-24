@@ -1620,7 +1620,7 @@
       popup.classList.add('popup-anim');
   }
 
-  // 🛡️ [未改動原邏輯] 僅在括號內新增 myImgUrl, opImgUrl
+  // 🛡️ 修復 5：精準掛載後座力與能量球動畫！
   function triggerBattleAnimations(myNum, opNum, isFinal, myTotalWins, opTotalWins, isMyUlt, isOpUlt, myImgUrl, opImgUrl) {
     const myCard = document.getElementById('my-card'); 
     const opCard = document.getElementById('op-card');
@@ -1634,15 +1634,16 @@
 
     let delayBeforeAttack = 0;
     if (myNum > opNum && isMyUlt) {
-        playCutinAnimation(myCard.style.backgroundImage, true);
+        // 🚀 大招切入修復：改吃傳進來的 myImgUrl，不要再從 DOM 抓！
+        playCutinAnimation(`url('${myImgUrl}')`, true);
         delayBeforeAttack = 1500; 
     } else if (opNum > myNum && isOpUlt) {
-        playCutinAnimation(opCard.style.backgroundImage, false);
+        playCutinAnimation(`url('${opImgUrl}')`, false);
         delayBeforeAttack = 1500;
     }
 
     setTimeout(() => {
-        // 抓取包在外層的 container 和 wrapper
+        // 抓取精準的外層容器來放特效
         const myContainer = myCard.closest('.my-container');
         const opContainer = opCard.closest('.op-container');
         const myWrapper = myCard.closest('.arena-card-wrapper');
@@ -1650,7 +1651,7 @@
 
         if (myNum > opNum) { 
           if(myCard) {
-            // 我方開火，加上後座力
+            // 我方開火後座力
             if(myContainer) myContainer.classList.add('recoil-my');
             
             if (isMyUlt) {
@@ -1670,7 +1671,7 @@
         else if (myNum < opNum) { 
           if (isMyUlt) showSkillPopup("❌ 技能被打斷...", "#e74c3c");
           if(opCard) {
-            // 對手開火，加上後座力
+            // 對手開火後座力
             if(opContainer) opContainer.classList.add('recoil-op');
             
             if (isOpUlt) {
@@ -1695,7 +1696,7 @@
         updateCardDamage(opCard, myTotalWins);
 
         setTimeout(() => {
-          // 清除光球與後座力，為下一局準備
+          // 清除所有狀態為下局準備
           if(myWrapper) myWrapper.classList.remove('blast-up', 'blast-ultimate');
           if(opWrapper) opWrapper.classList.remove('blast-down', 'blast-ultimate-down');
           if(myContainer) myContainer.classList.remove('recoil-my');
@@ -1704,7 +1705,8 @@
           showImpactOverlay(myNum, opNum, isFinal, myImgUrl, opImgUrl);
         }, 1600); 
 
-    }, delayBeforeAttack);
+    }, delayBeforeAttack); 
+  }
 
   // 2. 檢查雙方分數 (修復括號錯誤與整合抽獎系統)
   function checkBoth(roomId) {
