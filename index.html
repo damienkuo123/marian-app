@@ -1528,12 +1528,25 @@
   }
   
 
-  // 🗡️ 大招動畫播放器 (接收後端主題，如果沒有就隨機)
+  // 🚀 大招切入動畫：動態讀取發動者的稀有度與遮罩，展現閃卡！
   function playCutinAnimation(avatarUrl, isMyUlt) {
       const overlay = document.getElementById('cutin-overlay');
-      const char = document.getElementById('cutin-char');
+      const cutinCard = document.getElementById('cutin-card');
+      const cutinBg = document.getElementById('cutin-card-bg');
       
-      char.style.backgroundImage = avatarUrl;
+      cutinBg.style.backgroundImage = avatarUrl;
+      
+      // 直接從全域變數讀取發動大招的人的特效設定
+      let rarity = isMyUlt ? window.currentMyRarity : window.currentOpRarity;
+      let mask = isMyUlt ? window.currentMyMask : window.currentOpMask;
+      
+      cutinCard.setAttribute('data-rarity', rarity || 'N');
+      if (mask) {
+          cutinCard.classList.add('masked');
+          cutinCard.style.setProperty('--mask', mask.includes('url(') ? mask : `url('${mask}')`);
+      } else {
+          cutinCard.classList.remove('masked');
+      }
       
       let theme = isMyUlt ? window.myTheme : window.opTheme;
       if (!theme) {
