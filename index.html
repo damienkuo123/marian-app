@@ -1187,7 +1187,7 @@
       document.getElementById('portal-countdown').innerText = pCount;
       if(pCount <= 0) { 
           clearInterval(pTimer); 
-          location.reload(); 
+          if (window.portalJump) window.portalJump(); 
       }
     }, 1000);
 
@@ -1203,27 +1203,14 @@
         const myName = isMeHost ? data.hostName : (data.guestName || STUDENT_ID);
         const opName = isMeHost ? (data.guestName || "挑戰者") : data.hostName;
 
-        // 🚀 終極自給自足引擎：自己去圖鑑庫裡面挖出 Rarity 和 Mask！(變數改名，保證不衝突)
-        let finalMyRarity = 'N', finalOpRarity = 'N', finalMyMask = '', finalOpMask = '';
-        
-        if (window.characterAssets) {
-            // 安全解碼並去除雜訊
-            const cleanUrl = (url) => url ? decodeURIComponent(url).split('?')[0].trim() : '';
-            const mySafeUrl = cleanUrl(myImgUrl);
-            const opSafeUrl = cleanUrl(opImgUrl);
+        // 🚀 終極解法：直接相信後端傳來的 Rarity 和 Mask，不再做多餘的前端比對！
+        // 如果後端沒傳，才給預設值 'N'
+        const finalMyRarity = isMeHost ? (data.hostRarity || 'N') : (data.guestRarity || 'N');
+        const finalOpRarity = isMeHost ? (data.guestRarity || 'N') : (data.hostRarity || 'N');
+        const finalMyMask = isMeHost ? (data.hostMask || '') : (data.guestMask || '');
+        const finalOpMask = isMeHost ? (data.guestMask || '') : (data.hostMask || '');
 
-            Object.values(window.characterAssets).forEach(char => {
-               const charSafeUrl = cleanUrl(char.img);
-               if(charSafeUrl && charSafeUrl === mySafeUrl) { 
-                   finalMyRarity = (char.rarity || 'N').trim(); 
-                   finalMyMask = (char.mask || '').trim(); 
-               }
-               if(charSafeUrl && charSafeUrl === opSafeUrl) { 
-                   finalOpRarity = (char.rarity || 'N').trim(); 
-                   finalOpMask = (char.mask || '').trim(); 
-               }
-            });
-        }
+        console.log("【偵測】我方 Rarity:", finalMyRarity, "對手 Rarity:", finalOpRarity);
 
         // 🚀 強制寫入我方特效
         const myCardEl = document.getElementById('portal-my-card');
@@ -1250,11 +1237,8 @@
         if(opImgUrl) document.getElementById('portal-op-bg').style.backgroundImage = `url('${opImgUrl}')`;
         document.getElementById('portal-my-name').innerText = myName;
         document.getElementById('portal-op-name').innerText = opName;
-        
-
 
         // 🚀 資料載入完畢，觸發史詩級「卡牌滑入對峙」動畫！
-        // 注意：動畫現在要掛在外層的 wrapper 上
         const myWrapper = document.getElementById('portal-my-wrapper');
         const opWrapper = document.getElementById('portal-op-wrapper');
         const vsSpark = document.querySelector('.portal-vs-spark');
