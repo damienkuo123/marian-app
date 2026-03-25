@@ -2153,8 +2153,11 @@
 
   
   function initGacha(opponentName) {
-    window.wonPoints = 0;   // 統計總獲得點數 (含重複補償)
-    window.wonAvatars = []; // 統計獲得的新角色 ID
+    window.wonPoints = 0;   
+    window.wonAvatars = []; 
+    
+    // 🚀 預載盲盒封面圖，避免一開始網路慢出現透明空洞！
+    Object.values(BOX_COVERS).forEach(src => { const img = new Image(); img.src = src; });
     
     const overlay = document.getElementById('gacha-overlay');
     const board = document.getElementById('gacha-board');
@@ -2190,9 +2193,9 @@
       cardEl.id = `gacha-card-${index}`;
       
       let finalLabel = card.prize.label;
-      let finalValueText = card.prize.type === 'points' ? `+${card.prize.value}` : 'SSR';
+      // 🚀 移除 ✨，只有點數才顯示文字，角色就不顯示這個
+      let finalValueText = card.prize.type === 'points' ? `+${card.prize.value}` : '';
       
-      // 🚀 加上深藍色底色 background-color: #1c2331; 避免翻面時變透明！
       let finalBgStyles = `background-color: #1c2331;`;
       
       if (card.prize.type === 'avatar') {
@@ -2200,32 +2203,31 @@
           if (typeof characterAssets !== 'undefined' && characterAssets[charId]) {
               finalLabel = characterAssets[charId].name; 
               finalBgStyles = `background-color: #1c2331; background-image: url('${characterAssets[charId].img}'); background-size: cover; background-position: center top;`;
-              finalValueText = "✨"; 
           }
       }
 
       let coverImg = BOX_COVERS[card.boxRarity] || BOX_COVERS['N'];
 
-      // 🚀 核心升級：植入與戰場一模一樣的 3D 卡牌多層結構！
+      // 🚀 補上 #2c3e50 底色防破圖，並動態隱藏空的獎品數值
       cardEl.innerHTML = `
-        <div class="card" data-rarity="${card.boxRarity}">
+        <div class="card" data-rarity="${card.boxRarity}" id="gacha-3d-card-${index}">
           <div class="card__translater">
             <div class="card__rotator gacha-inner">
               <div class="gacha-front">
-                <div class="card__bg" style="background-image: url('${coverImg}'); background-size: cover;"></div>
+                <div class="card__bg" style="background-color: #2c3e50; background-image: url('${coverImg}'); background-size: cover;"></div>
                 <div class="card__shine"></div><div class="card__glare"></div>
                 <div class="unlock-ui">
                   <div class="unlock-hint">解鎖密語</div>
                   <div class="unlock-word">${card.word}</div>
                   <div class="voice-lock-btn" id="lock-btn-${index}" oncontextmenu="return false;">🎙️</div>
-                  <div class="voice-status" id="lock-status-${index}">長按發音</div>
+                  <div class="voice-status" id="lock-status-${index}">長按發音解鎖</div>
                 </div>
               </div>
               <div class="gacha-back ${card.prize.class}">
                 <div class="card__bg" style="${finalBgStyles}"></div>
                 <div class="card__shine"></div><div class="card__glare"></div>
-                <div class="prize-content" style="z-index: 20; transform: translateZ(30px);">
-                  <div class="prize-value">${finalValueText}</div>
+                <div class="prize-content-ui" style="transform: translateZ(30px);">
+                  <div class="prize-value" style="${finalValueText ? '' : 'display:none;'}">${finalValueText}</div>
                   <div class="prize-label">${finalLabel}</div>
                 </div>
               </div>
@@ -2234,9 +2236,11 @@
         </div>
       `;
       
+      // 🚀 允許點擊已經打開的卡片來欣賞！
       cardEl.onclick = (e) => {
-          if (isGachaResolving || card.flipped || gachaPicksLeft <= 0) return;
-          if (focusedCardIndex === -1) focusCard(index);
+          if (focusedCardIndex !== -1) return; // 畫面上已經有放大的卡片時，不動作
+          if (!card.flipped && gachaPicksLeft <= 0) return; // 如果沒次數了，未翻開的不能點，但已翻開的可以點！
+          focusCard(index);
       };
 
       wrapperEl.appendChild(cardEl);
