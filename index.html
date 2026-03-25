@@ -2204,19 +2204,29 @@
       // 🚀 移除 ✨，只有點數才顯示文字，角色就不顯示這個
       let finalValueText = card.prize.type === 'points' ? `+${card.prize.value}` : '';
       
-      let finalBgStyles = `background-color: #1c2331;`;
+      let isAvatar = card.prize.type === 'avatar';
+      let uiClass = isAvatar ? 'avatar-ui' : 'points-ui';
+      let finalLabel = card.prize.label;
+      let finalValueText = isAvatar ? '' : `+${card.prize.value}`; // 🚀 移除角色的 ✨
       
-      if (card.prize.type === 'avatar') {
+      let finalBgStyles = '';
+      
+      if (isAvatar) {
           const charId = card.prize.value;
           if (typeof characterAssets !== 'undefined' && characterAssets[charId]) {
               finalLabel = characterAssets[charId].name; 
               finalBgStyles = `background-color: #1c2331; background-image: url('${characterAssets[charId].img}'); background-size: cover; background-position: center top;`;
           }
+      } else {
+          // 🚀 關鍵：點數卡如果只有純黑底色，特效會出不來！所以給他們專屬的漸層高光底色！
+          if (card.prize.class === 'prize-SSR') finalBgStyles = `background: linear-gradient(135deg, #e67e22, #f1c40f);`;
+          else if (card.prize.class === 'prize-SR') finalBgStyles = `background: linear-gradient(135deg, #9b59b6, #34495e);`;
+          else if (card.prize.class === 'prize-R') finalBgStyles = `background: linear-gradient(135deg, #2980b9, #2c3e50);`;
+          else finalBgStyles = `background: linear-gradient(135deg, #34495e, #2c3e50);`;
       }
 
       let coverImg = BOX_COVERS[card.boxRarity] || BOX_COVERS['N'];
 
-      // 🚀 補上 #2c3e50 底色防破圖，並動態隱藏空的獎品數值
       cardEl.innerHTML = `
         <div class="card" data-rarity="${card.boxRarity}" id="gacha-3d-card-${index}">
           <div class="card__translater">
@@ -2234,7 +2244,7 @@
               <div class="gacha-back ${card.prize.class}">
                 <div class="card__bg" style="${finalBgStyles}"></div>
                 <div class="card__shine"></div><div class="card__glare"></div>
-                <div class="prize-content-ui" style="transform: translateZ(30px);">
+                <div class="prize-content-ui ${uiClass}" style="transform: translateZ(30px);">
                   <div class="prize-value" style="${finalValueText ? '' : 'display:none;'}">${finalValueText}</div>
                   <div class="prize-label">${finalLabel}</div>
                 </div>
@@ -2244,10 +2254,11 @@
         </div>
       `;
       
-      // 🚀 允許點擊已經打開的卡片來欣賞！
+      // 🚀 點擊邏輯大升級：可以隨時點擊已翻開的卡片欣賞！點放大中的卡片會自動收合！
       cardEl.onclick = (e) => {
-          if (focusedCardIndex !== -1) return; // 畫面上已經有放大的卡片時，不動作
-          if (!card.flipped && gachaPicksLeft <= 0) return; // 如果沒次數了，未翻開的不能點，但已翻開的可以點！
+          if (focusedCardIndex === index && card.flipped) { cancelFocus(); return; } 
+          if (focusedCardIndex !== -1) return; 
+          if (!card.flipped && gachaPicksLeft <= 0) return; 
           focusCard(index);
       };
 
