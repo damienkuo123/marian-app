@@ -2066,6 +2066,40 @@
     { type: 'avatar', value: 'A002', label: 'SSR', class: 'prize-SSR', glow: 'crack-gold', weight: 0.1 }
   ];
 
+  // 🚀 盲盒封面圖庫 (你可以隨時替換成你想要的網址)
+  const BOX_COVERS = {
+    'N': 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/cosmos-bottom.png', /* 預設底圖 */
+    'R': 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/cosmos-bottom.png',
+    'SR': 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/trainerbg.png',
+    'SSR': 'https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/illusion.png'
+  };
+
+  // 1. 先抽盲盒稀有度
+  function getBoxRarity() {
+    let r = Math.random() * 100;
+    if (r < 75) return 'N';
+    if (r < 95) return 'R';
+    if (r < 99) return 'SR';
+    return 'SSR';
+  }
+
+  // 2. 根據盲盒稀有度，過濾獎池並抽獎
+  function drawPrizeByBox(boxRarity) {
+    let pool = [];
+    if (boxRarity === 'N') pool = PRIZE_POOL; // N箱可抽所有
+    else if (boxRarity === 'R') pool = PRIZE_POOL.filter(p => p.class !== 'prize-N'); // R箱保底 R 以上
+    else if (boxRarity === 'SR') pool = PRIZE_POOL.filter(p => p.class === 'prize-SR' || p.class === 'prize-SSR'); // SR箱保底 SR 以上
+    else if (boxRarity === 'SSR') pool = PRIZE_POOL.filter(p => p.class === 'prize-SSR'); // SSR箱保底 SSR
+
+    let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+    let random = Math.random() * totalWeight;
+    for (let item of pool) {
+      if (random < item.weight) return item;
+      random -= item.weight;
+    }
+    return pool[0];
+  }
+
   function drawPrize() {
     let totalWeight = PRIZE_POOL.reduce((sum, item) => sum + item.weight, 0);
     let random = Math.random() * totalWeight;
@@ -2096,14 +2130,15 @@
     focusedCardIndex = -1;
     board.innerHTML = ""; 
 
-    // 生成 6 張帶有隨機密碼的卡片
+    // 生成 6 張帶有獨立稀有度的 3D 盲盒卡片
     gachaCardsData = [];
     for(let i = 0; i < 6; i++) {
         let randomWord = battleQuizArr.length > 0 ? battleQuizArr[Math.floor(Math.random() * battleQuizArr.length)].en : "OPEN";
-        gachaCardsData.push({ id: i, word: randomWord, prize: drawPrize(), flipped: false });
+        let boxRarity = getBoxRarity();
+        let prize = drawPrizeByBox(boxRarity);
+        gachaCardsData.push({ id: i, word: randomWord, boxRarity: boxRarity, prize: prize, flipped: false });
     }
 
-    // 渲染卡片 (加上 Wrapper 替身)
     gachaCardsData.forEach((card, index) => {
       const wrapperEl = document.createElement('div');
       wrapperEl.className = 'gacha-card-wrapper';
@@ -2113,68 +2148,62 @@
       cardEl.className = 'gacha-card';
       cardEl.id = `gacha-card-${index}`;
       
-      // 🚀 [SSR 進化]：判斷獎品類型，動態生成立繪背景與真名
       let finalLabel = card.prize.label;
       let finalValueText = card.prize.type === 'points' ? `+${card.prize.value}` : 'SSR';
-      let finalBgStyles = card.prize.bgImg ? `style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('${card.prize.bgImg}')"` : '';
+      let finalBgStyles = card.prize.bgImg ? `background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('${card.prize.bgImg}')` : '';
       
       if (card.prize.type === 'avatar') {
           const charId = card.prize.value;
           if (typeof characterAssets !== 'undefined' && characterAssets[charId]) {
-              finalLabel = characterAssets[charId].name; // 顯示角色真名
-              // 顯示精美立繪背景 (移除黑洞漸層)
-              finalBgStyles = `style="background-image: url('${characterAssets[charId].img}'); background-size: cover; background-position: center top;"`;
+              finalLabel = characterAssets[charId].name; 
+              finalBgStyles = `background-image: url('${characterAssets[charId].img}'); background-size: cover; background-position: center top;`;
               finalValueText = "✨"; 
           }
       }
 
-      // 🚀 植入 3D 閃卡結構！正面是盲盒，背面是獎品
+      let coverImg = BOX_COVERS[card.boxRarity] || BOX_COVERS['N'];
+
+      // 🚀 核心升級：植入與戰場一模一樣的 3D 卡牌多層結構！
       cardEl.innerHTML = `
-        <div class="card" data-rarity="N" id="gacha-3d-card-${index}">
+        <div class="card" data-rarity="${card.boxRarity}">
           <div class="card__translater">
             <div class="card__rotator gacha-inner">
-              
               <div class="gacha-front">
-                <div class="card__bg"></div>
+                <div class="card__bg" style="background-image: url('${coverImg}'); background-size: cover;"></div>
                 <div class="card__shine"></div><div class="card__glare"></div>
                 <div class="unlock-ui">
                   <div class="unlock-hint">解鎖密語</div>
                   <div class="unlock-word">${card.word}</div>
                   <div class="voice-lock-btn" id="lock-btn-${index}" oncontextmenu="return false;">🎙️</div>
-                  <div class="voice-status" id="lock-status-${index}">長按發音解鎖</div>
+                  <div class="voice-status" id="lock-status-${index}">長按發音</div>
                 </div>
               </div>
-
               <div class="gacha-back ${card.prize.class}">
                 <div class="card__bg" style="${finalBgStyles}"></div>
                 <div class="card__shine"></div><div class="card__glare"></div>
-                <div class="prize-content-ui" style="transform: translateZ(30px);">
+                <div class="prize-content" style="z-index: 20; transform: translateZ(30px);">
                   <div class="prize-value">${finalValueText}</div>
                   <div class="prize-label">${finalLabel}</div>
                 </div>
               </div>
-              
             </div>
           </div>
         </div>
       `;
       
-      // 第一層互動：點擊卡片絕對不會收合，只會觸發放大！
       cardEl.onclick = (e) => {
           if (isGachaResolving || card.flipped || gachaPicksLeft <= 0) return;
-          if (focusedCardIndex === -1) {
-              focusCard(index);
-          }
+          if (focusedCardIndex === -1) focusCard(index);
       };
 
       wrapperEl.appendChild(cardEl);
       board.appendChild(wrapperEl);
-      
       bindVoiceLock(index);
     });
 
     overlay.classList.add('active');
-    // 重新綁定新生成的盲盒卡片 3D 感應
+    
+    // 🚀 必須在此刻重新綁定 3D 感應，因為卡片是剛生成的！
     setTimeout(() => { initInteractiveHoloCards(); }, 100);
   }
 
@@ -2267,12 +2296,11 @@
       };
   }
 
-  // 🚀 觸發封印碎裂與翻開動畫
   function triggerReveal(index) {
       const cardEl = document.getElementById(`gacha-card-${index}`);
+      const cardRoot = cardEl.querySelector('.card'); // 抓取 3D 根元素
       const prizeInfo = gachaCardsData[index].prize;
       
-      // 階段 1：直接套用你設定的專屬震動與裂痕光芒 (crack-gold 等)
       cardEl.classList.add(prizeInfo.glow);
       
       setTimeout(() => {
@@ -2280,48 +2308,34 @@
           cardEl.classList.add('flipped');
           cancelFocus(); 
 
-          // 🚀 階段 2：翻開瞬間，將 3D 卡片切換為獎品的稀有度！
-          const cardRoot = document.getElementById(`gacha-3d-card-${index}`);
-          let prizeRarity = 'N';
-          if (prizeInfo.class === 'prize-R') prizeRarity = 'R';
-          if (prizeInfo.class === 'prize-SR') prizeRarity = 'SR';
-          if (prizeInfo.class === 'prize-SSR') prizeRarity = 'SSR';
+          // 🚀 驚喜時刻：把 3D 光芒特效瞬間切換成獎品的稀有度！
+          let prizeRarity = prizeInfo.class.replace('prize-', '');
           if (cardRoot) cardRoot.setAttribute('data-rarity', prizeRarity);
-
-          // 處理重複角色與結算顯示... (底下的代碼不變)
-          let prizeToAdd = { ...prizeInfo };
+          
+          let prizeToAdd = { ...prizeInfo }; 
           
           if (prizeToAdd.type === 'avatar') {
               const charId = prizeToAdd.value;
-              
-              // 1. 檢查「原本的帳號」是否已經有這個角色
               const alreadyOwnedInAccount = (window.myUnlockedAvatars || []).includes(charId);
-              // 2. 檢查「這次抽獎的前幾抽」是否已經抽到這個角色
               const alreadyGotInThisGacha = window.wonAvatars.includes(charId);
               
               if (alreadyOwnedInAccount || alreadyGotInThisGacha) {
-                  // 重複了！轉換成補償點數
                   const charName = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
-                  // 💡 結算顯示明確的補償文字
-                  prizeToAdd.realLabel = `(重複) ${charName} → 轉為 500 點補償`; 
-                  window.wonPoints += 500; // 補償 500 點
+                  prizeToAdd.realLabel = `(重複) ${charName} → 轉為 500 點`; 
+                  window.wonPoints += 500; 
               } else {
-                  // 新角色
                   prizeToAdd.realLabel = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
-                  window.wonAvatars.push(charId); // 記錄下來，防止這局再抽到
+                  window.wonAvatars.push(charId); 
               }
           } else {
-              // 點數獎勵
               window.wonPoints += prizeToAdd.value; 
               prizeToAdd.realLabel = prizeToAdd.label;
           }
           
           gachaWonItems.push(prizeToAdd);
-
           gachaPicksLeft--;
           document.getElementById('picks-left').innerText = gachaPicksLeft;
 
-          // ... (後續結算邏輯保持不變) ...
           if (gachaPicksLeft <= 0) {
               isGachaResolving = true;
               document.getElementById('gacha-subtitle').innerHTML = "<span style='color:#e74c3c'>次數已用盡！</span>";
