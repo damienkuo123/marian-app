@@ -707,10 +707,9 @@
     
     .gacha-card-wrapper:not(.has-focus) .gacha-card:not(.flipped):hover .card__translater { transform: translateY(-10px) scale(1.05); transition: 0.3s; box-shadow: 0 25px 40px rgba(0,210,211,0.4); }
 
-    /* 正反面容器放入 3D Z 軸 */
+    /* 正反面容器獨立，去除干擾的 flex */
     .gacha-front, .gacha-back { 
-      position: absolute; inset: 0; transform-style: preserve-3d; backface-visibility: hidden; 
-      border-radius: var(--card-radius); display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: absolute; inset: 0; transform-style: preserve-3d; backface-visibility: hidden; border-radius: var(--card-radius);
     }
     .gacha-front { transform: rotateY(0deg) translateZ(0.01px); }
     .gacha-back { transform: rotateY(180deg) translateZ(0.01px); background: #1c2331; border: 2px solid #576574; }
@@ -724,8 +723,14 @@
     }
     @keyframes spin-hologram { 100% { transform: rotate(360deg); } }
     
-    .unlock-ui { display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 20; opacity: 0; transform: scale(0.8) translateZ(30px); transition: all 0.5s; pointer-events: none; }
-    .gacha-card.focused .unlock-ui { display: flex; opacity: 1; transform: scale(1) translateZ(30px); pointer-events: auto; }
+    /* 🚀 將 UI 層變成 flex，保證裡面的文字和按鈕完美置中 */
+    .unlock-ui, .prize-content-ui {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20;
+    }
+    
+    /* 解鎖 UI 的浮現動畫 */
+    .unlock-ui { opacity: 0; transform: scale(0.8) translateZ(30px); transition: all 0.5s; pointer-events: none; visibility: hidden; }
+    .gacha-card.focused .unlock-ui { opacity: 1; transform: scale(1) translateZ(30px); pointer-events: auto; visibility: visible; }
     .gacha-card.focused .gacha-front .card__bg::before { opacity: 0.1; }
 
     .unlock-hint { font-size: 14px; color: #a4b0be; letter-spacing: 2px; margin-bottom: 10px; }
