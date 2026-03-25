@@ -673,10 +673,18 @@
     /* 🚀 破除結界 2：唯獨「被聚焦」的卡片替身，恢復 pointer-events: auto 變成實體，這樣麥克風就能被點到了！ */
     #gacha-overlay.focus-mode .gacha-card-wrapper.has-focus { perspective: none !important; z-index: 1000; pointer-events: auto; }
 
-    /* 🃏 卡片本體 */
-    .gacha-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1; }
+    /* 🃏 讓抽獎卡片完美銜接 3D 引擎 */
+    .gacha-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; transition: all 0.5s; z-index: 1; }
     
-    /* 🚀 真正的霸氣滿版展開！絕不偏移！ */
+    .gacha-card .card { --flip-y: 0deg; width: 100%; height: 100%; }
+    .gacha-card .card__rotator { 
+      transform: rotateY(calc(var(--rotate-x) + var(--flip-y))) rotateX(var(--rotate-y)); 
+      transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .gacha-card.flipped .card { --flip-y: 180deg; }
+    .gacha-card.missed .card { --flip-y: 180deg; }
+    .gacha-card.missed .card__translater { transform: scale(0.95); filter: grayscale(0.9) brightness(0.4); transition: 0.8s; }
+
     .gacha-card.focused { 
       position: fixed !important; top: 50% !important; left: 50% !important; 
       transform: translate(-50%, -50%) !important; 
@@ -686,30 +694,35 @@
       box-shadow: 0 30px 80px rgba(0,0,0,0.9), 0 0 50px rgba(0,210,211,0.3) !important;
     }
     
-    .gacha-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d; box-shadow: 0 15px 35px rgba(0,0,0,0.6); border-radius: 12px; }
-    .gacha-card-wrapper:not(.has-focus) .gacha-card:not(.flipped):hover .gacha-inner { transform: translateY(-10px) scale(1.05); box-shadow: 0 25px 40px rgba(0,210,211,0.4); }
-    
-    .gacha-card.flipped .gacha-inner { transform: rotateY(180deg) scale(1); }
-    .gacha-card.missed .gacha-inner { transform: rotateY(180deg) scale(0.95); filter: grayscale(0.9) brightness(0.4); }
+    .gacha-card-wrapper:not(.has-focus) .gacha-card:not(.flipped):hover .card__translater { transform: translateY(-10px) scale(1.05); transition: 0.3s; box-shadow: 0 25px 40px rgba(0,210,211,0.4); }
 
-    .gacha-front, .gacha-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; background-size: cover; background-position: center; }
+    /* 正反面容器放入 3D Z 軸 */
+    .gacha-front, .gacha-back { 
+      position: absolute; inset: 0; transform-style: preserve-3d; backface-visibility: hidden; 
+      border-radius: var(--card-radius); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .gacha-front { transform: rotateY(0deg) translateZ(0.01px); }
+    .gacha-back { transform: rotateY(180deg) translateZ(0.01px); background: #1c2331; border: 2px solid #576574; }
 
-    /* 🔮 神祕卡背封印與語音鎖 */
-    .gacha-front { background: linear-gradient(145deg, #1e272b 0%, #0b0f19 100%); border: 2px solid rgba(0, 210, 211, 0.3); transition: all 0.3s; }
-    .gacha-front::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 0deg, transparent, rgba(0, 210, 211, 0.3), transparent, rgba(155, 89, 182, 0.3), transparent); animation: spin-hologram 4s linear infinite; pointer-events: none; opacity: 0.5; }
+    /* 盲盒魔法陣移入 bg 層，防止蓋住 3D 光芒 */
+    .gacha-front .card__bg { background: linear-gradient(145deg, #1e272b 0%, #0b0f19 100%); border: 2px solid rgba(0, 210, 211, 0.3); border-radius: var(--card-radius); }
+    .gacha-front .card__bg::before { 
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+      background: conic-gradient(from 0deg, transparent, rgba(0, 210, 211, 0.3), transparent, rgba(155, 89, 182, 0.3), transparent); 
+      animation: spin-hologram 4s linear infinite; pointer-events: none; opacity: 0.5; z-index: 2;
+    }
+    @keyframes spin-hologram { 100% { transform: rotate(360deg); } }
     
-    .unlock-ui { display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; opacity: 0; transform: scale(0.8); transition: all 0.5s; pointer-events: none; }
-    .gacha-card.focused .unlock-ui { display: flex; opacity: 1; transform: scale(1); pointer-events: auto; }
-    .gacha-card.focused .gacha-front::before { opacity: 0.1; }
+    .unlock-ui { display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 20; opacity: 0; transform: scale(0.8) translateZ(30px); transition: all 0.5s; pointer-events: none; }
+    .gacha-card.focused .unlock-ui { display: flex; opacity: 1; transform: scale(1) translateZ(30px); pointer-events: auto; }
+    .gacha-card.focused .gacha-front .card__bg::before { opacity: 0.1; }
 
     .unlock-hint { font-size: 14px; color: #a4b0be; letter-spacing: 2px; margin-bottom: 10px; }
     .unlock-word { font-size: 40px; font-weight: 900; color: #00d2d3; text-shadow: 0 0 20px rgba(0,210,211,0.8); margin-bottom: 25px; letter-spacing: 2px; text-transform: uppercase; }
     
-    /* 🎤 長按解鎖按鈕 (滿版尺寸放大) */
     .voice-lock-btn { width: 80px; height: 80px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 3px solid #0fb9b1; color: #fff; font-size: 35px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 0 20px rgba(15,185,177,0.5); transition: all 0.2s; -webkit-touch-callout: none; user-select: none; margin-bottom: 10px; }
     .voice-lock-btn.recording { transform: scale(0.9); background: #eb3b5a; border-color: #ff7675; box-shadow: 0 0 30px #eb3b5a, 0 0 60px #eb3b5a; animation: pulse-record 0.5s infinite alternate; }
     @keyframes pulse-record { to { box-shadow: 0 0 15px #eb3b5a; } }
-    
     .voice-status { font-size: 14px; color: #f1c40f; margin-top: 10px; font-weight: bold; }
 
     /* 💥 封印碎裂與稀有度光芒特效 */
@@ -2016,24 +2029,23 @@
   };
   
   // 🎲 獎池設定
-  /* 將此代碼替換您原本的 PRIZE_POOL */
   const PRIZE_POOL = [
     // 🚀 全獎項，N合起來80，R合起來15，SR合起來2.5，SSR合起來0.5
     { type: 'points', value: 0, label: '0 點', class: 'prize-N', glow: 'crack-white', weight: 35 },
     { type: 'points', value: 5, label: '5 點', class: 'prize-N', glow: 'crack-white', weight: 25 },
     { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white', weight: 15 },
-    { type: 'avatar', value: 'A001', label: 'N', class: 'prize-N', glow: 'crack-gold', weight: 5 },
+    { type: 'avatar', value: 'A001', label: 'N', class: 'prize-N', glow: 'crack-white', weight: 5 },
     { type: 'points', value: 20, label: '20 點', class: 'prize-R', glow: 'crack-white', weight: 5 },
-    { type: 'points', value: 30, label: '30 點', class: 'prize-R', glow: 'crack-purple', weight: 5 },
-    { type: 'points', value: 50, label: '50 點', class: 'prize-R', glow: 'crack-purple', weight: 3 },
-    { type: 'avatar', value: 'A003', label: 'R', class: 'prize-R', glow: 'crack-gold', weight: 1 },
-    { type: 'avatar', value: 'A005', label: 'R', class: 'prize-R', glow: 'crack-gold', weight: 1 },
+    { type: 'points', value: 30, label: '30 點', class: 'prize-R', glow: 'crack-white', weight: 5 },
+    { type: 'points', value: 50, label: '50 點', class: 'prize-R', glow: 'crack-white', weight: 3 },
+    { type: 'avatar', value: 'A003', label: 'R', class: 'prize-R', glow: 'crack-white', weight: 1 },
+    { type: 'avatar', value: 'A005', label: 'R', class: 'prize-R', glow: 'crack-white', weight: 1 },
     { type: 'points', value: 70, label: '70 點', class: 'prize-SR', glow: 'crack-purple', weight: 2 },
     { type: 'points', value: 90, label: '90 點', class: 'prize-SR', glow: 'crack-purple', weight: 2 },
     { type: 'points', value: 150, label: '150 點', class: 'prize-SR', glow: 'crack-purple', weight: 0.3 },
-    { type: 'avatar', value: 'A004', label: 'SR', class: 'prize-SR', glow: 'crack-gold', weight: 0.2 },
-    { type: 'points', value: 500, label: '500 點', class: 'prize-SSR', glow: 'crack-purple', weight: 0.3 },
-    { type: 'points', value: 888, label: '888 點', class: 'prize-SSR', glow: 'crack-purple', weight: 0.2 },
+    { type: 'avatar', value: 'A004', label: 'SR', class: 'prize-SR', glow: 'crack-purple', weight: 0.2 },
+    { type: 'points', value: 500, label: '500 點', class: 'prize-SSR', glow: 'crack-gold', weight: 0.3 },
+    { type: 'points', value: 888, label: '888 點', class: 'prize-SSR', glow: 'crack-gold', weight: 0.2 },
     { type: 'avatar', value: 'A002', label: 'SSR', class: 'prize-SSR', glow: 'crack-gold', weight: 0.1 }
   ];
 
@@ -2099,19 +2111,33 @@
           }
       }
 
+      // 🚀 植入 3D 閃卡結構！正面是盲盒，背面是獎品
       cardEl.innerHTML = `
-        <div class="gacha-inner">
-          <div class="gacha-front">
-            <div class="unlock-ui">
-              <div class="unlock-hint">解鎖密語</div>
-              <div class="unlock-word">${card.word}</div>
-              <div class="voice-lock-btn" id="lock-btn-${index}" oncontextmenu="return false;">🎙️</div>
-              <div class="voice-status" id="lock-status-${index}">長按發音解鎖</div>
+        <div class="card" data-rarity="N" id="gacha-3d-card-${index}">
+          <div class="card__translater">
+            <div class="card__rotator gacha-inner">
+              
+              <div class="gacha-front">
+                <div class="card__bg"></div>
+                <div class="card__shine"></div><div class="card__glare"></div>
+                <div class="unlock-ui">
+                  <div class="unlock-hint">解鎖密語</div>
+                  <div class="unlock-word">${card.word}</div>
+                  <div class="voice-lock-btn" id="lock-btn-${index}" oncontextmenu="return false;">🎙️</div>
+                  <div class="voice-status" id="lock-status-${index}">長按發音解鎖</div>
+                </div>
+              </div>
+
+              <div class="gacha-back ${card.prize.class}">
+                <div class="card__bg" style="${finalBgStyles}"></div>
+                <div class="card__shine"></div><div class="card__glare"></div>
+                <div style="position:absolute; z-index:20; transform: translateZ(30px); display:flex; flex-direction:column; align-items:center;">
+                  <div class="prize-value">${finalValueText}</div>
+                  <div class="prize-label">${finalLabel}</div>
+                </div>
+              </div>
+              
             </div>
-          </div>
-          <div class="gacha-back ${card.prize.class}" ${finalBgStyles}>
-            <div class="prize-value">${finalValueText}</div>
-            <div class="prize-label">${finalLabel}</div>
           </div>
         </div>
       `;
@@ -2131,6 +2157,8 @@
     });
 
     overlay.classList.add('active');
+    // 重新綁定新生成的盲盒卡片 3D 感應
+    setTimeout(() => { initInteractiveHoloCards(); }, 100);
   }
 
   // 聚焦卡片
@@ -2227,6 +2255,7 @@
       const cardEl = document.getElementById(`gacha-card-${index}`);
       const prizeInfo = gachaCardsData[index].prize;
       
+      // 階段 1：直接套用你設定的專屬震動與裂痕光芒 (crack-gold 等)
       cardEl.classList.add(prizeInfo.glow);
       
       setTimeout(() => {
@@ -2234,8 +2263,16 @@
           cardEl.classList.add('flipped');
           cancelFocus(); 
 
-          // 🚀 [SSR 進化]：處理重複角色與結算顯示
-          let prizeToAdd = { ...prizeInfo }; // 複製一份獎品資訊
+          // 🚀 階段 2：翻開瞬間，將 3D 卡片切換為獎品的稀有度！
+          const cardRoot = document.getElementById(`gacha-3d-card-${index}`);
+          let prizeRarity = 'N';
+          if (prizeInfo.class === 'prize-R') prizeRarity = 'R';
+          if (prizeInfo.class === 'prize-SR') prizeRarity = 'SR';
+          if (prizeInfo.class === 'prize-SSR') prizeRarity = 'SSR';
+          if (cardRoot) cardRoot.setAttribute('data-rarity', prizeRarity);
+
+          // 處理重複角色與結算顯示... (底下的代碼不變)
+          let prizeToAdd = { ...prizeInfo };
           
           if (prizeToAdd.type === 'avatar') {
               const charId = prizeToAdd.value;
@@ -2316,8 +2353,8 @@
   // 🌈 頂級 3D 互動閃卡引擎 (全場域適配版)
   // =======================================================
   function initInteractiveHoloCards() {
-      // 🚀 抓取 Portal、戰場、結算畫面裡所有的 3D 卡片！
-      const cards = document.querySelectorAll('#portal-my-card, #portal-op-card, #my-card, #op-card, #impact-card');
+      // 🚀 加入 .gacha-card .card，讓盲盒也能感應滑鼠與陀螺儀！
+      const cards = document.querySelectorAll('#portal-my-card, #portal-op-card, #my-card, #op-card, #impact-card, .gacha-card .card');
       
       cards.forEach(card => {
           const shineLayer = card.querySelector('.card__shine');
