@@ -2363,6 +2363,7 @@
       };
   }
 
+  // 🚀 觸發封印碎裂與翻開動畫
   function triggerReveal(index) {
       const cardEl = document.getElementById(`gacha-card-${index}`);
       const cardRoot = cardEl.querySelector('.card'); // 抓取 3D 根元素
@@ -2378,7 +2379,7 @@
           gachaCardsData[index].flipped = true;
           cardEl.classList.add('flipped');
           
-          // 🚀 注意：我把 cancelFocus() 移除了！
+          // 🚀 注意：我把一開始的 cancelFocus() 移除了！
           // 翻面後，卡片會維持巨大化，讓玩家慢慢欣賞！玩家只要點擊旁邊的暗色背景就會自動收合。
 
           let prizeRarity = 'N';
@@ -2427,8 +2428,13 @@
                       showGachaSummary();
                   }, 2500);
               }, 1000);
+          } else {
+              // 🚀 如果不是最後一抽，翻開欣賞 1.5 秒後自動收合！(這樣就不會卡死了)
+              setTimeout(() => {
+                  if (focusedCardIndex === index) cancelFocus();
+              }, 1500);
           }
-      }, 1000);
+      }, 1000); 
   }
 
   // 顯示戰利品並發送 GAS
