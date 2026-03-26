@@ -1093,6 +1093,62 @@
     document.addEventListener('touchstart', resetIdleTimer);
     document.addEventListener('mousedown', resetIdleTimer);
     resetIdleTimer();
+
+    
+    // 🚀 檢查並更新突發事件的按鈕狀態
+    function checkEventStatus() {
+      const eventCard = document.querySelector('.event-card');
+      eventCard.innerHTML = '<div class="event-tag">突發事件</div><div class="event-title">檢查活動中...</div>';
+      eventCard.style.pointerEvents = 'none'; // 檢查期間不可點擊
+
+      fetch(`${gasHomeUrl}?action=get_current_event`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // 🎉 有活動！顯示單元名稱，並綁定開始函數，傳入專屬的班級代碼
+            eventCard.innerHTML = `<div class="event-tag" style="background: #e74c3c; animation: pulse 2s infinite;">現正舉辦</div><div class="event-title">${data.eventName}</div>`;
+            eventCard.style.pointerEvents = 'auto';
+            eventCard.style.opacity = '1';
+            eventCard.onclick = () => startEvent(data.eventCode);
+          } else {
+            // 😴 沒活動！變灰並顯示不開放
+            eventCard.innerHTML = `<div class="event-tag" style="background: #7f8c8d;">暫無活動</div><div class="event-title">現在不開放</div>`;
+            eventCard.style.opacity = '0.5';
+            eventCard.style.pointerEvents = 'none';
+          }
+        })
+        .catch(err => {
+          eventCard.innerHTML = `<div class="event-tag">突發事件</div><div class="event-title">連線失敗</div>`;
+        });
+    }
+
+    // 🚀 啟動突發事件 (接收來自排程表的 eventClassCode)
+    function startEvent(eventClassCode) {
+      const btn = document.querySelector('.event-card');
+      btn.style.pointerEvents = 'none';
+      btn.innerHTML = '<div class="event-tag">突發事件</div><div class="event-title">載入中...</div>';
+
+      const eventLevel = "hard"; // 突發事件預設為最高難度
+
+      // 呼叫建立 PvE 房間的 API，帶入動態的班級代碼
+      const url = `${gasHomeUrl}?action=create_pve_room&id=${STUDENT_ID}&classCode=${eventClassCode}&level=${eventLevel}`;
+
+      fetch(url, { method: 'GET', mode: 'cors' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // 加上 &isEvent=true 標籤，讓對戰頁面知道這是單抽的活動模式
+            window.location.href = `index.html?roomId=${data.roomId}&id=${STUDENT_ID}&isEvent=true`;
+          } else {
+            alert("活動載入失敗，請稍後再試！");
+            window.location.reload();
+          }
+        })
+        .catch(err => {
+          alert("網路錯誤，無法連線至活動！");
+          window.location.reload();
+        });
+    }
     
   </script>
 </body>
