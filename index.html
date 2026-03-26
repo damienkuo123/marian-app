@@ -1185,6 +1185,11 @@
           .then(res => res.json())
           .then(data => {
             window.characterAssets = data.assets || {}; // 存入全域變數
+            
+            // 🚀 關鍵修復：同步給抽獎系統的變數，並啟動獎池引擎！
+            characterAssets = window.characterAssets;   
+            buildDynamicPrizePool();                    
+
             showPortal();
           }).catch(err => {
             console.log("圖鑑載入失敗，使用預設", err);
@@ -2190,7 +2195,7 @@
       });
 
       // 4. 設定各稀有度的「總機率權重」(你的完美設計)
-      const totalWeights = { 'N': 5, 'R': 2, 'SR': 0.5, 'SSR': 0.1 };
+      const totalWeights = { 'N': 2, 'R': 1, 'SR': 0.3, 'SSR': 0.1 };
 
       // 5. 將「一般」角色動態加入獎池，自動計算平分權重與開卡特效
       normalAvatars.forEach(([id, char]) => {
