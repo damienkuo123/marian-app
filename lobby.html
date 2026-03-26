@@ -1140,7 +1140,7 @@
         });
     }
 
-    // 🚀 接收並傳遞 eventAvatarId (修復 API 名稱與回傳判定)
+    // 🚀 接收並傳遞 eventAvatarId (修復難度名稱與連線設定)
     function startEvent(eventClassCode, eventAvatarId) {
       // 1. 避免重複點擊
       const eventBanner = document.querySelector('.event-banner');
@@ -1171,14 +1171,15 @@
           aiTimerInterval = null;
           aiMsgEl.innerText = "🚀 傳送中...";
 
-          const eventLevel = "hard"; 
-          // 🚀 關鍵修復 1：改用你真實的 action=create_ai_battle，並把 classCode 變數名改為 classId
+          // 🚀 關鍵修復 1：難度必須是後端認得的 "高階Ai"，不能寫 "hard"，否則後端會當機！
+          const eventLevel = "高階Ai"; 
+          
           const url = `${GAS_URL}?action=create_ai_battle&id=${STUDENT_ID}&classId=${eventClassCode}&level=${eventLevel}`;
 
-          fetch(url, { method: 'GET', mode: 'cors' })
+          // 🚀 關鍵修復 2：移除 mode: 'cors'，改用最單純的 fetch，完全對齊你原本 AI 對戰的成功寫法！
+          fetch(url)
             .then(res => res.json())
             .then(data => {
-              // 🚀 關鍵修復 2：AI 房間回傳的是 data.roomId，只要有這個就代表建立成功！
               if (data.roomId) {
                 // 🚀 將活動角色 ID 放入網址，讓對戰室知道 Boss 是誰！
                 window.location.href = `index.html?roomId=${data.roomId}&id=${STUDENT_ID}&isEvent=true&eventAvatar=${eventAvatarId}`;
