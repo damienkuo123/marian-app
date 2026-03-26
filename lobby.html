@@ -713,7 +713,8 @@
       rarities.forEach(rarity => {
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
-          if (char.category === "活動") return false; 
+          // 🚀 注意：我把 if (char.category === "活動") return false; 刪掉了！讓活動角色可以顯示出來
+          
           if (char.category === "限定") {
             if (char.endTime) {
               const end = new Date(char.endTime);
@@ -736,12 +737,28 @@
         items.forEach(([id, char]) => {
           const isOwned = userUnlocked.includes(id);
           const isLimited = (char.category === "限定");
+          const isEvent = (char.category === "活動"); // 🚀 新增判斷是否為活動角色
           const cost = char.cost || 500; 
 
           const cardEl = document.createElement('div');
           cardEl.className = 'shop-card-wrapper' + (isOwned ? ' owned' : '');
           
-          const limitedBadgeHtml = isLimited ? `<div class="shop-limited-badge">⏳ 限時販售</div>` : "";
+          // 如果是限定就顯示限時販售，如果是活動就顯示活動標籤
+          let limitedBadgeHtml = "";
+          if (isLimited) limitedBadgeHtml = `<div class="shop-limited-badge">⏳ 限時販售</div>`;
+          if (isEvent) limitedBadgeHtml = `<div class="shop-limited-badge" style="background: #8e44ad;">✨ 活動專屬</div>`;
+
+          // 🚀 關鍵判斷：決定按鈕長什麼樣子
+          let btnHtml = "";
+          if (isOwned) {
+              btnHtml = `<button class="btn-buy" disabled>已擁有</button>`;
+          } else if (isEvent) {
+              // 抽卡專屬的活動角色，不提供購買按鈕
+              btnHtml = `<button class="btn-buy" disabled style="background: #8e44ad; color: white; opacity: 1;">活動限定</button>`;
+          } else {
+              // 一般與限定角色，正常顯示購買按鈕
+              btnHtml = `<button class="btn-buy" onclick="buyCharacter('${id}', ${cost})">💰 ${cost} 點兌換</button>`;
+          }
 
           cardEl.innerHTML = `
             ${limitedBadgeHtml}
@@ -749,10 +766,7 @@
               ${createStaticCardHTML(char)} 
             </div>
             <div style="font-size: 15px; font-weight: 900; margin-bottom: 3px; color: #2c3e50;">${char.name}</div>
-            <button class="btn-buy" ${isOwned ? 'disabled' : ''} onclick="buyCharacter('${id}', ${cost})">
-              ${isOwned ? '已擁有' : `💰 ${cost} 點兌換`}
-            </button>
-          `;
+            ${btnHtml} `;
           grid.appendChild(cardEl);
         });
         container.appendChild(grid);
