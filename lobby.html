@@ -1112,41 +1112,54 @@
     
     // 🚀 檢查並更新突發事件的按鈕狀態
     function checkEventStatus() {
-      const eventCard = document.querySelector('.event-card');
-      eventCard.innerHTML = '<div class="event-tag">突發事件</div><div class="event-title">檢查活動中...</div>';
-      eventCard.style.pointerEvents = 'none'; // 檢查期間不可點擊
+      // 1. 修正：正確抓取你的活動橫幅 class (event-banner)
+      const eventBanner = document.querySelector('.event-banner');
+      if (!eventBanner) return; 
 
-      fetch(`${gasHomeUrl}?action=get_current_event`)
+      const overlay = eventBanner.querySelector('.event-overlay');
+      if (overlay) {
+          overlay.innerHTML = '<div class="locked-tag" style="background: rgba(0,0,0,0.8); color: #fff; border-color: #fff; transform: rotate(0deg);">⏳ 檢查活動中...</div>';
+      }
+      eventBanner.style.pointerEvents = 'none';
+
+      // 2. 修正：改用正確的全域變數 GAS_URL
+      fetch(`${GAS_URL}?action=get_current_event`)
         .then(res => res.json())
         .then(data => {
           if (data.status === 'success') {
             // 🎉 有活動！顯示單元名稱，並綁定開始函數，傳入專屬的班級代碼
-            eventCard.innerHTML = `<div class="event-tag" style="background: #e74c3c; animation: pulse 2s infinite;">現正舉辦</div><div class="event-title">${data.eventName}</div>`;
-            eventCard.style.pointerEvents = 'auto';
-            eventCard.style.opacity = '1';
-            eventCard.onclick = () => startEvent(data.eventCode);
+            if (overlay) {
+                overlay.innerHTML = `<div class="locked-tag" style="background: rgba(231,76,60,0.9); color: white; border-color: white; animation: pulse 2s infinite; transform: rotate(0deg); box-shadow: 0 0 20px rgba(231,76,60,0.8);">✨ ${data.eventName} ✨</div>`;
+            }
+            eventBanner.style.pointerEvents = 'auto';
+            eventBanner.style.opacity = '1';
+            eventBanner.onclick = () => startEvent(data.eventCode);
           } else {
             // 😴 沒活動！變灰並顯示不開放
-            eventCard.innerHTML = `<div class="event-tag" style="background: #7f8c8d;">暫無活動</div><div class="event-title">現在不開放</div>`;
-            eventCard.style.opacity = '0.5';
-            eventCard.style.pointerEvents = 'none';
+            if (overlay) {
+                overlay.innerHTML = `<div class="locked-tag" style="transform: rotate(0deg); color: #bdc3c7; border-color: #bdc3c7;">🔒 現在不開放</div>`;
+            }
+            eventBanner.style.opacity = '0.5';
+            eventBanner.style.pointerEvents = 'none';
           }
         })
         .catch(err => {
-          eventCard.innerHTML = `<div class="event-tag">突發事件</div><div class="event-title">連線失敗</div>`;
+          if (overlay) overlay.innerHTML = `<div class="locked-tag" style="transform: rotate(0deg);">⚠️ 連線失敗</div>`;
         });
     }
 
     // 🚀 啟動突發事件 (接收來自排程表的 eventClassCode)
     function startEvent(eventClassCode) {
-      const btn = document.querySelector('.event-card');
-      btn.style.pointerEvents = 'none';
-      btn.innerHTML = '<div class="event-tag">突發事件</div><div class="event-title">載入中...</div>';
+      const eventBanner = document.querySelector('.event-banner');
+      eventBanner.style.pointerEvents = 'none';
+      
+      const overlay = eventBanner.querySelector('.event-overlay');
+      if(overlay) overlay.innerHTML = '<div class="locked-tag" style="transform: rotate(0deg);">🚀 載入中...</div>';
 
       const eventLevel = "hard"; // 突發事件預設為最高難度
 
-      // 呼叫建立 PvE 房間的 API，帶入動態的班級代碼
-      const url = `${gasHomeUrl}?action=create_pve_room&id=${STUDENT_ID}&classCode=${eventClassCode}&level=${eventLevel}`;
+      // 修正：改用正確的全域變數 GAS_URL
+      const url = `${GAS_URL}?action=create_pve_room&id=${STUDENT_ID}&classCode=${eventClassCode}&level=${eventLevel}`;
 
       fetch(url, { method: 'GET', mode: 'cors' })
         .then(res => res.json())
