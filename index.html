@@ -1143,21 +1143,33 @@
             analyser.fftSize = 256;
             dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-            // 🚀 2. 動態去後端查你「現在」真正擁有的角色！
-            document.getElementById('gacha-title').innerText = "連線讀取中..."; // 給個小提示
+            // 🚀 2. 動態去後端查你「現在」的圖鑑與真實擁有的角色！
+            document.getElementById('gacha-title').innerText = "連線讀取中..."; 
             
-            let res = await fetch(`${GAS_URL}?action=get_profile&id=${STUDENT_ID}`);
+            // 🚀 關鍵修復：改用 get_lobby_data，一次把圖鑑跟個人解鎖進度都抓回來！
+            let res = await fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`);
             let data = await res.json();
             
-            // 將後端回傳的字串轉換成陣列
-            window.myUnlockedAvatars = data.unlocked.split(',').map(s => s.trim()).filter(s => s !== "");
+            // 寫入圖鑑，並啟動動態獎池引擎！
+            window.characterAssets = data.assets || {};
+            characterAssets = window.characterAssets;
+            buildDynamicPrizePool();
+            
+            // 寫入真實擁有的角色
+            if (data.profile && data.profile.unlocked) {
+                window.myUnlockedAvatars = data.profile.unlocked.split(',').map(s => s.trim()).filter(s => s !== "");
+            } else {
+                window.myUnlockedAvatars = [];
+            }
             console.log("測試模式啟動！真實擁有角色：", window.myUnlockedAvatars);
+            console.log("動態獎池生成：", PRIZE_POOL);
             
             document.getElementById('gacha-title').innerText = "🎉 戰鬥勝利 🎉"; // 恢復標題
 
         } catch(e) {
             console.log("API 請求或麥克風失敗", e);
             window.myUnlockedAvatars = ['A001']; // 萬一斷線的備用防呆
+            buildDynamicPrizePool(); // 就算斷線，也要建一個基礎點數獎池避免當機
         }
         
         initGacha("高階Ai");
@@ -1193,6 +1205,8 @@
             showPortal();
           }).catch(err => {
             console.log("圖鑑載入失敗，使用預設", err);
+            // 🚀 就算網路異常，也要建立預設的點數獎池，否則打贏後會當機！
+            buildDynamicPrizePool();
             showPortal();
           });
       } catch(err) { alert("請開啟麥克風權限才能對戰！"); }
