@@ -2159,54 +2159,63 @@
   let isGachaRecording = false;
   let gachaMaxVolume = 0;
 
-  /* 將此代碼替換您原本的 characterAssets */
-  const characterAssets = {
-    'A001': { 
-      name: '飛岩 Rockfall', 
-      img: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E9%A3%9B%E5%B2%A9%20Rockfall.webp'
-    },
-    'A002': { 
-      name: '閃影 Chloe Blink', 
-      img: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E9%96%83%E5%BD%B1%20Chloe%20Blink.webp',
-      mask: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E9%96%83%E5%BD%B1%20Chloe%20Blink_mask.webp' 
-    },
-    'A003': { 
-      name: '琥珀·共生 Amber', 
-      img: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E7%90%A5%E7%8F%80%C2%B7%E5%85%B1%E7%94%9F%20Amber.webp',
-      mask: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E7%90%A5%E7%8F%80%C2%B7%E5%85%B1%E7%94%9F%20Amber_mask.webp' 
-    },
-    'A004': { 
-      name: '熔核·剛 Molten-Core', 
-      img: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E7%86%94%E6%A0%B8%C2%B7%E5%89%9B%20Molten-Core%20Steel.webp',
-      mask: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E7%86%94%E6%A0%B8%C2%B7%E5%89%9B%20Molten-Core%20Steel_mask.webp' 
-    },
-    'A005': { 
-      name: '墨菲·流波 Murphy', 
-      img: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E5%A2%A8%E8%8F%B2%C2%B7%E6%B5%81%E6%B3%A2%20Murphy.webp',
-      mask: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/%E5%A2%A8%E8%8F%B2%C2%B7%E6%B5%81%E6%B3%A2%20Murphy_mask.webp' 
-    }
-  };
-  
-  // 🎲 獎池設定
-  const PRIZE_POOL = [
-    // 🚀 全獎項，N合起來80，R合起來15，SR合起來2.5，SSR合起來0.5
-    { type: 'points', value: 0, label: '0 點', class: 'prize-N', glow: 'crack-white', weight: 40 },
-    { type: 'points', value: 5, label: '5 點', class: 'prize-N', glow: 'crack-white', weight: 30 },
-    { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white', weight: 15 },
-    { type: 'avatar', value: 'A001', label: 'N', class: 'prize-N', glow: 'crack-white', weight: 1 },
-    { type: 'points', value: 20, label: '20 點', class: 'prize-R', glow: 'crack-white', weight: 4 },
-    { type: 'points', value: 30, label: '30 點', class: 'prize-R', glow: 'crack-white', weight: 3 },
-    { type: 'points', value: 50, label: '50 點', class: 'prize-R', glow: 'crack-white', weight: 2 },
-    { type: 'avatar', value: 'A003', label: 'R', class: 'prize-R', glow: 'crack-white', weight: 1 },
-    { type: 'avatar', value: 'A005', label: 'R', class: 'prize-R', glow: 'crack-white', weight: 1 },
-    { type: 'points', value: 70, label: '70 點', class: 'prize-SR', glow: 'crack-purple', weight: 1 },
-    { type: 'points', value: 90, label: '90 點', class: 'prize-SR', glow: 'crack-purple', weight: 1 },
-    { type: 'points', value: 150, label: '150 點', class: 'prize-SR', glow: 'crack-purple', weight: 0.3 },
-    { type: 'avatar', value: 'A004', label: 'SR', class: 'prize-SR', glow: 'crack-purple', weight: 200 },
-    { type: 'points', value: 500, label: '500 點', class: 'prize-SSR', glow: 'crack-gold', weight: 0.3 },
-    { type: 'points', value: 888, label: '888 點', class: 'prize-SSR', glow: 'crack-gold', weight: 0.1 },
-    { type: 'avatar', value: 'A002', label: 'SSR', class: 'prize-SSR', glow: 'crack-gold', weight: 100 }
-  ];
+  // 原本寫死的圖鑑和獎池，現在改成動態變數
+  let characterAssets = {};
+  let PRIZE_POOL = [];
+
+  // 🚀 新增：全自動動態獎池引擎 (自動讀取 Google Sheet 數據)
+  function buildDynamicPrizePool() {
+      // 1. 保留原本固定的「點數獎池」
+      let pool = [
+          { type: 'points', value: 0, label: '0 點', class: 'prize-N', glow: 'crack-white', weight: 40 },
+          { type: 'points', value: 5, label: '5 點', class: 'prize-N', glow: 'crack-white', weight: 30 },
+          { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white', weight: 15 },
+          { type: 'points', value: 20, label: '20 點', class: 'prize-R', glow: 'crack-white', weight: 4 },
+          { type: 'points', value: 30, label: '30 點', class: 'prize-R', glow: 'crack-white', weight: 3 },
+          { type: 'points', value: 50, label: '50 點', class: 'prize-R', glow: 'crack-white', weight: 2 },
+          { type: 'points', value: 70, label: '70 點', class: 'prize-SR', glow: 'crack-purple', weight: 1 },
+          { type: 'points', value: 90, label: '90 點', class: 'prize-SR', glow: 'crack-purple', weight: 1 },
+          { type: 'points', value: 150, label: '150 點', class: 'prize-SR', glow: 'crack-purple', weight: 0.3 },
+          { type: 'points', value: 500, label: '500 點', class: 'prize-SSR', glow: 'crack-gold', weight: 0.3 },
+          { type: 'points', value: 888, label: '888 點', class: 'prize-SSR', glow: 'crack-gold', weight: 0.1 }
+      ];
+
+      // 2. 從全域圖鑑中，篩選出第 J 欄 (Category) 為「一般」的角色
+      let normalAvatars = Object.entries(characterAssets).filter(([id, char]) => char.category === '一般');
+
+      // 3. 統計各稀有度的卡片數量，用來平分機率
+      let counts = { 'N': 0, 'R': 0, 'SR': 0, 'SSR': 0 };
+      normalAvatars.forEach(([id, char]) => {
+          if (counts[char.rarity] !== undefined) counts[char.rarity]++;
+      });
+
+      // 4. 設定各稀有度的「總機率權重」(你的完美設計)
+      const totalWeights = { 'N': 5, 'R': 2, 'SR': 0.5, 'SSR': 0.1 };
+
+      // 5. 將「一般」角色動態加入獎池，自動計算平分權重與開卡特效
+      normalAvatars.forEach(([id, char]) => {
+          let r = char.rarity;
+          // 計算單張卡片的專屬權重 (總權重 ÷ 該稀有度總數量)
+          let weight = (counts[r] > 0) ? (totalWeights[r] / counts[r]) : 0;
+          
+          // 自動套用你指定的開卡光芒特效
+          let glowClass = 'crack-white';
+          if (r === 'SR') glowClass = 'crack-purple';
+          if (r === 'SSR') glowClass = 'crack-gold';
+
+          pool.push({
+              type: 'avatar',
+              value: id,
+              label: r,
+              class: `prize-${r}`,
+              glow: glowClass,
+              weight: weight
+          });
+      });
+
+      PRIZE_POOL = pool; // 寫入正式獎池
+      console.log("🎲 動態獎池生成完畢！目前獎池總數：", PRIZE_POOL.length);
+  }
 
   // 🚀 盲盒封面圖庫 (你可以隨時替換成你想要的網址)
   const BOX_COVERS = {
