@@ -1140,7 +1140,7 @@
         });
     }
 
-    // 🚀 接收並傳遞 eventAvatarId (加入 5 秒倒數傳送動畫)
+    // 🚀 接收並傳遞 eventAvatarId (修復 API 名稱與回傳判定)
     function startEvent(eventClassCode, eventAvatarId) {
       // 1. 避免重複點擊
       const eventBanner = document.querySelector('.event-banner');
@@ -1172,13 +1172,15 @@
           aiMsgEl.innerText = "🚀 傳送中...";
 
           const eventLevel = "hard"; 
-          const url = `${GAS_URL}?action=create_pve_room&id=${STUDENT_ID}&classCode=${eventClassCode}&level=${eventLevel}`;
+          // 🚀 關鍵修復 1：改用你真實的 action=create_ai_battle，並把 classCode 變數名改為 classId
+          const url = `${GAS_URL}?action=create_ai_battle&id=${STUDENT_ID}&classId=${eventClassCode}&level=${eventLevel}`;
 
           fetch(url, { method: 'GET', mode: 'cors' })
             .then(res => res.json())
             .then(data => {
-              if (data.status === 'success') {
-                // 🚀 關鍵：把 eventAvatar 放進網址裡面，讓對戰室知道 Boss 是誰！
+              // 🚀 關鍵修復 2：AI 房間回傳的是 data.roomId，只要有這個就代表建立成功！
+              if (data.roomId) {
+                // 🚀 將活動角色 ID 放入網址，讓對戰室知道 Boss 是誰！
                 window.location.href = `index.html?roomId=${data.roomId}&id=${STUDENT_ID}&isEvent=true&eventAvatar=${eventAvatarId}`;
               } else {
                 alert("活動載入失敗，請稍後再試！");
