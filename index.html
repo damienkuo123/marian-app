@@ -2421,6 +2421,17 @@
           
           let prizeToAdd = { ...prizeInfo }; 
           
+          // 🚀 關鍵修復：如果是角色卡，翻開瞬間替卡片掛上專屬的 Mask 遮罩！
+          // 這樣角色的星空與雷射光澤，就會完美貼合角色的輪廓發光！
+          if (prizeToAdd.type === 'avatar' && characterAssets[prizeToAdd.value] && characterAssets[prizeToAdd.value].mask) {
+              cardRoot.classList.add('masked');
+              cardRoot.style.setProperty('--mask', `url('${characterAssets[prizeToAdd.value].mask}')`);
+          } else {
+              cardRoot.classList.remove('masked');
+              cardRoot.style.removeProperty('--mask');
+          }
+          
+          // 這裡接回原本的判斷邏輯（包含重複角色變 300 點）
           if (prizeToAdd.type === 'avatar') {
               const charId = prizeToAdd.value;
               const alreadyOwnedInAccount = (window.myUnlockedAvatars || []).includes(charId);
