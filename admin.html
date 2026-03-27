@@ -6,7 +6,7 @@
     <title>瑪麗安中控台 (Admin)</title>
     <style>
         :root {
-            var(--primary-color): #ffd700;
+            --primary-color: #ffd700;
             --bg-dark: #1a0505;
             --card-bg: rgba(50, 15, 15, 0.75); 
         }
@@ -131,7 +131,7 @@
             </div>
         </div>
 
-        <input type="text" id="scanner" autofocus style="opacity: 0; position: absolute; top: -100px;">
+        <input type="text" id="scanner" inputmode="none" autofocus style="opacity: 0; position: absolute; top: -100px;">
     </div>
 
     <script>
@@ -151,7 +151,7 @@
         }
 
         let currentStudentId = null;
-        let currentPointsValue = 0; // 🚀 用來記錄並瞬間修改點數的變數
+        let currentPointsValue = 0; 
 
         const scanner = document.getElementById('scanner');
         const card = document.getElementById('mainCard');
@@ -170,8 +170,19 @@
         }
 
         let scanTimer;
-        document.addEventListener('click', () => scanner.focus());
-        setInterval(() => scanner.focus(), 1000);
+        
+        // =======================================================
+        // 🚀 升級 2：智慧焦點鎖定 (絕對不搶走手動輸入框的焦點)
+        // =======================================================
+        // ❌ 刪除了 document.addEventListener('click', ...) 防止點擊時虛擬鍵盤彈出
+        
+        setInterval(() => {
+            const active = document.activeElement;
+            // 只有當老師「沒有」在點擊自訂分數的輸入框時，才把焦點還給隱藏掃描器
+            if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA') {
+                scanner.focus();
+            }
+        }, 1000);
 
         scanner.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
@@ -223,43 +234,33 @@
                     
                     document.getElementById('stu-name').innerText = data.studentName;
                     
-                    // 🚀 記錄純數字，方便等一下瞬間運算
                     currentPointsValue = Number(data.currentPoints);
                     document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
                 })
                 .catch(err => showError("⚠️ 無法讀取資料"));
         }
 
-        // =======================================================
-        // 💰 加扣分核心邏輯 (加入防呆鎖死與光速反應機制)
-        // =======================================================
         function send(val, btnElement) {
             if (!currentStudentId) return;
             if (val >= 101 && !confirm(`確定要一次給予 ${val} 點嗎？`)) return;
             if (val <= -101 && !confirm(`確定要一次扣除 ${Math.abs(val)} 點嗎？`)) return;
 
-            // 1. 🛑 瞬間鎖死所有按鈕，防止老師連按或誤按
             const allBtns = document.querySelectorAll('.btn-action');
             allBtns.forEach(b => { b.style.pointerEvents = 'none'; b.style.opacity = '0.5'; });
             
-            // 2. 將被按下的按鈕變成沙漏，給予視覺回饋
             const originalText = btnElement.innerText;
             btnElement.innerText = "⏳";
 
-            // 3. 呼叫後端 API
             fetch(`${GAS_URL}?action=admin_add_points&id=${currentStudentId}&val=${val}&secret=${ADMIN_SECRET}`)
                 .then(res => res.json())
                 .then(resData => {
-                    // 4. 🚀 光速樂觀更新 (Optimistic UI)：不用等重新載入資料，直接把分數加上去！
                     currentPointsValue += val;
                     const ptsEl = document.getElementById('stu-points');
                     ptsEl.innerText = `${currentPointsValue} PTS`;
                     
-                    // 放大縮小的Ｑ彈特效
                     ptsEl.style.transform = "scale(1.3)";
                     setTimeout(() => ptsEl.style.transform = "scale(1)", 300);
 
-                    // 5. 🔓 解除按鈕鎖定，恢復原狀
                     allBtns.forEach(b => { b.style.pointerEvents = 'auto'; b.style.opacity = '1'; });
                     btnElement.innerText = originalText;
                 })
@@ -297,6 +298,8 @@
             msg.innerText = "🟢 系統就緒，請感應學生卡";
             msg.style.color = "white";
             window.history.replaceState(null, null, 'admin.html');
+            
+            // 由於已經移除了點擊強制的 focus，我們在按返回時手動觸發一次 focus
             scanner.focus();
         }
 
