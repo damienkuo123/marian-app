@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>瑪麗安中控台 (Admin)</title>
+    <style>
+        :root {
+            --admin-red: #c0392b;
+            --admin-gold: #f1c40f;
+            --bg-dark: #1a1515;
+            --card-bg: rgba(40, 20, 20, 0.85);
+        }
+
+        body {
+            margin: 0; padding: 0; font-family: -apple-system, sans-serif;
+            background: radial-gradient(circle at center, #2c1515 0%, var(--bg-dark) 100%);
+            height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; color: white;
+        }
+
+        .admin-container {
+            background: var(--card-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            padding: 40px 30px; border-radius: 30px; border: 2px solid #e74c3c;
+            box-shadow: 0 20px 50px rgba(192, 57, 43, 0.3), inset 0 0 20px rgba(231, 76, 60, 0.2);
+            text-align: center; max-width: 400px; width: 90%; box-sizing: border-box;
+        }
+
+        .admin-title { font-size: 28px; color: var(--admin-gold); margin: 0 0 5px 0; font-weight: 900; letter-spacing: 2px; }
+        .admin-subtitle { color: #bdc3c7; font-size: 14px; margin-bottom: 30px; letter-spacing: 1px; }
+
+        /* 掃描提示區 */
+        .scan-zone { background: rgba(0,0,0,0.5); border: 1px dashed var(--admin-gold); padding: 20px; border-radius: 20px; margin-bottom: 20px; transition: 0.3s; }
+        .scan-zone.active { border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); }
+        .scan-icon { font-size: 40px; animation: float 2s infinite; margin-bottom: 10px; }
+        
+        /* 學生資訊區 (預設隱藏) */
+        #student-panel { display: none; background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .stu-name { font-size: 32px; font-weight: 900; margin: 0 0 10px 0; color: white; }
+        .stu-points { font-size: 40px; font-weight: 900; color: #2ecc71; margin: 0 0 20px 0; text-shadow: 0 0 15px rgba(46, 204, 113, 0.4); }
+
+        /* 按鈕區 */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .btn-action { padding: 15px; border-radius: 15px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s; color: white; }
+        .btn-action:active { transform: scale(0.95); }
+        .btn-add { background: linear-gradient(135deg, #27ae60, #2ecc71); box-shadow: 0 4px 10px rgba(46,204,113,0.3); }
+        .btn-minus { background: linear-gradient(135deg, #c0392b, #e74c3c); box-shadow: 0 4px 10px rgba(231,76,60,0.3); }
+        
+        .custom-input-group { display: flex; gap: 10px; }
+        .custom-input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; font-size: 16px; text-align: center; }
+        
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        #error-msg { color: #e74c3c; font-weight: bold; margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-container" id="main-ui">
+        <h1 class="admin-title">👨‍🏫 瑪麗安中控台</h1>
+        <p class="admin-subtitle">教師專用點數管理系統</p>
+
+        <div class="scan-zone" id="scan-zone">
+            <div class="scan-icon" id="scan-icon">🪪</div>
+            <h3 style="margin:0; color:#bdc3c7;" id="scan-text">請感應學生卡片...</h3>
+        </div>
+
+        <div id="student-panel">
+            <h2 class="stu-name" id="stu-name">-</h2>
+            <div class="stu-points" id="stu-points">0 PTS</div>
+            
+            <div class="btn-grid">
+                <button class="btn-action btn-add" onclick="modifyPoints(50)">+ 50</button>
+                <button class="btn-action btn-add" onclick="modifyPoints(10)">+ 10</button>
+                <button class="btn-action btn-minus" onclick="modifyPoints(-50)">- 50</button>
+                <button class="btn-action btn-minus" onclick="modifyPoints(-10)">- 10</button>
+            </div>
+            
+            <div class="custom-input-group">
+                <input type="number" id="custom-val" class="custom-input" placeholder="輸入自訂數值">
+                <button class="btn-action btn-add" style="flex:1;" onclick="modifyCustomPoints()">執行</button>
+            </div>
+            
+            <button style="margin-top:20px; background:none; border:1px solid #7f8c8d; color:#bdc3c7; padding:10px 20px; border-radius:10px; cursor:pointer;" onclick="resetScanner()">返回繼續掃描</button>
+        </div>
+
+        <div id="error-msg">❌ 查無此學生或網路異常</div>
+        <input type="text" id="scanner" autofocus style="opacity:0; position:absolute; top:-100px;">
+    </div>
+
+    <div id="unauth-mask" style="position:fixed; inset:0; background:#000; z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; color:#e74c3c;">
+        <h1 style="font-size:50px; margin:0;">⛔</h1>
+        <h2>未經授權的存取</h2>
+    </div>
+
+    <script>
+        // ⚠️ 記得替換為你的 GAS 網址！
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
+        
+        // 🛡️ 資安防護：只從網址拿密碼，代碼內不寫死密碼！
+        const params = new URLSearchParams(window.location.search);
+        const ADMIN_SECRET = params.get('secret');
+
+        // 如果沒有帶鑰匙，直接封鎖畫面
+        if (!ADMIN_SECRET) {
+            document.getElementById('unauth-mask').style.display = 'flex';
+        }
+
+        let currentStudentId = null;
+        const scanner = document.getElementById('scanner');
+        const scanZone = document.getElementById('scan-zone');
+        const studentPanel = document.getElementById('student-panel');
+        const scanText = document.getElementById('scan-text');
+        const errorMsg = document.getElementById('error-msg');
+
+        // 強制鎖定焦點
+        document.addEventListener('click', () => scanner.focus());
+        setInterval(() => scanner.focus(), 1000);
+
+        let scanTimer;
+        
+        // 🚀 雙重觸發攔截器 (支援 Enter 與 停頓)
+        scanner.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(scanTimer);
+                const finalID = scanner.value.trim();
+                if (finalID.length >= 6) fetchStudent(finalID);
+                scanner.value = "";
+            }
+        });
+
+        scanner.addEventListener('input', function() {
+            clearTimeout(scanTimer);
+            scanTimer = setTimeout(() => {
+                const finalID = scanner.value.trim();
+                if (finalID.length >= 6) {
+                    fetchStudent(finalID);
+                    scanner.value = "";
+                }
+            }, 200);
+        });
+
+        // 🔍 第一步：查卡號並獲取學生資料
+        function fetchStudent(cardId) {
+            if (studentPanel.style.display === 'block') return; // 如果已經在操作畫面，忽略新的掃描
+            
+            errorMsg.style.display = 'none';
+            scanText.innerText = "⏳ 讀取資料中...";
+            scanText.style.color = "var(--admin-gold)";
+
+            // 1. 先用背景 API 查這張卡是誰 (這就是你之前提到的 API)
+            fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(cardId)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentStudentId = data.uid;
+                        // 2. 查到 UID 後，再拿他的名字跟點數
+                        loadStudentData(currentStudentId);
+                    } else {
+                        showError("查無此卡");
+                    }
+                })
+                .catch(err => showError("網路連線異常"));
+        }
+
+        // 📊 第二步：載入點數與姓名
+        function loadStudentData(uid) {
+            fetch(`${GAS_URL}?action=get_dashboard_data&id=${uid}`)
+                .then(res => res.json())
+                .then(data => {
+                    // 切換 UI
+                    scanZone.style.display = 'none';
+                    studentPanel.style.display = 'block';
+                    
+                    document.getElementById('stu-name').innerText = data.studentName;
+                    document.getElementById('stu-points').innerText = `${data.currentPoints} PTS`;
+                })
+                .catch(err => showError("無法讀取學生資料"));
+        }
+
+        // 💰 第三步：執行加扣分
+        function modifyPoints(val) {
+            if (!currentStudentId) return;
+            if (val >= 101 && !confirm(`確定要一次給予 ${val} 點嗎？`)) return;
+            if (val <= -101 && !confirm(`確定要一次扣除 ${Math.abs(val)} 點嗎？`)) return;
+
+            // 把按鈕變灰，防止老師連按
+            const btns = document.querySelectorAll('.btn-action');
+            btns.forEach(b => b.style.pointerEvents = 'none');
+
+            // 呼叫 GAS 的管理員 API，並附上網址帶來的 secret 鑰匙！
+            fetch(`${GAS_URL}?action=admin_add_points&id=${currentStudentId}&val=${val}&secret=${ADMIN_SECRET}`)
+                .then(res => res.json())
+                .then(resData => {
+                    // 加分成功，重新載入該學生的最新點數
+                    loadStudentData(currentStudentId);
+                    btns.forEach(b => b.style.pointerEvents = 'auto');
+                    
+                    // 顯示成功特效
+                    const ptsEl = document.getElementById('stu-points');
+                    ptsEl.style.transform = "scale(1.2)";
+                    setTimeout(() => ptsEl.style.transform = "scale(1)", 300);
+                })
+                .catch(err => {
+                    alert("加扣分失敗，請檢查網路！");
+                    btns.forEach(b => b.style.pointerEvents = 'auto');
+                });
+        }
+
+        function modifyCustomPoints() {
+            const inputVal = document.getElementById('custom-val').value;
+            const val = parseInt(inputVal);
+            if (!isNaN(val) && val !== 0) {
+                modifyPoints(val);
+                document.getElementById('custom-val').value = '';
+            }
+        }
+
+        // 🔄 重新準備掃描下一個學生
+        function resetScanner() {
+            currentStudentId = null;
+            studentPanel.style.display = 'none';
+            scanZone.style.display = 'block';
+            scanText.innerText = "請感應學生卡片...";
+            scanText.style.color = "#bdc3c7";
+            scanner.focus();
+        }
+
+        function showError(msg) {
+            errorMsg.innerText = `❌ ${msg}`;
+            errorMsg.style.display = 'block';
+            scanText.innerText = "請感應學生卡片...";
+            scanText.style.color = "#bdc3c7";
+            setTimeout(() => errorMsg.style.display = 'none', 3000);
+        }
+    </script>
+</body>
+</html>
