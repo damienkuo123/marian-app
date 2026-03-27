@@ -2137,20 +2137,86 @@
 
   
 
-  let nfcBuffer = "";
-  document.addEventListener('keydown', function(e) {
-    if (!isNaN(e.key)) {
-      nfcBuffer += e.key;
-    }
-    if (e.key === 'Enter') {
-      if (nfcBuffer.length > 3) { 
-        console.log("偵測到學生刷卡，準備強制跳轉：" + nfcBuffer);
-        const gatekeeperUrl = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
-        window.location.href = gatekeeperUrl + "?cardId=" + nfcBuffer;
+  // =======================================================
+    // 🚀 升級 2：瑪麗安「無痕換人攔截器」 (Arena 戰場強制中斷版)
+    // =======================================================
+    (function() {
+      const focusHunter = document.createElement('input');
+      focusHunter.type = "text";
+      focusHunter.style.position = "fixed";
+      focusHunter.style.top = "-500px"; 
+      focusHunter.style.opacity = "0";
+      document.body.appendChild(focusHunter);
+
+      setInterval(() => { 
+        const active = document.activeElement;
+        // 確保焦點不在其他輸入框時才奪取焦點
+        if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA') { 
+          focusHunter.focus(); 
+        }
+      }, 1000);
+
+      let scanTimer;
+      
+      // 機制 1：讀卡機有送出 Enter 鍵
+      focusHunter.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          clearTimeout(scanTimer);
+          const finalID = focusHunter.value.trim();
+          if (finalID.length >= 6) verifyCardForArena(finalID);
+          focusHunter.value = "";
+        }
+      });
+
+      // 機制 2：讀卡機沒送 Enter 鍵，靠停頓 0.2 秒判斷
+      focusHunter.addEventListener('input', function() {
+        clearTimeout(scanTimer);
+        scanTimer = setTimeout(() => {
+          const finalID = focusHunter.value.trim();
+          if (finalID.length >= 6) {
+            verifyCardForArena(finalID);
+            focusHunter.value = "";
+          }
+        }, 200);
+      });
+
+      function verifyCardForArena(cardId) {
+        // 如果戰鬥中途被刷卡，直接蓋上最高層級的遮罩中斷戰鬥
+        const loader = document.createElement('div');
+        loader.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at center, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); font-family:sans-serif; transition:opacity 0.3s;";
+        loader.innerHTML = `
+          <h2 style="color:#ffd700; font-size: 26px; font-weight: 900; margin: 0 0 10px 0; letter-spacing: 2px;">🔄 強制中斷戰鬥</h2>
+          <p style="color:#94a3b8; font-size: 14px; margin: 0 0 40px 0;">偵測到新卡片，正在切換學生...</p>
+          <div style="position:relative; width:80px; height:80px; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; width:100%; height:100%; border-radius:50%; border:4px solid #e74c3c; border-top-color: #ffd700; animation:spin 1s linear infinite;"></div>
+            <div style="font-size:30px; animation:blink 1.5s infinite;">🪪</div>
+          </div>
+          <style>
+            @keyframes spin { to { transform: rotate(360deg); } }
+            @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+          </style>
+        `;
+        document.body.appendChild(loader);
+
+        // 背景 API 驗證卡號
+        fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(cardId)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+               // 驗證成功，直接跳轉到該新學生的 Dashboard
+               window.location.href = `dashboard.html?id=${data.uid}`;
+            } else {
+               alert("❌ 查無此卡！");
+               document.body.removeChild(loader);
+               focusHunter.focus();
+            }
+          })
+          .catch(err => {
+             document.body.removeChild(loader);
+             focusHunter.focus();
+          });
       }
-      nfcBuffer = ""; 
-    }
-  });
+    })();
 
   // =======================================================
     // 🚀 升級 1：靜置 3 分鐘自動登出回首頁 (Portal)
