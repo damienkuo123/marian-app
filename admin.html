@@ -132,7 +132,15 @@
                 <button class="btn-action btn-add" style="flex:0.8;" onclick="modifyCustomPoints()">執行</button>
             </div>
             
-            <button class="btn-return" onclick="resetScanner()">🔙 返回繼續掃描</button>
+            <div class="custom-input-group">
+                <input type="number" id="custom-val" class="custom-input" placeholder="輸入自訂數值">
+                <button class="btn-action btn-add" style="flex:0.8;" onclick="modifyCustomPoints()">執行</button>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn-return" style="flex:1;" onclick="resetScanner()">🔙 繼續掃描</button>
+                <button class="btn-return" style="flex:1; border-color: #3498db; color: #3498db;" onclick="window.location.href='dashboard.html?id=' + currentStudentId + '&view=true'">👀 查看學生主頁</button>
+            </div>
         </div>
 
         <input type="text" id="scanner" autofocus style="opacity: 0; position: absolute; top: -100px;">
@@ -142,11 +150,17 @@
         // ⚠️ 記得替換為你的 GAS 網址！
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
         
-        // 🛡️ 資安防護：只從網址拿密碼，代碼內不寫死密碼
         const params = new URLSearchParams(window.location.search);
-        const ADMIN_SECRET = params.get('secret');
+        
+        // 🛡️ 1. 記憶老師身分 (老師掃自己的卡時觸發)
+        if (params.get('secret')) {
+            localStorage.setItem('marian_auth', params.get('secret'));
+            // 淨化網址，把密碼藏起來，學生偷看手機也看不到密碼！
+            window.history.replaceState(null, null, 'admin.html');
+        }
 
-        if (!ADMIN_SECRET) {
+        const ADMIN_SECRET = localStorage.getItem('marian_auth');
+        if (ADMIN_SECRET !== "marian2026") {
             document.getElementById('unauth-mask').style.display = 'flex';
         }
 
@@ -154,15 +168,32 @@
         const scanner = document.getElementById('scanner');
         const card = document.getElementById('mainCard');
         const msg = document.getElementById('msg');
-        
         const scanUI = document.getElementById('scan-ui');
         const actionUI = document.getElementById('action-ui');
-        
+
+        // 🚀 2. 接收瞬間傳送 (手機 NFC 掃描學生卡時觸發)
+        const TARGET_ID = params.get('id');
+        if (TARGET_ID) {
+            currentStudentId = TARGET_ID;
+            
+            // 為了網址乾淨，把 id 也抹掉，這樣重新整理才不會卡住
+            window.history.replaceState(null, null, 'admin.html');
+            
+            // 切換為載入 UI
+            card.className = 'container loading';
+            msg.innerText = "⏳ 讀取學生資料中...";
+            msg.style.color = "#ffd700";
+            
+            // 直接跳過查卡號步驟，呼叫載入點數函數！
+            loadStudentData(currentStudentId);
+        }
+
         let scanTimer;
 
-        // 焦點鎖定
+        // 焦點鎖定 (保留給外接 USB 掃描器使用)
         document.addEventListener('click', () => scanner.focus());
         setInterval(() => scanner.focus(), 1000);
+        
 
         // 🚀 雙重觸發攔截器 (Enter 與 停頓)
         scanner.addEventListener('keydown', function(e) {
