@@ -148,8 +148,54 @@
     }
 
     /* =======================================================
-       🎨 100% 滿血還原：對接你的 cosmos, trainer, v-full-art
+       🎨 100% 滿血還原：全域特效宣告 + 原版 3D 厚度回歸！
        ======================================================= */
+
+    /* 🚀 重新啟動 3D 引擎 (保留 Z 軸深度，讓星空跟雷射浮起來！) */
+    .card__rotator * { transform-style: preserve-3d; }
+    
+    .card__front { 
+      display: grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr; 
+      width: 100%; height: 100%; border-radius: var(--card-radius); 
+      transform-style: preserve-3d !important; 
+      transform: translate3d(0px, 0px, 0.01px);
+    }
+    
+    .card__bg, .card__shine, .card__glare { 
+      grid-area: 1/1; width: 100%; height: 100%; border-radius: var(--card-radius); box-sizing: border-box; 
+      /* 移除 overflow: hidden 以免破壞 3D，改靠 border-radius 與 mask 裁切 */
+      pointer-events: none;
+      transform-style: preserve-3d !important;
+    }
+
+    .card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0px); z-index: 1; }
+
+    /* 原版基礎眩光 (恢復 Z 軸 1.41px) */
+    .card__glare {
+      transform: translateZ(1.41px); z-index: 3;
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%);
+      opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay;
+    }
+
+    /* 光澤圖層本體宣告 (恢復 3D Z軸深度 1px) */
+    .card__shine {
+      display: grid; transform: translateZ(1px); z-index: 4; transform-style: preserve-3d;
+      background: transparent; background-size: cover; background-position: center;
+      filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge;
+    }
+    .card__shine:before, .card__shine:after { grid-area: 1/1; border-radius: var(--card-radius); content: ""; display: block !important; }
+    .card__shine:before { transform: translateZ(1.2px); }
+    .card__shine:after { transform: translateZ(1.6px); }
+
+    /* 🚀 你的進化版 Masking (絕對強制挖空) */
+    .card.masked .card__shine, .card.masked .card__shine:before, .card.masked .card__shine:after {
+      -webkit-mask-image: linear-gradient(white, white), var(--mask) !important;
+      -webkit-mask-composite: destination-out !important;
+      mask-image: linear-gradient(white, white), var(--mask) !important;
+      mask-composite: exclude !important;
+      -webkit-mask-size: cover !important; mask-size: cover !important;
+      -webkit-mask-position: center center !important; mask-position: center center !important;
+    }
 
     /* 🔵【R卡：Cosmos 星空】 */
     .card[data-rarity="R"] .card__shine {
@@ -215,6 +261,43 @@
     }
     .card[data-rarity="SSR"] .card__bg { border-color: var(--gold) !important; box-shadow: inset 0 0 15px rgba(241,196,15,0.5) !important; }
 
+    /* 🌈【UR卡：Rainbow Secret Holo 彩虹隱藏亮面】(特效拉滿新增！) */
+    .card[data-rarity="UR"] .card__shine {
+      --r-clr-1: hsl(0, 57%, 37%); --r-clr-2: hsl(40, 53%, 39%); --r-clr-3: hsl(90, 60%, 35%);
+      --r-clr-4: hsl(180, 60%, 35%); --r-clr-5: hsl(180, 60%, 35%); --r-clr-6: hsl(210, 57%, 39%);
+      --r-clr-7: hsl(280, 55%, 31%);
+
+      background-image: 
+        linear-gradient(-45deg, var(--r-clr-1), var(--r-clr-5)),
+        var(--glitter),
+        linear-gradient( -30deg, 
+          var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), 
+          var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), 
+          var(--r-clr-1)
+        ) !important;
+      background-blend-mode: soft-light !important;
+      background-size: 100% 100%, 30% 30%, 400% 400% !important;
+      background-position: center center, center center, var(--pointer-x) var(--pointer-y) !important;
+      filter: brightness(calc((var(--pointer-from-center)*0.3) + 0.55)) contrast(2) saturate(1) !important;
+      mix-blend-mode: color-dodge !important; opacity: 1 !important;
+    }
+    .card[data-rarity="UR"] .card__shine:before {
+      content: "" !important; display: block !important;
+      background-image: var(--foil) !important;
+      background-size: var(--imgsize) !important;
+      background-position: center center !important;
+      filter: brightness(2.5) contrast(1) !important;
+      opacity: calc((var(--pointer-from-center) + 0.4 ) * 0.6 ) !important;
+      background-blend-mode: difference !important;
+      mix-blend-mode: darken !important;
+    }
+    .card[data-rarity="UR"] .card__glare {
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0, 0%, 100%) 5%, hsl(200, 5%, 85%) 60%, hsl(320, 40%, 10%) 150%) !important;
+      mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75 ) !important;
+    }
+    .card[data-rarity="UR"] .card__bg { border-color: #ff9ff3 !important; box-shadow: inset 0 0 15px rgba(255,159,243,0.8) !important; }
+
+    
     /* =======================================================
        🚀 新增：畫廊與商店的靜態卡片特效
        ======================================================= */
