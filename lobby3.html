@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>瑪麗安傳說大廳</title>
+  <style>
+    /* =======================================================
+       🚀 原始對接：100% 保留您的完美特效變數
+       ======================================================= */
+    :root {
+      --bg-color: #1a1e29;
+      --gold: #f1c40f;
+
+      --grain: url("https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/grain.webp");
+      --glitter: url("https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/glitter.png");
+      --foil: url("https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/illusion.png");
+      --trainer-foil: url("https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/trainerbg.png");
+      --cosmos-bottom: url("https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/cosmos-bottom.png");
+      --cosmos-mid: url("https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/cosmos-middle-trans.png");
+      --cosmos-top: url("https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/cosmos-top-trans.png");
+
+      --space: 5%;
+      --angle: 133deg;
+      --imgsize: 33%;
+      
+      --card-aspect: 0.718;
+      --card-radius: 4.55% / 3.5%;
+      --card-edge: hsl(47, 100%, 78%);
+      --card-back: hsl(205, 100%, 25%);
+      --card-glow: hsl(175, 100%, 90%);
+
+      /* 霓虹光譜 (完全還原) */
+      --sunpillar-1: hsl(2, 100%, 73%);
+      --sunpillar-2: hsl(53, 100%, 69%);
+      --sunpillar-3: hsl(93, 100%, 69%);
+      --sunpillar-4: hsl(176, 100%, 76%);
+      --sunpillar-5: hsl(228, 100%, 74%);
+      --sunpillar-6: hsl(283, 100%, 73%);
+      
+      --sunpillar-clr-1: var(--sunpillar-1);
+      --sunpillar-clr-2: var(--sunpillar-2);
+      --sunpillar-clr-3: var(--sunpillar-3);
+      --sunpillar-clr-4: var(--sunpillar-4);
+      --sunpillar-clr-5: var(--sunpillar-5);
+      --sunpillar-clr-6: var(--sunpillar-6);
+    }
+
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg-color); font-family: -apple-system, sans-serif; color: white; overflow: hidden; }
+    
+    /* 大廳 UI */
+    header { padding: max(20px, env(safe-area-inset-top)) 20px 10px; display: flex; justify-content: space-between; align-items: center; z-index: 100; position: relative; }
+    .user-info h2 { margin: 0; font-size: 14px; color: #a4b0be; letter-spacing: 2px; }
+    .user-points { font-size: 26px; font-weight: 900; color: #00d2d3; text-shadow: 0 0 15px rgba(0,210,211,0.6); }
+    .hero-info-zone { text-align: center; margin-top: 10px; min-height: 80px; z-index: 10; position: relative; }
+    .badges { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 900; letter-spacing: 1px; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); }
+    .badge.rarity-N { color: #bdc3c7; border-color: #bdc3c7; background: rgba(189,195,199,0.1); }
+    .badge.rarity-R { color: #3498db; border-color: #3498db; background: rgba(52,152,219,0.1); }
+    .badge.rarity-SR { color: #9b59b6; border-color: #9b59b6; background: rgba(155,89,182,0.1); }
+    .badge.rarity-SSR { color: var(--gold); border-color: var(--gold); background: rgba(241,196,15,0.15); box-shadow: 0 0 15px rgba(241,196,15,0.4); }
+    .badge.category { color: #2ecc71; border-color: #2ecc71; background: rgba(46,204,113,0.1); }
+    .hero-name { font-size: 32px; font-weight: 900; letter-spacing: 4px; margin: 0; text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+
+    /* =======================================================
+       🚀 優化：裝備槽鎖死骨架，保證讀取時絕對不跳動！
+       ======================================================= */
+    .gallery-container { position: relative; width: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; }
+    .center-target-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 388px; border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 25px; pointer-events: none; z-index: 0; transition: 0.3s; }
+    .center-target-box::after { content: 'EQUIP SLOT'; position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 14px; font-weight: bold; letter-spacing: 4px; transition: 0.3s; }
+    .center-target-box.is-equipped { border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(241,196,15,0.4), inset 0 0 20px rgba(241,196,15,0.2); }
+    .center-target-box.is-equipped::after { content: 'EQUIPPED'; color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+
+    .carousel-track { display: flex; gap: 40px; overflow-x: auto; width: 100%; padding: 40px calc(50vw - 125px); scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; align-items: center; z-index: 5; perspective: 1000px; }
+    .carousel-track::-webkit-scrollbar { display: none; }
+    
+    .holo-card-wrapper { position: relative; scroll-snap-align: center; flex-shrink: 0; width: 250px; height: 348px; cursor: pointer; transition: 0.3s; border-radius: 4.55%/3.5%; }
+    .holo-card-wrapper:active { transform: scale(0.95); }
+    .tap-to-view { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 6px 16px; border-radius: 15px; font-size: 11px; font-weight: bold; letter-spacing: 2px; color: var(--gold); border: 1px solid var(--gold); pointer-events: none; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 10; }
+
+    /* =======================================================
+       ✨ 100% 滿血還原：原汁原味 Poke-Holo Base + 3D 結構
+       ======================================================= */
+    #showcase-modal {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+      background: rgba(5, 9, 20, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #showcase-modal.active { opacity: 1; pointer-events: auto; }
+    .close-btn { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 100; }
+
+    .showcase-wrapper { width: 85vw; max-width: 400px; aspect-ratio: var(--card-aspect); perspective: 600px; }
+    
+    .card {
+      width: 100%; height: 100%; position: relative;
+      transform: translate3d(0px, 0px, 0.01px);
+      transform-style: preserve-3d;
+      --pointer-x: 50%; --pointer-y: 50%;
+      --pointer-from-center: 0; --pointer-from-top: 0.5; --pointer-from-left: 0.5;
+      --rotate-x: 0deg; --rotate-y: 0deg;
+      --card-opacity: 1; --card-scale: 1; --translate-x: 0px; --translate-y: 0px;
+    }
+
+    .card__translater, .card__rotator { width: 100%; height: 100%; display: grid; perspective: 600px; transform-origin: center; transform-style: preserve-3d; }
+    .card__translater { transform: translate3d(var(--translate-x), var(--translate-y), 0.1px) scale(var(--card-scale)); }
+    .card__rotator { transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y)); box-shadow: 0px 10px 20px -5px black, 0 2px 15px -5px black; border-radius: var(--card-radius); }
+    /* 🚀 讓卡片的正反面變成 Grid 容器，並強制所有圖層擠在同一個平面 (grid-area: 1/1) */
+    .card__front { 
+      display: grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr; 
+      width: 100%; height: 100%; border-radius: var(--card-radius); transform-style: preserve-3d; 
+      transform: translate3d(0px, 0px, 0.01px);
+    }
+    
+    /* 🚀 移除會破壞 mix-blend-mode 的 transform-style！讓光澤圖層能完美疊加發光 */
+    .card__bg, .card__shine, .card__glare { 
+      grid-area: 1/1; width: 100%; height: 100%; border-radius: var(--card-radius); box-sizing: border-box; overflow: hidden;
+      pointer-events: none;
+    }
+
+    .card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0px); z-index: 1; }
+
+    /* 原版基礎眩光 */
+    .card__glare {
+      transform: translateZ(1.41px); overflow: hidden; z-index: 3;
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%);
+      opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay;
+    }
+
+    /* 🚀 遺失的關鍵靈魂：光澤圖層本體宣告 */
+    .card__shine {
+      display: grid; transform: translateZ(1px); overflow: hidden; z-index: 4;
+      background: transparent; background-size: cover; background-position: center;
+      filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge;
+    }
+    .card__shine:before, .card__shine:after { grid-area: 1/1; border-radius: var(--card-radius); content: ""; display: block !important; }
+    .card__shine:before { transform: translateZ(1px); }
+    .card__shine:after { transform: translateZ(1.2px); }
+
+    /* 🚀 你的進化版 Masking (絕對強制挖空) */
+    .card.masked .card__shine, .card.masked .card__shine:before, .card.masked .card__shine:after {
+      -webkit-mask-image: linear-gradient(white, white), var(--mask) !important;
+      -webkit-mask-composite: destination-out !important;
+      mask-image: linear-gradient(white, white), var(--mask) !important;
+      mask-composite: exclude !important;
+      -webkit-mask-size: cover !important; mask-size: cover !important;
+      -webkit-mask-position: center center !important; mask-position: center center !important;
+    }
+
+    /* =======================================================
+       🎨 100% 滿血還原：全域特效宣告 + 原版 3D 厚度回歸！
+       ======================================================= */
+
+    /* 🚀 重新啟動 3D 引擎 (保留 Z 軸深度，讓星空跟雷射浮起來！) */
+    .card__rotator * { transform-style: preserve-3d; }
+    
+    .card__front { 
+      display: grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr; 
+      width: 100%; height: 100%; border-radius: var(--card-radius); 
+      transform-style: preserve-3d !important; 
+      transform: translate3d(0px, 0px, 0.01px);
+    }
+    
+    .card__bg, .card__shine, .card__glare { 
+      grid-area: 1/1; width: 100%; height: 100%; border-radius: var(--card-radius); box-sizing: border-box; 
+      /* 移除 overflow: hidden 以免破壞 3D，改靠 border-radius 與 mask 裁切 */
+      pointer-events: none;
+      transform-style: preserve-3d !important;
+    }
+
+    .card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0px); z-index: 1; }
+
+    /* 原版基礎眩光 (恢復 Z 軸 1.41px) */
+    .card__glare {
+      transform: translateZ(1.41px); z-index: 3;
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%);
+      opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay;
+    }
+
+    /* 光澤圖層本體宣告 (恢復 3D Z軸深度 1px) */
+    .card__shine {
+      display: grid; transform: translateZ(1px); z-index: 4; transform-style: preserve-3d;
+      background: transparent; background-size: cover; background-position: center;
+      filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge;
+    }
+    .card__shine:before, .card__shine:after { grid-area: 1/1; border-radius: var(--card-radius); content: ""; display: block !important; }
+    .card__shine:before { transform: translateZ(1.2px); }
+    .card__shine:after { transform: translateZ(1.6px); }
+
+    /* 🚀 你的進化版 Masking (絕對強制挖空) */
+    .card.masked .card__shine, .card.masked .card__shine:before, .card.masked .card__shine:after {
+      -webkit-mask-image: linear-gradient(white, white), var(--mask) !important;
+      -webkit-mask-composite: destination-out !important;
+      mask-image: linear-gradient(white, white), var(--mask) !important;
+      mask-composite: exclude !important;
+      -webkit-mask-size: cover !important; mask-size: cover !important;
+      -webkit-mask-position: center center !important; mask-position: center center !important;
+    }
+
+    /* 🔵【R卡：Cosmos 星空】 */
+    .card[data-rarity="R"] .card__shine {
+      --space: 4%;
+      background-image: var(--cosmos-bottom), repeating-linear-gradient(82deg, hsl(53, 65%, 60%) calc(var(--space)*1), hsl(93, 56%, 50%) calc(var(--space)*2), hsl(176, 54%, 49%) calc(var(--space)*3), hsl(228, 59%, 55%) calc(var(--space)*4), hsl(283, 60%, 55%) calc(var(--space)*5), hsl(326, 59%, 51%) calc(var(--space)*6), hsl(326, 59%, 51%) calc(var(--space)*7), hsl(283, 60%, 55%) calc(var(--space)*8), hsl(228, 59%, 55%) calc(var(--space)*9), hsl(176, 54%, 49%) calc(var(--space)*10), hsl(93, 56%, 50%) calc(var(--space)*11), hsl(53, 65%, 60%) calc(var(--space)*12) ), radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(180, 100%, 89%, 0.5) 5%, hsla(180, 14%, 57%, 0.3) 40%, hsl(0, 0%, 0%) 130% ) !important;
+      background-blend-mode: color-burn, multiply !important; background-position: center, calc(10% + (var(--pointer-from-left)*80%)) calc(10% + (var(--pointer-from-top)*80%)), center !important;
+      background-size: cover, 400% 900%, cover !important; filter: brightness(1) contrast(1) saturate(.8) !important; mix-blend-mode: color-dodge !important; opacity: 1 !important;
+    }
+    .card[data-rarity="R"] .card__shine:before {
+      content: "" !important; display: block !important;
+      background-image: var(--cosmos-mid), repeating-linear-gradient(82deg, hsl(53, 65%, 60%) calc(var(--space)*1), hsl(93, 56%, 50%) calc(var(--space)*2), hsl(176, 54%, 49%) calc(var(--space)*3), hsl(228, 59%, 55%) calc(var(--space)*4), hsl(283, 60%, 55%) calc(var(--space)*5), hsl(326, 59%, 51%) calc(var(--space)*6), hsl(326, 59%, 51%) calc(var(--space)*7), hsl(283, 60%, 55%) calc(var(--space)*8), hsl(228, 59%, 55%) calc(var(--space)*9), hsl(176, 54%, 49%) calc(var(--space)*10), hsl(93, 56%, 50%) calc(var(--space)*11), hsl(53, 65%, 60%) calc(var(--space)*12) ) !important;
+      background-blend-mode: lighten, multiply !important; background-position: center, calc(15% + (var(--pointer-from-left)*70%)) calc(15% + (var(--pointer-from-top)*70%)), center !important;
+      background-size: cover, 400% 900%, cover !important; filter: brightness(1.25) contrast(1.75) saturate(.8) !important; mix-blend-mode: overlay !important;
+    }
+    .card[data-rarity="R"] .card__shine:after {
+      content: "" !important; display: block !important;
+      background-image: var(--cosmos-top), repeating-linear-gradient(82deg, hsl(53, 65%, 60%) calc(var(--space)*1), hsl(93, 56%, 50%) calc(var(--space)*2), hsl(176, 54%, 49%) calc(var(--space)*3), hsl(228, 59%, 55%) calc(var(--space)*4), hsl(283, 60%, 55%) calc(var(--space)*5), hsl(326, 59%, 51%) calc(var(--space)*6), hsl(326, 59%, 51%) calc(var(--space)*7), hsl(283, 60%, 55%) calc(var(--space)*8), hsl(228, 59%, 55%) calc(var(--space)*9), hsl(176, 54%, 49%) calc(var(--space)*10), hsl(93, 56%, 50%) calc(var(--space)*11), hsl(53, 65%, 60%) calc(var(--space)*12) ) !important;
+      background-blend-mode: multiply, multiply !important; background-position: center, calc(20% + (var(--pointer-from-left)*60%)) calc(20% + (var(--pointer-from-top)*60%)), center !important;
+      background-size: cover, 400% 900%, cover !important; filter: brightness(1.25) contrast(1.75) saturate(.8) !important; mix-blend-mode: multiply !important;
+    }
+    .card[data-rarity="R"] .card__bg { border-color: #3498db !important; box-shadow: inset 0 0 10px rgba(52, 152, 219, 0.5) !important; }
+
+    /* 🟣【SR卡：Trainer Full Art】 */
+    .card[data-rarity="SR"] .card__shine {
+      --imgsize: 33%; mix-blend-mode: color-dodge !important; opacity: 1 !important;
+    }
+    .card[data-rarity="SR"] .card__shine, .card[data-rarity="SR"] .card__shine:after {
+      background-image: var(--trainer-foil) !important; background-size: var(--imgsize) !important;
+      filter: brightness(calc((var(--pointer-from-center)*0.05) + .6)) contrast(1.5) saturate(1.2) !important;
+    }
+    .card[data-rarity="SR"] .card__shine:before {
+      content: "" !important; display: block !important;
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0, 0%, 100%) 0%, hsla(0, 0%, 0%, 0) 80%) !important;
+      mix-blend-mode: screen !important; opacity: 0.5 !important;
+    }
+    .card[data-rarity="SR"] .card__glare {
+      opacity: calc(var(--card-opacity) * .75) !important; mix-blend-mode: multiply !important; filter: brightness(1.5) contrast(1.4) saturate(1) !important; background-size: 170% 170% !important;
+    }
+    .card[data-rarity="SR"] .card__bg { border-color: #bdc3c7 !important; box-shadow: inset 0 0 10px rgba(189, 195, 199, 0.5) !important; }
+
+    /* 🟡【SSR卡：V-Full Art】 */
+    .card[data-rarity="SSR"] .card__shine, .card[data-rarity="SSR"] .card__shine:after {
+      background-blend-mode: exclusion, hue, hard-light !important;
+      filter: brightness(calc((var(--pointer-from-center)*.3) + .35)) contrast(2) saturate(1.5) !important;
+    }
+    .card[data-rarity="SSR"] .card__shine:before { display: none !important; }
+    .card[data-rarity="SSR"] .card__shine:after { content: "" !important; display: block !important; filter: brightness(calc((var(--pointer-from-center)*.5) + .8)) contrast(1.6) saturate(1.4) !important; }
+    
+    .card[data-rarity="SSR"] .card__shine {
+      opacity: 1 !important;
+      background-image: var(--foil), repeating-linear-gradient( 0deg, var(--sunpillar-clr-1) calc(var(--space)*1), var(--sunpillar-clr-2) calc(var(--space)*2), var(--sunpillar-clr-3) calc(var(--space)*3), var(--sunpillar-clr-4) calc(var(--space)*4), var(--sunpillar-clr-5) calc(var(--space)*5), var(--sunpillar-clr-6) calc(var(--space)*6), var(--sunpillar-clr-1) calc(var(--space)*7) ), repeating-linear-gradient( var(--angle), #0e152e 0%, hsl(180, 10%, 60%) 3.8%, hsl(180, 29%, 66%) 4.5%, hsl(180, 10%, 60%) 5.2%, #0e152e 10% , #0e152e 12% ), radial-gradient( farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 0%, 0.1) 12%, hsla(0, 0%, 0%, 0.15) 20%, hsla(0, 0%, 0%, 0.25) 120% ) !important;
+      background-position: center center, 0% var(--pointer-y), calc( var(--pointer-x) + (var(--pointer-y)*0.2) ) var(--pointer-y), var(--pointer-x) var(--pointer-y) !important;
+      background-blend-mode: soft-light, hue, hard-light !important; background-size: var(--imgsize), 200% 700%, 300% 100%, 200% 100% !important;
+    }
+    .card[data-rarity="SSR"] .card__shine:after {
+      background-position: center center, 0% var(--pointer-y), calc( (var(--pointer-x) + (var(--pointer-y)*0.2)) * -1) calc( var(--pointer-y) * -1), var(--pointer-x) var(--pointer-y) !important;
+      background-size: var(--imgsize), 200% 400%, 195% 100%, 200% 100% !important;
+      filter: brightness(calc((var(--pointer-from-center)*.4) + .8)) contrast(1.5) saturate(1.25) !important; mix-blend-mode: exclusion !important;
+    }
+    .card[data-rarity="SSR"] .card__glare {
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0, 0%, 75%) 5%, hsl(200, 5%, 35%) 60%, hsl(320, 40%, 10%) 150%) !important;
+      background-size: 120% 150% !important; background-position: center center !important; mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75 ) !important;
+    }
+    .card[data-rarity="SSR"] .card__bg { border-color: var(--gold) !important; box-shadow: inset 0 0 15px rgba(241,196,15,0.5) !important; }
+
+    /* 🌈【UR卡：Rainbow Secret Holo 彩虹隱藏亮面】(特效拉滿新增！) */
+    .card[data-rarity="UR"] .card__shine {
+      --r-clr-1: hsl(0, 57%, 37%); --r-clr-2: hsl(40, 53%, 39%); --r-clr-3: hsl(90, 60%, 35%);
+      --r-clr-4: hsl(180, 60%, 35%); --r-clr-5: hsl(180, 60%, 35%); --r-clr-6: hsl(210, 57%, 39%);
+      --r-clr-7: hsl(280, 55%, 31%);
+
+      background-image: 
+        linear-gradient(-45deg, var(--r-clr-1), var(--r-clr-5)),
+        var(--glitter),
+        linear-gradient( -30deg, 
+          var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), 
+          var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), 
+          var(--r-clr-1)
+        ) !important;
+      background-blend-mode: soft-light !important;
+      background-size: 100% 100%, 30% 30%, 400% 400% !important;
+      background-position: center center, center center, var(--pointer-x) var(--pointer-y) !important;
+      filter: brightness(calc((var(--pointer-from-center)*0.3) + 0.55)) contrast(2) saturate(1) !important;
+      mix-blend-mode: color-dodge !important; opacity: 1 !important;
+    }
+    .card[data-rarity="UR"] .card__shine:before {
+      content: "" !important; display: block !important;
+      background-image: var(--foil) !important;
+      background-size: var(--imgsize) !important;
+      background-position: center center !important;
+      filter: brightness(2.5) contrast(1) !important;
+      opacity: calc((var(--pointer-from-center) + 0.4 ) * 0.6 ) !important;
+      background-blend-mode: difference !important;
+      mix-blend-mode: darken !important;
+    }
+    .card[data-rarity="UR"] .card__glare {
+      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0, 0%, 100%) 5%, hsl(200, 5%, 85%) 60%, hsl(320, 40%, 10%) 150%) !important;
+      mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75 ) !important;
+    }
+    .card[data-rarity="UR"] .card__bg { border-color: #ff9ff3 !important; box-shadow: inset 0 0 15px rgba(255,159,243,0.8) !important; }
+
+    
+    /* =======================================================
+       🚀 新增：畫廊與商店的靜態卡片特效
+       ======================================================= */
+    .static-card {
+      /* 固定光點在左上方，透出高級光澤，不啟用旋轉追蹤 */
+      --pointer-x: 35% !important; --pointer-y: 35% !important; 
+      --pointer-from-center: 0.5 !important; 
+      --rotate-x: 0deg !important; --rotate-y: 0deg !important;
+      transition: 0.3s;
+    }
+    /* 滑鼠/手指摸上去時，光澤微幅呼吸 */
+    .static-card:hover { --pointer-x: 65% !important; --pointer-y: 65% !important; --pointer-from-center: 0.7 !important; }
+
+    /* 🔘 底部按鈕區 (改為彈性推移，絕對不重疊) */
+    .action-zone { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 1000; margin-top: auto; padding-bottom: max(30px, env(safe-area-inset-bottom)); }
+    .btn-equip { background: linear-gradient(135deg, #27ae60, #1e8449); color: white; border: none; padding: 16px 60px; font-size: 20px; font-weight: 900; border-radius: 30px; letter-spacing: 4px; box-shadow: 0 10px 20px rgba(39, 174, 96, 0.4); cursor: pointer; transition: 0.3s; }
+    .btn-equip:active { transform: scale(0.95); }
+    .btn-equip.is-equipped { background: #576574; box-shadow: none; cursor: default; }
+    .btn-shop { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 10px 25px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; backdrop-filter: blur(5px); }
+    #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #000; padding: 12px 30px; border-radius: 20px; font-weight: 900; font-size: 16px; opacity: 0; pointer-events: none; transition: 0.4s; z-index: 10000; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+
+    /* =======================================================
+       🛒 Phase 3: 商店分區與毛玻璃彈窗
+       ======================================================= */
+    #shop-modal {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+      background: rgba(245, 246, 250, 0.95); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      z-index: 9000; display: flex; flex-direction: column; align-items: center; padding-top: max(20px, env(safe-area-inset-top));
+      opacity: 0; pointer-events: none; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(100%);
+    }
+    #shop-modal.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    
+    .shop-header { width: 100%; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; border-bottom: 1px solid rgba(0,0,0,0.1); }
+    .shop-title { font-size: 22px; font-weight: 900; color: #2c3e50; margin: 0; letter-spacing: 2px; }
+    .shop-close-btn { width: 35px; height: 35px; background: #e0e0e0; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #333; cursor: pointer; font-size: 16px; }
+    
+    .shop-grid-container { width: 100%; height: calc(100% - 80px); overflow-y: auto; padding: 10px 20px 100px; box-sizing: border-box; }
+    
+    .shop-rarity-title { font-size: 20px; font-weight: 900; margin: 30px 0 15px; padding-left: 15px; border-left: 6px solid; letter-spacing: 2px; }
+    .title-SSR { color: #d35400; border-color: var(--gold); }
+    .title-SR { color: #8e44ad; border-color: #9b59b6; }
+    .title-R { color: #2980b9; border-color: #3498db; }
+    .title-N { color: #7f8c8d; border-color: #bdc3c7; }
+
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
+    
+    .shop-card-wrapper { background: white; border-radius: 15px; padding: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.08); border: 1px solid #eee; text-align: center; position: relative; }
+    .shop-card-wrapper.owned { opacity: 0.6; filter: grayscale(0.5); }
+    
+    .shop-card-img-box { width: 100%; aspect-ratio: var(--card-aspect); border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .shop-card-img-box:active { transform: scale(0.95); }
+    
+    .btn-buy { width: 100%; background: #f1c40f; color: #856404; font-weight: bold; border: none; padding: 10px 0; border-radius: 10px; margin-top: 8px; font-size: 14px; box-shadow: 0 4px 0 #d4ac0d; cursor: pointer; transition: 0.2s; }
+    .btn-buy:active { transform: translateY(4px); box-shadow: none; }
+    .shop-card-wrapper.owned .btn-buy { background: #bdc3c7; color: white; cursor: default; box-shadow: none; pointer-events: none; }
+
+    .shop-limited-badge { position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; padding: 4px 8px; font-size: 10px; font-weight: 900; border-radius: 8px; box-shadow: 0 4px 10px rgba(231,76,60,0.4); z-index: 10; letter-spacing: 1px; animation: pulse 1.5s infinite; border: 1px solid white; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+    /* =======================================================
+       ⚔️ Phase 4: 戰鬥大廳 (SPA 視差切換與導航)
+       ======================================================= */
+    .nav-buttons { display: flex; gap: 15px; width: 100%; max-width: 350px; margin-top: 5px; padding: 0 20px; box-sizing: border-box; }
+    .btn-nav { flex: 1; padding: 12px 0; border-radius: 20px; font-size: 14px; font-weight: 900; border: none; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .btn-nav:active { transform: scale(0.95); }
+    .btn-back { background: rgba(255,255,255,0.1); color: white; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); }
+    .btn-battle { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; border: 1px solid #ff7979; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+    /* 🚀 修復 1：讓畫廊能真正被「推開」，並鎖死垂直骨架防止讀取時跳動！ */
+    #armory-view {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
+      display: flex; flex-direction: column; overflow: hidden; /* 加入這行鎖定結構 */
+      transition: transform 0.4s ease, opacity 0.4s ease;
+      will-change: transform, opacity;
+    }
+    #armory-view.slide-out {
+      /* 往左退一半，且微微變暗，這就是原生 App 常用的視差效果！ */
+      transform: translateX(-50vw);
+      opacity: 0.2;
+      pointer-events: none;
+    }
+
+    /* 🚀 修復 2：拔掉會導致露餡的 cubic-bezier 回彈 */
+    #battle-view {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+      background: var(--bg-color);
+      background-image: radial-gradient(circle at 50% 0%, #34495e 0%, #0a0e17 100%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 30px 30px, 30px 30px;
+      z-index: 8000; display: flex; flex-direction: column;
+      
+      /* 關鍵！改為最標準的 ease-out，滑進來就穩穩停住，絕不回彈！ */
+      transition: transform 0.4s ease-out, visibility 0.4s;
+      transform: translateX(100%);
+      pointer-events: none; 
+      visibility: hidden;   
+      will-change: transform;
+    }
+    #battle-view.active { 
+      transform: translateX(0); 
+      pointer-events: auto; 
+      visibility: visible;  
+    }
+    
+    .battle-header { padding: max(20px, env(safe-area-inset-top)) 20px 15px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.5); }
+    .btn-return-armory { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; justify-content: center; align-items: center; font-size: 18px; cursor: pointer; transition: 0.2s; }
+    .btn-return-armory:active { transform: scale(0.9); }
+    .battle-title { color: white; font-size: 20px; font-weight: 900; margin: 0; letter-spacing: 2px; }
+    /* =======================================================
+       ⚔️ 戰場 UI 設計 (復刻您的頂級原版設計)
+       ======================================================= */
+    .battle-content { flex: 1; padding: 20px 20px 100px; overflow-y: auto; max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    
+    /* 質感分隔線標題 */
+    .section-divider { text-align: center; color: #bdc3c7; font-size: 14px; letter-spacing: 2px; margin: 30px 0 15px; position: relative; }
+    
+    /* 🤖 AI 橫幅卡片 (復刻原版) */
+    .ai-banner { width: 100%; height: 110px; border-radius: 16px; margin-bottom: 16px; position: relative; overflow: hidden; background-size: cover; background-position: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 20px rgba(0,0,0,0.4); cursor: pointer; transition: 0.2s; }
+    .ai-banner:active { transform: scale(0.96); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+    .ai-banner-overlay { position: absolute; inset: 0; background: linear-gradient(to right, rgba(10,14,23,0.95) 0%, rgba(10,14,23,0.6) 40%, transparent 100%); }
+    .ai-banner-text { position: absolute; left: 25px; top: 50%; transform: translateY(-50%); z-index: 2; display: flex; flex-direction: column; gap: 5px; }
+    .ai-banner-text h4 { color: white; font-size: 24px; font-weight: 900; margin: 0; letter-spacing: 2px; text-shadow: 0 2px 5px black; }
+    .ai-banner-text p { color: var(--gold); font-size: 13px; font-weight: 900; margin: 0; text-shadow: 0 2px 5px black; letter-spacing: 1px; }
+
+    /* 🚨 活動戰場專用鎖定樣式 */
+    .event-banner { width: 100%; height: 120px; border-radius: 16px; position: relative; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden; background-size: cover; background-position: center 20%; box-shadow: 0 10px 20px rgba(0,0,0,0.5); margin-bottom: 16px; }
+    .event-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; }
+    .locked-tag { background: rgba(0,0,0,0.8); color: var(--gold); padding: 5px 20px; border-radius: 8px; font-weight: 900; border: 2px solid var(--gold); transform: rotate(-5deg); font-size: 18px; letter-spacing: 4px; box-shadow: 0 0 15px rgba(241,196,15,0.3); }
+
+    /* ⚔️ PvP 控制台 (復刻原版) */
+    .pvp-panel { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 15px; padding: 15px; backdrop-filter: blur(10px); }
+    .difficulty-selector { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; margin-bottom: 10px; }
+    .difficulty-selector::-webkit-scrollbar { display: none; }
+    .diff-btn { flex: 0 0 auto; width: 85px; height: 65px; border-radius: 15px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); color: #7f8c8d; font-size: 20px; font-weight: 900; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+    .diff-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(241,196,15,0.1); box-shadow: 0 0 15px rgba(241,196,15,0.2); }
+    
+    .btn-primary-large { width: 100%; background: linear-gradient(to bottom, #ff8c00, #e65c00); color: white; border: none; padding: 18px; border-radius: 15px; font-size: 20px; font-weight: 900; letter-spacing: 2px; cursor: pointer; box-shadow: 0 8px 20px rgba(230, 92, 0, 0.4); transition: 0.2s; }
+    .btn-primary-large:active { transform: translateY(4px); box-shadow: 0 4px 10px rgba(230, 92, 0, 0.4); }
+
+    /* 📡 雷達房間列表 */
+    .radar-title { font-size: 12px; color: #a4b0be; letter-spacing: 2px; margin-bottom: 10px; display: flex; justify-content: space-between; margin-top: 15px; }
+    .room-list { display: flex; flex-direction: column; gap: 12px; }
+    .room-item { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--gold); }
+    .room-info { display: flex; flex-direction: column; gap: 5px; }
+    .room-name { color: white; font-weight: 900; font-size: 16px; letter-spacing: 1px; }
+    .room-meta { font-size: 12px; color: #a4b0be; }
+    .btn-join { background: var(--gold); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 900; cursor: pointer; font-size: 14px; }
+    .btn-join:active { transform: scale(0.9); }
+
+    /* =======================================================
+       ✨ 戰鬥大廳特效：流光按鈕、雷達、訊號條
+       ======================================================= */
+    /* 通用隱藏 */
+    .hidden { display: none !important; }
+
+    /* 🛡️ 傳送門按鈕能量流動效果 (取代原本的 btn-primary-large) */
+    .btn-portal-epic {
+      background: linear-gradient(135deg, #ff9900, #ff5e00) !important;
+      position: relative; overflow: hidden; border: 1px solid rgba(255, 215, 0, 0.5) !important;
+      box-shadow: 0 0 20px rgba(255, 153, 0, 0.4); border-radius: 15px; margin-top: 10px;
+      height: 60px; width: 100%; display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 20px; font-weight: 900; letter-spacing: 2px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-portal-epic:active { transform: translateY(4px); box-shadow: 0 4px 10px rgba(230, 92, 0, 0.4); }
+    /* 流光動畫 */
+    .btn-portal-epic::after {
+      content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.4), transparent);
+      transform: rotate(45deg); animation: sweep 3s infinite;
+    }
+    @keyframes sweep { 0% { left: -120%; } 100% { left: 120%; } }
+
+    /* 🛡️ 戰術雷達掃描動畫 */
+    .radar-container { position: relative; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: rgba(255,215,0,0.5); }
+    .radar-beam { position: absolute; width: 80px; height: 80px; border: 2px solid var(--gold); border-radius: 50%; animation: radar-pulse 2s infinite; opacity: 0; }
+    @keyframes radar-pulse { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(1.5); opacity: 0; } }
+
+    /* 🛡️ 訊號發射條動畫 */
+    .signal-bars { display: inline-flex; gap: 3px; align-items: flex-end; height: 15px; margin-left: 10px; }
+    .bar { width: 3px; background: var(--gold); animation: signal-grow 1s infinite alternate; }
+    @keyframes signal-grow { 0% { height: 20%; } 100% { height: 100%; } }
+
+    /* 🚀 活動情報按鈕與發音彈窗樣式 */
+    .event-info-btn {
+      background: rgba(142, 68, 173, 0.2); border: 1px solid rgba(142, 68, 173, 0.5); color: #fff;
+      border-radius: 12px; padding: 12px; width: 100%; margin-top: 10px; font-size: 15px; font-weight: bold; cursor: pointer;
+      display: none; transition: 0.3s; backdrop-filter: blur(5px);
+    }
+    .event-info-btn:active { transform: scale(0.95); }
+    
+    .vocab-list-container { max-height: 50vh; overflow-y: auto; text-align: left; margin-top: 15px; padding-right: 5px; }
+    .vocab-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(0,0,0,0.4); border-radius: 12px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); }
+    .vocab-en { font-size: 20px; color: #f1c40f; font-weight: 900; letter-spacing: 1px; }
+    .vocab-zh { font-size: 13px; color: #bdc3c7; margin-top: 4px; }
+    .vocab-play { background: #3498db; border: none; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.2s; }
+    .vocab-play:active { transform: scale(0.9); background: #2980b9; }
+
+    /* ========================================= */
+    /* 🚀 活動情報彈窗 (Modal) 基礎與排版樣式 */
+    /* ========================================= */
+    .modal-overlay {
+      display: none; /* 🚀 關鍵：預設隱藏！不會再卡在大廳了 */
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+      background: rgba(0, 0, 0, 0.85); z-index: 9999;
+      justify-content: center; align-items: center;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    }
+    .modal-overlay.active {
+      display: flex; /* 點擊按鈕加上 active 時才會顯示 */
+      animation: modalFadeIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal-content {
+      background: #1a1e29; padding: 30px 25px; border-radius: 20px;
+      width: 85%; max-width: 400px; position: relative;
+      border: 2px solid #9b59b6; box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 30px rgba(155,89,182,0.3);
+      text-align: center;
+    }
+    .close-btn {
+      position: absolute; top: 12px; right: 18px;
+      background: none; border: none; color: #a4b0be;
+      font-size: 32px; font-weight: bold; cursor: pointer; transition: 0.2s; line-height: 1;
+    }
+    .close-btn:active { color: #fff; transform: scale(0.8); }
+
+  </style>
+</head>
+<body>
+  <div id="toast">裝備成功！</div>
+
+  <div id="armory-view">
+    
+    <header>
+      <div class="user-info">
+        <h2 id="header-name">連線中...</h2>
+        <div class="user-points" id="header-points">0 PTS</div>
+      </div>
+      <button class="btn-shop" onclick="openShop()">🛒 兌換角色</button>
+    </header>
+
+    <div class="hero-info-zone">
+      <div class="badges">
+        <div id="badge-rarity" class="badge rarity-N">讀取中</div>
+        <div id="badge-category" class="badge category">讀取中</div>
+      </div>
+      <h1 id="hero-name" class="hero-name">讀取中...</h1>
+    </div>
+
+    <div class="gallery-container">
+      <div id="target-box" class="center-target-box"></div>
+      <div class="carousel-track" id="carousel"></div>
+    </div>
+
+    <div class="action-zone">
+      <button id="equip-btn" class="btn-equip" onclick="equipCurrentCharacter()">裝備此角色</button>
+      <div class="nav-buttons">
+        <button class="btn-nav btn-back" onclick="window.location.href='dashboard.html?id=' + STUDENT_ID">🔙 返回主堡</button>
+        <button class="btn-nav btn-battle" onclick="goToBattleRoom()">⚔️ 選擇戰場</button>
+      </div>
+    </div>
+
+  </div> <div id="battle-view">
+    <div class="battle-header">
+      <div class="btn-return-armory" onclick="goBackToArmory()">🔙</div>
+      <h2 class="battle-title">選擇戰場</h2>
+    </div>
+
+    <div id="ai-countdown-overlay" style="display: none; position: absolute; inset: 0; background: rgba(10, 14, 23, 0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+      <div style="margin-bottom: 15px; letter-spacing: 2px; font-weight: bold; color: var(--gold); font-size: 20px;">
+        📡 <span id="ai-msg">連線至...</span> <b id="ai-timer" style="font-size: 32px; color: #e74c3c;">5</b>
+      </div>
+      <div class="signal-bars" style="margin-bottom: 40px; height: 30px;">
+        <div class="bar" style="width: 6px; animation-delay: 0.1s;"></div>
+        <div class="bar" style="width: 6px; animation-delay: 0.3s;"></div>
+        <div class="bar" style="width: 6px; animation-delay: 0.5s;"></div>
+      </div>
+      <button style="background: rgba(231,76,60,0.1); border: 2px solid #e74c3c; color: #e74c3c; padding: 15px 50px; border-radius: 15px; font-size: 18px; font-weight: 900; cursor: pointer; transition: 0.2s;" onclick="cancelAiChallenge()">
+        ❌ 取消傳送
+      </button>
+    </div>
+    
+    <div class="battle-content">
+      
+      <div class="section-divider"><span>突發事件</span></div>
+      <div>
+        <div class="event-banner">
+          <div class="event-overlay">
+            <div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 目前不開放</div>
+          </div>
+        </div>
+        <button id="event-vocab-btn" class="event-info-btn" onclick="openEventVocab()">📖 查看事件題庫</button>
+      </div>
+
+      <div class="section-divider"><span>Ai 對戰</span></div>
+      <div>
+        <div class="ai-banner" style="background-image: url('https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/Ai_m.webp');" onclick="startAiChallenge('初階Ai')">
+          <div class="ai-banner-overlay"></div>
+          <div class="ai-banner-text">
+            <h4>初階 Ai</h4>
+            <p>挑戰獎勵：1次抽獎</p>
+          </div>
+        </div>
+
+        <div class="ai-banner" style="background-image: url('https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/Ai_l.webp');" onclick="startAiChallenge('中階Ai')">
+          <div class="ai-banner-overlay"></div>
+          <div class="ai-banner-text">
+            <h4>中階 Ai</h4>
+            <p>挑戰獎勵：2次抽獎</p>
+          </div>
+        </div>
+
+        <div class="ai-banner" style="background-image: url('https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/Ai_h.webp');" onclick="startAiChallenge('高階Ai')">
+          <div class="ai-banner-overlay"></div>
+          <div class="ai-banner-text">
+            <h4>高階 Ai</h4>
+            <p>挑戰獎勵：3次抽獎</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-divider" style="margin-top: 40px;"><span>1v1 真人對戰</span></div>
+      <div>
+        <div class="pvp-panel">
+          <div class="difficulty-selector">
+            <div class="diff-btn active" onclick="selectDifficulty(this, 'E1')">E1</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E2')">E2</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E3')">E3</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E4')">E4</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E5')">E5</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E6')">E6</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E7')">E7</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E8')">E8</div>
+            <div class="diff-btn" onclick="selectDifficulty(this, 'E9')">E9</div>
+          </div>
+          
+          <input type="hidden" id="pvp-level" value="E1">
+
+          <button id="create-room-btn" class="btn-portal-epic" onclick="createBattleRoom()">開啟 1v1 戰場</button>
+
+          <div class="radar-title">
+            <span>📡 附近戰場掃描中...</span>
+            <span id="radar-signal-count" style="color: #2ecc71;">0 個信號</span>
+          </div>
+          <div class="room-list" id="pvp-room-list">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div> 
+
+
+  <div id="shop-modal">
+    <div class="shop-header">
+      <h2 class="shop-title">🛒 角色兌換所</h2>
+      <div class="shop-close-btn" onclick="closeShop()">✕</div>
+    </div>
+    <div class="shop-grid-container" id="shop-grid-container">
+    </div>
+  </div>
+
+
+  <div id="showcase-modal">
+    <div class="close-btn" onclick="closeShowcase()">✕</div>
+    <h2 id="showcase-name" style="color:white; letter-spacing:4px; margin-bottom:20px; text-shadow:0 0 10px rgba(255,255,255,0.5);">角色名稱</h2>
+    
+    <div class="showcase-wrapper">
+      <div id="modal-card" class="card" data-rarity="N">
+        <div class="card__translater">
+          <div class="card__rotator">
+            <div class="card__front">
+              <div id="modal-bg" class="card__bg"></div>
+              <div class="card__shine"></div>
+              <div class="card__glare"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="color:rgba(255,255,255,0.4); font-size:12px; margin-top:20px; letter-spacing:2px;">👆 觸摸並轉動卡片欣賞全息特效</p>
+  </div>
+  
+  <script>
+    // ⚠️ 請替換為你真實的 GAS 網址
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
+    
+    // 🚀 這是修復的關鍵拼字錯誤 (new URLSearchParams)
+    const params = new URLSearchParams(window.location.search);
+    const STUDENT_ID = params.get('id') || "S001";
+
+    let characterAssets = {}; 
+    let userUnlocked = [];
+    let userEquipped = "";
+    let currentCenteredId = ""; 
+
+    // 🚀 新增：對戰大廳專用的全域變數
+    let lobbyRefreshTimer = null;
+    let battleStatusTimer = null;
+    let aiTimerInterval = null;
+    let currentRoomId = null;
+    let roomExpireTimer = null;
+    const GITHUB_APP_URL = "https://damienkuo123.github.io/marian-app/";
+
+    async function initLobby() {
+      checkEventStatus();
+      try {
+        const res = await fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`);
+        const data = await res.json();
+        
+        characterAssets = data.assets;
+        // 🚀 關鍵修復：將左上角改為真實姓名 (如果沒抓到才顯示 ID)
+        document.getElementById('header-name').innerText = data.profile.name || STUDENT_ID;
+        document.getElementById('header-points').innerText = `${data.profile.points} PTS`;
+        userUnlocked = (data.profile.unlocked || "A001").split(',').map(s => s.trim()).filter(s => s !== "");
+        userEquipped = data.profile.equipped || "A001"; 
+
+        // 🚀 自動排序玩家畫廊：依照 SSR > SR > R > N 權重降冪排列
+        const rarityWeight = { 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
+        userUnlocked.sort((a, b) => {
+          const wA = characterAssets[a] ? (rarityWeight[characterAssets[a].rarity] || 0) : 0;
+          const wB = characterAssets[b] ? (rarityWeight[characterAssets[b].rarity] || 0) : 0;
+          return wB - wA; 
+        });
+
+        renderCarousel();
+      } catch (e) {
+        console.error("載入失敗：", e);
+        document.getElementById('hero-name').innerText = "⚠️ 離線預設模式";
+        characterAssets = {
+          'A001': { name: 'Marian 瑪麗安', img: 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' }, 
+        };
+        userUnlocked = ["A001"];
+        userEquipped = "A001";
+        renderCarousel();
+      }
+    }
+
+    // 🚀 產生靜態特效卡片DOM (支援遮罩網址動態解析)
+    function createStaticCardHTML(char) {
+      let maskString = "";
+      if (char.mask) {
+        // 自動判斷是否已經有 url() 包裝
+        maskString = char.mask.includes('url(') ? char.mask : `url('${char.mask}')`;
+      }
+      let maskStyle = char.mask ? `style="--mask: ${maskString};"` : "";
+      let maskedClass = char.mask ? "masked" : "";
+      return `
+        <div class="card static-card ${maskedClass}" data-rarity="${char.rarity}" ${maskStyle}>
+          <div class="card__translater">
+            <div class="card__rotator">
+              <div class="card__front">
+                <div class="card__bg" style="background-image: url('${char.img}')"></div>
+                <div class="card__shine"></div>
+                <div class="card__glare"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCarousel() {
+      const carousel = document.getElementById('carousel');
+      carousel.innerHTML = "";
+
+      userUnlocked.forEach(id => {
+        if (!characterAssets[id]) return;
+        const char = characterAssets[id];
+        const wrapper = document.createElement('div');
+        wrapper.className = 'holo-card-wrapper';
+        wrapper.setAttribute('data-id', id);
+        
+        wrapper.innerHTML = createStaticCardHTML(char) + `<div class="tap-to-view">🔍 點擊查看特效</div>`;
+        wrapper.onclick = () => openShowcase(id);
+        carousel.appendChild(wrapper);
+      });
+
+      initScrollSpy();
+      setTimeout(() => {
+        const equippedWrapper = document.querySelector(`.holo-card-wrapper[data-id="${userEquipped}"]`);
+        if (equippedWrapper) equippedWrapper.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+      }, 300);
+    }
+
+    function initScrollSpy() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => { if (entry.isIntersecting) updateCenterInfo(entry.target.getAttribute('data-id')); });
+      }, { root: document.getElementById('carousel'), rootMargin: '0px -50% 0px -50%', threshold: 0 });
+      document.querySelectorAll('.holo-card-wrapper').forEach(card => observer.observe(card));
+    }
+
+    function updateCenterInfo(id) {
+      currentCenteredId = id;
+      const char = characterAssets[id];
+      if(!char) return;
+
+      document.getElementById('hero-name').innerText = char.name;
+      const rBadge = document.getElementById('badge-rarity');
+      rBadge.className = `badge rarity-${char.rarity}`;
+      rBadge.innerText = char.rarity;
+      document.getElementById('badge-category').innerText = char.category;
+
+      const btn = document.getElementById('equip-btn');
+      const targetBox = document.getElementById('target-box');
+      if (id === userEquipped) {
+        btn.innerText = "✅ 裝備中";
+        btn.className = "btn-equip is-equipped";
+        targetBox.classList.add('is-equipped');
+      } else {
+        btn.innerText = "裝備此角色";
+        btn.className = "btn-equip";
+        targetBox.classList.remove('is-equipped');
+      }
+    }
+
+    function equipCurrentCharacter() {
+      if (currentCenteredId === userEquipped) return;
+      const btn = document.getElementById('equip-btn');
+      btn.innerText = "連線中...";
+      btn.classList.add('is-equipped');
+
+      fetch(`${GAS_URL}?action=equip_avatar&id=${STUDENT_ID}&avatarId=${currentCenteredId}`)
+        .then(res => res.json()).then(data => {
+          if(data.success) {
+            userEquipped = currentCenteredId;
+            updateCenterInfo(currentCenteredId); 
+            showToast("裝備成功！");
+          }
+        }).catch(() => {
+          userEquipped = currentCenteredId;
+          updateCenterInfo(currentCenteredId);
+          showToast("裝備成功！(離線模式)");
+        });
+    }
+
+    // =======================================================
+    // 🛒 商店分區與限定邏輯
+    // =======================================================
+    function openShop() {
+      renderShop();
+      document.getElementById('shop-modal').classList.add('active');
+    }
+
+    function closeShop() { document.getElementById('shop-modal').classList.remove('active'); }
+
+    function renderShop() {
+      const container = document.getElementById('shop-grid-container');
+      container.innerHTML = "";
+      
+      const rarities = ['SSR', 'SR', 'R', 'N'];
+      const now = new Date();
+
+      rarities.forEach(rarity => {
+        const items = Object.entries(characterAssets).filter(([id, char]) => {
+          if (char.rarity !== rarity) return false;
+          // 🚀 注意：我把 if (char.category === "活動") return false; 刪掉了！讓活動角色可以顯示出來
+          
+          if (char.category === "限定") {
+            if (char.endTime) {
+              const end = new Date(char.endTime);
+              if (now > end) return false; 
+            }
+          }
+          return true;
+        });
+
+        if (items.length === 0) return;
+
+        const titleEl = document.createElement('h3');
+        titleEl.className = `shop-rarity-title title-${rarity}`;
+        titleEl.innerText = `${rarity} 區段`;
+        container.appendChild(titleEl);
+
+        const grid = document.createElement('div');
+        grid.className = 'shop-grid';
+
+        items.forEach(([id, char]) => {
+          const isOwned = userUnlocked.includes(id);
+          const isLimited = (char.category === "限定");
+          const isEvent = (char.category === "活動"); // 🚀 新增判斷是否為活動角色
+          const cost = char.cost || 500; 
+
+          const cardEl = document.createElement('div');
+          cardEl.className = 'shop-card-wrapper' + (isOwned ? ' owned' : '');
+          
+          // 如果是限定就顯示限時販售，如果是活動就顯示活動標籤
+          let limitedBadgeHtml = "";
+          if (isLimited) limitedBadgeHtml = `<div class="shop-limited-badge">⏳ 限時販售</div>`;
+          if (isEvent) limitedBadgeHtml = `<div class="shop-limited-badge" style="background: #8e44ad;">✨ 活動專屬</div>`;
+
+          // 🚀 關鍵判斷：決定按鈕長什麼樣子
+          let btnHtml = "";
+          if (isOwned) {
+              btnHtml = `<button class="btn-buy" disabled>已擁有</button>`;
+          } else if (isEvent) {
+              // 抽卡專屬的活動角色，不提供購買按鈕
+              btnHtml = `<button class="btn-buy" disabled style="background: #8e44ad; color: white; opacity: 1;">活動限定</button>`;
+          } else {
+              // 一般與限定角色，正常顯示購買按鈕
+              btnHtml = `<button class="btn-buy" onclick="buyCharacter('${id}', ${cost})">💰 ${cost} 點兌換</button>`;
+          }
+
+          cardEl.innerHTML = `
+            ${limitedBadgeHtml}
+            <div class="shop-card-img-box" onclick="openShowcase('${id}')">
+              ${createStaticCardHTML(char)} 
+            </div>
+            <div style="font-size: 15px; font-weight: 900; margin-bottom: 3px; color: #2c3e50;">${char.name}</div>
+            ${btnHtml} `;
+          grid.appendChild(cardEl);
+        });
+        container.appendChild(grid);
+      });
+    }
+
+    function buyCharacter(id, cost) {
+      if (!confirm(`確定要花費 ${cost} 點兌換此角色嗎？`)) return;
+      fetch(`${GAS_URL}?action=purchase_avatar&id=${STUDENT_ID}&avatarId=${id}`)
+        .then(res => res.json()).then(data => {
+          alert(data.msg);
+          if (data.success) location.reload(); 
+        }).catch(() => alert("連線失敗，請稍後再試。"));
+    }
+
+    // =======================================================
+    // 🔍 展示模式與 3D 引擎 (完全不變！)
+    // =======================================================
+    const modal = document.getElementById('showcase-modal');
+    const modalCard = document.getElementById('modal-card');
+    let holoEngineActive = false;
+
+    function openShowcase(id) {
+      const char = characterAssets[id];
+      if(!char) return;
+      
+      document.getElementById('showcase-name').innerText = char.name;
+      document.getElementById('modal-bg').style.backgroundImage = `url('${char.img}')`;
+      modalCard.setAttribute('data-rarity', char.rarity);
+      
+      if (char.mask) {
+        modalCard.classList.add('masked');
+        let maskString = char.mask.includes('url(') ? char.mask : `url('${char.mask}')`;
+        modalCard.style.setProperty('--mask', maskString);
+      } else {
+        modalCard.classList.remove('masked');
+      }
+      
+      modalCard.style.setProperty('--rotate-x', '0deg');
+      modalCard.style.setProperty('--rotate-y', '0deg');
+      modalCard.style.setProperty('--pointer-x', '50%');
+      modalCard.style.setProperty('--pointer-y', '50%');
+      modalCard.style.setProperty('--pointer-from-center', '0');
+      modalCard.style.setProperty('--pointer-from-top', '0.5');
+      modalCard.style.setProperty('--pointer-from-left', '0.5');
+      
+      modal.classList.add('active');
+
+      if(!holoEngineActive) {
+        initModalHoloEngine();
+        holoEngineActive = true;
+      }
+    }
+
+    function closeShowcase() { modal.classList.remove('active'); }
+    modal.addEventListener('click', (e) => { if(e.target === modal) closeShowcase(); });
+
+    function initModalHoloEngine() {
+      let bounds;
+      let ticking = false;
+
+      function updateCard(x, y) {
+        const leftX = x / bounds.width;
+        const topY = y / bounds.height;
+        const center = { x: leftX - 0.5, y: topY - 0.5 };
+        const distance = Math.sqrt(center.x**2 + center.y**2);
+
+        modalCard.style.setProperty('--pointer-x', `${leftX * 100}%`);
+        modalCard.style.setProperty('--pointer-y', `${topY * 100}%`);
+        modalCard.style.setProperty('--pointer-from-center', clamp(distance * 2, 0, 1));
+        modalCard.style.setProperty('--pointer-from-top', topY);
+        modalCard.style.setProperty('--pointer-from-left', leftX);
+        
+        modalCard.style.setProperty('--rotate-x', `${center.y * -20}deg`); 
+        modalCard.style.setProperty('--rotate-y', `${center.x * 20}deg`);
+        ticking = false;
+      }
+      
+      function rotateToMouse(e) {
+        if (!bounds) bounds = modalCard.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const mouseX = clientX - bounds.left;
+        const mouseY = clientY - bounds.top;
+        
+        if (!ticking) {
+          requestAnimationFrame(() => updateCard(mouseX, mouseY));
+          ticking = true;
+        }
+      }
+
+      function resetTilt() {
+        modalCard.style.transition = "transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        modalCard.style.setProperty('--rotate-x', '0deg');
+        modalCard.style.setProperty('--rotate-y', '0deg');
+        modalCard.style.setProperty('--pointer-from-center', '0');
+        modalCard.style.setProperty('--pointer-x', '50%');
+        modalCard.style.setProperty('--pointer-y', '50%');
+        setTimeout(() => { modalCard.style.transition = "none"; }, 500);
+      }
+
+      function startInteraction() {
+        bounds = modalCard.getBoundingClientRect(); 
+        modalCard.style.transition = "none"; 
+      }
+
+      modalCard.addEventListener('pointerenter', startInteraction);
+      modalCard.addEventListener('pointermove', rotateToMouse);
+      modalCard.addEventListener('pointerleave', resetTilt);
+      
+      modalCard.addEventListener('touchstart', startInteraction, {passive: true});
+      modalCard.addEventListener('touchmove', rotateToMouse, {passive: true});
+      modalCard.addEventListener('touchend', resetTilt);
+    }
+
+    function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
+    function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.style.opacity = 1; t.style.transform = 'translate(-50%, 0)'; setTimeout(() => { t.style.opacity = 0; t.style.transform = 'translate(-50%, -20px)'; }, 2000); }
+
+    // =======================================================
+    // ⚔️ 戰場連線核心引擎
+    // =======================================================
+
+    // 1. 刷新雷達房間列表 (加上了雷達掃描圈圈與完美防呆)
+    function refreshLobby() {
+      fetch(`${GAS_URL}?action=get_lobby&t=${new Date().getTime()}`)
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById('pvp-room-list');
+          
+          if (!data || data.length === 0) { 
+            // 🚀 換上帥氣的雷達掃描動畫
+            container.innerHTML = `
+              <div class="radar-container">
+                <div class="radar-beam"></div>
+                <div class="radar-beam" style="animation-delay: 1s;"></div>
+                <p style="font-size: 14px; margin-top: 20px; color:rgba(255,215,0,0.6); font-weight:bold; letter-spacing:2px;">正在掃描戰場...</p>
+              </div>`; 
+            document.getElementById('radar-signal-count').innerText = "0 個信號";
+            return; 
+          }
+
+          document.getElementById('radar-signal-count').innerText = `${data.length} 個信號`;
+          const now = new Date().getTime();
+          
+          container.innerHTML = data.map(room => {
+            const isMyRoom = (room.hostId === STUDENT_ID);
+            const remain = Math.max(0, 120 - Math.floor((now - room.startTime) / 1000));
+
+            // 🚀 關鍵防護：把按鈕的 HTML 獨立出來判斷
+            let btnHtml = '';
+            if (isMyRoom) {
+                // 如果是自己的房間，不加上 onclick，並變成灰色等待狀態
+                btnHtml = `<button class="btn-join" style="background: #7f8c8d; color: white; cursor: not-allowed;" disabled>⏳ 等待對手</button>`;
+            } else {
+                // 如果是別人的房間，才加上 onclick 觸發加入
+                btnHtml = `<button class="btn-join" onclick="joinBattle('${room.roomId}')">⚔️ 加入</button>`;
+            }
+
+            return `
+              <div class="room-item" style="${isMyRoom ? 'border-left-color: #2ecc71;' : ''}">
+                <div class="room-info">
+                  <span class="room-name">${room.hostName} 的戰場</span>
+                  <span class="room-meta">難度: ${room.difficulty} | ⏱ ${remain}s</span>
+                </div>
+                ${btnHtml} </div>
+            `;
+          }).join('');
+        })
+        .catch(err => console.log("掃描失敗:", err));
+    }
+
+    // 2. 建立 1v1 真人房間
+    function createBattleRoom() {
+      // 從我們新增的隱藏 input 抓取難度
+      const classId = document.getElementById('pvp-level').value;
+      const createBtn = document.getElementById('create-room-btn');
+      
+      createBtn.innerText = "⏳ 建立中...";
+      createBtn.style.pointerEvents = "none";
+      createBtn.style.filter = "grayscale(1)"; // 按鈕變灰
+
+      fetch(`${GAS_URL}?action=create_battle&id=${STUDENT_ID}&classId=${classId}`)
+        .then(res => res.json())
+        .then(data => {
+          currentRoomId = data.roomId;
+          createBtn.innerText = "❌ 取消戰場";
+          createBtn.style.pointerEvents = "auto";
+          createBtn.style.filter = "hue-rotate(320deg)"; // 讓橘色流光變成危險的紅色流光
+          createBtn.onclick = () => cancelMyRoom();
+
+          battleStatusTimer = setInterval(checkRoomStatus, 3000);
+          roomExpireTimer = setTimeout(() => { if(currentRoomId) cancelMyRoom(true); }, 120000);
+          refreshLobby();
+        });
+    }
+
+    // 3. 取消房間
+    function cancelMyRoom(isTimeout = false) {
+      if (currentRoomId) {
+        fetch(`${GAS_URL}?action=cancel_battle&id=${STUDENT_ID}&roomId=${currentRoomId}`);
+        if(battleStatusTimer) clearInterval(battleStatusTimer);
+        currentRoomId = null;
+      }
+      
+      const createBtn = document.getElementById('create-room-btn');
+      createBtn.innerText = "開啟 1v1 真人戰場";
+      createBtn.style.filter = "none"; // 恢復橘色流光
+      createBtn.onclick = () => createBattleRoom();
+      
+      if (isTimeout) alert("已超過 2 分鐘無人挑戰，戰場自動關閉。");
+      refreshLobby();
+    }
+
+    // 4. 加入別人的房間
+    function joinBattle(roomId) {
+      if(lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+      document.getElementById('pvp-room-list').innerHTML = '<p style="color:var(--gold); text-align:center;">🔗 正在建立連線...</p>';
+      
+      fetch(`${GAS_URL}?action=join_battle&id=${STUDENT_ID}&roomId=${roomId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "Success") jumpToBattle(roomId);
+          else { alert("戰場已關閉或滿員！"); refreshLobby(); lobbyRefreshTimer = setInterval(refreshLobby, 4000); }
+        });
+    }
+
+    // 5. 檢查房間是否有人加入 (房主視角)
+    function checkRoomStatus() {
+      if(!currentRoomId) return;
+      fetch(`${GAS_URL}?action=get_battle_status&roomId=${currentRoomId}&t=${new Date().getTime()}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "InGame") {
+            if(battleStatusTimer) clearInterval(battleStatusTimer);
+            jumpToBattle(currentRoomId);
+          }
+        });
+    }
+
+    // 6. 建立 AI 房間並倒數 5 秒
+    function startAiChallenge(level) {
+      // 🚀 已經拔除 alert 阻擋，讓活動戰場也能進入 5 秒傳送倒數！
+      if(aiTimerInterval) return;
+      
+      const overlay = document.getElementById('ai-countdown-overlay');
+      overlay.style.display = 'flex'; 
+      
+      let count = 5;
+      const aiTimerEl = document.getElementById('ai-timer');
+      const aiMsgEl = document.getElementById('ai-msg');
+      
+      aiTimerEl.innerText = count;
+      aiMsgEl.innerText = `連線至 ${level}...`;
+      
+      aiTimerInterval = setInterval(() => {
+        count--;
+        aiTimerEl.innerText = count;
+        if(count <= 0) {
+          clearInterval(aiTimerInterval);
+          aiMsgEl.innerText = "🚀 傳送中..."; 
+          fetch(`${GAS_URL}?action=create_ai_battle&id=${STUDENT_ID}&level=${level}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.roomId) jumpToBattle(data.roomId);
+            }).catch(err => {
+              alert("連線失敗");
+              cancelAiChallenge();
+            });
+        }
+      }, 1000);
+    }
+
+    function cancelAiChallenge() {
+      if(aiTimerInterval) { 
+        clearInterval(aiTimerInterval); 
+        aiTimerInterval = null; 
+      }
+      document.getElementById('ai-countdown-overlay').style.display = 'none';
+    }
+
+    // 7. 最終跳轉指令 (前往對戰 APP)
+    function jumpToBattle(roomId) {
+      // 🚀 明確指向 arena.html！
+      const targetUrl = `${GITHUB_APP_URL}arena.html?id=${STUDENT_ID}&mode=battle&roomId=${roomId}`;
+      window.location.href = targetUrl;
+    }
+    
+    // =======================================================
+    // ⚔️ 視圖切換邏輯 (雙房間與導航)
+    // =======================================================
+    function goToBattleRoom() {
+      document.getElementById('battle-view').classList.add('active');
+      document.getElementById('armory-view').classList.add('slide-out');
+      
+      refreshLobby();
+      if(lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+      lobbyRefreshTimer = setInterval(refreshLobby, 4000);
+    }
+
+    function goBackToArmory() {
+      document.getElementById('battle-view').classList.remove('active');
+      document.getElementById('armory-view').classList.remove('slide-out');
+      
+      if(lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+      if(currentRoomId) cancelMyRoom(false);
+    }
+
+    function goBackToGAS() {
+      const gasHomeUrl = "https://script.google.com/macros/s/AKfycbyWm-WnRO5h3dliEPR36Cq1hCf5DgM4GIgJqXVUREclhtYOHjxq9DptApmQPkU5p5Ys/exec";
+      window.location.href = `${gasHomeUrl}?id=${STUDENT_ID}`; 
+    }
+
+    // 切換難度按鈕樣式，並把值寫入隱藏欄位
+    function selectDifficulty(element, level) {
+      document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+      document.getElementById('pvp-level').value = level;
+    }
+    
+    window.onload = initLobby;
+
+
+    
+    let currentEventWords = []; // 存儲目前的活動題庫
+
+    // 🚀 檢查並更新突發事件的按鈕狀態、圖片與題庫
+    function checkEventStatus() {
+      const eventBanner = document.querySelector('.event-banner');
+      const vocabBtn = document.getElementById('event-vocab-btn');
+      if (!eventBanner) return; 
+
+      const overlay = eventBanner.querySelector('.event-overlay');
+      if (overlay) overlay.innerHTML = '<div class="locked-tag" style="background: rgba(0,0,0,0.8); color: #fff; border-color: #fff;">⏳ 檢查活動中...</div>';
+      eventBanner.style.pointerEvents = 'none';
+
+      fetch(`${GAS_URL}?action=get_current_event`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // 🚀 1. 抓取 Boss 專屬圖片，如果找不到就用預設的
+            let bossImg = 'https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/event-bg.webp'; 
+            if (data.eventAvatar && characterAssets[data.eventAvatar]) {
+                bossImg = characterAssets[data.eventAvatar].img;
+            }
+            eventBanner.style.backgroundImage = `url('${bossImg}')`;
+
+            // 🚀 2. 組合毛玻璃文字與右下角的「截止日期」標籤
+            let dateHtml = data.endDate ? `<div style="position:absolute; bottom:10px; right:15px; background:rgba(0,0,0,0.75); color:#f1c40f; font-size:12px; padding:5px 10px; border-radius:12px; border:1px solid rgba(241,196,15,0.5); font-weight:bold;">⏳ 截止: ${data.endDate}</div>` : '';
+            
+            if (overlay) {
+                overlay.innerHTML = `<div class="locked-tag" style="background: rgba(142,68,173,0.9); color: white; border-color: white; animation: pulse 2s infinite; box-shadow: 0 0 20px rgba(142,68,173,0.8);">✨ ${data.eventName} ✨</div>` + dateHtml;
+            }
+            
+            eventBanner.style.pointerEvents = 'auto';
+            eventBanner.style.opacity = '1';
+            eventBanner.onclick = () => startEvent(data.eventCode, data.eventAvatar);
+
+            // 🚀 3. 儲存題庫，並顯示情報按鈕
+            if (data.words) currentEventWords = data.words;
+            if (vocabBtn) vocabBtn.style.display = 'block';
+
+          } else {
+            // 😴 沒活動：固定為預設圖、關閉情報按鈕
+            eventBanner.style.backgroundImage = `url('https://cdn.jsdelivr.net/gh/damienkuo123/marian-app@main/assets/event-bg.webp')`;
+            if (overlay) overlay.innerHTML = `<div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 現在不開放</div>`;
+            eventBanner.style.opacity = '0.5';
+            eventBanner.style.pointerEvents = 'none';
+            if (vocabBtn) vocabBtn.style.display = 'none';
+          }
+        }).catch(err => {
+          if (overlay) overlay.innerHTML = `<div class="locked-tag">⚠️ 連線失敗</div>`;
+        });
+    }
+
+    // 🚀 打開單字情報彈窗
+    function openEventVocab() {
+        const listEl = document.getElementById('vocab-list');
+        listEl.innerHTML = "";
+        
+        if (currentEventWords.length === 0) {
+            listEl.innerHTML = "<div style='text-align:center; color:#bdc3c7; padding: 20px;'>暫無題庫資料</div>";
+        } else {
+            currentEventWords.forEach(word => {
+                listEl.innerHTML += `
+                    <div class="vocab-row">
+                        <div>
+                            <div class="vocab-en">${word.en}</div>
+                            <div class="vocab-zh">${word.zh}</div>
+                        </div>
+                        <button class="vocab-play" onclick="playEventWord('${word.en}')">🔊</button>
+                    </div>
+                `;
+            });
+        }
+        document.getElementById('vocab-modal').classList.add('active');
+    }
+
+    function closeEventVocab() {
+        document.getElementById('vocab-modal').classList.remove('active');
+    }
+
+    // 🚀 發音功能
+    function playEventWord(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'en-US';
+        window.speechSynthesis.speak(msg);
+    }
+
+    // 🚀 接收並傳遞 eventAvatarId (修復難度名稱與連線設定)
+    function startEvent(eventClassCode, eventAvatarId) {
+      // 1. 避免重複點擊
+      const eventBanner = document.querySelector('.event-banner');
+      if (eventBanner) eventBanner.style.pointerEvents = 'none';
+
+      // 2. 借用 Ai 對戰的倒數防呆變數
+      if(aiTimerInterval) return;
+
+      // 3. 叫出全黑的 5 秒倒數遮罩
+      const overlay = document.getElementById('ai-countdown-overlay');
+      overlay.style.display = 'flex';
+
+      let count = 5;
+      const aiTimerEl = document.getElementById('ai-timer');
+      const aiMsgEl = document.getElementById('ai-msg');
+
+      aiTimerEl.innerText = count;
+      aiMsgEl.innerText = `連線至 突發事件...`;
+
+      // 4. 開始 5 秒倒數
+      aiTimerInterval = setInterval(() => {
+        count--;
+        aiTimerEl.innerText = count;
+        
+        // 倒數結束，執行建立房間與跳轉
+        if(count <= 0) {
+          clearInterval(aiTimerInterval);
+          aiTimerInterval = null;
+          aiMsgEl.innerText = "🚀 傳送中...";
+
+          // 🚀 關鍵修復 1：難度必須是後端認得的 "高階Ai"，不能寫 "hard"，否則後端會當機！
+          const eventLevel = "高階Ai"; 
+          
+          const url = `${GAS_URL}?action=create_ai_battle&id=${STUDENT_ID}&classId=${eventClassCode}&level=${eventLevel}`;
+
+          // 🚀 關鍵修復 2：移除 mode: 'cors'，改用最單純的 fetch，完全對齊你原本 AI 對戰的成功寫法！
+          fetch(url)
+            .then(res => res.json())
+            .then(data => {
+              if (data.roomId) {
+                // 🚀 將活動角色 ID 放入網址，突發事件直達車改為駛向 arena.html！
+                window.location.href = `arena.html?roomId=${data.roomId}&id=${STUDENT_ID}&isEvent=true&eventAvatar=${eventAvatarId}`;
+              } else {
+                alert("活動載入失敗，請稍後再試！");
+                cancelAiChallenge(); // 隱藏倒數畫面
+                if (eventBanner) eventBanner.style.pointerEvents = 'auto';
+              }
+            })
+            .catch(err => {
+              alert("網路錯誤，無法連線至活動！");
+              cancelAiChallenge(); // 隱藏倒數畫面
+              if (eventBanner) eventBanner.style.pointerEvents = 'auto';
+            });
+        }
+      }, 1000);
+    }
+
+    // =======================================================
+    // 🚀 升級 2：靜置 3 分鐘自動登出回首頁 (Portal)
+    // =======================================================
+    let idleTimer;
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        window.location.href = "index.html"; 
+      }, 180000); // 3 分鐘無動作就踢回大門
+    };
+    document.addEventListener('touchstart', resetIdleTimer);
+    document.addEventListener('mousedown', resetIdleTimer);
+    resetIdleTimer();
+
+    // =======================================================
+    // 🚀 升級 3：瑪麗安「無痕換人攔截器」 (支援免 Enter 停頓掃描)
+    // =======================================================
+    (function() {
+      const focusHunter = document.createElement('input');
+      focusHunter.type = "text";
+      focusHunter.style.position = "fixed";
+      focusHunter.style.top = "-500px"; 
+      focusHunter.style.opacity = "0";
+      document.body.appendChild(focusHunter);
+
+      setInterval(() => { 
+        const active = document.activeElement;
+        // 確保焦點不在其他輸入框時才奪取焦點
+        if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA') { 
+          focusHunter.focus(); 
+        }
+      }, 1000);
+
+      let scanTimer;
+      
+      // 機制 1：讀卡機有送出 Enter 鍵
+      focusHunter.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          clearTimeout(scanTimer);
+          const finalID = focusHunter.value.trim();
+          if (finalID.length >= 6) verifyCardForLobby(finalID);
+          focusHunter.value = "";
+        }
+      });
+
+      // 機制 2：讀卡機沒送 Enter 鍵，靠停頓 0.2 秒判斷
+      focusHunter.addEventListener('input', function() {
+        clearTimeout(scanTimer);
+        scanTimer = setTimeout(() => {
+          const finalID = focusHunter.value.trim();
+          if (finalID.length >= 6) {
+            verifyCardForLobby(finalID);
+            focusHunter.value = "";
+          }
+        }, 200);
+      });
+
+      function verifyCardForLobby(cardId) {
+        // 🚀 新版質感遮罩：與 Portal 風格統一
+        const loader = document.createElement('div');
+        // 使用深色漸層、增加霧面效果、提升質感
+        loader.style = "position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at center, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); font-family:sans-serif; transition:opacity 0.3s;";
+        loader.id = "swap-loader";
+        
+        loader.innerHTML = `
+          <h2 style="color:#ffd700; font-size: 26px; font-weight: 900; margin: 0 0 10px 0; letter-spacing: 2px;">🔄 身分驗證中</h2>
+          <p style="color:#94a3b8; font-size: 14px; margin: 0 0 40px 0;">數位系統資料對接，請稍候...</p>
+          <div style="position:relative; width:80px; height:80px; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; width:100%; height:100%; border-radius:50%; border:4px solid #ffd700; border-top-color: #ffd700; animation:spin 1s linear infinite;"></div>
+            <div style="font-size:30px; animation:blink 1.5s infinite;">🪪</div>
+          </div>
+          <style>
+            @keyframes spin { to { transform: rotate(360deg); } }
+            @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+          </style>
+        `;
+        document.body.appendChild(loader);
+
+        // 背景 API 驗證卡號
+        fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(cardId)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+               window.location.href = `dashboard.html?id=${data.uid}`;
+            } else {
+               alert("❌ 查無此卡！");
+               document.body.removeChild(loader);
+            }
+          })
+          .catch(err => {
+             document.body.removeChild(loader);
+          });
+      }
+    })();
+    
+  </script>
+  <div id="vocab-modal" class="modal-overlay" onclick="if(event.target===this) closeEventVocab()">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeEventVocab()">×</button>
+    <h2 style="color: #9b59b6; margin-top: 0; letter-spacing: 2px;">📜 事件題庫</h2>
+    <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 15px;">先點擊發音預習，擊敗 Boss 更有把握！</p>
+    <div id="vocab-list" class="vocab-list-container">
+      </div>
+  </div>
+</div>
+</body>
+</html>
