@@ -386,10 +386,29 @@
         const count = data.missionCount || 0;
         document.getElementById('mission-count').innerText = `${count} 次`;
         
-        let estText = "-100 點"; let estColor = "var(--marian-red)"; let barColor = "#e74c3c";
-        if (count >= 20) { estText = "+100 點"; estColor = "var(--marian-green)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; }
-        else if (count >= 10) { estText = "+50 點"; estColor = "var(--marian-green)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; }
-        else if (count >= 5) { estText = "安全 (不扣點)"; estColor = "var(--text-main)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; }
+        let estText = ""; 
+        let estColor = ""; 
+        let barColor = "";
+
+        if (count >= 20) { 
+          estText = "+100 點"; 
+          estColor = "var(--marian-green)"; 
+          barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
+        } else if (count >= 10) { 
+          estText = "+50 點"; 
+          estColor = "var(--marian-green)"; 
+          barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
+        } else if (count >= 5) { 
+          estText = "安全 (不扣點)"; 
+          estColor = "var(--text-main)"; 
+          barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
+        } else {
+          // 🚀 動態扣分機制：每少一次多扣 200 點 (0次: -1000, 1次: -800 ... 4次: -200)
+          const penalty = -1000 + (count * 200);
+          estText = `${penalty} 點`;
+          estColor = "var(--marian-red)";
+          barColor = "#e74c3c"; // 達標 5 次前，進度條維持警戒的紅色
+        }
         
         document.getElementById('mission-est').innerText = estText;
         document.getElementById('mission-est').style.color = estColor;
