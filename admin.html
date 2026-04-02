@@ -297,6 +297,7 @@
             }, 200);
         });
 
+        // 🚀 修改後：直接呼叫極速版 API，一發入魂！
         function fetchStudent(cardId) {
             if (actionUI.style.display === 'block') return;
             
@@ -304,12 +305,12 @@
             msg.innerText = "⏳ 讀取學生資料中...";
             msg.style.color = "#ffd700";
 
-            fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(cardId)}`)
+            fetch(`${GAS_URL}?action=get_admin_student_data&cardId=${encodeURIComponent(cardId)}&secret=${ADMIN_SECRET}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         currentStudentId = data.uid;
-                        loadStudentData(currentStudentId);
+                        renderAdminData(data); // 呼叫統一的渲染函數
                     } else {
                         showError("❌ 查無此學生");
                     }
@@ -317,36 +318,46 @@
                 .catch(err => showError("⚠️ 網路連線異常"));
         }
 
+        // 🚀 修改後：如果是透過 URL id 進來的，一樣呼叫極速版 API
         function loadStudentData(uid) {
             fetch(`${GAS_URL}?action=get_admin_student_data&id=${uid}&secret=${ADMIN_SECRET}`)
                 .then(res => res.json())
                 .then(data => {
-                    card.className = 'container';
-                    scanUI.style.display = 'none';
-                    actionUI.style.display = 'block';
-                    document.getElementById('top-nav').style.display = 'none'; // 🚀 新增：隱藏頂部按鈕
-                    
-                    document.getElementById('stu-name').innerText = data.studentName;
-                    
-                    currentPointsValue = Number(data.currentPoints);
-                    document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
-
-                    const logContainer = document.getElementById('log-container');
-                    if (!data.recentLogs || data.recentLogs.length === 0) {
-                        logContainer.innerHTML = `<p style="text-align:center; color:#7f8c8d;">尚無紀錄</p>`;
+                    if (data.success) {
+                        renderAdminData(data); // 呼叫統一的渲染函數
                     } else {
-                        logContainer.innerHTML = data.recentLogs.map(log => {
-                            let valClass = log.val >= 0 ? "log-plus" : "log-minus";
-                            let valText = log.val >= 0 ? `+${log.val}` : log.val;
-                            return `
-                            <div class="log-row">
-                                <span><span class="log-time">${log.time}</span> ${log.reason || '系統變更'}</span>
-                                <span class="${valClass}">${valText} 點</span>
-                            </div>`;
-                        }).join('');
+                        showError("❌ 無法讀取資料");
                     }
                 })
-                .catch(err => showError("⚠️ 無法讀取資料"));
+                .catch(err => showError("⚠️ 網路連線異常"));
+        }
+
+        // 🚀 新增：將 UI 渲染獨立成一個函數，讓程式碼更乾淨
+        function renderAdminData(data) {
+            card.className = 'container';
+            scanUI.style.display = 'none';
+            actionUI.style.display = 'block';
+            document.getElementById('top-nav').style.display = 'none'; // 隱藏頂部按鈕
+            
+            document.getElementById('stu-name').innerText = data.studentName;
+            
+            currentPointsValue = Number(data.currentPoints);
+            document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
+
+            const logContainer = document.getElementById('log-container');
+            if (!data.recentLogs || data.recentLogs.length === 0) {
+                logContainer.innerHTML = `<p style="text-align:center; color:#7f8c8d;">尚無紀錄</p>`;
+            } else {
+                logContainer.innerHTML = data.recentLogs.map(log => {
+                    let valClass = log.val >= 0 ? "log-plus" : "log-minus";
+                    let valText = log.val >= 0 ? `+${log.val}` : log.val;
+                    return `
+                    <div class="log-row">
+                        <span><span class="log-time">${log.time}</span> ${log.reason || '系統變更'}</span>
+                        <span class="${valClass}">${valText} 點</span>
+                    </div>`;
+                }).join('');
+            }
         }
 
         function toggleLogs(show) { document.getElementById('logModal').style.display = show ? 'flex' : 'none'; }
