@@ -840,6 +840,8 @@
             document.getElementById('mainCard').style.display = 'block'; // 🚀 改為 block，解決擠向左邊的問題
         }
 
+        let allEventAvatars = []; // 存活動角色
+
         function fetchTaskData() {
             const listZone = document.getElementById('tm-list-zone');
             listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取任務庫中...</p>';
@@ -850,31 +852,61 @@
                     if (data.error) return listZone.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
                     
                     allTasksData = data.words;
-                    allSchedulesData = data.schedules; // 🚀 把 Schedule_Bank 的資料也存起來！
+                    allSchedulesData = data.schedules;      // 🚀 抓取所有排程
+                    allEventAvatars = data.eventAvatars;    // 🚀 抓取所有活動角色
                     
-                    // 建立班級篩選器 (提取不重複的 ClassID)
                     const classSet = new Set();
                     allTasksData.forEach(t => { if (t.classId) classSet.add(t.classId); });
                     const filterSelect = document.getElementById('tm-class-filter');
                     const currentFilter = filterSelect.value;
-                    filterSelect.innerHTML = '<option value="">🏫 顯示全部班級</option>';
+                    filterSelect.innerHTML = '<option value="">🏫 請選擇班級</option>';
                     Array.from(classSet).sort().forEach(cls => {
                         filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
                     });
 
-                    changeTaskFilter(); // 觸發渲染
+                    changeTaskFilter(); 
                 });
         }
 
         function changeTaskFilter() {
             const filterClass = document.getElementById('tm-class-filter').value;
-            filteredTasks = filterClass ? allTasksData.filter(t => t.classId === filterClass) : allTasksData;
-            
-            // 最新建立的任務排在最上面 (Row 越大的越新)
+            filteredTasks = filterClass ? allTasksData.filter(t => t.classId === filterClass) : [];
             filteredTasks.sort((a, b) => b.row - a.row);
-            
             currentTaskPage = 1;
+            
             renderTaskList();
+            renderSmartCalendar(); // 🚀 渲染上方的時間軸
+        }
+
+        // 🚀 新增：上方橫向捲動的時間軸
+        function renderSmartCalendar() {
+            const filterClass = document.getElementById('tm-class-filter').value;
+            const calZone = document.querySelector('.tm-calendar-zone');
+            
+            if (!filterClass) {
+                calZone.innerHTML = '<div style="color:#94a3b8; font-size:14px;">👆 請先選擇班級以查看排程</div>';
+                return;
+            }
+
+            let classSchedules = allSchedulesData.filter(s => s.classId === filterClass && s.startDate);
+            if (classSchedules.length === 0) {
+                calZone.innerHTML = '<div style="color:#94a3b8; font-size:14px;">此班級目前無排定任務</div>';
+                return;
+            }
+
+            classSchedules.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+            let html = '<div class="tm-timeline">';
+            classSchedules.forEach(sch => {
+                let startStr = sch.startDate.substring(5); // 去掉年份
+                let endStr = sch.endDate.substring(5);
+                html += `
+                <div class="tm-time-item">
+                    <div class="tm-time-date">🗓️ ${startStr} ~ ${endStr}</div>
+                    <div class="tm-time-unit">${sch.unit}</div>
+                </div>`;
+            });
+            html += '</div>';
+            calZone.innerHTML = html;
         }
 
         function changeTaskPage(direction) {
