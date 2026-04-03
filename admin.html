@@ -1218,28 +1218,29 @@
         let calTargetTask = { row: 0, classId: '', unit: '' };
         let blockedDates = []; // 儲存該班級已經被佔用的日期
 
-        function openCalendarModal(row, classId, unit) {
-            // 🚀 核心：檢查是不是「已經排定」的任務
+        // 🚀 修改：加入 forceStartDate 參數
+        function openCalendarModal(row, classId, unit, forceStartDate = null) {
             let existingSch = allSchedulesData.find(s => s.classId === classId && s.unit === unit);
             
-            calTargetTask = { 
-                row: existingSch ? existingSch.row : 0, // 如果存在，抓它原本的 Row (變成修改模式)
-                classId: classId, 
-                unit: unit 
-            };
-            
+            calTargetTask = { row: existingSch ? existingSch.row : 0, classId: classId, unit: unit };
             document.getElementById('cal-task-info').innerText = `班級：${classId} | 單元：${unit} ${existingSch ? '(修改排程)' : ''}`;
             
-            calSelectingStart = existingSch ? existingSch.startDate : null;
-            calSelectingEnd = existingSch ? existingSch.endDate : null;
+            // 🚀 核心：如果是從空日期點過來的，強制覆蓋開始日！
+            calSelectingStart = forceStartDate || (existingSch ? existingSch.startDate : null);
+            calSelectingEnd = existingSch && !forceStartDate ? existingSch.endDate : null;
 
             if (calSelectingStart && calSelectingEnd) {
                  document.getElementById('cal-status-text').innerText = `✅ 已選擇：${calSelectingStart} ~ ${calSelectingEnd}`;
                  document.getElementById('cal-status-text').style.color = "#2ecc71";
+            } else if (calSelectingStart) {
+                 // 🚀 如果只有開始日 (快速點擊進來的)
+                 document.getElementById('cal-status-text').innerText = `開始日期：${calSelectingStart}，請選擇「結束日期」`;
+                 document.getElementById('cal-status-text').style.color = "#f1c40f";
             } else {
                  document.getElementById('cal-status-text').innerText = "請點擊選擇「開始日期」";
                  document.getElementById('cal-status-text').style.color = "#cbd5e1";
             }
+            
 
             // 🚀 Event 角色選單邏輯
             const eventZone = document.getElementById('event-avatar-zone');
