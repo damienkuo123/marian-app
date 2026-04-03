@@ -53,11 +53,21 @@
       if (!secret) return alert("請先輸入密碼");
       document.getElementById('loading').style.display = 'block';
       
-      const formData = new URLSearchParams();
-      formData.append('content', content);
-
-      fetch(`${GAS_URL}?action=add_newsletter&secret=${secret}`, { method: 'POST', body: formData })
-        .then(() => loadArticles());
+      // 🚀 關鍵修復：將 POST 改為簡單的 GET 請求，避開語音評分的攔截！
+      fetch(`${GAS_URL}?action=add_newsletter&secret=${secret}&content=${encodeURIComponent(content)}`)
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            loadArticles(); // 成功後重新讀取列表
+          } else {
+            alert("新增失敗，請確認密碼是否正確");
+            document.getElementById('loading').style.display = 'none';
+          }
+        })
+        .catch(err => {
+          alert("網路連線異常，請再試一次");
+          document.getElementById('loading').style.display = 'none';
+        });
     }
 
     function deleteArticle(row) {
