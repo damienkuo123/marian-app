@@ -120,6 +120,44 @@
         }
         .drag-handle { cursor: grab; padding: 0 10px; color: #cbd5e1; font-size: 22px; transition: 0.2s; user-select: none; }
         .drag-handle:active { cursor: grabbing; color: #ffd700; transform: scale(1.2); }
+
+        /* =======================================================
+           📅 任務管理系統專屬 UI
+           ======================================================= */
+        #taskManagerView { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 200; flex-direction: column; animation: fadeIn 0.3s; overflow: hidden; }
+        .tm-header { padding: max(15px, env(safe-area-inset-top)) 20px 15px; background: rgba(15,23,42,0.9); display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tm-back { color: var(--primary-color); font-size: 24px; cursor: pointer; padding: 5px 15px 5px 0; font-weight: bold; }
+        .tm-title { font-size: 20px; font-weight: 900; color: white; flex: 1; text-align: center; margin-right: 34px; letter-spacing: 2px; }
+        
+        .tm-calendar-zone { flex: 0.8; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; color: #7f8c8d; font-size: 16px; font-weight: bold; flex-direction: column; gap: 10px; }
+        
+        .tm-filter-bar { padding: 12px 20px; display: flex; gap: 10px; background: rgba(0,0,0,0.2); }
+        .tm-select { flex: 1; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 16px; font-weight: bold; outline: none; appearance: none; text-align: center; }
+        .tm-select option { background: var(--bg-dark); }
+        
+        .tm-list-zone { flex: 1.2; overflow-y: auto; padding: 15px 20px 90px 20px; }
+        .tm-list-zone::-webkit-scrollbar { display: none; }
+        .task-card { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .task-info { flex: 1; text-align: left; overflow: hidden; }
+        .task-class { font-size: 13px; color: var(--primary-color); font-weight: 900; margin-bottom: 6px; border: 1px solid var(--primary-color); padding: 3px 8px; border-radius: 8px; display: inline-block; background: rgba(255,215,0,0.1); }
+        .task-unit { font-size: 18px; font-weight: 900; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .task-actions { display: flex; gap: 10px; margin-left: 15px; }
+        .btn-icon { background: rgba(255,255,255,0.15); border: none; border-radius: 12px; width: 45px; height: 45px; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .btn-icon:active { transform: scale(0.9); }
+        .btn-schedule { background: rgba(46,204,113,0.2); border: 1px solid #2ecc71; color: #2ecc71; }
+        
+        .tm-pagination { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px 20px max(15px, env(safe-area-inset-bottom)); background: rgba(15,23,42,0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .btn-page { background: transparent; color: white; border: none; font-size: 24px; padding: 5px 15px; cursor: pointer; transition: 0.2s; }
+        .btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-page:active:not(:disabled) { transform: scale(0.8); color: var(--primary-color); }
+        .btn-new-task { background: linear-gradient(135deg, #00b894, #00cec9); padding: 14px 20px; border-radius: 16px; border: none; color: white; font-weight: 900; font-size: 16px; box-shadow: 0 5px 15px rgba(0,184,148,0.3); flex: 1; margin: 0 15px; letter-spacing: 1px; transition: 0.2s; }
+        .btn-new-task:active { transform: scale(0.96); }
+
+        /* 📝 編輯器單字列專屬 */
+        .word-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; animation: fadeIn 0.3s; }
+        .word-input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: white; font-size: 16px; font-weight: bold; text-align: center; }
+        .word-input::placeholder { color: #64748b; font-weight: normal; }
+        .btn-del-word { background: rgba(231,76,60,0.2); color: #e74c3c; border: 1px solid rgba(231,76,60,0.5); border-radius: 10px; width: 40px; height: 40px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -136,7 +174,7 @@
             <div class="dropdown-menu" id="menu-dropdown">
                 <div class="dropdown-item" onclick="openProgressModal()">📊 學習進度</div>
                 <div class="dropdown-item super-only" onclick="openNewsletterModal()">📝 專欄編輯</div>
-                <div class="dropdown-item super-only" onclick="alert('學習任務排定功能開發中！')">📅 學習任務排定</div>
+                <div class="dropdown-item super-only" onclick="openTaskManager()">📅 學習任務排定</div>
             </div>
         </div>
         <div class="nav-btn" onclick="adminLogout()">🔒 登出</div>
@@ -213,6 +251,62 @@
             <h3 class="modal-title">📝 最近點數紀錄</h3>
             <div id="log-container" class="modal-scroll-area"></div>
             <button class="btn-action btn-gray" style="margin-top: 15px; padding: 15px;" onclick="toggleLogs(false)">關閉</button>
+        </div>
+    </div>
+
+    <div id="taskManagerView">
+        <div class="tm-header">
+            <div class="tm-back" onclick="closeTaskManager()">❮ 返回</div>
+            <div class="tm-title">學習任務排定</div>
+        </div>
+        
+        <div class="tm-calendar-zone">
+            <div style="font-size: 40px; margin-bottom: 5px;">📆</div>
+            <div>智慧日曆區 (下階段實作)</div>
+            <div style="font-size: 13px; color: #64748b; margin-top: 5px;">將支援動態防撞期與視覺化排程</div>
+        </div>
+        
+        <div class="tm-filter-bar">
+            <select id="tm-class-filter" class="tm-select" onchange="changeTaskFilter()">
+                <option value="">🏫 顯示全部班級</option>
+            </select>
+        </div>
+        
+        <div id="tm-list-zone" class="tm-list-zone">
+            </div>
+        
+        <div class="tm-pagination">
+            <button id="tm-prev-btn" class="btn-page" onclick="changeTaskPage(-1)">❮</button>
+            <button class="btn-new-task" onclick="openTaskEditor(0, '', '', '[]')">➕ 新增任務單元</button>
+            <button id="tm-next-btn" class="btn-page" onclick="changeTaskPage(1)">❯</button>
+        </div>
+    </div>
+
+    <div id="taskEditorModal" class="modal-overlay" onclick="closeModal('taskEditorModal')">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-height: 90vh; width: 95%; padding: 25px 20px;">
+            <h3 id="task-editor-title" class="modal-title">新增任務單元</h3>
+            <div class="modal-scroll-area" style="padding-right: 5px;">
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="edit-task-class" class="word-input" style="flex:1;" placeholder="班級 (例: E1)">
+                    <input type="text" id="edit-task-unit" class="word-input" style="flex:2;" placeholder="單元 (例: Unit 1)">
+                </div>
+                
+                <div style="font-size:13px; color:#94a3b8; font-weight:bold; margin-bottom:12px; display:flex; justify-content:space-between; padding:0 5px;">
+                    <span>英文單字 (EN)</span><span>中文翻譯 (ZH)</span>
+                </div>
+                
+                <div id="word-list-container">
+                    </div>
+                
+                <button class="btn-action" style="background:rgba(255,255,255,0.05); color:#cbd5e1; font-size:15px; padding:15px; margin-top:15px; border:2px dashed rgba(255,255,255,0.2); width:100%;" onclick="addWordRow('', '')">
+                    ➕ 新增一組單字
+                </button>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button id="save-task-btn" class="btn-action" style="background:#2ecc71; font-size:18px; padding:15px;" onclick="saveTaskData()">💾 儲存</button>
+                <button class="btn-action btn-gray" style="font-size:18px; padding:15px;" onclick="closeModal('taskEditorModal')">取消</button>
+            </div>
         </div>
     </div>
 
@@ -650,6 +744,201 @@
                 localStorage.removeItem('marian_auth'); 
                 window.location.reload(); 
             } 
+        }
+
+        // =======================================================
+        // 📅 任務排定系統 (階段二前端邏輯)
+        // =======================================================
+        let allTasksData = [];
+        let filteredTasks = [];
+        let currentTaskPage = 1;
+        const TASKS_PER_PAGE = 10;
+        let editingTaskRow = 0; // 0 代表新增
+
+        function openTaskManager() {
+            document.getElementById('menu-dropdown').classList.remove('show');
+            document.getElementById('mainCard').style.display = 'none';
+            document.getElementById('taskManagerView').style.display = 'flex';
+            fetchTaskData();
+        }
+
+        function closeTaskManager() {
+            document.getElementById('taskManagerView').style.display = 'none';
+            document.getElementById('mainCard').style.display = 'flex';
+        }
+
+        function fetchTaskData() {
+            const listZone = document.getElementById('tm-list-zone');
+            listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取任務庫中...</p>';
+            
+            fetch(`${GAS_URL}?action=get_task_data&secret=${ADMIN_SECRET}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) return listZone.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
+                    
+                    allTasksData = data.words;
+                    
+                    // 建立班級篩選器 (提取不重複的 ClassID)
+                    const classSet = new Set();
+                    allTasksData.forEach(t => { if (t.classId) classSet.add(t.classId); });
+                    const filterSelect = document.getElementById('tm-class-filter');
+                    const currentFilter = filterSelect.value;
+                    filterSelect.innerHTML = '<option value="">🏫 顯示全部班級</option>';
+                    Array.from(classSet).sort().forEach(cls => {
+                        filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
+                    });
+
+                    changeTaskFilter(); // 觸發渲染
+                });
+        }
+
+        function changeTaskFilter() {
+            const filterClass = document.getElementById('tm-class-filter').value;
+            filteredTasks = filterClass ? allTasksData.filter(t => t.classId === filterClass) : allTasksData;
+            
+            // 最新建立的任務排在最上面 (Row 越大的越新)
+            filteredTasks.sort((a, b) => b.row - a.row);
+            
+            currentTaskPage = 1;
+            renderTaskList();
+        }
+
+        function changeTaskPage(direction) {
+            currentTaskPage += direction;
+            renderTaskList();
+        }
+
+        function renderTaskList() {
+            const listZone = document.getElementById('tm-list-zone');
+            const prevBtn = document.getElementById('tm-prev-btn');
+            const nextBtn = document.getElementById('tm-next-btn');
+
+            if (filteredTasks.length === 0) {
+                listZone.innerHTML = '<p style="text-align:center; color:#7f8c8d; margin-top:40px; font-weight:bold;">這個班級目前沒有任務喔！</p>';
+                prevBtn.disabled = true; nextBtn.disabled = true;
+                return;
+            }
+
+            const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE);
+            prevBtn.disabled = (currentTaskPage === 1);
+            nextBtn.disabled = (currentTaskPage === totalPages);
+
+            const startIdx = (currentTaskPage - 1) * TASKS_PER_PAGE;
+            const pageTasks = filteredTasks.slice(startIdx, startIdx + TASKS_PER_PAGE);
+
+            let html = '';
+            pageTasks.forEach(task => {
+                // 將單字陣列轉成字串，以便傳遞給編輯器
+                const wordsJsonStr = encodeURIComponent(JSON.stringify(task.words));
+                
+                html += `
+                <div class="task-card">
+                    <div class="task-info">
+                        <div class="task-class">${task.classId}</div>
+                        <div class="task-unit">${task.unit}</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${task.words.length} 個單字</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${task.classId}', '${task.unit}', '${wordsJsonStr}')">✏️</button>
+                        <button class="btn-icon btn-schedule" title="排定日期" onclick="alert('階段三排程功能開發中！預計開啟互動式月曆。')">📅</button>
+                    </div>
+                </div>`;
+            });
+            listZone.innerHTML = html;
+        }
+
+        // --- 📝 動態任務編輯器邏輯 ---
+        function openTaskEditor(row, classId, unit, wordsJsonStr) {
+            editingTaskRow = row;
+            document.getElementById('task-editor-title').innerText = row === 0 ? '✨ 新增任務單元' : '✏️ 編輯任務單元';
+            document.getElementById('edit-task-class').value = classId || '';
+            document.getElementById('edit-task-unit').value = unit || '';
+            
+            const container = document.getElementById('word-list-container');
+            container.innerHTML = '';
+            
+            let words = [];
+            try { words = JSON.parse(decodeURIComponent(wordsJsonStr)); } catch(e) {}
+            
+            // 如果是空的，預設給 3 組空白輸入框
+            if (words.length === 0) {
+                for(let i=0; i<3; i++) addWordRow('', '');
+            } else {
+                words.forEach(w => addWordRow(w.en, w.zh));
+            }
+            
+            document.getElementById('taskEditorModal').style.display = 'flex';
+        }
+
+        function addWordRow(en, zh) {
+            const container = document.getElementById('word-list-container');
+            const row = document.createElement('div');
+            row.className = 'word-row';
+            row.innerHTML = `
+                <input type="text" class="word-input word-en" value="${en}" placeholder="Apple">
+                <input type="text" class="word-input word-zh" value="${zh}" placeholder="蘋果">
+                <button class="btn-del-word" onclick="this.parentElement.remove()" title="刪除此行">✖</button>
+            `;
+            container.appendChild(row);
+            // 讓卷軸自動滾到底部
+            const scrollArea = document.querySelector('#taskEditorModal .modal-scroll-area');
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+        }
+
+        function saveTaskData() {
+            const classId = document.getElementById('edit-task-class').value.trim();
+            const unit = document.getElementById('edit-task-unit').value.trim();
+            
+            if (!classId || !unit) {
+                alert("請填寫「班級代碼」與「單元名稱」！");
+                return;
+            }
+
+            // 收集所有填寫的單字
+            const enInputs = document.querySelectorAll('.word-en');
+            const zhInputs = document.querySelectorAll('.word-zh');
+            let wordsArray = [];
+            
+            for (let i = 0; i < enInputs.length; i++) {
+                const en = enInputs[i].value.trim();
+                const zh = zhInputs[i].value.trim();
+                // 只有英文有填寫才算數
+                if (en !== "") {
+                    wordsArray.push({ en: en, zh: zh });
+                }
+            }
+
+            if (wordsArray.length === 0) {
+                alert("請至少填寫一個英文單字！");
+                return;
+            }
+
+            const saveBtn = document.getElementById('save-task-btn');
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "⏳ 儲存中...";
+            saveBtn.style.pointerEvents = "none";
+
+            const formData = new URLSearchParams();
+            formData.append('row', editingTaskRow);
+            formData.append('classId', classId);
+            formData.append('unit', unit);
+            formData.append('words', JSON.stringify(wordsArray));
+
+            fetch(`${GAS_URL}?action=save_word_bank&secret=${ADMIN_SECRET}`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('taskEditorModal');
+                        fetchTaskData(); // 重新讀取資料，刷新列表
+                    } else {
+                        alert(data.error || "儲存失敗，請重試！");
+                    }
+                })
+                .catch(err => alert("網路連線超時，請檢查網路狀態！"))
+                .finally(() => {
+                    saveBtn.innerText = originalText;
+                    saveBtn.style.pointerEvents = "auto";
+                });
         }
     </script>
 </body>
