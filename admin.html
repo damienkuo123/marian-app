@@ -210,19 +210,39 @@
             document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
         }
 
+        // 🟢 全域變數宣告 (必須放在前面，跳轉邏輯才讀得到)
+        let currentStudentId = null, currentPointsValue = 0, scanTimer;
+        const scanner = document.getElementById('scanner');
+        const card = document.getElementById('mainCard');
+        const msg = document.getElementById('msg');
+        const scanUI = document.getElementById('scan-ui');
+        const actionUI = document.getElementById('action-ui');
+
+        // 🚀 關鍵修復：補回遺失的「URL 跳轉掃描接收邏輯」！
+        const TARGET_ID = params.get('id');
+        if (TARGET_ID) {
+            currentStudentId = TARGET_ID;
+            window.history.replaceState(null, null, 'admin.html');
+            card.className = 'container loading';
+            msg.innerText = "⏳ 讀取學生資料中...";
+            msg.style.color = "#ffd700";
+            loadStudentData(currentStudentId);
+        }
+
         // 🟢 選單切換
         function toggleMenu() {
             const menu = document.getElementById('menu-dropdown');
             menu.classList.toggle('show');
         }
         window.onclick = function(event) {
-            if (!event.target.matches('.nav-btn')) {
+            // 使用 closest 更安全，避免點擊文字時失效
+            if (!event.target.closest('.nav-btn')) {
                 document.getElementById('menu-dropdown').classList.remove('show');
             }
         }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        // --- 📊 學習進度邏輯 (維持原樣並適應手風琴 UI) ---
+        // --- 📊 學習進度邏輯 ---
         function openProgressModal() {
             document.getElementById('progressModal').style.display = 'flex';
             document.getElementById('progress-container').innerHTML = '<p style="text-align:center; color:#ffd700;">⏳ 正在彙整全校資料...</p>';
@@ -238,7 +258,9 @@
                         <div class="accordion-body">${stuHtml}</div>
                     </div>`;
                 }
-                document.getElementById('progress-container').innerHTML = html;
+                document.getElementById('progress-container').innerHTML = html || '<p style="text-align:center; color:#7f8c8d;">目前尚無班級資料</p>';
+            }).catch(err => {
+                document.getElementById('progress-container').innerHTML = '<p style="text-align:center; color:#e74c3c;">⚠️ 連線失敗</p>';
             });
         }
 
@@ -255,7 +277,6 @@
                 if(data.error) return container.innerHTML = `<p color='red'>${data.error}</p>`;
                 let html = '';
                 data.forEach((item, index) => {
-                    // 嘗試抓取 <h3> 當作標題，抓不到就給預設
                     let titleMatch = item.content.match(/<h3[^>]*>(.*?)<\/h3>/i);
                     let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : `文章 #${index+1}`;
                     
@@ -288,10 +309,9 @@
             fetch(`${GAS_URL}?action=delete_newsletter&secret=${ADMIN_SECRET}&row=${row}`).then(()=>loadNewsletters());
         }
 
-        // 🚀 編輯模式：將顯示區塊替換為 Textarea
         function startEdit(row) {
             const bodyDiv = document.getElementById(`nl-body-${row}`);
-            const contentHtml = bodyDiv.querySelector('div').innerHTML; // 抓取原始 HTML
+            const contentHtml = bodyDiv.querySelector('div').innerHTML; 
             bodyDiv.innerHTML = `
                 <textarea id="edit-area-${row}" class="html-editor">${contentHtml}</textarea>
                 <div style="display:flex; gap:10px;">
@@ -312,10 +332,7 @@
                 .then(() => loadNewsletters());
         }
 
-        // --- (以下掃描與加扣分維持原樣，不需要更動) ---
-        let currentStudentId = null, currentPointsValue = 0, scanTimer;
-        const scanner = document.getElementById('scanner'), card = document.getElementById('mainCard'), msg = document.getElementById('msg'), scanUI = document.getElementById('scan-ui'), actionUI = document.getElementById('action-ui');
-        
+        // --- 物理掃描與加扣分維持原樣 ---
         setInterval(() => { const active = document.activeElement; if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA') scanner.focus(); }, 1000);
         scanner.addEventListener('keydown', function(e) { if (e.key === 'Enter') { clearTimeout(scanTimer); const finalID = scanner.value.trim(); if (finalID.length >= 6) fetchStudent(finalID); scanner.value = ""; }});
         scanner.addEventListener('input', function() { clearTimeout(scanTimer); scanTimer = setTimeout(() => { const finalID = scanner.value.trim(); if (finalID.length >= 6) { fetchStudent(finalID); scanner.value = ""; } }, 200);});
