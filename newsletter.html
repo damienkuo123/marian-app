@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>瑪麗安專欄管理系統</title>
+  <style>
+    body { font-family: sans-serif; background: #f4f6f9; padding: 20px; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .article-card { background: #fff9db; padding: 20px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid #f1c40f; position: relative; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
+    .btn-ai { background: #6c5ce7; }
+    .btn-delete { background: #e74c3c; position: absolute; top: 20px; right: 20px; }
+    #secret-input { padding: 10px; border-radius: 8px; border: 1px solid #ccc; width: 200px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="color: #007bff;">📝 週末專欄管理後台</h1>
+    <div style="margin-bottom: 20px;">
+      <input type="password" id="secret-input" placeholder="請輸入管理員密碼">
+      <button class="btn btn-ai" onclick="loadArticles()">登入並讀取</button>
+      <button class="btn btn-ai" style="background: #00b894; margin-left: 10px;" onclick="addArticle('AI_GENERATE')">✨ 讓 AI 自動寫一篇新專欄</button>
+    </div>
+    <div id="loading" style="display:none; color: #f39c12; font-weight: bold;">處理中，請稍候...</div>
+    <div id="article-list"></div>
+  </div>
+
+  <script>
+    const GAS_URL = "你的_GAS_網址填這裡"; // ⚠️ 記得改！
+    
+    function loadArticles() {
+      const secret = document.getElementById('secret-input').value;
+      document.getElementById('loading').style.display = 'block';
+      fetch(`${GAS_URL}?action=get_newsletters&secret=${secret}`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('loading').style.display = 'none';
+          const list = document.getElementById('article-list');
+          list.innerHTML = "";
+          data.forEach(item => {
+            list.innerHTML += `
+              <div class="article-card">
+                <button class="btn btn-delete" onclick="deleteArticle(${item.row})">刪除</button>
+                ${item.content}
+              </div>`;
+          });
+        }).catch(() => alert("密碼錯誤或連線失敗"));
+    }
+
+    function addArticle(content) {
+      const secret = document.getElementById('secret-input').value;
+      if (!secret) return alert("請先輸入密碼");
+      document.getElementById('loading').style.display = 'block';
+      
+      const formData = new URLSearchParams();
+      formData.append('content', content);
+
+      fetch(`${GAS_URL}?action=add_newsletter&secret=${secret}`, { method: 'POST', body: formData })
+        .then(() => loadArticles());
+    }
+
+    function deleteArticle(row) {
+      if(!confirm("確定要刪除這篇專欄嗎？")) return;
+      const secret = document.getElementById('secret-input').value;
+      document.getElementById('loading').style.display = 'block';
+      fetch(`${GAS_URL}?action=delete_newsletter&secret=${secret}&row=${row}`)
+        .then(() => loadArticles());
+    }
+  </script>
+</body>
+</html>
