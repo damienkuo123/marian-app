@@ -888,35 +888,104 @@
             renderSmartCalendar(); // 🚀 渲染上方的時間軸
         }
 
-        // 🚀 新增：上方橫向捲動的時間軸
+        // 🚀 新增：全動態甘特圖日曆 (Gantt Chart Calendar)
         function renderSmartCalendar() {
             const filterClass = document.getElementById('tm-class-filter').value;
             const calZone = document.querySelector('.tm-calendar-zone');
             
             if (!filterClass) {
-                calZone.innerHTML = '<div style="color:#94a3b8; font-size:14px;">👆 請先選擇班級以查看排程</div>';
+                calZone.innerHTML = '<div style="color:#94a3b8; font-size:14px; padding:25px; text-align:center; width:100%;">👆<br><br>請先選擇班級<br>以查看排程日曆</div>';
                 return;
             }
 
             let classSchedules = allSchedulesData.filter(s => s.classId === filterClass && s.startDate);
-            if (classSchedules.length === 0) {
-                calZone.innerHTML = '<div style="color:#94a3b8; font-size:14px;">此班級目前無排定任務</div>';
-                return;
+            
+            // 建立 35 天視圖 (往前 7 天，往後 28 天)
+            const DAY_WIDTH = 55;
+            const TOTAL_DAYS = 35;
+            let baseDate = new Date();
+            baseDate.setDate(baseDate.getDate() - 7);
+            baseDate.setHours(0,0,0,0);
+
+            let datesHtml = '';
+            for(let i=0; i<TOTAL_DAYS; i++) {
+                let d = new Date(baseDate);
+                d.setDate(d.getDate() + i);
+                let dayName = ["日","一","二","三","四","五","六"][d.getDay()];
+                let dateNum = d.getDate();
+                let isToday = (d.toDateString() === new Date().toDateString());
+                let todayClass = isToday ? 'sc-today' : '';
+                
+                datesHtml += `
+                <div class="sc-day-col" style="width:${DAY_WIDTH}px;">
+                    <div class="sc-weekday">${dayName}</div>
+                    <div class="sc-date-num ${todayClass}">${dateNum}</div>
+                </div>`;
             }
 
-            classSchedules.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-            let html = '<div class="tm-timeline">';
-            classSchedules.forEach(sch => {
-                let startStr = sch.startDate.substring(5); // 去掉年份
-                let endStr = sch.endDate.substring(5);
-                html += `
-                <div class="tm-time-item">
-                    <div class="tm-time-date">🗓️ ${startStr} ~ ${endStr}</div>
-                    <div class="tm-time-unit">${sch.unit}</div>
-                </div>`;
-            });
-            html += '</div>';
+            let tracksHtml = '';
+            if (classSchedules.length > 0) {
+                // 按照開始日期排序
+                classSchedules.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                
+                classSchedules.forEach((sch, idx) => {
+                    let sD = new Date(sch.startDate); sD.setHours(0,0,0,0);
+                    let eD = new Date(sch.endDate); eD.setHours(0,0,0,0);
+                    
+                    // 計算在視圖中的相對位置
+                    let startDiff = Math.floor((sD - baseDate) / (1000 * 60 * 60 * 24));
+                    let endDiff = Math.floor((eD - baseDate) / (1000 * 60 * 60 * 24));
+                    
+                    // 如果任務落在視圖範圍內
+                    if (endDiff >= 0 && startDiff < TOTAL_DAYS) {
+                        let visibleStart = Math.max(0, startDiff);
+                        let visibleEnd = Math.min(TOTAL_DAYS - 1, endDiff);
+                        
+                        let left = visibleStart * DAY_WIDTH;
+                        let width = (visibleEnd - visibleStart + 1) * DAY_WIDTH;
+                        
+                        // 處理超出邊界的圓角
+                        let isCutLeft = startDiff < 0;
+                        let isCutRight = endDiff >= TOTAL_DAYS;
+                        let bRad = `border-radius: ${isCutLeft ? '0' : '14px'} ${isCutRight ? '0' : '14px'} ${isCutRight ? '0' : '14px'} ${isCutLeft ? '0' : '14px'};`;
+                        
+                        // 交替顏色
+                        let colors = ['linear-gradient(90deg, #3498db, #2980b9)', 'linear-gradient(90deg, #9b59b6, #8e44ad)', 'linear-gradient(90deg, #e67e22, #d35400)'];
+                        let bg = sch.classId.toUpperCase().includes('EVENT') ? 'linear-gradient(90deg, #f1c40f, #e67e22)' : colors[idx % colors.length];
+
+                        let safeClassId = sch.classId.replace(/'/g, "\\'");
+                        let safeUnit = sch.unit.replace(/'/g, "\\'");
+
+                        tracksHtml += `
+                        <div class="sc-track-bar" 
+                             onclick="openCalendarModal(${sch.row}, '${safeClassId}', '${safeUnit}')"
+                             style="top:${idx * 36}px; left:${left + 4}px; width:${width - 8}px; background:${bg}; ${bRad}">
+                            ${sch.unit}
+                        </div>`;
+                    }
+                });
+            } else {
+                tracksHtml = '<div style="color:#64748b; font-size:13px; padding-left:20px; margin-top:10px;">尚未排定任何任務</div>';
+            }
+
+            let trackHeight = classSchedules.length > 0 ? classSchedules.length * 36 : 40;
+
+            let html = `
+            <div id="smart-cal-scroll" class="sc-scroll-box">
+                <div style="width:${TOTAL_DAYS * DAY_WIDTH}px; height:100%;">
+                    <div class="sc-date-header">${datesHtml}</div>
+                    <div class="sc-tracks-container" style="height:${trackHeight}px;">
+                        ${tracksHtml}
+                    </div>
+                </div>
+            </div>`;
             calZone.innerHTML = html;
+
+            // 自動滾動，將「今天」置中
+            setTimeout(() => {
+                let scrollBox = document.getElementById('smart-cal-scroll');
+                if (scrollBox) scrollBox.scrollLeft = (7 * DAY_WIDTH) - (scrollBox.clientWidth / 2) + (DAY_WIDTH / 2);
+            }, 50);
         }
 
         function changeTaskPage(direction) {
@@ -944,8 +1013,23 @@
 
             let html = '';
             pageTasks.forEach(task => {
-                // 將單字陣列轉成字串，以便傳遞給編輯器
-                const wordsJsonStr = encodeURIComponent(JSON.stringify(task.words));
+                // 🚀 核心修復：強制將單引號轉碼為 %27，徹底解決按鈕失效問題！
+                const wordsJsonStr = encodeURIComponent(JSON.stringify(task.words)).replace(/'/g, "%27");
+                const safeClassId = task.classId.replace(/'/g, "\\'");
+                const safeUnit = task.unit.replace(/'/g, "\\'");
+                
+                html += `
+                <div class="task-card">
+                    <div class="task-info">
+                        <div class="task-class">${task.classId}</div>
+                        <div class="task-unit">${task.unit}</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${task.words.length} 個單字</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${safeClassId}', '${safeUnit}', '${wordsJsonStr}')">✏️</button>
+                        <button class="btn-icon btn-schedule" title="排定日期" onclick="openCalendarModal(${task.row}, '${safeClassId}', '${safeUnit}')">📅</button>
+                    </div>
+                </div>`;
                 
                 html += `
                 <div class="task-card">
