@@ -643,18 +643,28 @@
                         let titleMatch = item.content.match(/<h3[^>]*>(.*?)<\/h3>/i);
                         let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : `文章 #${index+1}`;
                         
-                        // 🚀 核心：給標籤加上 queue-badge 這個 class，方便我們用 JS 瞬間竄改它
                         let queueBadge = index === 0 
                             ? `<span class="queue-badge" style="background:#e74c3c; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:8px; font-weight:bold; flex-shrink:0;">即將寄出</span>` 
                             : `<span class="queue-badge" style="background:#64748b; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:8px; font-weight:bold; flex-shrink:0;">順位 ${index+1}</span>`;
                         
+                        // 🚀 升級 1：把後端傳來的標籤 (Tags) 變成絕美的 UI 徽章！
+                        // 並且針對「備用機制」給予醒目的橘紅色警告標籤
+                        let tagBadge = "";
+                        if (item.tags) {
+                            if (item.tags.includes("備用機制")) {
+                                tagBadge = `<span style="background:rgba(231, 76, 60, 0.15); color:#e74c3c; padding:3px 8px; border-radius:8px; font-size:11px; margin-right:8px; font-weight:900; border:1px solid rgba(231, 76, 60, 0.4); flex-shrink:0;">⚠️ ${item.tags}</span>`;
+                            } else {
+                                tagBadge = `<span style="background:rgba(52, 152, 219, 0.15); color:#3498db; padding:3px 8px; border-radius:8px; font-size:11px; margin-right:8px; font-weight:900; border:1px solid rgba(52, 152, 219, 0.4); flex-shrink:0;">🏷️ ${item.tags}</span>`;
+                            }
+                        }
+
                         html += `
                         <div class="accordion-group" data-row="${item.row}">
                             <div class="accordion-header" style="cursor:default;">
                                 <div style="display:flex; align-items:center; width:90%; overflow:hidden;">
                                     <span class="drag-handle">☰</span>
                                     ${queueBadge}
-                                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; cursor:pointer;" onclick="this.closest('.accordion-group').classList.toggle('active')">📄 ${title}</span>
+                                    ${tagBadge} <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; cursor:pointer;" onclick="this.closest('.accordion-group').classList.toggle('active')">📄 ${title}</span>
                                 </div>
                                 <span onclick="this.closest('.accordion-group').classList.toggle('active')" style="cursor:pointer; padding:5px 15px;">▾</span>
                             </div>
@@ -670,17 +680,15 @@
                     
                     container.innerHTML = html || '<p style="text-align:center;">目前沒有庫存文章</p>';
 
-                    // 🚀 初始化進化版 SortableJS
                     if (data.length > 0) {
                         new Sortable(container, {
-                            animation: 250,               // 加長動畫時間，讓位移更滑順
+                            animation: 250,               
                             handle: '.drag-handle',       
                             ghostClass: 'sortable-ghost', 
                             dragClass: 'sortable-drag',   
-                            forceFallback: true,          // 🚀 強制關閉 HTML5 預設拖曳，改用純 JS 渲染 (解決殘影破圖)
-                            fallbackOnBody: true,         // 🚀 把殘影綁定在 Body 上！徹底突破 Modal 彈窗的捲動遮罩！
+                            forceFallback: true,          
+                            fallbackOnBody: true,         
                             onEnd: function () {
-                                // 🚀 拖曳放開的瞬間：不等人，立刻用 JS 洗牌所有順位標籤！
                                 const items = document.querySelectorAll('#newsletter-container .accordion-group');
                                 items.forEach((item, idx) => {
                                     const badge = item.querySelector('.queue-badge');
@@ -692,8 +700,6 @@
                                         badge.innerText = `順位 ${idx + 1}`;
                                     }
                                 });
-
-                                // 執行背景存檔
                                 saveNewOrder();
                             }
                         });
@@ -717,9 +723,11 @@
             fetch(`${GAS_URL}?action=reorder_newsletters&secret=${ADMIN_SECRET}`, { method: 'POST', body: formData })
                 .then(res => res.json())
                 .then(data => {
-                    // 🚀 存檔完成後，只改標題，【不再重新載入整個列表】！
-                    // 這樣就不會發生「存檔完閃爍一下」的問題，體驗極致絲滑！
                     headerTitle.innerHTML = '📝 專欄編輯系統';
+                    // 🚀 升級 2：致命 Bug 修復！
+                    // 當後端存檔並打亂 Sheet 行號後，必須「強制重整前端畫面」，
+                    // 讓所有的 DOM 元素重新綁定【新的行號】，這樣編輯跟刪除才不會砍錯人！
+                    loadNewsletters(); 
                 });
         }
 
