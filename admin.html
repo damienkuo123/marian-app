@@ -1250,6 +1250,15 @@
         // 🚀 修改：加入 forceStartDate 參數
         function openCalendarModal(row, classId, unit, forceStartDate = null) {
             let existingSch = allSchedulesData.find(s => s.classId === classId && s.unit === unit);
+
+            // 🚀 核心：如果是「修改模式」，就顯示取消按鈕
+            const cancelBtn = document.getElementById('cal-cancel-btn');
+            if (existingSch) {
+                cancelBtn.style.display = 'block';
+                calTargetTask.row = existingSch.row; // 記錄行號以供刪除
+            } else {
+                cancelBtn.style.display = 'none';
+            }
             
             calTargetTask = { row: existingSch ? existingSch.row : 0, classId: classId, unit: unit };
             document.getElementById('cal-task-info').innerText = `班級：${classId} | 單元：${unit} ${existingSch ? '(修改排程)' : ''}`;
@@ -1304,6 +1313,32 @@
             calCurrentDate = calSelectingStart ? new Date(calSelectingStart) : new Date(); 
             renderCalendar();
             document.getElementById('calendarModal').style.display = 'flex';
+        }
+
+        // 🚀 執行取消排程 (刪除 Schedule_Bank 裡的這一行)
+        function deleteSchedule() {
+            if(!confirm(`確定要取消【${calTargetTask.unit}】的日期安排嗎？`)) return;
+            
+            const btn = document.getElementById('cal-cancel-btn');
+            btn.innerText = "⏳..."; btn.style.pointerEvents = "none";
+
+            const formData = new URLSearchParams();
+            formData.append('type', 'schedule');
+            formData.append('row', calTargetTask.row);
+
+            fetch(`${GAS_URL}?action=delete_task_data&secret=${ADMIN_SECRET}`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('calendarModal');
+                        fetchTaskData(); // 重新整理，彩帶就會消失
+                    } else {
+                        alert("取消失敗！");
+                    }
+                })
+                .finally(() => {
+                    btn.innerText = "取消排程"; btn.style.pointerEvents = "auto";
+                });
         }
 
         function changeMonth(offset) {
@@ -1439,6 +1474,53 @@
                     btn.style.pointerEvents = "auto";
                 });
         }
+
+        // =======================================================
+        // 🏗️ 視窗高度動態調整引擎 (Resizer Engine)
+        // =======================================================
+        const resizer = document.getElementById('tmResizer');
+        const calZone = document.querySelector('.tm-calendar-zone');
+        let isResizing = false;
+
+        const startResizing = (e) => { isResizing = true; document.body.style.cursor = 'ns-resize'; };
+        const stopResizing = () => { isResizing = false; document.body.style.cursor = 'default'; };
+
+        const resize = (e) => {
+            if (!isResizing) return;
+            // 取得手指或滑鼠的 Y 座標
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const headerHeight = document.querySelector('.tm-header').offsetHeight;
+            
+            // 計算新的高度，最小 60px (幾乎收合)，最大 70vh
+            let newHeight = clientY - headerHeight;
+            if (newHeight < 60) newHeight = 60;
+            if (newHeight > window.innerHeight * 0.7) newHeight = window.innerHeight * 0.7;
+            
+            calZone.style.height = newHeight + 'px';
+            calZone.style.minHeight = 'unset'; // 覆蓋掉原本的 min-height
+            
+            // 如果高度太小，隱藏日曆內容，只留標題
+            const calGrid = document.getElementById('top-cal-grid');
+            const calWeekdays = document.querySelector('.cal-weekdays');
+            if (newHeight < 150) {
+                calGrid.style.opacity = '0';
+                calWeekdays.style.opacity = '0';
+            } else {
+                calGrid.style.opacity = '1';
+                calWeekdays.style.opacity = '1';
+            }
+        };
+
+        // 綁定事件 (滑鼠)
+        resizer.addEventListener('mousedown', startResizing);
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResizing);
+
+        // 綁定事件 (觸控)
+        resizer.addEventListener('touchstart', startResizing);
+        window.addEventListener('touchmove', resize);
+        window.addEventListener('touchend', stopResizing);
+        
     </script>
 </body>
 </html>
