@@ -643,8 +643,24 @@
             loadNewsletters();
         }
 
-        // 🚀 新增：全域變數來儲存拖曳引擎，確保每次重新讀取時能先殺掉舊的！
+        // 🚀 新增：全域變數來儲存拖曳引擎
         let newsletterSortable = null;
+
+        // 🚀 新增：標籤專屬的顏色產生器 (雜湊演算法確保同文字同顏色)
+        function getTagColor(tag) {
+            if(tag === "備用機制") return { bg: "rgba(231, 76, 60, 0.15)", text: "#e74c3c", border: "rgba(231, 76, 60, 0.4)" };
+            const colors = [
+                { bg: "rgba(52, 152, 219, 0.15)", text: "#3498db", border: "rgba(52, 152, 219, 0.4)" }, // 藍
+                { bg: "rgba(46, 204, 113, 0.15)", text: "#2ecc71", border: "rgba(46, 204, 113, 0.4)" }, // 綠
+                { bg: "rgba(155, 89, 182, 0.15)", text: "#9b59b6", border: "rgba(155, 89, 182, 0.4)" }, // 紫
+                { bg: "rgba(241, 196, 15, 0.15)", text: "#f1c40f", border: "rgba(241, 196, 15, 0.4)" }, // 黃
+                { bg: "rgba(230, 126, 34, 0.15)", text: "#e67e22", border: "rgba(230, 126, 34, 0.4)" }, // 橘
+                { bg: "rgba(26, 188, 156, 0.15)", text: "#1abc9c", border: "rgba(26, 188, 156, 0.4)" }  // 青
+            ];
+            let hash = 0;
+            for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
+        }
 
         function loadNewsletters() {
             const container = document.getElementById('newsletter-container');
@@ -664,16 +680,16 @@
                             ? `<span class="queue-badge" style="background:#e74c3c; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">即將寄出</span>` 
                             : `<span class="queue-badge" style="background:#64748b; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">順位 ${index+1}</span>`;
                         
-                        let tagBadge = "";
+                        // 🚀 升級：去除 emoji，以逗號切割並並排渲染一致顏色的標籤
+                        let tagHtml = "";
                         if (item.tags) {
-                            if (item.tags.includes("備用機制")) {
-                                tagBadge = `<span style="background:rgba(231, 76, 60, 0.15); color:#e74c3c; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:900; border:1px solid rgba(231, 76, 60, 0.4); display:inline-block;">⚠️ ${item.tags}</span>`;
-                            } else {
-                                tagBadge = `<span style="background:rgba(52, 152, 219, 0.15); color:#3498db; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:900; border:1px solid rgba(52, 152, 219, 0.4); display:inline-block;">🏷️ ${item.tags}</span>`;
-                            }
+                            let tagsArray = item.tags.replace(/標籤：|🔖|🏷️|⚠️/g, '').split(',').map(t => t.trim()).filter(t => t !== "");
+                            tagHtml = tagsArray.map(tag => {
+                                let color = getTagColor(tag);
+                                return `<span style="background:${color.bg}; color:${color.text}; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:900; border:1px solid ${color.border}; display:inline-block; margin-right:6px;">${tag}</span>`;
+                            }).join('');
                         }
 
-                        // 🚀 升級排版：第一列放控制與標題，第二列放標籤
                         html += `
                         <div class="accordion-group" data-row="${item.row}">
                             <div class="accordion-header" style="cursor:default; display:flex; flex-direction:column; align-items:stretch; padding:12px 15px;">
@@ -687,7 +703,7 @@
                                     <span onclick="this.closest('.accordion-group').classList.toggle('active')" style="cursor:pointer; padding:5px 0 5px 15px;">▾</span>
                                 </div>
                                 
-                                ${tagBadge ? `<div style="padding-left: 45px; margin-top: 8px; text-align:left;">${tagBadge}</div>` : ''}
+                                ${tagHtml ? `<div style="padding-left: 45px; margin-top: 8px; text-align:left;">${tagHtml}</div>` : ''}
                                 
                             </div>
                             <div class="accordion-body" id="nl-body-${item.row}">
@@ -702,7 +718,6 @@
                     
                     container.innerHTML = html || '<p style="text-align:center;">目前沒有庫存文章</p>';
 
-                    // 🚀 關鍵修復：掛上新拖曳引擎之前，必須先殺掉舊的！
                     if (data.length > 0) {
                         if (newsletterSortable) {
                             newsletterSortable.destroy(); 
@@ -732,7 +747,6 @@
                     }
                 });
         }
-
         function saveNewOrder() {
             const items = document.querySelectorAll('#newsletter-container .accordion-group');
             let newOrder = [];
