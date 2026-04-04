@@ -1169,9 +1169,18 @@
             listZone.innerHTML = html;
         }
 
-        // 🚀 新增：刪除任務功能
+        // 🚀 新增：安全防護版刪除任務功能
         function deleteTaskData(row, unitName) {
-            if(!confirm(`⚠️ 警告：確定要徹底刪除【${unitName}】嗎？\n(包含裡面的所有單字都會被清空，此動作無法復原！)`)) return;
+            // 改用 prompt 要求使用者手動輸入文字，杜絕手滑！
+            const userInput = prompt(`⚠️ 危險動作警告 ⚠️\n\n您即將徹底刪除【${unitName}】！\n(包含裡面的所有單字都會被清空，且無法復原)\n\n請在下方輸入「刪除」兩個字來確認執行：`);
+            
+            // 防呆檢查：如果按取消 (null)，或者打錯字，直接擋下！
+            if (userInput !== "刪除") {
+                if (userInput !== null) {
+                    alert("❌ 輸入錯誤！安全鎖已啟動，取消刪除動作。");
+                }
+                return; 
+            }
             
             const listZone = document.getElementById('tm-list-zone');
             listZone.innerHTML = '<p style="text-align:center; color:#e74c3c; margin-top:40px; font-weight:bold;">🗑️ 正在刪除資料中...</p>';
