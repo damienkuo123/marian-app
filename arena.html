@@ -2029,6 +2029,17 @@
           fetch(`${GAS_URL}?action=evaluate_speech_battle&word=${encodeURIComponent(battleQuizArr[currentBattleRound].en)}`, { method: 'POST', body: r.result.split(',')[1] })
             .then(res => res.json()).then(data => {
                 clearInterval(gradingAnim);
+                
+                // 🚀 戰場暴擊：如果念錯字，畫面中央的立體英文單字會瞬間噴出紅光！
+                const originalText = battleQuizArr[currentBattleRound].en;
+                const words = originalText.split(/\s+/);
+                if (data.errorWords && data.errorWords.length > 0) {
+                    const highlightedHTML = words.map((w, idx) => {
+                        return data.errorWords.includes(idx) ? `<span style="color: #ff4757; text-shadow: 0 0 20px #ff4757, 0 0 40px #ff4757;">${w}</span>` : w;
+                    }).join(" ");
+                    document.getElementById('target-word').innerHTML = highlightedHTML;
+                }
+                
                 submitBattleScore(ROOM_ID, data.score);
             }).catch(() => {
                 clearInterval(gradingAnim);
