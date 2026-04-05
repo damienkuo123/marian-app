@@ -1543,7 +1543,25 @@
     document.getElementById('idx-display').innerText = currentIndex + 1;
     document.getElementById('word-display').innerText = current.en;
     document.getElementById('zh-display').innerText = current.zh;
-    document.getElementById('feedback').innerText = scores[currentIndex] !== null ? "得分：" + scores[currentIndex] : "";
+    
+    // 🚀 核心修復：切換題目時，強制把教練的臉跟舊評語收起來！
+    const visualZone = document.getElementById('visual-feedback-zone');
+    const mouthImg = document.getElementById('mouth-guide-img');
+    if (visualZone) visualZone.style.display = 'none';
+    if (mouthImg) mouthImg.style.display = 'none';
+    
+    document.getElementById('status').innerText = "按住錄音，放開打分";
+    document.getElementById('status').style.color = "#636e72";
+
+    // 處理這題是否已經有分數
+    if (scores[currentIndex] !== null) {
+        let fText = (window.feedbacks && window.feedbacks[currentIndex]) ? window.feedbacks[currentIndex] : "";
+        document.getElementById('feedback').innerHTML = `<span style="font-size:28px; color:var(--marian-green);">${scores[currentIndex]} 分</span><br><span style="font-size:15px; color:#2d3436;">${fText}</span>`;
+        if (visualZone) visualZone.style.display = 'flex'; // 顯示外框，但不顯示嘴型
+    } else {
+        document.getElementById('feedback').innerHTML = ""; 
+    }
+
     document.getElementById('record-btn').style.display = 'block';
     document.getElementById('progress-fill').style.width = (((currentIndex + 1) / quizData.length) * 100) + "%";
     if (isReReading) {
