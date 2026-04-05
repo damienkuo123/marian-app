@@ -1066,12 +1066,7 @@
     <div id="zh-display"></div>
     <button type="button" id="record-btn" oncontextmenu="return false;">🎤</button>
     <p id="status" style="font-weight:bold; color:#636e72;">按住錄音，放開打分</p>
-    
-    <div id="visual-feedback-zone" style="display: none; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; background: rgba(255,255,255,0.9); padding: 15px 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.08);">
-        <img id="mouth-guide-img" src="" style="width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); flex-shrink: 0;">
-        <div id="feedback" style="font-size: 18px; font-weight: 800; color: var(--dark-gray); text-align: left; line-height: 1.4;"></div>
-    </div>
-    
+    <div id="feedback" style="font-size: 26px; font-weight: 800; color: var(--marian-green); margin-top: 10px;"></div>
     <div style="margin-top: 30px; display:flex; justify-content:center;">
       <button class="btn btn-nav" id="prev-btn">◀ 上一題</button>
       <button class="btn btn-nav" id="next-btn">下一題 ▶</button>
@@ -1544,21 +1539,7 @@
     document.getElementById('idx-display').innerText = currentIndex + 1;
     document.getElementById('word-display').innerText = current.en;
     document.getElementById('zh-display').innerText = current.zh;
-    
-    // 🚀 核心修復：切換題目時，徹底隱藏教練面版與殘留圖片
-    const visualZone = document.getElementById('visual-feedback-zone');
-    if (visualZone) visualZone.style.display = 'none';
-    
-    // 判斷這題有沒有分數，有的話顯示，沒有的話清空
-    if (scores[currentIndex] !== null) {
-        // 如果已經錄過音，把分數跟評語塞回去 (不顯示圖片以免太複雜，只留文字)
-        let fText = (window.feedbacks && window.feedbacks[currentIndex]) ? window.feedbacks[currentIndex] : "";
-        document.getElementById('feedback').innerHTML = `<span style="font-size:28px;">${scores[currentIndex]} 分</span><br><span style="font-size:15px;">${fText}</span>`;
-        if (visualZone) visualZone.style.display = 'flex'; // 把框框顯示出來
-    } else {
-        document.getElementById('feedback').innerHTML = "";
-    }
-    
+    document.getElementById('feedback').innerText = scores[currentIndex] !== null ? "得分：" + scores[currentIndex] : "";
     document.getElementById('record-btn').style.display = 'block';
     document.getElementById('progress-fill').style.width = (((currentIndex + 1) / quizData.length) * 100) + "%";
     if (isReReading) {
@@ -1582,12 +1563,7 @@
     rb.onpointerdown = (e) => {
       if(isGrading) return;
       e.preventDefault(); 
-      
-      // 🚀 每次重新錄音時，藏起教練面板，並把標紅的錯字恢復成原本的黑色
-      document.getElementById('visual-feedback-zone').style.display = 'none';
       document.getElementById('feedback').innerHTML = ""; 
-      document.getElementById('word-display').innerText = quizData[currentIndex].en; 
-      
       maxVolume = 0; chunks = []; tooQuietFlag = false;
       
       mediaRecorder = new MediaRecorder(stream);
@@ -1624,40 +1600,7 @@
               scores[currentIndex] = data.score;
               if(!window.feedbacks) window.feedbacks = [];
               window.feedbacks[currentIndex] = data.feedback;
-              
-              // 🚀 1. Elsa Speak 級錯字標紅系統
-              const originalText = quizData[currentIndex].en;
-              const words = originalText.split(/\s+/);
-              if (data.errorWords && data.errorWords.length > 0) {
-                  const highlightedHTML = words.map((w, idx) => {
-                      return data.errorWords.includes(idx) ? `<span style="color: var(--marian-red); text-shadow: 0 0 10px rgba(214,48,49,0.3);">${w}</span>` : w;
-                  }).join(" ");
-                  document.getElementById('word-display').innerHTML = highlightedHTML;
-              }
-
-              // 🚀 2. 動態嘴型圖片切換系統
-              const mouthShape = data.mouthShape || "relax"; 
-              const visualZone = document.getElementById('visual-feedback-zone');
-              
-              if (mouthShape === "perfect") {
-                  // 如果拿到 100 分，直接把這整個區塊隱藏！
-                  visualZone.style.display = 'none';
-              } else {
-                  const mouthImages = {
-                      "open_wide": "https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/open_wide.png",
-                      "round_lips": "https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/round_lips.png",
-                      "teeth_on_lip": "https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/teeth_on_lip.png",
-                      "tongue_up": "https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/tongue_up.png",
-                      "relax": "https://raw.githubusercontent.com/damienkuo123/marian-app/refs/heads/main/assets/relax.png"
-                  };
-                  document.getElementById('mouth-guide-img').src = mouthImages[mouthShape] || mouthImages["relax"];
-                  visualZone.style.display = 'flex';
-              }
-
-              // 🚀 3. 渲染高質感回饋文字 (IPA 已經在 GAS 後端包進 feedback 裡了！)
-              let scoreColor = data.score >= 80 ? 'var(--marian-green)' : (data.score >= 60 ? '#f39c12' : 'var(--marian-red)');
-              document.getElementById('feedback').innerHTML = `<span style="color:${scoreColor}; font-size:28px;">${data.score} 分</span><br><span style="font-size:15px;">${data.feedback}</span>`;
-              
+              document.getElementById('feedback').innerHTML = `得分：${data.score}<br><small>${data.feedback}</small>`;
               document.getElementById('status').innerText = "評分完成！";
               isGrading = false;
               rb.style.opacity = "1";
