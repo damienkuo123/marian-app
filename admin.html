@@ -434,6 +434,9 @@
 
         <div class="sm-batch-bar">
             <span style="color:#f1c40f; font-weight:bold; font-size:14px; flex:1; text-align:left; white-space:nowrap;" id="sm-batch-count">已勾選 0 位學生</span>
+            
+            <button id="sm-select-all-btn" class="btn-action" style="background:transparent; border:1px solid #f1c40f; color:#f1c40f; font-size:13px; padding:5px 10px; flex:none; width:auto; white-space:nowrap; box-shadow:none;" onclick="toggleSelectAll()">全選</button>
+            
             <button class="btn-action" style="background:#f1c40f; color:#0f172a; font-size:13px; padding:6px 12px; flex:none; width:auto; white-space:nowrap; box-shadow:none; margin-left:10px;" onclick="openBatchEditor()">設定修改 ➔</button>
         </div>
         
@@ -2007,6 +2010,32 @@
 
         function updateBatchCount() {
             document.getElementById('sm-batch-count').innerText = `已勾選 ${selectedStuRows.size} 位學生`;
+            
+            // 🚀 連動更新「全選」按鈕的文字
+            const selectAllBtn = document.getElementById('sm-select-all-btn');
+            if (selectAllBtn && filteredStudents.length > 0) {
+                // 判斷：目前的「篩選名單」是否全部都已經在「勾選清單」裡面了？
+                const allSelected = filteredStudents.every(stu => selectedStuRows.has(stu.row));
+                selectAllBtn.innerText = allSelected ? "取消全選" : "全選";
+            }
+        }
+
+        // 🚀 新增：全選 / 取消全選引擎
+        function toggleSelectAll() {
+            if (filteredStudents.length === 0) return;
+            
+            const allSelected = filteredStudents.every(stu => selectedStuRows.has(stu.row));
+            
+            if (allSelected) {
+                // 如果目前的篩選名單「已經全勾了」，就把它們全部取消
+                filteredStudents.forEach(stu => selectedStuRows.delete(stu.row));
+            } else {
+                // 否則，把目前的篩選名單「全部打勾」(隱藏的跨頁學生也會被勾到！)
+                filteredStudents.forEach(stu => selectedStuRows.add(stu.row));
+            }
+            
+            updateBatchCount();
+            renderStudentList(); // 重新畫出名單上的打勾狀態
         }
 
         function openBatchEditor() {
