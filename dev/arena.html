@@ -2837,22 +2837,7 @@
         if (!isBattleRecording) {
             isBattleRecording = true;
             
-            // 🚀 關鍵修復：檢查麥克風心跳
-            try {
-                if (!globalMicStream || globalMicStream.getAudioTracks()[0].readyState === 'ended') {
-                    console.log("麥克風已斷開，重新申請...");
-                    globalMicStream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 16000 } 
-                    });
-                }
-                // 🚀 關鍵修復：喚醒 AudioContext
-                if (!sysAudioCtx) sysAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (sysAudioCtx.state === 'suspended') await sysAudioCtx.resume();
-            } catch(err) {
-                alert("無法使用麥克風，請確認權限！");
-                isBattleRecording = false; return;
-            }
-  
+            // 強制切斷所有正在播放的讀音
             window.speechSynthesis.cancel();
             if (audioCtx && audioCtx.state === 'running') {
                 audioCtx.suspend().then(() => audioCtx.resume());
@@ -2875,14 +2860,23 @@
                 if(myCard) myCard.classList.add('charging-mana');     
             }
 
+            // 🚀 核心防護 1：喚醒系統音效引擎
             if (!sysAudioCtx) sysAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (sysAudioCtx.state === 'suspended') sysAudioCtx.resume();
+            if (sysAudioCtx.state === 'suspended') await sysAudioCtx.resume();
 
-            if (!globalMicStream) {
-                alert("麥克風未授權！");
-                isBattleRecording = false;
-                battleBtn.classList.remove('recording-active', 'ult-recording-active');
-                return;
+            // 🚀 核心防護 2：檢查麥克風心跳，若被瀏覽器強制休眠則立刻重啟！
+            if (!globalMicStream || !globalMicStream.active || globalMicStream.getAudioTracks()[0].readyState === 'ended') { 
+                console.log("麥克風休眠，重新申請權限...");
+                try {
+                    globalMicStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 16000 } 
+                    });
+                } catch (err) {
+                    alert("⚠️ 無法連線麥克風，請確認權限！"); 
+                    isBattleRecording = false;
+                    battleBtn.classList.remove('recording-active', 'ult-recording-active');
+                    return; 
+                }
             }
 
             battleRecorder = new MediaRecorder(globalMicStream);
@@ -2902,7 +2896,7 @@
                 }
             }, 12000);
 
-        } 
+        }
         // 🔴 狀態 B：如果目前正在錄音 -> 停止錄音並送出
         else {
             isBattleRecording = false;
@@ -4020,14 +4014,23 @@
                   audioCtx.suspend().then(() => audioCtx.resume());
               }
 
-              if (!globalMicStream) { 
-                  alert("麥克風未授權！"); 
-                  isGachaRecording = false; 
-                  return; 
-              }
-              
+              // 🚀 核心防護 1：喚醒系統音效引擎
               if (!sysAudioCtx) sysAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-              if (sysAudioCtx.state === 'suspended') sysAudioCtx.resume();
+              if (sysAudioCtx.state === 'suspended') await sysAudioCtx.resume();
+
+              // 🚀 核心防護 2：檢查麥克風心跳，若被瀏覽器強制休眠則立刻重啟！
+              if (!globalMicStream || !globalMicStream.active || globalMicStream.getAudioTracks()[0].readyState === 'ended') { 
+                  console.log("麥克風休眠，重新申請權限...");
+                  try {
+                      globalMicStream = await navigator.mediaDevices.getUserMedia({ 
+                          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 16000 } 
+                      });
+                  } catch (err) {
+                      alert("⚠️ 無法連線麥克風，請確認權限！"); 
+                      isGachaRecording = false; 
+                      return; 
+                  }
+              }
 
               gachaChunks = [];
               btn.classList.add('recording'); // 套用 Gacha 專屬的紅色脈衝動畫
@@ -4069,6 +4072,14 @@
                       status.innerText = "🔵 驗證密語中...";
                       status.style.color = "#3498db";
 
+                      // 🚀 保留原本的 Token 判斷
+                      if (!azureAuthToken) {
+                         status.innerText = "🚨 系統授權到期，請重新整理網頁";
+                         status.style.color = "#e74c3c";
+                         btn.style.pointerEvents = "auto";
+                         return;
+                      }
+
                       const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(azureAuthToken, azureRegionCode);
                       speechConfig.speechRecognitionLanguage = "en-US";
                       const audioConfig = SpeechSDK.AudioConfig.fromWavFileInput(wavFile);
@@ -4096,6 +4107,12 @@
                               status.innerText = "未辨識到密語";
                               status.style.color = "#e74c3c";
                           }
+                          recognizer.close();
+                      }, (err) => {
+                          console.error("Azure 辨識錯誤:", err);
+                          status.innerText = "🚨 引擎連線錯誤，請重試";
+                          status.style.color = "#e74c3c";
+                          btn.style.pointerEvents = "auto"; // 必須解開按鈕，否則卡死
                           recognizer.close();
                       });
                   } catch(err) {
