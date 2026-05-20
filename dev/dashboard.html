@@ -732,6 +732,13 @@
       fetch(`${GAS_URL}?action=get_dashboard_data&id=${STUDENT_ID}`)
         .then(res => res.json())
         .then(data => {
+          // 🚀 關鍵修復：檢查後端是否回報錯誤（例如：沒這間校區、沒這個學號）
+          if (data.success === false || data.error) {
+              alert("⚠️ 查無此帳號！請確認學生代號或校區代碼是否正確。");
+              logoutToPortal(); // 強制踢回首頁
+              return; // 終止後續的錯誤渲染
+          }
+
           renderDashboard(data);
           
           document.getElementById('loading-screen').style.opacity = '0';
