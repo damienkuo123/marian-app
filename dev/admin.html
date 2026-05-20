@@ -1,0 +1,3016 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tappie中控台 (Admin)</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+  
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+    <meta name="apple-mobile-web-app-title" content="Tappie中控台">
+  
+    <link rel="apple-touch-icon" href="/assets/app-icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #ffd700;
+            --bg-dark: #0f172a; 
+            --card-bg: rgba(30, 41, 59, 0.85); 
+        }
+
+        body {
+            margin: 0; padding: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background: radial-gradient(circle at center, #1e293b 0%, var(--bg-dark) 100%);
+            height: 100vh; display: flex; align-items: center; justify-content: center;
+            color: white; overflow: hidden;
+        }
+
+        /* 🚀 頂部導航與下拉選單 */
+        .top-nav { position: fixed; top: max(15px, env(safe-area-inset-top)); left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 100; }
+        .nav-btn { cursor: pointer; color: #fff; font-size: 15px; font-weight: bold; transition: 0.2s; border: 1px solid rgba(255,255,255,0.25); padding: 10px 16px; border-radius: 12px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); letter-spacing: 1px; position: relative; }
+        .nav-btn:active { transform: scale(0.9); }
+        
+        .dropdown-menu { display: none; position: absolute; top: 50px; left: 0; background: rgba(15, 23, 42, 0.95); border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.8); width: 160px; backdrop-filter: blur(10px); }
+        .dropdown-menu.show { display: flex; flex-direction: column; animation: fadeIn 0.2s; }
+        .dropdown-item { padding: 15px; color: white; text-align: left; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:hover { background: rgba(255,215,0,0.2); color: #ffd700; }
+        .super-only { display: none; }
+
+        .container { position: relative; background: var(--card-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); padding: 35px 20px; border-radius: 35px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.05); text-align: center; max-width: 420px; width: 90%; animation: fadeIn 0.8s ease-out; transition: all 0.3s ease; box-sizing: border-box; max-height: 85vh; overflow-y: auto; margin-top: 20px; }
+        .container::-webkit-scrollbar { display: none; }
+
+        .logo-wrapper { position: relative; width: 110px; height: 110px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+        .pulse-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 4px solid #ffd700; animation: pulse 2s infinite; }
+        h1 { font-size: 2.2em; margin: 10px 0; letter-spacing: 2px; background: linear-gradient(to bottom, #ffd700, #f39c12); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { font-size: 1.1em; color: #cbd5e1; margin-bottom: 25px; font-weight: bold; letter-spacing: 1px; }
+
+        .status-badge { display: inline-flex; align-items: center; background: rgba(0, 0, 0, 0.5); padding: 12px 24px; border-radius: 100px; border: 1px solid rgba(255, 215, 0, 0.3); }
+        .status-dot { width: 12px; height: 12px; background: #22c55e; border-radius: 50%; margin-right: 12px; box-shadow: 0 0 10px #22c55e; animation: blink 1.5s infinite; }
+        #msg { margin: 0; font-weight: bold; letter-spacing: 1px; color: white; font-size: 15px; }
+
+        #action-ui { display: none; animation: fadeIn 0.4s ease-out; }
+        .stu-name { font-size: 30px; font-weight: 900; margin: 0 0 5px 0; color: white; letter-spacing: 2px;}
+        .stu-points { font-size: 50px; font-weight: 900; color: #2ecc71; margin: 0 0 5px 0; text-shadow: 0 0 15px rgba(46, 204, 113, 0.4); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+        .history-btn { font-size: 15px; color: #cbd5e1; text-decoration: underline; cursor: pointer; display: inline-block; margin-bottom: 25px; transition: 0.2s; padding: 5px 15px; }
+        
+        .control-panel { background: rgba(0,0,0,0.3); border-radius: 25px; padding: 25px 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .panel-title { font-weight: bold; margin: 0 0 15px 0; font-size: 17px; letter-spacing: 1px; text-align: left; }
+        .btn-flex-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .btn-action { flex: 1; padding: 15px 0; border-radius: 14px; border: none; font-size: 18px; font-weight: 900; cursor: pointer; transition: 0.2s; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .btn-action:active { transform: scale(0.95); box-shadow: none; }
+        
+        .btn-green { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .btn-gray { background: #64748b; }
+        .btn-red { background: linear-gradient(135deg, #c0392b, #e74c3c); }
+        
+        .custom-input-group { display: flex; gap: 10px; }
+        .custom-input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; font-size: 18px; text-align: center; }
+        .custom-input::placeholder { color: #94a3b8; }
+        
+        .btn-return { background: transparent; border: 1px solid #94a3b8; color: #e2e8f0; padding: 15px; border-radius: 15px; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 18px; width:100%;}
+        
+        /* 📋 彈窗共用設定 */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .modal-content { background: rgba(15, 23, 42, 0.95); width: 90%; max-width: 550px; max-height: 85vh; border-radius: 30px; padding: 30px 25px; text-align: left; border: 1px solid rgba(255, 215, 0, 0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.8); display: flex; flex-direction: column; box-sizing: border-box; }
+        .modal-title { text-align: center; color: #ffd700; margin-top: 0; margin-bottom: 20px; font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+        .modal-scroll-area { overflow-y: auto; padding-right: 5px; flex: 1; }
+        .modal-scroll-area::-webkit-scrollbar { display: none; }
+
+        .log-row { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); font-size: 16px; color: #f8fafc; }
+        .log-time { color: #94a3b8; font-size: 13px; margin-right: 10px; }
+        .log-plus { color: #2ecc71 !important; font-weight: bold; }
+        .log-minus { color: #e74c3c !important; font-weight: bold; }
+
+        /* 手風琴 UI (進度與專欄共用) */
+        .accordion-group { background: rgba(0,0,0,0.3); border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; overflow: hidden; transition: 0.3s; }
+        .accordion-header { padding: 18px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 900; color: #fff; background: rgba(255,255,255,0.05); font-size: 18px; line-height: 1.4; }
+        .accordion-header:active { background: rgba(255,255,255,0.1); }
+        .accordion-body { display: none; padding: 18px; background: rgba(0,0,0,0.2); }
+        .accordion-group.active .accordion-body { display: block; animation: fadeIn 0.3s; }
+        .accordion-group.active .accordion-header { border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(255,215,0,0.1); color: #ffd700; }
+        
+        .html-editor { width: 100%; height: 250px; background: #fff; color: #333; border-radius: 10px; padding: 10px; font-family: monospace; font-size: 14px; box-sizing: border-box; border: 2px solid #3498db; margin-bottom: 10px;}
+
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 70% { transform: scale(1.3); opacity: 0; } 100% { transform: scale(1); opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading .pulse-ring { border-top-color: white; animation: spin 1s linear infinite; }
+        .loading .status-dot { background: #ffd700; box-shadow: 0 0 10px #ffd700; animation: none; }
+        .error .status-dot { background: #e74c3c; box-shadow: 0 0 10px #e74c3c; animation: none; }
+
+        @media (min-width: 768px) {
+            .top-nav { top: 25px; left: 40px; right: 40px; }
+            .dropdown-menu { width: 220px; top: 60px; }
+            .dropdown-item { font-size: 18px; padding: 20px; }
+            .container { max-width: 550px; padding: 50px 40px; }
+            .modal-content { max-width: 600px; padding: 40px; }
+            
+            .modal-content.wide-modal { max-width: 900px; }
+            .desktop-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+            .desktop-grid-2 > .accordion-group, .desktop-grid-2 > .brand-box { margin-bottom: 0 !important; }
+
+            /* ==============================================
+               🚀 任務與學生清單：大螢幕自適應瀑布流網格 
+               ============================================== */
+            .tm-list-zone {
+                display: grid !important; /* 🚀 強制開啟網格，覆蓋前面的 flex 設定 */
+                /* 🚀 縮小 min 寬度到 280px，確保連小尺寸 iPad 直拿都能順利雙排！ */
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+                gap: 20px;
+                align-content: start; 
+            }
+            
+            /* 🚀 強制清單內的卡片不要自作聰明撐破網格 */
+            .tm-list-zone .task-card {
+                width: auto !important; 
+                margin: 0 !important;
+            }
+
+            .tm-list-zone > p {
+                /* 讓「找不到學生」或「沒有任務」的提示文字，橫跨所有欄位置中 */
+                grid-column: 1 / -1; 
+                margin-top: 60px;
+                font-size: 20px;
+            }
+        }
+        
+        /* 🚀 拖曳排序專屬物理特效 */
+        .sortable-ghost { 
+            opacity: 0.3 !important; 
+            background: #f8fafc !important; 
+            border: 2px dashed #94a3b8 !important; 
+        }
+        .sortable-drag { 
+            background: rgba(255, 255, 255, 0.95) !important; 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4) !important; 
+            transform: scale(1.02) rotate(2deg) !important; 
+            opacity: 1 !important; 
+            z-index: 99999 !important; 
+            cursor: grabbing !important; 
+            border-radius: 18px !important;
+            backdrop-filter: blur(10px) !important;
+        }
+        .drag-handle { cursor: grab; padding: 0 10px; color: #cbd5e1; font-size: 22px; transition: 0.2s; user-select: none; }
+        .drag-handle:active { cursor: grabbing; color: #ffd700; transform: scale(1.2); }
+
+        /* =======================================================
+           📅 任務管理系統專屬 UI
+           ======================================================= */
+        #taskManagerView { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 200; flex-direction: column; animation: fadeIn 0.3s; overflow: hidden; }
+        .tm-header { padding: max(15px, env(safe-area-inset-top)) 20px 15px; background: rgba(15,23,42,0.9); display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tm-back { color: var(--primary-color); font-size: 24px; cursor: pointer; padding: 5px 15px 5px 0; font-weight: bold; }
+        .tm-title { font-size: 20px; font-weight: 900; color: white; flex: 1; text-align: center; margin-right: 34px; letter-spacing: 2px; }
+        
+        /* 🚀 頂部方格月曆專屬樣式 */
+        .tm-calendar-zone { 
+            flex: none; 
+            min-height: 330px; 
+            background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            position: relative; width: 100%; padding-bottom: 20px;
+            overflow: hidden; /* 🚀 防護裝甲一：外框縮小的時候，把超出的日曆無情地切掉，不准往下掉！ */
+        }
+        
+        .sc-scroll-box { width: 100%; overflow-x: auto; scroll-behavior: smooth; height: 100%; }
+        .sc-scroll-box::-webkit-scrollbar { display: none; }
+        .sc-date-header { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 10px 0; background: rgba(0,0,0,0.1); }
+        .sc-day-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px dashed rgba(255,255,255,0.05); }
+        .sc-weekday { font-size: 11px; color: #94a3b8; margin-bottom: 4px; font-weight: bold; }
+        .sc-date-num { font-size: 15px; font-weight: 900; color: white; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+        .sc-today { background: #ffd700; color: #0f172a; box-shadow: 0 2px 8px rgba(255,215,0,0.4); }
+        .sc-tracks-container { position: relative; width: 100%; margin-top: 10px; padding-bottom: 15px; }
+        .sc-track-bar { position: absolute; height: 28px; display: flex; align-items: center; padding: 0 10px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 12px; font-weight: bold; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: 0.2s; }
+        .sc-track-bar:active { transform: scale(0.98); }
+        
+        
+        /* 🚀 下半部區域：提高 Z 軸層級，保證絕對不會被上方元素蓋住 */
+        .tm-filter-bar { 
+            padding: 12px 20px; display: flex; gap: 10px; background: rgba(0,0,0,0.2); 
+            position: relative; z-index: 20; /* 🚀 防護裝甲二：把下拉選單圖層拉高 */
+        }
+        .tm-select { flex: 1; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 16px; font-weight: bold; outline: none; appearance: none; text-align: center; }
+        .tm-select option { background: var(--bg-dark); }
+        
+        .tm-list-zone { 
+            flex: 1.2; overflow-y: auto; padding: 15px 20px 90px 20px; 
+            position: relative; z-index: 10; 
+            /* 🚀 加入 Flex 排版與間距，交由 gap 統一控管距離 */
+            display: flex; flex-direction: column; gap: 15px; 
+        }
+        .tm-list-zone::-webkit-scrollbar { display: none; }
+        
+        .task-card { 
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 20px; padding: 18px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+            /* 🚀 移除 margin-bottom，加入寬度 100% 與 box-sizing 保證網格不變形 */
+            margin: 0; width: 100%; box-sizing: border-box; 
+        }
+        .task-info { flex: 1; text-align: left; overflow: hidden; }
+        .task-class { font-size: 13px; color: var(--primary-color); font-weight: 900; margin-bottom: 6px; border: 1px solid var(--primary-color); padding: 3px 8px; border-radius: 8px; display: inline-block; background: rgba(255,215,0,0.1); }
+        .task-unit { font-size: 18px; font-weight: 900; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .task-actions { display: flex; gap: 10px; margin-left: 15px; }
+        .btn-icon { background: rgba(255,255,255,0.15); border: none; border-radius: 12px; width: 45px; height: 45px; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .btn-icon:active { transform: scale(0.9); }
+        .btn-schedule { background: rgba(46,204,113,0.2); border: 1px solid #2ecc71; color: #2ecc71; }
+        
+        /* 🚀 底部按鈕區：提高圖層到 30，徹底突破清單的遮擋！ */
+        .tm-pagination { 
+            position: absolute; bottom: 0; left: 0; right: 0; 
+            padding: 15px 20px max(15px, env(safe-area-inset-bottom)); 
+            background: rgba(15,23,42,0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); 
+            border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; 
+            z-index: 30; 
+        }
+        .btn-page { background: transparent; color: white; border: none; font-size: 24px; padding: 5px 15px; cursor: pointer; transition: 0.2s; }
+        .btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-page:active:not(:disabled) { transform: scale(0.8); color: var(--primary-color); }
+        .btn-new-task { background: linear-gradient(135deg, #00b894, #00cec9); padding: 14px 20px; border-radius: 16px; border: none; color: white; font-weight: 900; font-size: 16px; box-shadow: 0 5px 15px rgba(0,184,148,0.3); flex: 1; margin: 0 15px; letter-spacing: 1px; transition: 0.2s; }
+        .btn-new-task:active { transform: scale(0.96); }
+
+        /* 📝 編輯器單字列專屬 */
+        .word-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; animation: fadeIn 0.3s; }
+        .word-input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: white; font-size: 16px; font-weight: bold; text-align: center; }
+        .word-input::placeholder { color: #64748b; font-weight: normal; }
+        .btn-del-word { background: rgba(231,76,60,0.2); color: #e74c3c; border: 1px solid rgba(231,76,60,0.5); border-radius: 10px; width: 40px; height: 40px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        /* =======================================================
+           📅 互動式日曆 (Airbnb-style) 專屬 UI
+           ======================================================= */
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px; }
+        .cal-month-title { font-size: 20px; font-weight: 900; color: white; letter-spacing: 2px; }
+        .cal-nav-btn { background: rgba(255,255,255,0.15); border: none; color: white; width: 40px; height: 40px; border-radius: 12px; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        .cal-nav-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.3); }
+        
+        .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: #94a3b8; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        
+        .cal-day { 
+            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-size: 16px; font-weight: bold; color: white; background: rgba(255,255,255,0.05); 
+            border-radius: 12px; cursor: pointer; transition: 0.2s; position: relative; border: 1px solid transparent; 
+            min-width: 0; /* 🚀 終極防爆：告訴瀏覽器「格子不能被裡面的文字撐大」！ */
+        }
+        .cal-day:active:not(.disabled) { transform: scale(0.9); }
+        .cal-day.empty { background: transparent; cursor: default; pointer-events: none; }
+    
+
+        /* 🚫 防撞期與過期樣式 */
+        .cal-day.disabled { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); cursor: not-allowed; }
+        .cal-day.disabled .day-num { color: rgba(255,255,255,0.4); text-decoration: line-through; }
+        .cal-day.past-date { opacity: 0.6; }
+        .cal-tiny-text { font-size: 9px; line-height: 1; text-align: center; margin-top: 2px; padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+        
+        /* 🎯 選取狀態 (頭尾與中間區間) */
+        .cal-day.selected { background: var(--primary-blue); border-color: #74b9ff; box-shadow: 0 4px 15px rgba(0,102,204,0.4); z-index: 2; }
+        .cal-day.in-range { background: rgba(0, 102, 204, 0.2); border-radius: 4px; }
+        
+        /* 🔵 有排程的班級提示點 */
+        .cal-dots-zone { display: flex; gap: 3px; position: absolute; bottom: 4px; }
+        .cal-dot { width: 4px; height: 4px; border-radius: 50%; background: #f1c40f; }
+        
+        /* 🚀 任務卡片刪除按鈕 (進化為右上角立體小紅點) */
+        .btn-del-task { 
+            position: absolute; top: -8px; right: -8px; 
+            background: #e74c3c; color: white; border: 2px solid var(--bg-dark); 
+            width: 28px; height: 28px; border-radius: 50%; 
+            font-size: 12px; font-weight: bold; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(231,76,60,0.4); z-index: 10; transition: 0.2s;
+        }
+        .btn-del-task:active { transform: scale(0.8); box-shadow: none; }
+
+        /* 🚀 連續彩帶專屬樣式 (絕對定位跨越版) */
+        .cal-ribbon {
+            color: white; font-size: 12px; font-weight: bold; height: 18px; line-height: 18px; 
+            overflow: hidden; white-space: nowrap; text-overflow: ellipsis; 
+            text-align: center; /* 🚀 絕對置中 */
+            padding: 0 4px; box-sizing: border-box; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            user-select: none; -webkit-user-select: none;
+            pointer-events: none; /* 🚀 防穿透點擊干擾，讓底下的格子負責接收點擊 */
+        }
+
+        /* 🚀 拖動拉桿樣式 (裝甲防護版) */
+        .tm-resizer {
+            height: 24px; width: 100%; background: rgba(255,255,255,0.05);
+            display: flex; align-items: center; justify-content: center;
+            cursor: ns-resize; touch-action: none; border-top: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0; /* 🚀 絕對防護：禁止瀏覽器把拉桿擠扁！ */
+            position: relative; z-index: 50; /* 🚀 提高層級：防止點擊穿透到日曆！ */
+        }
+        .tm-resizer::after {
+            content: ''; width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;
+        }
+
+        /* 🚀 取消排程按鈕樣式 */
+        .btn-cancel-schedule {
+            background: transparent; color: #ff7675; border: 1px solid #ff7675;
+            padding: 15px; border-radius: 15px; cursor: pointer; transition: 0.2s;
+            font-weight: bold; font-size: 16px; flex: 0.6;
+        }
+        .btn-cancel-schedule:active { background: rgba(255,118,117,0.1); transform: scale(0.95); }
+
+        /* =======================================================
+           🧑‍🎓 學生管理系統專屬 UI
+           ======================================================= */
+        .stu-checkbox { width: 22px; height: 22px; margin-right: 15px; cursor: pointer; accent-color: var(--primary-color); display: none; }
+        .batch-mode-active .stu-checkbox { display: block; animation: fadeIn 0.3s; }
+        .batch-mode-active .btn-schedule { display: none; } /* 批量模式隱藏編輯鈕 */
+        
+        .sm-search-bar { display: flex; gap: 10px; margin-bottom: 10px; }
+        .sm-search-input { flex: 1; padding: 12px 15px; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 15px; }
+        .sm-search-input::placeholder { color: #94a3b8; }
+        
+        .sm-batch-bar { display: none; background: rgba(241, 196, 15, 0.2); border: 1px solid #f1c40f; padding: 10px 15px; border-radius: 12px; margin: 0 20px 10px 20px; justify-content: space-between; align-items: center; }
+        .batch-mode-active ~ .sm-batch-bar { display: flex; animation: fadeIn 0.3s; }
+    </style>
+</head>
+<body>
+
+    <div id="unauth-mask" style="position:fixed; inset:0; background:#050000; z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; color:#e74c3c;">
+        <h1 style="font-size:60px; margin:0; background:none; -webkit-text-fill-color: #e74c3c;">⛔</h1>
+        <h2 style="letter-spacing: 2px;">未經授權的存取</h2>
+        <p style="color:#7f8c8d;">請使用教師專用 NFC 卡感應進入</p>
+    </div>
+
+    <div class="top-nav" id="top-nav">
+        <div class="nav-btn" onclick="toggleMenu()">
+            ⚙️ 功能清單 ▾
+            <div class="dropdown-menu" id="menu-dropdown">
+                <div class="dropdown-item" onclick="openProgressModal()">📊 學習進度</div>
+                <div class="dropdown-item super-only" onclick="openNewsletterModal()">📝 專欄編輯</div>
+                <div class="dropdown-item super-only" onclick="openTaskManager()">📅 學習任務排定</div>
+                <div class="dropdown-item super-only" onclick="openStudentManager()">🧑‍🎓 編輯學生資料</div>
+                <div class="dropdown-item super-only" onclick="openBrandingModal()">🎨 校區視覺設定</div>
+                <div class="dropdown-item super-only" onclick="openGamiModal()">🕹️ 進階點數設定</div>
+            </div>
+        </div>
+        <div class="nav-btn" onclick="adminLogout()">🔒 登出</div>
+    </div>
+
+    <div class="container" id="mainCard">
+        <div id="scan-ui">
+            <div class="logo-wrapper">
+                <div class="pulse-ring" id="ring"></div>
+                <img src="/assets/logo.webp" style="width:80px; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3));">
+            </div>
+            <h1>教師中控台</h1>
+            <p class="subtitle" id="role-text">專屬管理員權限</p>
+            <div class="status-badge" id="statusBadge">
+                <div class="status-dot"></div>
+                <p id="msg">系統就緒，請感應學生卡</p>
+            </div>
+        </div>
+
+        <div id="action-ui">
+            <h2 class="stu-name" id="stu-name">-</h2>
+            <div class="stu-points" id="stu-points">0 PTS</div>
+            <span class="history-btn" onclick="toggleLogs(true)">點數明細 ⓘ</span>
+            <div class="control-panel">
+                <p class="panel-title" style="color:#2ecc71;">▲ 獎勵加分</p>
+                <div class="btn-flex-row">
+                    <button class="btn-action btn-green" onclick="send(10, this)">+ 10</button>
+                    <button class="btn-action btn-green" onclick="send(50, this)">+ 50</button>
+                    <button class="btn-action btn-green" onclick="send(100, this)">+ 100</button>
+                </div>
+                <div class="custom-input-group">
+                    <input type="number" id="customAdd" class="custom-input" placeholder="數值">
+                    <button class="btn-action btn-green" style="flex:0.6; padding:10px;" onclick="handleAdd(this)">執行</button>
+                </div>
+                <hr style="border: 0.5px dashed rgba(255,255,255,0.1); margin: 25px 0;">
+                <p class="panel-title" style="color:#e74c3c;">▼ 扣分懲罰</p>
+                <div class="btn-flex-row">
+                    <button class="btn-action btn-gray" onclick="send(-10, this)">- 10</button>
+                    <button class="btn-action btn-gray" onclick="send(-50, this)">- 50</button>
+                    <button class="btn-action btn-gray" onclick="send(-100, this)">- 100</button>
+                </div>
+                <div class="custom-input-group">
+                    <input type="number" id="customMinus" class="custom-input" placeholder="數值">
+                    <button class="btn-action btn-red" style="flex:0.6; padding:10px;" onclick="handleMinus(this)">執行</button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-return" style="flex:1;" onclick="resetScanner()">🔙 繼續掃描</button>
+                <button class="btn-return" style="flex:1; border-color:#3498db; color:#3498db;" onclick="window.location.href='dashboard.html?id=' + currentStudentId + '&view=true'">👀 學生主頁</button>
+            </div>
+        </div>
+        <input type="text" id="scanner" inputmode="none" autofocus style="opacity: 0; position: absolute; top: -100px;">
+    </div>
+
+    <div id="progressModal" class="modal-overlay" onclick="closeModal('progressModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 class="modal-title">📊 各班口說進度</h3>
+            <div id="progress-container" class="modal-scroll-area"></div>
+            <button class="btn-action btn-gray" style="margin-top: 15px; padding: 15px;" onclick="closeModal('progressModal')">關閉</button>
+        </div>
+    </div>
+
+    <div id="newsletterModal" class="modal-overlay" onclick="closeModal('newsletterModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 class="modal-title" style="color: #6c5ce7;">📝 專欄編輯系統</h3>
+            <button class="btn-action" style="background:#00b894; font-size:16px; padding:12px; margin-bottom:15px;" onclick="addNewsletter()">✨ 讓 AI 自動寫一篇新專欄</button>
+            <div id="newsletter-container" class="modal-scroll-area"></div>
+            <button class="btn-action btn-gray" style="margin-top: 15px; padding: 15px;" onclick="closeModal('newsletterModal')">關閉</button>
+        </div>
+    </div>
+
+    <div id="logModal" class="modal-overlay" onclick="toggleLogs(false)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 class="modal-title">📝 最近點數紀錄</h3>
+            <div id="log-container" class="modal-scroll-area"></div>
+            <button class="btn-action btn-gray" style="margin-top: 15px; padding: 15px;" onclick="toggleLogs(false)">關閉</button>
+        </div>
+    </div>
+
+    <div id="taskManagerView">
+        <div class="tm-header">
+            <div class="tm-back" onclick="closeTaskManager()">❮ 返回</div>
+            <div class="tm-title">學習任務排定</div>
+        </div>
+        
+        <div class="tm-calendar-zone" style="padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div class="cal-header" style="width: 100%; max-width: 350px; margin-bottom: 10px;">
+                <button class="cal-nav-btn" onclick="changeTopMonth(-1)">❮</button>
+                <div id="top-cal-month-title" class="cal-month-title" style="font-size: 16px;"></div>
+                <button class="cal-nav-btn" onclick="changeTopMonth(1)">❯</button>
+            </div>
+            <div class="cal-weekdays" style="width: 100%; max-width: 350px;">
+                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            </div>
+            <div id="top-cal-grid" class="cal-grid" style="width: 100%; max-width: 350px;"></div>
+        </div>
+
+        <div class="tm-resizer" id="tmResizer"></div>
+        
+        <div class="tm-filter-bar">
+            <select id="tm-class-filter" class="tm-select" onchange="changeTaskFilter()">
+                <option value="">🏫 顯示全部班級</option>
+            </select>
+        </div>
+        
+        <div id="tm-list-zone" class="tm-list-zone">
+            </div>
+        
+        <div class="tm-pagination">
+            <button id="tm-prev-btn" class="btn-page" onclick="changeTaskPage(-1)">❮</button>
+            <button class="btn-new-task" onclick="openTaskEditor(0, '', '', '[]')">➕ 新增任務單元</button>
+            <button id="tm-next-btn" class="btn-page" onclick="changeTaskPage(1)">❯</button>
+        </div>
+    </div>
+
+    <div id="studentManagerView" style="display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 200; flex-direction: column; animation: fadeIn 0.3s; overflow: hidden;">
+        <div class="tm-header">
+            <div class="tm-back" onclick="closeStudentManager()">❮ 返回</div>
+            <div class="tm-title">學生資料管理</div>
+            <button id="sm-batch-toggle-btn" class="btn-action" style="background:rgba(255,255,255,0.1); font-size:14px; padding:6px 12px; flex:none; width:auto;" onclick="toggleBatchMode()">批量修改</button>
+        </div>
+        
+        <div class="tm-filter-bar" style="flex-direction: column; z-index: 20; padding-top: 20px;">
+            <div class="sm-search-bar">
+                <input type="text" id="sm-search" class="sm-search-input" placeholder="🔍 搜尋姓名 / UID / 班級..." oninput="changeStuFilter()">
+            </div>
+            <select id="sm-class-filter" class="tm-select" onchange="changeStuFilter()">
+                <option value="">🏫 顯示全部學生</option>
+            </select>
+        </div>
+
+        <div class="sm-batch-bar">
+            <span style="color:#f1c40f; font-weight:bold; font-size:14px; flex:1; text-align:left; white-space:nowrap;" id="sm-batch-count">已勾選 0 位學生</span>
+            
+            <button id="sm-select-all-btn" class="btn-action" style="background:transparent; border:1px solid #f1c40f; color:#f1c40f; font-size:13px; padding:5px 10px; flex:none; width:auto; white-space:nowrap; box-shadow:none;" onclick="toggleSelectAll()">全選</button>
+            
+            <button class="btn-action" style="background:#f1c40f; color:#0f172a; font-size:13px; padding:6px 12px; flex:none; width:auto; white-space:nowrap; box-shadow:none; margin-left:10px;" onclick="openBatchEditor()">設定修改 ➔</button>
+        </div>
+        
+        <div id="sm-list-zone" class="tm-list-zone"></div>
+        
+        <div class="tm-pagination">
+            <button id="sm-prev-btn" class="btn-page" onclick="changeStuPage(-1)">❮</button>
+            <button class="btn-new-task" onclick="openStudentEditor(0, '', '', '一般生', '')">➕ 新增學生資訊</button>
+            <button id="sm-next-btn" class="btn-page" onclick="changeStuPage(1)">❯</button>
+        </div>
+    </div>
+
+    <div id="studentEditorModal" class="modal-overlay" onclick="closeModal('studentEditorModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 id="stu-editor-title" class="modal-title">新增學生</h3>
+            <div class="modal-scroll-area">
+                <label style="color:#94a3b8; font-size:13px; font-weight:bold;">學生姓名 (Name)</label>
+                <input type="text" id="edit-stu-name" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:left;" placeholder="請輸入姓名">
+                
+                <label style="color:#94a3b8; font-size:13px; font-weight:bold;">卡片內碼 (UID)</label>
+                <input type="text" id="edit-stu-uid" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:left;" placeholder="請輸入 UID">
+                
+                <label style="color:#94a3b8; font-size:13px; font-weight:bold;">學生類別</label>
+                <select id="edit-stu-type" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:left;" onchange="toggleStuClassInput('edit-stu-type', 'edit-stu-class-container')">
+                    <option value="一般生">一般生</option>
+                    <option value="美語資優生">美語資優生</option>
+                </select>
+
+                <div id="edit-stu-class-container" style="display:none;">
+                    <label style="color:#f1c40f; font-size:13px; font-weight:bold;">班級代碼 (ClassID)</label>
+                    <input type="text" id="edit-stu-class" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:left;" placeholder="請輸入班級代碼">
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button id="del-stu-btn" class="btn-action" style="background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid #e74c3c; font-size:15px; padding:12px 5px; flex:1; display:none; box-shadow:none; white-space:nowrap;" onclick="deleteStudentData()">🗑️ 刪除</button>
+                
+                <button id="save-stu-btn" class="btn-action" style="background:#2ecc71; font-size:16px; padding:12px 5px; flex:1.2; white-space:nowrap;" onclick="saveStudentData()">💾 儲存</button>
+                <button class="btn-action btn-gray" style="font-size:16px; padding:12px 5px; flex:1; white-space:nowrap;" onclick="closeModal('studentEditorModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="batchEditorModal" class="modal-overlay" onclick="closeModal('batchEditorModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 class="modal-title" style="color:#f1c40f;">⚡ 批量修改學生資料</h3>
+            <p style="text-align:center; color:#cbd5e1; font-size:13px; margin-top:0;">⚠️ 留空的欄位代表「不進行修改」</p>
+            <div class="modal-scroll-area">
+                <label style="color:#94a3b8; font-size:13px; font-weight:bold;">統一修改：學生類別</label>
+                <select id="batch-stu-type" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:left;" onchange="toggleStuClassInput('batch-stu-type', 'batch-stu-class-container')">
+                    <option value="">-- 不修改 --</option>
+                    <option value="一般生">一般生</option>
+                    <option value="美語資優生">美語資優生</option>
+                </select>
+
+                <div id="batch-stu-class-container" style="display:none;">
+                    <label style="color:#f1c40f; font-size:13px; font-weight:bold;">統一修改：班級代碼</label>
+                    <input type="text" id="batch-stu-class" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:15px; text-align:left;" placeholder="不修改請留空">
+                </div>
+
+                <hr style="border: 0.5px dashed rgba(255,255,255,0.1); margin: 20px 0;">
+                <p style="color:#e74c3c; font-size:12px; margin-bottom:5px; font-weight:bold;">※ 以下欄位通常不建議批量修改，除非您要將這批學生設為相同的假資料</p>
+                
+                <input type="text" id="batch-stu-name" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:10px; text-align:left;" placeholder="統一修改姓名 (不修改請留空)">
+                <input type="text" id="batch-stu-uid" class="word-input" style="width:100%; box-sizing:border-box; margin-bottom:10px; text-align:left;" placeholder="統一修改 UID (不修改請留空)">
+            </div>
+            <div style="display:flex; gap:10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button id="save-batch-btn" class="btn-action" style="background:#f1c40f; color:#0f172a; font-size:18px; padding:15px;" onclick="saveBatchStudentData()">🚀 確認批量修改</button>
+                <button class="btn-action btn-gray" style="font-size:18px; padding:15px;" onclick="closeModal('batchEditorModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskEditorModal" class="modal-overlay" onclick="closeModal('taskEditorModal')">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-height: 90vh; width: 95%; padding: 25px 20px;">
+            <h3 id="task-editor-title" class="modal-title">新增任務單元</h3>
+            <div class="modal-scroll-area" style="padding-right: 5px;">
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="edit-task-class" class="word-input" style="flex:1;" placeholder="班級代碼 (例: E1)">
+                    <input type="text" id="edit-task-unit" class="word-input" style="flex:2;" placeholder="單元名稱 (例: E1 Unit1)">
+                </div>
+                
+                <div style="font-size:13px; color:#94a3b8; font-weight:bold; margin-bottom:12px; display:flex; justify-content:space-between; padding:0 5px;">
+                    <span>英文單字 (EN)</span><span>中文翻譯 (ZH)</span>
+                </div>
+                
+                <div id="word-list-container">
+                    </div>
+                
+                <button class="btn-action" style="background:rgba(255,255,255,0.05); color:#cbd5e1; font-size:15px; padding:15px; margin-top:15px; border:2px dashed rgba(255,255,255,0.2); width:100%;" onclick="addWordRow('', '')">
+                    ➕ 新增一組單字
+                </button>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button id="save-task-btn" class="btn-action" style="background:#2ecc71; font-size:18px; padding:15px;" onclick="saveTaskData()">💾 儲存</button>
+                <button class="btn-action btn-gray" style="font-size:18px; padding:15px;" onclick="closeModal('taskEditorModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="brandingModal" class="modal-overlay" onclick="closeModal('brandingModal')">
+        <div class="modal-content wide-modal" onclick="event.stopPropagation()">
+            <h3 class="modal-title" style="color:#00cec9;">🎨 校區視覺設定</h3>
+            <p style="text-align:center; color:#94a3b8; font-size:13px; margin-top:0; margin-bottom: 20px;">(僅限超級管理員修改，儲存後即刻生效)</p>
+            
+            <div class="modal-scroll-area">
+                <div class="desktop-grid-2">
+                    <div class="brand-box" style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 18px; border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 20px; text-align: center; height: 100%; box-sizing: border-box;">
+                        <p style="font-weight: bold; margin-top: 0; color: #f8fafc;">1. 系統主視覺 Logo</p>
+                        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">建議規格：去背 PNG / 橫式比例 / 小於 1MB</p>
+                        <div style="height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                            <img id="preview-logo" src="/assets/logo.webp" style="max-width: 100%; max-height: 80px; object-fit: contain;">
+                        </div>
+                        <input type="file" id="input-logo" accept="image/png, image/webp, image/jpeg" style="display:none;" onchange="handleFileSelect(this, 'logo')">
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn-action btn-gray" style="flex: 4; font-size: 16px; padding: 12px; width: auto;" onclick="document.getElementById('input-logo').click()">選擇檔案</button>
+                            <button class="btn-action" style="flex: 1; padding: 12px; background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; font-size: 18px; width: auto;" onclick="deleteBranding('logo')">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="brand-box" style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 18px; border: 1px dashed rgba(255,255,255,0.2); text-align: center; height: 100%; box-sizing: border-box;">
+                        <p style="font-weight: bold; margin-top: 0; color: #f8fafc;">2. 桌面 App 圖示 (Icon)</p>
+                        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">建議規格：1:1 滿版正方形 / JPG 或 PNG</p>
+                        <div style="height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                            <img id="preview-icon" src="/assets/app-icon.png" style="width: 80px; height: 80px; border-radius: 18px; object-fit: cover; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.1);">
+                        </div>
+                        <input type="file" id="input-icon" accept="image/png, image/jpeg" style="display:none;" onchange="handleFileSelect(this, 'icon')">
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn-action btn-gray" style="flex: 4; font-size: 16px; padding: 12px; width: auto;" onclick="document.getElementById('input-icon').click()">選擇檔案</button>
+                            <button class="btn-action" style="flex: 1; padding: 12px; background: rgba(231,76,60,0.2); border: 1px solid #e74c3c; color: #e74c3c; font-size: 18px; width: auto;" onclick="deleteBranding('icon')">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="upload-status" style="margin-top: 20px; font-size: 15px; font-weight: bold; text-align: center; color: #ffd700; min-height: 20px;"></div>
+            </div>
+            
+            <button class="btn-action btn-gray" style="font-size:18px; padding:15px; margin-top: 20px;" onclick="closeModal('brandingModal')">關閉</button>
+        </div>
+    </div>
+
+    <div id="gamiModal" class="modal-overlay" onclick="closeModal('gamiModal')">
+        <div class="modal-content wide-modal" onclick="event.stopPropagation()" style="max-height: 90vh; width: 95%; padding: 25px 20px;">
+            <h3 class="modal-title" style="color:#f39c12; margin-bottom: 5px;">🕹️ 遊戲化數值中控台</h3>
+            <p style="text-align:center; color:#94a3b8; font-size:12px; margin-top:0; margin-bottom: 15px;">調整後將套用至全校區 (僅限超級管理員)</p>
+            
+            <div class="modal-scroll-area" style="padding-right: 5px;">
+                <div class="desktop-grid-2">
+                    
+                    <div class="accordion-group">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">🎯 今日挑戰給點規則 ▾</div>
+                        <div class="accordion-body">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <span style="color:#cbd5e1; font-size:14px; font-weight:bold;">最低及格門檻 (分)</span>
+                                <input type="number" id="gami-pass-score" class="word-input" style="width:80px; box-sizing:border-box; padding:8px; flex:none;">
+                            </div>
+                            <hr style="border:0.5px dashed rgba(255,255,255,0.1); margin:10px 0;">
+                            
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; text-align:center; color:#f1c40f; font-size:12px; font-weight:bold; margin-bottom:5px;">
+                                <span>分數達標 (≥)</span><span>獲得點數</span>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:8px;"><input type="number" id="gami-t1-min" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><input type="number" id="gami-t1-pts" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"></div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:8px;"><input type="number" id="gami-t2-min" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><input type="number" id="gami-t2-pts" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"></div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:8px;"><input type="number" id="gami-t3-min" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><input type="number" id="gami-t3-pts" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-group">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">🏅 單元任務與扣點規則 ▾</div>
+                        <div class="accordion-body">
+                            <p style="color:#e74c3c; font-size:13px; font-weight:bold; margin:0 0 10px 0;">▼ 未達標懲罰</p>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span style="color:#cbd5e1; font-size:13px; font-weight:bold;">安全門檻 (低於幾次)</span><input type="number" id="gami-fail-th" class="word-input" style="width:80px; box-sizing:border-box; padding:8px; flex:none;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span style="color:#cbd5e1; font-size:13px; font-weight:bold;">0次基礎扣點 (負數)</span><input type="number" id="gami-fail-base" class="word-input" style="width:80px; box-sizing:border-box; padding:8px; color:#e74c3c; flex:none;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><span style="color:#cbd5e1; font-size:13px; font-weight:bold;">每多練1次挽回點數</span><input type="number" id="gami-fail-step" class="word-input" style="width:80px; box-sizing:border-box; padding:8px; flex:none;"></div>
+                            <hr style="border:0.5px dashed rgba(255,255,255,0.1); margin:10px 0;">
+                            <p style="color:#2ecc71; font-size:13px; font-weight:bold; margin:0 0 10px 0;">▲ 達標獎勵</p>
+                            <div style="margin-bottom:15px;"><div style="color:#cbd5e1; font-size:13px; font-weight:bold; margin-bottom:8px;">達標門檻 (次) / 獎勵點數</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"><input type="number" id="gami-good-th" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><input type="number" id="gami-good-pts" class="word-input" style="width:100%; box-sizing:border-box; padding:8px; color:#2ecc71;"></div></div>
+                            <div style="margin-bottom:10px;"><div style="color:#cbd5e1; font-size:13px; font-weight:bold; margin-bottom:8px;">卓越門檻 (次) / 獎勵點數</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"><input type="number" id="gami-perf-th" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><input type="number" id="gami-perf-pts" class="word-input" style="width:100%; box-sizing:border-box; padding:8px; color:#2ecc71;"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-group">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">🏆 排行榜給點規則 ▾</div>
+                        <div class="accordion-body">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span style="color:#cbd5e1; font-size:14px; font-weight:bold;">🥇 第一名獎勵</span><input type="number" id="gami-lb-1" class="word-input" style="width:100px; box-sizing:border-box; padding:8px; flex:none;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span style="color:#cbd5e1; font-size:14px; font-weight:bold;">🥈 第二名獎勵</span><input type="number" id="gami-lb-2" class="word-input" style="width:100px; box-sizing:border-box; padding:8px; flex:none;"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span style="color:#cbd5e1; font-size:14px; font-weight:bold;">🥉 第三名獎勵</span><input type="number" id="gami-lb-3" class="word-input" style="width:100px; box-sizing:border-box; padding:8px; flex:none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-group">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">🎲 盲盒機率與卡池中控台 ▾</div>
+                        <div class="accordion-body">
+                            <p style="color:#3498db; font-size:13px; font-weight:bold; margin:0 0 10px 0;">勝場獲得盲盒數量</p>
+                            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                <div style="flex:1;"><div style="font-size:11px; color:#94a3b8; margin-bottom:4px; text-align:center;">初階 AI</div><select id="gami-pick-easy" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+                                <div style="flex:1;"><div style="font-size:11px; color:#94a3b8; margin-bottom:4px; text-align:center;">中階 AI</div><select id="gami-pick-med" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+                                <div style="flex:1;"><div style="font-size:11px; color:#94a3b8; margin-bottom:4px; text-align:center;">高階 AI</div><select id="gami-pick-hard" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                                <div style="flex:1;"><div style="font-size:11px; color:#94a3b8; margin-bottom:4px; text-align:center;">玩家對戰</div><select id="gami-pick-pvp" class="word-input" style="width:100%; box-sizing:border-box; padding:8px;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+                                <div style="flex:1;"><div style="font-size:11px; color:#94a3b8; margin-bottom:4px; text-align:center;">活動 Boss</div><select id="gami-pick-boss" class="word-input" style="width:100%; box-sizing:border-box; padding:8px; background-color: rgba(0,0,0,0.8); cursor: not-allowed;" disabled title="活動 Boss 固定為 1 次"><option value="1">1</option></select></div>
+                            </div>
+                            
+                            <hr style="border:0.5px dashed rgba(255,255,255,0.1); margin:15px 0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <p style="color:#f1c40f; font-size:15px; font-weight:900; margin:0;">🌟 絕對機率分配清單</p>
+                                <div style="background:rgba(0,0,0,0.4); padding:4px 10px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); font-size:12px; font-weight:bold;">
+                                    總和：<span id="live-prob-sum" style="color:#2ecc71; font-size:14px;">0%</span>
+                                </div>
+                            </div>
+                            <p style="color:#94a3b8; font-size:11px; font-weight:bold; margin:0 0 15px 0;">設定真實中獎率。點數可切換區段，角色區段由商店決定。各區段會自動排序。</p>
+                            
+                            <div id="gacha-flat-container" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px; max-height:350px; overflow-y:auto; padding-right:5px;"></div>
+                            
+                            <button class="btn-action" style="background:rgba(46,204,113,0.15); color:#2ecc71; font-size:14px; padding:12px; width:100%; border:1px dashed #2ecc71;" onclick="addFlatPointRow(10, 'N', 1)">➕ 新增一組點數獎項</button>
+                        </div>
+                    </div>
+
+                    <div class="accordion-group">
+                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active'); if(this.parentElement.classList.contains('active')) loadShopAdminList();">🛒 角色商品定價快調 ▾</div>
+                        <div class="accordion-body" style="padding: 10px;">
+                            <div id="shop-admin-list" style="display:flex; flex-direction:column; gap:8px;">
+                                <p style="text-align:center; color:#94a3b8; font-size:13px; margin: 10px 0;">點擊展開後自動讀取...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div> <div id="gami-status" style="text-align:center; font-size:14px; font-weight:bold; height:20px; color:#2ecc71; margin-top:10px;"></div>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button id="save-gami-btn" class="btn-action" style="background:#f39c12; color:#0f172a; font-size:16px; padding:15px; flex:1;" onclick="saveGamification()">🚀 儲存全域數值</button>
+                <button class="btn-action btn-gray" style="font-size:16px; padding:15px; flex:0.4;" onclick="closeModal('gamiModal')">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="probCheckModal" class="modal-overlay" style="z-index: 10500;">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 320px; text-align: center;">
+            <h3 style="color:#e74c3c; margin-top:0; font-size:22px; font-weight:900;">⚖️ 機率總和異常</h3>
+            <p style="color:#cbd5e1; font-size:14px; margin-bottom:15px; line-height: 1.5;">所有獎項的真實機率加總必須剛好等於 100%。</p>
+            <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.1);">
+                <div style="font-size:13px; color:#94a3b8; margin-bottom:5px;">目前總和</div>
+                <div id="prob-current-sum" style="font-size:36px; font-weight:900; color:#f1c40f;">95%</div>
+                <div id="prob-diff-text" style="font-size:14px; font-weight:bold; color:#e74c3c; margin-top:5px;">(少了 5%)</div>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-action btn-gray" style="font-size:15px; padding:12px;" onclick="document.getElementById('probCheckModal').style.display='none'">
+                    🔙 取消儲存，我手動調整
+                </button>
+                <button class="btn-action" style="background:linear-gradient(135deg, #00b894, #00cec9); font-size:15px; padding:12px; box-shadow:0 5px 15px rgba(0,184,148,0.3);" onclick="autoNormalizeProbabilities()">
+                    ✨ 系統自動調整成 100%
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="quickSelectModal" class="modal-overlay" onclick="closeModal('quickSelectModal')">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width:350px;">
+            <h3 class="modal-title" style="color:#f1c40f; margin-bottom:5px;">📌 快速排定任務</h3>
+            <p style="text-align:center; color:#94a3b8; font-size:14px; margin-bottom:20px;">開始日期：<span id="qs-date" style="color:white; font-weight:bold; padding:2px 8px; background:rgba(255,255,255,0.1); border-radius:6px;"></span></p>
+            
+            <select id="qs-task-select" class="word-input" style="width:100%; margin-bottom:25px; padding:15px;">
+                </select>
+            
+            <button class="btn-action btn-green" style="width:100%; padding:15px; font-size:16px;" onclick="confirmQuickSchedule()">前往排定 ➔</button>
+        </div>
+    </div>
+
+    <div id="calendarModal" class="modal-overlay" onclick="closeModal('calendarModal')">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-height: 90vh; width: 95%; padding: 25px 20px;">
+            <h3 class="modal-title" style="color:#2ecc71; margin-bottom:5px;">📅 排定任務時程</h3>
+            <p id="cal-task-info" style="text-align:center; color:#94a3b8; font-size:14px; margin:0 0 20px 0; font-weight:bold;"></p>
+            
+            <div class="modal-scroll-area" style="padding-right: 5px;">
+                <div class="cal-header">
+                    <button class="cal-nav-btn" onclick="changeMonth(-1)">❮</button>
+                    <div id="cal-month-title" class="cal-month-title">2026年 4月</div>
+                    <button class="cal-nav-btn" onclick="changeMonth(1)">❯</button>
+                </div>
+                
+                <div class="cal-weekdays">
+                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+                
+                <div id="cal-grid" class="cal-grid">
+                    </div>
+
+                <div id="event-avatar-zone" style="display:none; flex-direction:column; gap:8px; margin-top:15px; background:rgba(0,0,0,0.2); padding:12px; border-radius:12px; border:1px solid rgba(241,196,15,0.3);">
+                    <label style="color:#f1c40f; font-size:13px; font-weight:900; letter-spacing:1px;">🎭 活動首領指派 (Event 限定)</label>
+                    <select id="event-avatar-select" style="width:100%; padding:10px; border-radius:8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; font-size:14px; font-weight:bold; outline:none;">
+                        <option value="">-- 請選擇首領角色 --</option>
+                    </select>
+                </div>
+
+                <div style="text-align:center; margin-top:15px; font-size:13px; color:#cbd5e1; height:20px;" id="cal-status-text">
+                    請點擊選擇「開始日期」
+                </div>
+            </div> <div style="display:flex; gap:10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button id="cal-cancel-btn" class="btn-cancel-schedule" style="display:none;" onclick="deleteSchedule()">取消排程</button>
+                <button id="save-cal-btn" class="btn-action" style="background:linear-gradient(135deg, #27ae60, #2ecc71); font-size:18px; padding:15px; flex:1;" onclick="submitSchedule()">🚀 確認排定</button>
+                <button class="btn-action btn-gray" style="font-size:18px; padding:15px; flex:0.4;" onclick="closeModal('calendarModal')">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ 記得替換為你的 GAS 網址！
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";        
+        const params = new URLSearchParams(window.location.search);
+        
+        // 🚀 【SaaS 核心狀態管理器】
+        const urlSchool = params.get('school') ? params.get('school').toUpperCase() : null;
+        const urlSecret = params.get('secret');
+        const savedSchool = localStorage.getItem('tappie_school');
+        const savedAuth = localStorage.getItem('tappie_admin_key');
+
+        // 1. 🚨 強制清場邏輯：只要網址上的校區跟記憶中不同，或是網址帶了新密碼
+        if (urlSchool && (urlSchool !== savedSchool || urlSecret)) {
+             console.log("🚨 執行身分切換清場作業...");
+             
+             // 如果是換校區，且原本已經登入，跳出警告提醒
+             if (savedSchool && urlSchool !== savedSchool && savedAuth) {
+                  alert(`🏫 偵測到校區切換！正在退出 ${savedSchool}，進入 ${urlSchool}。`);
+             }
+
+             // 徹底擦除舊記憶
+             localStorage.removeItem('tappie_admin_key');
+             localStorage.removeItem('tappie_admin_key_time');
+             localStorage.setItem('tappie_school', urlSchool);
+             
+             // 如果網址有給新密碼，立刻存入
+             if (urlSecret) {
+                  localStorage.setItem('tappie_admin_key', urlSecret);
+                  localStorage.setItem('tappie_admin_key_time', new Date().getTime());
+                  // 為了安全與美觀，存完後把密碼從網址隱藏
+                  const cleanUrl = window.location.pathname + `?school=${urlSchool}`;
+                  window.history.replaceState(null, null, cleanUrl);
+             }
+
+             // 核心精髓：強制刷新頁面，讓整個系統在「乾淨的 TP02 記憶」下啟動
+             window.location.reload(); 
+             throw new Error("校區環境重置中，暫停後續腳本執行"); 
+        }
+
+        // 2. 🏠 建立目前運行的基礎常數
+        const CURRENT_SCHOOL = localStorage.getItem('tappie_school') || "TP01";
+        let ADMIN_SECRET = localStorage.getItem('tappie_admin_key');
+        const authTime = localStorage.getItem('tappie_admin_key_time');
+
+        // ⏳ 檢查是否超過 1 小時 (3600000毫秒)
+        if (ADMIN_SECRET && authTime) {
+            const now = new Date().getTime();
+            if (now - parseInt(authTime) > 3600000) {
+                localStorage.removeItem('tappie_admin_key');
+                localStorage.removeItem('tappie_admin_key_time');
+                ADMIN_SECRET = null;
+                alert("⚠️ 授權已過期（超過 1 小時），為保護系統安全，請重新感應管理員卡片！");
+            }
+        }
+
+        // 🚀 新增：主動防禦背景監控 (每 10 秒鐘偷偷查驗一次時間)
+        if (ADMIN_SECRET && authTime) {
+            setInterval(() => {
+                const currentTime = new Date().getTime();
+                // 如果目前時間減去登入時間 > 1小時 (3600000毫秒)
+                if (currentTime - parseInt(authTime) > 3600000) {
+                    localStorage.removeItem('tappie_admin_key');
+                    localStorage.removeItem('tappie_admin_key_time');
+                    alert("⏱️ 閒置時間過長！為保護系統安全，已自動強制登出。請重新感應卡片！");
+                    window.location.reload(); // 瞬間重整網頁，立刻彈出黑色封鎖畫面！
+                }
+            }, 10000); // 10000 毫秒 = 10 秒
+        }
+
+        // 🛡️ 將鑰匙傳給後端查驗，前端絕不進行明碼比對
+        if (!ADMIN_SECRET) {
+            document.getElementById('unauth-mask').style.display = 'flex';
+        } else {
+            // 🚀 修正：這裡換成了「反引號 ( ` )」，這樣變數才會被正確讀取！
+            fetch(`${GAS_URL}?action=verify_auth&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.valid) {
+                        // 密碼錯誤或隨便亂打，直接鎖定並清空假鑰匙
+                        document.getElementById('unauth-mask').style.display = 'flex';
+                        localStorage.removeItem('tappie_admin_key');
+                    } else if (data.role === "super") {
+                        // 後端認證是超級管理員，解鎖進階 UI
+                        document.getElementById('role-text').innerText = "⭐ 超級管理員權限";
+                        document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
+                    }
+                })
+                .catch(err => {
+                    alert("連線後端驗證失敗，請檢查網路連線。");
+                    document.getElementById('unauth-mask').style.display = 'flex';
+                });
+        }
+
+        
+
+        // 🟢 全域變數宣告
+        let currentStudentId = null;
+        let currentPointsValue = 0; 
+        let scanTimer;
+        
+        // 🚀 救命工具：補上前端日期格式化引擎 (沒有它排定按鈕會壞掉)
+        const Utilities = {
+            formatDate: function(date, tz, format) {
+                let d = new Date(date);
+                let yyyy = d.getFullYear();
+                let MM = String(d.getMonth() + 1).padStart(2, '0');
+                let dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${MM}-${dd}`; 
+            }
+        };
+
+        const scanner = document.getElementById('scanner');
+        const card = document.getElementById('mainCard');
+        const msg = document.getElementById('msg');
+        const scanUI = document.getElementById('scan-ui');
+        const actionUI = document.getElementById('action-ui');
+
+        // 🚀 URL 跳轉掃描接收邏輯
+        const TARGET_ID = params.get('id') || params.get('cardId');
+        if (TARGET_ID) {
+            currentStudentId = TARGET_ID;
+            window.history.replaceState(null, null, 'admin.html');
+            card.className = 'container loading';
+            msg.innerText = "⏳ 讀取學生資料中...";
+            msg.style.color = "#ffd700";
+            loadStudentData(currentStudentId);
+        }
+
+        // 🟢 選單切換邏輯 (加入安全防呆)
+        function toggleMenu() {
+            const menu = document.getElementById('menu-dropdown');
+            menu.classList.toggle('show');
+        }
+        
+        window.onclick = function(event) {
+            // 確認點擊的不是導航按鈕內部的任何元素才關閉選單
+            if (event.target && event.target.closest && !event.target.closest('.nav-btn')) {
+                const menu = document.getElementById('menu-dropdown');
+                if (menu) menu.classList.remove('show');
+            }
+        }
+        
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+        }
+
+        // --- 📊 學習進度邏輯 (雙管齊下抓取截止日版) ---
+        function openProgressModal() {
+            document.getElementById('progressModal').style.display = 'flex';
+            document.getElementById('progress-container').innerHTML = '<p style="text-align:center; color:#ffd700;">⏳ 正在彙整全校資料...</p>';
+            
+            // 🚀 同時跟後端要「進度」與「排程」這兩包資料
+            Promise.all([
+                fetch(`${GAS_URL}?action=get_all_progress&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`).then(res => res.json()),
+                fetch(`${GAS_URL}?action=get_task_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`).then(res => res.json())
+            ])
+            .then(([progressData, taskData]) => {
+                if(progressData.error) return document.getElementById('progress-container').innerHTML = `<p style="color:#e74c3c;">${progressData.error}</p>`;
+                
+                const schedules = taskData.schedules || [];
+                let html = '';
+                
+                for (const classId in progressData) {
+                    const info = progressData[classId]; 
+                    info.students.sort((a, b) => a.count - b.count);
+                    
+                    let stuHtml = info.students.map(s => {
+                        let badgeClass = "c-safe"; let icon = "✅";
+                        if (s.count < 5) { badgeClass = "c-danger"; icon = "⚠️"; }
+                        else if (s.count >= 10) { badgeClass = "c-good"; icon = "🔥"; }
+
+                        return `
+                        <div class="stu-row" style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed rgba(255,255,255,0.1);">
+                            <span class="s-name" style="color:#e2e8f0; font-weight:bold;">${s.name}</span>
+                            <span class="s-count" style="color:${s.count>=10?'#f1c40f':(s.count>=5?'#2ecc71':'#e74c3c')}; font-weight:900;">${icon} ${s.count} 次</span>
+                        </div>`;
+                    }).join('');
+
+                    // 🚀 尋找該班級正在進行單元的「截止日期」
+                    let deadlineHtml = "";
+                    if (info.unit !== "未排定") {
+                        let activeSch = schedules.find(s => s.classId.toUpperCase() === classId.toUpperCase() && s.unit === info.unit);
+                        if (activeSch && activeSch.endDate) {
+                            // 格式化日期：把 2026-04-15 變成 04/15 讓排版更精緻
+                            let dText = activeSch.endDate.substring(5).replace('-', '/');
+                            deadlineHtml = `<div style="font-size:12px; color:#ff7675; font-weight:bold; margin-top:5px; letter-spacing:0.5px;">⏰ 截止日: ${dText}</div>`;
+                        }
+                    }
+
+                    html += `
+                    <div class="accordion-group" onclick="this.classList.toggle('active')">
+                        <div class="accordion-header">
+                            <span>🏷️ ${classId}</span>
+                            <div style="text-align:right;">
+                                <span style="font-size:14px;">${info.unit} ▾</span>
+                                ${deadlineHtml} </div>
+                        </div>
+                        <div class="accordion-body">${stuHtml}</div>
+                    </div>`;
+                }
+                document.getElementById('progress-container').innerHTML = html || '<p style="text-align:center; color:#7f8c8d;">目前尚無班級資料</p>';
+            })
+            .catch(err => {
+                document.getElementById('progress-container').innerHTML = '<p style="text-align:center; color:#e74c3c;">⚠️ 連線失敗</p>';
+            });
+        }
+
+        // --- 📝 專欄管理邏輯 (超級管理員專屬) ---
+        function openNewsletterModal() {
+            document.getElementById('newsletterModal').style.display = 'flex';
+            loadNewsletters();
+        }
+
+        // 🚀 新增：全域變數來儲存拖曳引擎
+        let newsletterSortable = null;
+
+        // 🚀 新增：標籤專屬的主題顏色產生器 (關鍵字收斂法)
+        function getTagColor(tag) {
+            // 🚨 最高優先級：備用機制警告
+            if(tag.includes("備用機制")) return { bg: "rgba(231, 76, 60, 0.15)", text: "#e74c3c", border: "rgba(231, 76, 60, 0.4)" }; 
+            
+            // 🧠 大腦與科學 (知性藍)
+            if (/[腦|神經|記憶|睡眠|科學|生理|專注|邏輯|認知]/.test(tag)) {
+                return { bg: "rgba(52, 152, 219, 0.15)", text: "#3498db", border: "rgba(52, 152, 219, 0.4)" };
+            }
+            
+            // ❤️ 情緒與心理 (溫暖粉)
+            if (/[情緒|心理|安全感|壓力|共情|焦慮|性格|自信|感受]/.test(tag)) {
+                return { bg: "rgba(233, 30, 99, 0.15)", text: "#e84393", border: "rgba(233, 30, 99, 0.4)" };
+            }
+            
+            // 🌱 生活與日常 (生機綠)
+            if (/[生活|日常|習慣|環境|減塑|飲食|自然|探索|體驗]/.test(tag)) {
+                return { bg: "rgba(46, 204, 113, 0.15)", text: "#2ecc71", border: "rgba(46, 204, 113, 0.4)" };
+            }
+            
+            // 💬 語言與學習 (活力橘)
+            if (/[語言|口說|學習|閱讀|雙語|字彙|表達|溝通]/.test(tag)) {
+                return { bg: "rgba(243, 156, 18, 0.15)", text: "#f39c12", border: "rgba(243, 156, 18, 0.4)" };
+            }
+            
+            // 👨‍👩‍👧 親子與教養 (質感紫)
+            if (/[教養|親子|陪伴|父母|互動|依附|家庭|關係]/.test(tag)) {
+                return { bg: "rgba(155, 89, 182, 0.15)", text: "#9b59b6", border: "rgba(155, 89, 182, 0.4)" };
+            }
+
+            // 🔘 其他發散的隨機標籤 (質感灰：不搶戲，維持版面乾淨)
+            return { bg: "rgba(149, 165, 166, 0.15)", text: "#94a3b8", border: "rgba(149, 165, 166, 0.3)" };
+        }
+
+        function loadNewsletters() {
+            const container = document.getElementById('newsletter-container');
+            container.innerHTML = '<p style="text-align:center; color:#6c5ce7;">⏳ 正在讀取庫存文章...</p>';
+            
+            fetch(`${GAS_URL}?action=get_newsletters&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.error) return container.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
+                    
+                    let html = '';
+                    data.forEach((item, index) => {
+                        let titleMatch = item.content.match(/<h3[^>]*>(.*?)<\/h3>/i);
+                        let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : `文章 #${index+1}`;
+                        
+                        let queueBadge = index === 0 
+                            ? `<span class="queue-badge" style="background:#e74c3c; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">即將寄出</span>` 
+                            : `<span class="queue-badge" style="background:#64748b; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">順位 ${index+1}</span>`;
+                        
+                        // 🚀 升級：去除 emoji，以逗號切割並並排渲染一致顏色的標籤
+                        let tagHtml = "";
+                        if (item.tags) {
+                            let tagsArray = item.tags.replace(/標籤：|🔖|🏷️|⚠️/g, '').split(',').map(t => t.trim()).filter(t => t !== "");
+                            tagHtml = tagsArray.map(tag => {
+                                let color = getTagColor(tag);
+                                return `<span style="background:${color.bg}; color:${color.text}; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:900; border:1px solid ${color.border}; display:inline-block; margin-right:6px;">${tag}</span>`;
+                            }).join('');
+                        }
+
+                        html += `
+                        <div class="accordion-group" data-row="${item.row}">
+                            <div class="accordion-header" style="cursor:default; display:flex; flex-direction:column; align-items:stretch; padding:12px 15px;">
+                                
+                                <div style="display:flex; align-items:center; width:100%; justify-content:space-between;">
+                                    <div style="display:flex; align-items:center; overflow:hidden; flex:1;">
+                                        <span class="drag-handle" style="margin-right:10px;">☰</span>
+                                        ${queueBadge}
+                                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; cursor:pointer;" onclick="this.closest('.accordion-group').classList.toggle('active')">📄 ${title}</span>
+                                    </div>
+                                    <span onclick="this.closest('.accordion-group').classList.toggle('active')" style="cursor:pointer; padding:5px 0 5px 15px;">▾</span>
+                                </div>
+                                
+                                ${tagHtml ? `<div style="padding-left: 45px; margin-top: 8px; text-align:left;">${tagHtml}</div>` : ''}
+                                
+                            </div>
+                            <div class="accordion-body" id="nl-body-${item.row}">
+                                <div style="background:white; color:#333; padding:15px; border-radius:10px; font-size:14px; margin-bottom:15px;">${item.content}</div>
+                                <div style="display:flex; gap:10px;">
+                                    <button class="btn-action" style="background:#3498db; font-size:14px; padding:10px;" onclick="startEdit(${item.row})">✏️ 編輯</button>
+                                    <button class="btn-action" style="background:#e74c3c; font-size:14px; padding:10px;" onclick="deleteNewsletter(${item.row})">🗑️ 刪除</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    
+                    container.innerHTML = html || '<p style="text-align:center;">目前沒有庫存文章</p>';
+
+                    if (data.length > 0) {
+                        if (newsletterSortable) {
+                            newsletterSortable.destroy(); 
+                        }
+                        newsletterSortable = new Sortable(container, {
+                            animation: 250,               
+                            handle: '.drag-handle',       
+                            ghostClass: 'sortable-ghost', 
+                            dragClass: 'sortable-drag',   
+                            forceFallback: true,          
+                            fallbackOnBody: true,         
+                            onEnd: function () {
+                                const items = document.querySelectorAll('#newsletter-container .accordion-group');
+                                items.forEach((item, idx) => {
+                                    const badge = item.querySelector('.queue-badge');
+                                    if (idx === 0) {
+                                        badge.style.background = '#e74c3c';
+                                        badge.innerText = '即將寄出';
+                                    } else {
+                                        badge.style.background = '#64748b';
+                                        badge.innerText = `順位 ${idx + 1}`;
+                                    }
+                                });
+                                saveNewOrder();
+                            }
+                        });
+                    }
+                });
+        }
+        function saveNewOrder() {
+            const items = document.querySelectorAll('#newsletter-container .accordion-group');
+            let newOrder = [];
+            items.forEach(item => {
+                newOrder.push(parseInt(item.getAttribute('data-row')));
+            });
+            
+            // 🛑 致命裝甲 1 號：如果畫面上找不到文章 (長度為 0)，絕對不允許送出！
+            // 這能防止你在載入畫面時手滑觸發拖曳存檔。
+            if (newOrder.length === 0) {
+                console.warn("⚠️ 攔截到異常的空排序，已終止存檔以保護資料！");
+                return;
+            }
+            
+            const headerTitle = document.querySelector('#newsletterModal .modal-title');
+            headerTitle.innerHTML = '⏳ 儲存新排序中...';
+            
+            const formData = new URLSearchParams();
+            formData.append('order', JSON.stringify(newOrder));
+
+            fetch(`${GAS_URL}?action=reorder_newsletters&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    headerTitle.innerHTML = '📝 專欄編輯系統';
+                    loadNewsletters(); 
+                });
+        }
+
+        function addNewsletter() {
+            document.getElementById('newsletter-container').innerHTML = '<p style="text-align:center; color:#00b894;">✨ AI 正在努力撰寫中，大約需要 10~15 秒鐘...</p>';
+            
+            // 🚀 改用 POST 發送，確保長時間的 AI 運算不會被瀏覽器中斷
+            const formData = new URLSearchParams();
+            formData.append('content', 'AI_GENERATE');
+            
+            fetch(`${GAS_URL}?action=add_newsletter&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        loadNewsletters();
+                    } else {
+                        alert(data.error || "生成失敗，請檢查權限或庫存上限。");
+                        loadNewsletters(); // 失敗也要重新載入，避免卡在轉圈圈
+                    }
+                })
+                .catch(err => {
+                    alert("網路連線超時，但 AI 可能還在後台寫作。請稍後再重整查看！");
+                    loadNewsletters(); 
+                });
+        }
+
+        function deleteNewsletter(row) {
+            if(!confirm("確定要刪除這篇文章嗎？排在後面的文章會自動遞補上來喔！")) return;
+            document.getElementById('newsletter-container').innerHTML = '<p style="text-align:center; color:#e74c3c;">🗑️ 正在刪除...</p>';
+            fetch(`${GAS_URL}?action=delete_newsletter&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN&row=${row}`).then(()=>loadNewsletters());
+        }
+
+        function startEdit(row) {
+            const bodyDiv = document.getElementById(`nl-body-${row}`);
+            const contentHtml = bodyDiv.querySelector('div').innerHTML; 
+            bodyDiv.innerHTML = `
+                <textarea id="edit-area-${row}" class="html-editor">${contentHtml}</textarea>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-action" style="background:#2ecc71; font-size:14px; padding:10px;" onclick="saveEdit(${row})">💾 儲存</button>
+                    <button class="btn-action btn-gray" style="font-size:14px; padding:10px;" onclick="loadNewsletters()">取消</button>
+                </div>
+            `;
+        }
+
+        function saveEdit(row) {
+            const newContent = document.getElementById(`edit-area-${row}`).value;
+            document.getElementById('newsletter-container').innerHTML = '<p style="text-align:center; color:#3498db;">💾 正在儲存...</p>';
+            
+            const formData = new URLSearchParams();
+            formData.append('content', newContent);
+
+            fetch(`${GAS_URL}?action=edit_newsletter&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN&row=${row}`, { method: 'POST', body: formData })
+                .then(() => loadNewsletters());
+        }
+
+        // ==========================================
+        // 🔄 物理掃描與加扣分引擎 (完整還原版)
+        // ==========================================
+        
+        setInterval(() => {
+            const active = document.activeElement;
+            // 🚀 關鍵修復：把 SELECT 也加入白名單，讀卡機就不會去搶下拉選單的焦點了！
+            if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA' && active.tagName !== 'SELECT') {
+                scanner.focus();
+            }
+        }, 1000);
+
+        scanner.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // 🚀 加上這行，防止瀏覽器以為你要跳轉網址！
+                clearTimeout(scanTimer);
+                let rawInput = scanner.value.trim();
+                
+                // 🚀 萬能萃取器：把網址裡的 uid 或 id 挖出來
+                if (rawInput.includes("uid=")) {
+                    rawInput = rawInput.split("uid=")[1].split("&")[0];
+                } else if (rawInput.includes("id=")) {
+                    rawInput = rawInput.split("id=")[1].split("&")[0];
+                }
+
+                const finalID = rawInput.includes('-') ? rawInput : `${CURRENT_SCHOOL}-${rawInput}`;
+                if (finalID.length >= 4) { 
+                    fetchStudent(finalID);
+                }
+                scanner.value = "";
+            }
+        });
+
+        scanner.addEventListener('input', function() {
+            clearTimeout(scanTimer);
+            scanTimer = setTimeout(() => {
+                let rawInput = scanner.value.trim();
+                
+                // 🚀 萬能萃取器：把網址裡的 uid 或 id 挖出來
+                if (rawInput.includes("uid=")) {
+                    rawInput = rawInput.split("uid=")[1].split("&")[0];
+                } else if (rawInput.includes("id=")) {
+                    rawInput = rawInput.split("id=")[1].split("&")[0];
+                }
+
+                const finalID = rawInput.includes('-') ? rawInput : `${CURRENT_SCHOOL}-${rawInput}`;
+                if (finalID.length >= 4) { 
+                    fetchStudent(finalID);
+                }
+                scanner.value = "";
+            }, 200);
+        });
+
+        // --- 1. 掃描卡片時的 API 呼叫 ---
+        function fetchStudent(cardId) {
+            if (actionUI.style.display === 'block') return;
+
+            // 🚀 【鎖鑰加工】：如果老師只刷了 "test"，自動幫他補上 "TP02-test"
+            const rawId = String(cardId).trim();
+            const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
+
+            // 🚀 【前端邊境攔截】：檢查這張卡的校區，跟管理員目前的校區是否一致？
+            const targetSchool = finalUid.split('-')[0].toUpperCase();
+            if (targetSchool !== CURRENT_SCHOOL) {
+                showError(`⛔ 越權警告：無法查詢 ${targetSchool} 校區的學生！`);
+                return; // 直接擋下，絕對不送給 GAS！
+            }
+            
+            card.className = 'container loading';
+            msg.innerText = "⏳ 讀取學生資料中...";
+            msg.style.color = "#ffd700";
+
+            // 🚀 【統一參數】：我們統一把 finalUid 塞給 id 參數，讓後端優先抓取
+            fetch(`${GAS_URL}?action=get_admin_student_data&id=${encodeURIComponent(finalUid)}&secret=${ADMIN_SECRET}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentStudentId = data.uid;
+                        renderAdminUI(data); 
+                    } else {
+                        showError("❌ 查無此學生");
+                    }
+                })
+                .catch(err => showError("⚠️ 網路連線異常"));
+        }
+
+        // --- 2. 重新讀取學生資料時的 API 呼叫 ---
+        function loadStudentData(uid) {
+            // 🚀 【鎖鑰加工】
+            const rawId = String(uid).trim();
+            const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
+
+            // 🚀 【前端邊境攔截】
+            const targetSchool = finalUid.split('-')[0].toUpperCase();
+            if (targetSchool !== CURRENT_SCHOOL) {
+                showError(`⛔ 越權警告：無法讀取 ${targetSchool} 校區的資料！`);
+                return; 
+            }
+
+            // 🚀 【統一參數】
+            fetch(`${GAS_URL}?action=get_admin_student_data&id=${encodeURIComponent(finalUid)}&secret=${ADMIN_SECRET}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        renderAdminUI(data); 
+                    } else {
+                        showError("❌ 無法讀取資料");
+                    }
+                })
+                .catch(err => showError("⚠️ 網路連線異常"));
+        }
+
+        function renderAdminUI(data) {
+            card.className = 'container';
+            scanUI.style.display = 'none';
+            actionUI.style.display = 'block';
+            document.getElementById('top-nav').style.display = 'none'; 
+            
+            document.getElementById('stu-name').innerText = data.studentName;
+            
+            currentPointsValue = Number(data.currentPoints);
+            document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
+
+            const logContainer = document.getElementById('log-container');
+            if (!data.recentLogs || data.recentLogs.length === 0) {
+                logContainer.innerHTML = `<p style="text-align:center; color:#7f8c8d;">尚無紀錄</p>`;
+            } else {
+                logContainer.innerHTML = data.recentLogs.map(log => {
+                    let valClass = log.val >= 0 ? "log-plus" : "log-minus";
+                    let valText = log.val >= 0 ? `+${log.val}` : log.val;
+                    return `
+                    <div class="log-row">
+                        <span><span class="log-time">${log.time}</span> ${log.reason || '系統變更'}</span>
+                        <span class="${valClass}">${valText} 點</span>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function toggleLogs(show) { 
+            document.getElementById('logModal').style.display = show ? 'flex' : 'none'; 
+        }
+
+        function send(val, btnElement) {
+            if (!currentStudentId) return;
+            if (val >= 101 && !confirm(`確定要一次給予 ${val} 點嗎？`)) return;
+            if (val <= -101 && !confirm(`確定要一次扣除 ${Math.abs(val)} 點嗎？`)) return;
+
+            const allBtns = document.querySelectorAll('.btn-action');
+            allBtns.forEach(b => { b.style.pointerEvents = 'none'; b.style.opacity = '0.5'; });
+            
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "⏳";
+
+            fetch(`${GAS_URL}?action=admin_add_points&id=${currentStudentId}&val=${val}&secret=${ADMIN_SECRET}`)
+                .then(res => res.json())
+                .then(resData => {
+                    currentPointsValue += val;
+                    const ptsEl = document.getElementById('stu-points');
+                    ptsEl.innerText = `${currentPointsValue} PTS`;
+                    
+                    ptsEl.style.transform = "scale(1.3)";
+                    setTimeout(() => ptsEl.style.transform = "scale(1)", 300);
+
+                    loadStudentData(currentStudentId);
+
+                    allBtns.forEach(b => { b.style.pointerEvents = 'auto'; b.style.opacity = '1'; });
+                    btnElement.innerText = originalText;
+                })
+                .catch(err => {
+                    alert("加扣分失敗，請檢查網路！");
+                    allBtns.forEach(b => { b.style.pointerEvents = 'auto'; b.style.opacity = '1'; });
+                    btnElement.innerText = originalText;
+                });
+        }
+
+        function handleAdd(btnElement) { 
+            const val = parseInt(document.getElementById('customAdd').value); 
+            if (!isNaN(val) && val > 0) { 
+                send(val, btnElement); 
+                document.getElementById('customAdd').value = ''; 
+            } 
+        }
+
+        function handleMinus(btnElement) { 
+            const val = parseInt(document.getElementById('customMinus').value); 
+            if (!isNaN(val) && val > 0) { 
+                send(-val, btnElement); 
+                document.getElementById('customMinus').value = ''; 
+            } 
+        }
+
+        function resetScanner() { 
+            currentStudentId = null; 
+            actionUI.style.display = 'none'; 
+            scanUI.style.display = 'block'; 
+            document.getElementById('top-nav').style.display = 'flex'; 
+            card.className = 'container'; 
+            msg.innerText = "🟢 系統就緒，請感應學生卡"; 
+            msg.style.color = "white"; 
+            window.history.replaceState(null, null, 'admin.html'); 
+            scanner.focus(); 
+        }
+
+        function showError(errorText) { 
+            card.className = 'container error'; 
+            msg.innerText = errorText; 
+            msg.style.color = "#e74c3c"; 
+            setTimeout(() => { 
+                if (actionUI.style.display !== 'block') { 
+                    card.className = 'container'; 
+                    msg.innerText = "🟢 系統就緒，請感應學生卡"; 
+                    msg.style.color = "white"; 
+                } 
+            }, 2500); 
+        }
+
+        function adminLogout() { 
+            if (confirm("確定要登出嗎？")) { 
+                localStorage.removeItem('tappie_admin_key'); 
+                window.location.reload(); 
+            } 
+        }
+        // =======================================================
+        // 🎨 校區客製化視覺設定系統
+        // =======================================================
+        function openBrandingModal() {
+            document.getElementById('menu-dropdown').classList.remove('show');
+            document.getElementById('brandingModal').style.display = 'flex';
+            document.getElementById('upload-status').innerText = "";
+            loadBrandingConfig();
+        }
+
+        function loadBrandingConfig() {
+            document.getElementById('upload-status').innerText = "⏳ 讀取目前設定中...";
+            document.getElementById('upload-status').style.color = "#94a3b8";
+            
+            fetch(`${GAS_URL}?action=get_branding_config&id=${CURRENT_SCHOOL}-ADMIN&secret=${ADMIN_SECRET}`)
+                .then(res => res.json())
+                .then(config => {
+                    document.getElementById('upload-status').innerText = "";
+                    if (config.logoUrl) document.getElementById('preview-logo').src = config.logoUrl;
+                    if (config.iconUrl) document.getElementById('preview-icon').src = config.iconUrl;
+                })
+                .catch(err => {
+                    document.getElementById('upload-status').innerText = "⚠️ 讀取設定失敗";
+                    document.getElementById('upload-status').style.color = "#e74c3c";
+                });
+        }
+
+        function handleFileSelect(input, type) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // 容量防護 (1MB = 1048576 bytes)
+            if (file.size > 1048576) {
+                alert("⛔ 檔案太大了！為了維持學生載入速度，請上傳小於 1MB 的圖片喔！");
+                input.value = ""; 
+                return;
+            }
+
+            if (type === 'icon') {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = () => {
+                    if (Math.abs(img.width - img.height) > 5) { 
+                        alert("💡 溫馨提醒：App 圖示強烈建議使用「正方形圖片」，安裝到手機桌面才不會變形喔！");
+                    }
+                };
+            }
+
+            const reader = new FileReader();
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "⏳ 處理圖片中...";
+            statusEl.style.color = "#ffd700";
+
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                uploadBranding(base64, file.name, type);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function uploadBranding(base64, filename, type) {
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "🚀 正在將圖片同步至雲端金庫，請稍候...";
+            statusEl.style.color = "#3498db";
+            
+            const formData = new URLSearchParams();
+            formData.append('image', base64);
+            formData.append('filename', filename);
+            formData.append('brandingType', type);
+            // 🚀 關鍵：把 secret 跟 id 也包進去
+            formData.append('secret', ADMIN_SECRET);
+            formData.append('id', `${CURRENT_SCHOOL}-ADMIN`);
+
+            // 因為有送 image，必須使用 POST
+            fetch(`${GAS_URL}?action=upload_custom_branding`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    statusEl.innerText = "✅ 圖片更新成功！(新學員載入即生效)";
+                    statusEl.style.color = "#2ecc71";
+                    document.getElementById(`preview-${type}`).src = data.url;
+                } else {
+                    statusEl.innerText = "❌ 上傳失敗：" + data.error;
+                    statusEl.style.color = "#e74c3c";
+                }
+            })
+            .catch(err => {
+                statusEl.innerText = "⚠️ 網路連線中斷，請重試。";
+                statusEl.style.color = "#e74c3c";
+            });
+        }
+        function deleteBranding(type) {
+            const label = type === 'logo' ? '系統 Logo' : 'App 圖示';
+            if (!confirm(`確定要刪除已上傳的【${label}】並還原為官方預設嗎？`)) return;
+
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "⏳ 正在重置設定...";
+            statusEl.style.color = "#ffd700";
+
+            const formData = new URLSearchParams();
+            formData.append('brandingType', type);
+            formData.append('secret', ADMIN_SECRET);
+            formData.append('id', `${CURRENT_SCHOOL}-ADMIN`);
+
+            fetch(`${GAS_URL}?action=delete_custom_branding`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    statusEl.innerText = `✅ ${label} 已成功重置。`;
+                    statusEl.style.color = "#2ecc71";
+                    
+                    // 回復預設圖片預覽
+                    if (type === 'logo') document.getElementById('preview-logo').src = "/assets/logo.webp";
+                    if (type === 'icon') document.getElementById('preview-icon').src = "/assets/app-icon.png";
+                    
+                    alert("設定已重置！學生重新開啟網頁後將看到官方圖示。");
+                } else {
+                    statusEl.innerText = "❌ 刪除失敗：" + data.error;
+                    statusEl.style.color = "#e74c3c";
+                }
+            })
+            .catch(err => {
+                statusEl.innerText = "⚠️ 網路異常，請重試。";
+                statusEl.style.color = "#e74c3c";
+            });
+        }
+
+        // 🚀 預設的原始點數獎池
+        const DEFAULT_POINTS_POOL = [
+            { value: 0, rarity: "N", weight: 40 }, { value: 5, rarity: "N", weight: 30 },
+            { value: 10, rarity: "N", weight: 15 }, { value: 20, rarity: "R", weight: 4 },
+            { value: 30, rarity: "R", weight: 3 }, { value: 50, rarity: "R", weight: 2 },
+            { value: 70, rarity: "SR", weight: 1 }, { value: 90, rarity: "SR", weight: 0.5 },
+            { value: 150, rarity: "SR", weight: 0.3 }, { value: 500, rarity: "SSR", weight: 0.1 },
+            { value: 888, rarity: "SSR", weight: 0.1 }
+        ];
+
+        function addGamiPointRow(val = 10, rarity = 'N', weight = 1) {
+            const container = document.getElementById('gami-points-list');
+            const row = document.createElement('div');
+            row.className = 'gami-point-row';
+            row.style.cssText = 'display:flex; gap:8px; align-items:center; background:rgba(0,0,0,0.2); padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);';
+            row.innerHTML = `
+                <input type="number" class="word-input gp-val" style="flex:1; padding:6px; font-size:14px; text-align:center;" value="${val}">
+                <select class="word-input gp-rarity" style="flex:1; padding:6px; font-size:13px; text-align:center; appearance:none;">
+                    <option value="N" ${rarity==='N'?'selected':''}>N 卡</option>
+                    <option value="R" ${rarity==='R'?'selected':''}>R 卡</option>
+                    <option value="SR" ${rarity==='SR'?'selected':''}>SR 卡</option>
+                    <option value="SSR" ${rarity==='SSR'?'selected':''}>SSR 卡</option>
+                </select>
+                <input type="number" step="0.1" class="word-input gp-weight" style="flex:1; padding:6px; font-size:14px; text-align:center;" value="${weight}">
+                <button onclick="this.parentElement.remove()" style="width:30px; height:30px; background:rgba(231,76,60,0.2); color:#e74c3c; border:1px solid #e74c3c; border-radius:8px; cursor:pointer; font-size:14px; display:flex; justify-content:center; align-items:center; flex:none;">✖</button>
+            `;
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight; // 滾動到底部
+        }
+
+        // =======================================================
+        // 🕹️ 遊戲化數值中控台與商店定價引擎 (老闆指定：絕對機率直列版)
+        // =======================================================
+        
+        let currentShopAvatars = []; // 暫存商店角色
+        let flatGachaItems = []; // 展平後的卡池資料
+
+        const DEFAULT_GACHA_ITEMS = [
+            { type: 'points', value: 0, rarity: 'N', prob: 25 },
+            { type: 'points', value: 5, rarity: 'N', prob: 20 },
+            { type: 'points', value: 10, rarity: 'N', prob: 15 },
+            { type: 'points', value: 20, rarity: 'R', prob: 15 },
+            { type: 'points', value: 30, rarity: 'R', prob: 10 },
+            { type: 'points', value: 50, rarity: 'R', prob: 8 },
+            { type: 'points', value: 70, rarity: 'SR', prob: 4 },
+            { type: 'points', value: 90, rarity: 'SR', prob: 2 },
+            { type: 'points', value: 500, rarity: 'SSR', prob: 1 }
+        ];
+
+        function openGamiModal() {
+            document.getElementById('menu-dropdown').classList.remove('show');
+            document.getElementById('gamiModal').style.display = 'flex';
+            document.getElementById('gami-status').innerText = "讀取設定中...";
+            
+            Promise.all([
+                fetch(`${GAS_URL}?action=get_gamification_config&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST' }).then(r => r.json()),
+                fetch(`${GAS_URL}?action=get_shop_items_admin&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST' }).then(r => r.json())
+            ])
+            .then(([config, shopData]) => {
+                document.getElementById('gami-status').innerText = "";
+                if (!config || !config.dailyChallenge) return;
+
+                currentShopAvatars = (shopData || []).filter(item => !item.id.startsWith("AI_"));
+
+                document.getElementById('gami-pass-score').value = config.dailyChallenge.passScore;
+                document.getElementById('gami-t1-min').value = config.dailyChallenge.tiers[0].min;
+                document.getElementById('gami-t1-pts').value = config.dailyChallenge.tiers[0].pts;
+                document.getElementById('gami-t2-min').value = config.dailyChallenge.tiers[1].min;
+                document.getElementById('gami-t2-pts').value = config.dailyChallenge.tiers[1].pts;
+                document.getElementById('gami-t3-min').value = config.dailyChallenge.tiers[2].min;
+                document.getElementById('gami-t3-pts').value = config.dailyChallenge.tiers[2].pts;
+
+                document.getElementById('gami-fail-th').value = config.mission.failThreshold;
+                document.getElementById('gami-fail-base').value = config.mission.failBasePenalty;
+                document.getElementById('gami-fail-step').value = config.mission.failPenaltyStep;
+                document.getElementById('gami-good-th').value = config.mission.goodThreshold;
+                document.getElementById('gami-good-pts').value = config.mission.goodReward;
+                document.getElementById('gami-perf-th').value = config.mission.perfectThreshold;
+                document.getElementById('gami-perf-pts').value = config.mission.perfectReward;
+
+                document.getElementById('gami-lb-1').value = config.leaderboard[0];
+                document.getElementById('gami-lb-2').value = config.leaderboard[1];
+                document.getElementById('gami-lb-3').value = config.leaderboard[2];
+
+                document.getElementById('gami-pick-easy').value = config.gachaPicks["初階Ai"];
+                document.getElementById('gami-pick-med').value = config.gachaPicks["中階Ai"];
+                document.getElementById('gami-pick-hard').value = config.gachaPicks["高階Ai"];
+                document.getElementById('gami-pick-pvp').value = config.gachaPicks["玩家對戰"];
+
+                const passInput = document.getElementById('gami-pass-score');
+                const t3MinInput = document.getElementById('gami-t3-min');
+                passInput.oninput = function() { t3MinInput.value = this.value; };
+
+                // 🚀 核心轉換：載入 flatGachaItems
+                flatGachaItems = (config.gachaItems && config.gachaItems.length > 0) ? config.gachaItems : DEFAULT_GACHA_ITEMS;
+                
+                // 將商店裡的新角色，自動以 0% 補進列表
+                currentShopAvatars.forEach(av => {
+                    let existing = flatGachaItems.find(i => i.type === 'avatar' && String(i.value) === String(av.id));
+                    if (existing) {
+                        existing.rarity = av.rarity; // 確保稀有度跟商店一致
+                    } else {
+                        flatGachaItems.push({ type: 'avatar', value: av.id, rarity: av.rarity, prob: 0 });
+                    }
+                });
+
+                renderFlatGachaUI();
+            })
+            .catch(err => {
+                document.getElementById('gami-status').innerText = "⚠️ 讀取失敗，請重試";
+                document.getElementById('gami-status').style.color = "#e74c3c";
+            });
+        }
+
+        // 🎨 渲染一直排的 UI (按 Rarity 群組與機率高低排序)
+        function renderFlatGachaUI() {
+            const container = document.getElementById('gacha-flat-container');
+            container.innerHTML = "";
+
+            // 依照 SSR -> SR -> R -> N 的順序，且同區段內依據機率由高到低排列
+            const rarityOrder = { 'SSR': 1, 'SR': 2, 'R': 3, 'N': 4 };
+            const rarityColors = { 'N': '#bdc3c7', 'R': '#3498db', 'SR': '#9b59b6', 'SSR': '#f1c40f' };
+
+            flatGachaItems.sort((a, b) => {
+                if (rarityOrder[a.rarity] !== rarityOrder[b.rarity]) {
+                    return rarityOrder[a.rarity] - rarityOrder[b.rarity];
+                }
+                return b.prob - a.prob; // 同區段機率高的在前面
+            });
+
+            let currentRarityHeader = "";
+
+            flatGachaItems.forEach((item, index) => {
+                // 畫出區段分隔線與該區段的加總機率
+                if (item.rarity !== currentRarityHeader) {
+                    currentRarityHeader = item.rarity;
+                    let sectionTotal = flatGachaItems.filter(i => i.rarity === currentRarityHeader).reduce((sum, i) => sum + Number(i.prob), 0);
+                    container.innerHTML += `
+                        <div style="color:${rarityColors[currentRarityHeader]}; font-size:14px; font-weight:900; margin: 10px 0 0 5px; border-bottom: 2px solid ${rarityColors[currentRarityHeader]}40; padding-bottom: 6px; display:flex; justify-content:space-between;">
+                            <span>■ ${currentRarityHeader} 區段</span>
+                            <span>區段總和: <span id="section-sum-${currentRarityHeader}">${sectionTotal.toFixed(2)}</span>%</span>
+                        </div>`;
+                }
+
+                let isAvatar = item.type === 'avatar';
+                let displayName = "";
+                if (isAvatar) {
+                    let shopItem = currentShopAvatars.find(av => av.id === item.value);
+                    displayName = shopItem ? shopItem.name : "未知角色";
+                }
+
+                let rowHtml = `
+                <div class="flat-item-row" data-index="${index}" data-type="${item.type}" data-val="${item.value}" style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.4); padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                    <span style="font-size:16px; flex:none;">${isAvatar ? '🎭' : '💰'}</span>`;
+                
+                if (isAvatar) {
+                    // 角色不可改區段、不可刪除
+                    rowHtml += `
+                    <span style="flex:1; font-size:13px; font-weight:bold; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${displayName}">${displayName}</span>
+                    <span style="width:45px; font-size:11px; color:#cbd5e1; text-align:center;">(鎖定)</span>`;
+                } else {
+                    // 點數可以改面額、改區段
+                    rowHtml += `
+                    <input type="number" class="word-input flat-pts-val" value="${item.value}" style="flex:1; padding:6px; font-size:13px; text-align:center; min-width:0;">
+                    <select class="word-input flat-rarity-sel" style="width:55px; padding:6px; font-size:12px; flex:none; text-align:center; appearance:none;" onchange="updateFlatDataAndRender()">
+                        <option value="N" ${item.rarity==='N'?'selected':''}>N</option>
+                        <option value="R" ${item.rarity==='R'?'selected':''}>R</option>
+                        <option value="SR" ${item.rarity==='SR'?'selected':''}>SR</option>
+                        <option value="SSR" ${item.rarity==='SSR'?'selected':''}>SSR</option>
+                    </select>`;
+                }
+
+                rowHtml += `
+                    <input type="number" step="0.01" min="0" class="word-input flat-prob-inp" value="${item.prob}" style="width:60px; padding:6px; font-size:13px; text-align:center; flex:none;" oninput="updateLiveSum()">
+                    <span style="font-size:12px; color:#cbd5e1; width:12px;">%</span>`;
+                
+                if (!isAvatar) {
+                    rowHtml += `<button onclick="deleteFlatItem(${index})" style="background:rgba(231,76,60,0.2); border:1px solid #e74c3c; color:#e74c3c; border-radius:6px; width:26px; height:26px; font-size:12px; cursor:pointer; flex:none;">✖</button>`;
+                } else {
+                    rowHtml += `<div style="width:26px; flex:none;"></div>`; // 角色不能刪除，佔位符
+                }
+
+                rowHtml += `</div>`;
+                container.innerHTML += rowHtml;
+            });
+
+            updateLiveSum();
+        }
+
+        function addFlatPointRow(val, rarity, prob) {
+            syncInputToFlatData(); 
+            flatGachaItems.push({ type: 'points', value: val, rarity: rarity, prob: prob });
+            renderFlatGachaUI(); // 重新排序渲染
+        }
+
+        function deleteFlatItem(index) {
+            syncInputToFlatData();
+            flatGachaItems.splice(index, 1);
+            renderFlatGachaUI();
+        }
+
+        function updateFlatDataAndRender() {
+            syncInputToFlatData();
+            renderFlatGachaUI(); // 只要改了下拉選單區段，立刻重新排序！
+        }
+
+        // 把畫面上輸入的最新數字，同步回 flatGachaItems 陣列
+        function syncInputToFlatData() {
+            const rows = document.querySelectorAll('.flat-item-row');
+            rows.forEach(row => {
+                const idx = row.getAttribute('data-index');
+                const isAvatar = row.getAttribute('data-type') === 'avatar';
+                
+                let probVal = parseFloat(row.querySelector('.flat-prob-inp').value) || 0;
+                if(probVal < 0) probVal = 0; // 防呆
+                flatGachaItems[idx].prob = probVal;
+
+                if (!isAvatar) {
+                    flatGachaItems[idx].value = parseInt(row.querySelector('.flat-pts-val').value) || 0;
+                    flatGachaItems[idx].rarity = row.querySelector('.flat-rarity-sel').value;
+                }
+            });
+        }
+
+        // 計算右上角的總和，以及各區段的即時總和顯示
+        function updateLiveSum() {
+            const rows = document.querySelectorAll('.flat-item-row');
+            let totalSum = 0;
+            let sectionSums = { 'N': 0, 'R': 0, 'SR': 0, 'SSR': 0 };
+
+            rows.forEach(row => {
+                // 取得這行的機率數值
+                const probVal = parseFloat(row.querySelector('.flat-prob-inp').value) || 0;
+                totalSum += probVal;
+
+                // 判斷這行屬於哪個區段
+                let rarity = 'N';
+                if (row.getAttribute('data-type') === 'avatar') {
+                    // 角色不可改區段，直接從記憶體抓
+                    const idx = row.getAttribute('data-index');
+                    if (flatGachaItems[idx]) rarity = flatGachaItems[idx].rarity;
+                } else {
+                    // 點數可以改區段，從下拉選單即時抓取
+                    rarity = row.querySelector('.flat-rarity-sel').value;
+                }
+
+                // 累加到該區段的總和中
+                if (sectionSums[rarity] !== undefined) {
+                    sectionSums[rarity] += probVal;
+                }
+            });
+            
+            // 1. 更新右上角全域總和
+            const liveSumEl = document.getElementById('live-prob-sum');
+            if (liveSumEl) {
+                liveSumEl.innerText = totalSum.toFixed(2) + "%";
+                if (Math.abs(totalSum - 100) > 0.01) {
+                    liveSumEl.style.color = "#e74c3c"; // 錯誤時變紅
+                } else {
+                    liveSumEl.style.color = "#2ecc71"; // 100% 時變綠
+                }
+            }
+
+            // 2. 🚀 即時更新各區段的總和數字
+            ['N', 'R', 'SR', 'SSR'].forEach(r => {
+                const secEl = document.getElementById(`section-sum-${r}`);
+                if (secEl) {
+                    secEl.innerText = sectionSums[r].toFixed(2);
+                }
+            });
+
+            return totalSum;
+        }
+
+        // 🚀 儲存核心：攔截總和驗證
+        function saveGamification() {
+            syncInputToFlatData(); // 確保抓到最新數據
+            const sum = updateLiveSum();
+
+            if (Math.abs(sum - 100) > 0.01) {
+                // 不滿 100%，觸發跳窗！
+                const diff = (100 - sum).toFixed(2);
+                document.getElementById('prob-current-sum').innerText = sum.toFixed(2) + "%";
+                document.getElementById('prob-diff-text').innerText = sum > 100 ? `(多了 ${Math.abs(diff)}%)` : `(少了 ${diff}%)`;
+                document.getElementById('prob-diff-text').style.color = sum > 100 ? "#e67e22" : "#e74c3c";
+                document.getElementById('probCheckModal').style.display = 'flex';
+                return;
+            }
+            
+            executeSaveToBackend();
+        }
+
+        // ✨ 自動比例校正器 (Auto-Normalize)
+        function autoNormalizeProbabilities() {
+            document.getElementById('probCheckModal').style.display = 'none';
+            syncInputToFlatData();
+            
+            let sum = 0;
+            flatGachaItems.forEach(i => sum += i.prob);
+            
+            if (sum === 0) {
+                alert("目前機率全部是 0！系統無法分配，請手動填寫。");
+                return;
+            }
+
+            // 依據原始比例放大縮小
+            let newSum = 0;
+            flatGachaItems.forEach(i => {
+                i.prob = parseFloat(((i.prob / sum) * 100).toFixed(2));
+                newSum += i.prob;
+            });
+
+            // 處理小數點四捨五入的微小誤差 (例如加起來變 99.99)，補給最高機率的那個
+            if (Math.abs(newSum - 100) > 0.001) {
+                flatGachaItems.sort((a, b) => b.prob - a.prob);
+                let diff = 100 - newSum;
+                flatGachaItems[0].prob = parseFloat((flatGachaItems[0].prob + diff).toFixed(2));
+            }
+
+            renderFlatGachaUI(); // 畫面更新
+            alert("✨ 系統已將機率完美調整為 100%，請確認無誤後再次點擊儲存！");
+        }
+
+        // 真正的後端儲存函式
+        function executeSaveToBackend() {
+            const btn = document.getElementById('save-gami-btn');
+            const statusEl = document.getElementById('gami-status');
+            btn.innerText = "⏳ 儲存中...";
+            btn.style.pointerEvents = "none";
+            statusEl.innerText = "";
+
+            const newConfig = {
+                dailyChallenge: {
+                    passScore: Number(document.getElementById('gami-pass-score').value),
+                    tiers: [
+                        { min: Number(document.getElementById('gami-t1-min').value), pts: Number(document.getElementById('gami-t1-pts').value) },
+                        { min: Number(document.getElementById('gami-t2-min').value), pts: Number(document.getElementById('gami-t2-pts').value) },
+                        { min: Number(document.getElementById('gami-t3-min').value), pts: Number(document.getElementById('gami-t3-pts').value) }
+                    ]
+                },
+                mission: {
+                    failThreshold: Number(document.getElementById('gami-fail-th').value),
+                    failBasePenalty: Number(document.getElementById('gami-fail-base').value),
+                    failPenaltyStep: Number(document.getElementById('gami-fail-step').value),
+                    goodThreshold: Number(document.getElementById('gami-good-th').value),
+                    goodReward: Number(document.getElementById('gami-good-pts').value),
+                    perfectThreshold: Number(document.getElementById('gami-perf-th').value),
+                    perfectReward: Number(document.getElementById('gami-perf-pts').value)
+                },
+                leaderboard: [
+                    Number(document.getElementById('gami-lb-1').value),
+                    Number(document.getElementById('gami-lb-2').value),
+                    Number(document.getElementById('gami-lb-3').value)
+                ],
+                gachaPicks: {
+                    "初階Ai": Number(document.getElementById('gami-pick-easy').value),
+                    "中階Ai": Number(document.getElementById('gami-pick-med').value),
+                    "高階Ai": Number(document.getElementById('gami-pick-hard').value),
+                    "玩家對戰": Number(document.getElementById('gami-pick-pvp').value),
+                    "活動Boss": Number(document.getElementById('gami-pick-boss').value)
+                },
+                gachaItems: flatGachaItems // 🚀 直接存入絕對機率清單！
+            };
+
+            const formData = new URLSearchParams();
+            formData.append('config', JSON.stringify(newConfig));
+
+            fetch(`${GAS_URL}?action=save_gamification_settings&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        statusEl.innerText = "✅ 卡池機率已全域同步！";
+                        statusEl.style.color = "#2ecc71";
+                        setTimeout(() => closeModal('gamiModal'), 1500);
+                    } else {
+                        statusEl.innerText = "❌ 儲存失敗";
+                        statusEl.style.color = "#e74c3c";
+                    }
+                })
+                .catch(err => {
+                    statusEl.innerText = "⚠️ 網路異常";
+                    statusEl.style.color = "#e74c3c";
+                })
+                .finally(() => {
+                    btn.innerText = "🚀 儲存全域數值";
+                    btn.style.pointerEvents = "auto";
+                });
+        }
+
+        // 🛒 商店定價動態讀取與個別儲存
+        function loadShopAdminList() {
+            const listEl = document.getElementById('shop-admin-list');
+            listEl.innerHTML = '<p style="text-align:center; color:#3498db; font-size:13px; margin: 10px 0;">讀取商品中...</p>';
+            
+            fetch(`${GAS_URL}?action=get_shop_items_admin&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST' })
+                .then(res => res.json())
+                .then(items => {
+                    if (!items || items.length === 0) {
+                        listEl.innerHTML = '<p style="text-align:center; color:#7f8c8d; font-size:13px; margin: 10px 0;">商店目前沒有上架商品</p>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    items.forEach(item => {
+                        let rarityColor = item.rarity === 'SSR' ? '#f1c40f' : (item.rarity === 'SR' ? '#9b59b6' : (item.rarity === 'R' ? '#3498db' : '#ecf0f1'));
+                        html += `
+                        <div style="display:flex; align-items:center; background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); gap:10px;">
+                            <span style="color:${rarityColor}; font-weight:900; font-size:12px; width:30px; text-align:center;">${item.rarity}</span>
+                            <span style="flex:1; color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</span>
+                            <input type="number" id="shop-cost-${item.row}" value="${item.cost}" class="word-input" style="width:70px; padding:6px; font-size:14px; margin:0; flex:none;">
+                            <button onclick="saveShopItemPrice(${item.row}, this)" style="background:rgba(46,204,113,0.2); border:1px solid #2ecc71; color:#2ecc71; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:bold; font-size:12px; transition:0.2s;">儲存</button>
+                        </div>`;
+                    });
+                    listEl.innerHTML = html;
+                });
+        }
+
+        function saveShopItemPrice(row, btnElement) {
+            const costVal = document.getElementById(`shop-cost-${row}`).value;
+            if (costVal === "") return;
+
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "⏳";
+            btnElement.style.pointerEvents = "none";
+
+            const formData = new URLSearchParams();
+            formData.append('row', row);
+            formData.append('cost', costVal);
+
+            fetch(`${GAS_URL}?action=save_shop_item_price&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        btnElement.innerText = "✅";
+                        btnElement.style.background = "#2ecc71";
+                        btnElement.style.color = "white";
+                        setTimeout(() => {
+                            btnElement.innerText = originalText;
+                            btnElement.style.background = "rgba(46,204,113,0.2)";
+                            btnElement.style.color = "#2ecc71";
+                            btnElement.style.pointerEvents = "auto";
+                        }, 1500);
+                    } else {
+                        btnElement.innerText = "❌";
+                        setTimeout(() => { btnElement.innerText = originalText; btnElement.style.pointerEvents = "auto"; }, 1500);
+                    }
+                });
+        }
+
+        // =======================================================
+        // 📅 任務排定系統 (階段二前端邏輯)
+        // =======================================================
+        let allTasksData = [];
+        let filteredTasks = [];
+        let currentTaskPage = 1;
+        const TASKS_PER_PAGE = 10;
+        let editingTaskRow = 0; // 0 代表新增
+        let allSchedulesData = [];
+
+        function openTaskManager() {
+            document.getElementById('menu-dropdown').classList.remove('show');
+            document.getElementById('mainCard').style.display = 'none';
+            document.getElementById('taskManagerView').style.display = 'flex';
+            fetchTaskData();
+        }
+
+        function closeTaskManager() {
+            document.getElementById('taskManagerView').style.display = 'none';
+            document.getElementById('mainCard').style.display = 'block'; // 🚀 改為 block，解決擠向左邊的問題
+        }
+
+        let allEventAvatars = []; // 存活動角色
+
+        function fetchTaskData() {
+            const listZone = document.getElementById('tm-list-zone');
+            listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取任務庫中...</p>';
+            
+            fetch(`${GAS_URL}?action=get_task_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) return listZone.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
+                    
+                    allTasksData = data.words;
+                    allSchedulesData = data.schedules;      // 🚀 抓取所有排程
+                    allEventAvatars = data.eventAvatars;    // 🚀 抓取所有活動角色
+                    
+                    const classSet = new Set();
+                    allTasksData.forEach(t => { if (t.classId) classSet.add(t.classId); });
+                    const filterSelect = document.getElementById('tm-class-filter');
+                    const currentFilter = filterSelect.value;
+                    filterSelect.innerHTML = '<option value="">🏫 請選擇班級</option>';
+                    Array.from(classSet).sort().forEach(cls => {
+                        filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
+                    });
+
+                    changeTaskFilter(); 
+                });
+        }
+
+        function changeTaskFilter() {
+            const filterClass = document.getElementById('tm-class-filter').value;
+            filteredTasks = filterClass ? allTasksData.filter(t => t.classId === filterClass) : [];
+            filteredTasks.sort((a, b) => b.row - a.row);
+            currentTaskPage = 1;
+            
+            renderTaskList();
+            renderSmartCalendar(); // 🚀 渲染上方的時間軸
+        }
+
+        // 🚀 新增：頂部視圖專用的全域變數與切換函數
+        let topCalDate = new Date();
+        
+        function changeTopMonth(offset) {
+            topCalDate.setMonth(topCalDate.getMonth() + offset);
+            renderSmartCalendar();
+        }
+
+        // 🚀 華麗進化：連續彩帶式月曆 (Gantt Ribbon Calendar)
+        function renderSmartCalendar() {
+            const filterClass = document.getElementById('tm-class-filter').value;
+            const grid = document.getElementById('top-cal-grid');
+            const title = document.getElementById('top-cal-month-title');
+            
+            if (!filterClass) {
+                title.innerText = "請選擇班級";
+                grid.innerHTML = '<div style="grid-column: span 7; text-align:center; padding: 20px; color:#94a3b8; font-weight:bold;">👆 請於下方選擇班級以顯示排程</div>';
+                return;
+            }
+
+            const year = topCalDate.getFullYear();
+            const month = topCalDate.getMonth();
+            title.innerText = `${year}年 ${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1).getDay(); 
+            const daysInMonth = new Date(year, month + 1, 0).getDate(); 
+            
+            grid.innerHTML = '';
+            for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-day empty"></div>`; }
+
+            let classSchedules = allSchedulesData.filter(s => s.classId === filterClass && s.startDate);
+            let todayStr = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd");
+
+            const colorPalette = ['#3498db', '#e74c3c', '#9b59b6', '#00b894', '#e67e22', '#0984e3', '#fd79a8'];
+            let unitColorMap = {}; let colorIndex = 0;
+            classSchedules.forEach(s => { if (!unitColorMap[s.unit]) { unitColorMap[s.unit] = colorPalette[colorIndex % colorPalette.length]; colorIndex++; } });
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                let cellDate = new Date(year, month, i);
+                let dateStr = Utilities.formatDate(cellDate, "GMT+8", "yyyy-MM-dd");
+                
+                let isToday = (dateStr === todayStr);
+                let classNames = "cal-day";
+                if (isToday) classNames += " sc-today";
+
+                let innerHtml = `<span class="day-num" style="font-size:13px; margin-top:3px;">${i}</span>`;
+                let extraStyle = "";
+                
+                let sch = classSchedules.find(s => dateStr >= s.startDate && dateStr <= s.endDate);
+                
+                // 🚀 核心：判斷點擊事件 (如果已經排定，就傳入該排程；如果沒排定，觸發快速排程)
+                let clickAction = `onclick="promptQuickSchedule('${dateStr}')"`;
+
+                if (sch) {
+                    let safeClassId = sch.classId.replace(/'/g, "\\'");
+                    let safeUnit = sch.unit.replace(/'/g, "\\'");
+                    clickAction = `onclick="openCalendarModal(${sch.row}, '${safeClassId}', '${safeUnit}')"`;
+
+                    let cleanUnit = sch.unit;
+                    if (cleanUnit.toUpperCase().startsWith(filterClass.toUpperCase())) {
+                        cleanUnit = cleanUnit.substring(filterClass.length).trim();
+                        if (cleanUnit.startsWith('-')) cleanUnit = cleanUnit.substring(1).trim();
+                    }
+
+                    let unitColor = unitColorMap[sch.unit];
+                    extraStyle = `style="background: ${unitColor}15;"`;
+
+                    // 🎀 跨越日期的彩帶核心演算法
+                    let dOb = new Date(year, month, i);
+                    let dayOfWeek = dOb.getDay();
+                    
+                    // 判斷是否為這個彩帶片段的「起點」 (任務第一天、或者是週日、或者是每月 1 號)
+                    let isSegmentStart = (dateStr === sch.startDate || i === 1 || dayOfWeek === 0);
+
+                    if (isSegmentStart) {
+                        // 🚀 往後推算這個片段會跨越幾天 (遇到週六、月底、或任務結束就停止)
+                        let segmentLength = 1;
+                        let tempDate = new Date(year, month, i);
+                        let tempDateStr = Utilities.formatDate(tempDate, "GMT+8", "yyyy-MM-dd");
+                        
+                        while (tempDateStr < sch.endDate && tempDate.getDay() < 6 && tempDate.getDate() < daysInMonth) {
+                            tempDate.setDate(tempDate.getDate() + 1);
+                            tempDateStr = Utilities.formatDate(tempDate, "GMT+8", "yyyy-MM-dd");
+                            segmentLength++;
+                        }
+
+                        // 🚀 射線魔法：計算絕對寬度 (N天 * 100% + 中間的 6px 縫隙)
+                        let wCalc = segmentLength === 1 ? '100%' : `calc(${segmentLength * 100}% + ${(segmentLength - 1) * 6}px)`;
+                        
+                        let isActualStart = (dateStr === sch.startDate);
+                        let isActualEnd = (tempDateStr === sch.endDate);
+                        // 圓角只出現在任務真正的頭尾
+                        let bRad = `${isActualStart ? '6px' : '0'} ${isActualEnd ? '6px' : '0'} ${isActualEnd ? '6px' : '0'} ${isActualStart ? '6px' : '0'}`;
+
+                        innerHtml += `
+                        <div style="position: relative; width: 100%; height: 18px; margin-top: 2px; z-index: 10;">
+                            <div class="cal-ribbon" style="position: absolute; top: 0; left: 0; width: ${wCalc}; background: ${unitColor}; border-radius: ${bRad};" title="${cleanUnit}">
+                                ${cleanUnit}
+                            </div>
+                        </div>`;
+                    } else {
+                        // 如果不是起點，放一個透明佔位符，讓格子高度保持一致，並保留底框的淡色背景
+                        innerHtml += `<div style="width: 100%; height: 18px; margin-top: 2px;"></div>`;
+                    }
+                }
+
+                grid.innerHTML += `<div class="${classNames}" ${extraStyle} ${clickAction}>${innerHtml}</div>`;
+            }
+        }
+
+        // 🚀 新增：快速排定彈窗邏輯
+        let quickSelectDate = null;
+        function promptQuickSchedule(dateStr) {
+            quickSelectDate = dateStr;
+            document.getElementById('qs-date').innerText = dateStr;
+            const select = document.getElementById('qs-task-select');
+            
+            select.innerHTML = '<option value="">-- 請選擇要排定的任務單元 --</option>';
+            filteredTasks.forEach(t => {
+                // 將所有需要的參數打包在 value 裡面
+                select.innerHTML += `<option value="${t.row}|${t.classId}|${t.unit}">${t.unit}</option>`;
+            });
+            
+            document.getElementById('quickSelectModal').style.display = 'flex';
+        }
+
+        function confirmQuickSchedule() {
+            const val = document.getElementById('qs-task-select').value;
+            if (!val) { alert("請先選擇一個單元！"); return; }
+            const parts = val.split('|');
+            closeModal('quickSelectModal');
+            
+            // 呼叫原本的排定視窗，並且附帶「強制預設起始日」參數
+            openCalendarModal(parseInt(parts[0]), parts[1], parts[2], quickSelectDate);
+        }
+        
+
+        function changeTaskPage(direction) {
+            currentTaskPage += direction;
+            renderTaskList();
+        }
+
+        function renderTaskList() {
+            const listZone = document.getElementById('tm-list-zone');
+            const prevBtn = document.getElementById('tm-prev-btn');
+            const nextBtn = document.getElementById('tm-next-btn');
+
+            if (filteredTasks.length === 0) {
+                listZone.innerHTML = '<p style="text-align:center; color:#7f8c8d; margin-top:40px; font-weight:bold;">這個班級目前沒有任務喔！</p>';
+                prevBtn.disabled = true; nextBtn.disabled = true;
+                return;
+            }
+
+            const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE);
+            prevBtn.disabled = (currentTaskPage === 1);
+            nextBtn.disabled = (currentTaskPage === totalPages);
+
+            const startIdx = (currentTaskPage - 1) * TASKS_PER_PAGE;
+            const pageTasks = filteredTasks.slice(startIdx, startIdx + TASKS_PER_PAGE);
+
+            let html = '';
+            pageTasks.forEach(task => {
+                const wordsJsonStr = encodeURIComponent(JSON.stringify(task.words)).replace(/'/g, "%27");
+                const safeClassId = task.classId.replace(/'/g, "\\'");
+                const safeUnit = task.unit.replace(/'/g, "\\'");
+                
+                // 🚀 加入相對定位與右上角的刪除按鈕 ✖
+                html += `
+                <div class="task-card" style="position:relative;">
+                    <button class="btn-del-task" title="刪除任務" onclick="deleteTaskData(${task.row}, '${safeUnit}')">✖</button>
+                    <div class="task-info">
+                        <div class="task-class">${task.classId}</div>
+                        <div class="task-unit">${task.unit}</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${task.words.length} 個單字</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${safeClassId}', '${safeUnit}', '${wordsJsonStr}')">✏️</button>
+                        <button class="btn-icon btn-schedule" title="排定日期" onclick="openCalendarModal(${task.row}, '${safeClassId}', '${safeUnit}')">📅</button>
+                    </div>
+                </div>`;
+            });
+            listZone.innerHTML = html;
+        }
+
+        // 🚀 新增：安全防護版刪除任務功能
+        function deleteTaskData(row, unitName) {
+            // 改用 prompt 要求使用者手動輸入文字，杜絕手滑！
+            const userInput = prompt(`⚠️ 危險動作警告 ⚠️\n\n您即將徹底刪除【${unitName}】！\n(包含裡面的所有單字都會被清空，且無法復原)\n\n請在下方輸入「刪除」兩個字來確認執行：`);
+            
+            // 防呆檢查：如果按取消 (null)，或者打錯字，直接擋下！
+            if (userInput !== "刪除") {
+                if (userInput !== null) {
+                    alert("❌ 輸入錯誤！安全鎖已啟動，取消刪除動作。");
+                }
+                return; 
+            }
+            
+            const listZone = document.getElementById('tm-list-zone');
+            listZone.innerHTML = '<p style="text-align:center; color:#e74c3c; margin-top:40px; font-weight:bold;">🗑️ 正在刪除資料中...</p>';
+            
+            const formData = new URLSearchParams();
+            formData.append('type', 'word');
+            formData.append('row', row);
+
+            fetch(`${GAS_URL}?action=delete_task_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) fetchTaskData(); // 重新讀取
+                    else { alert("刪除失敗，請檢查權限！"); renderTaskList(); }
+                });
+        }
+        
+        
+
+        // --- 📝 動態任務編輯器邏輯 ---
+        function openTaskEditor(row, classId, unit, wordsJsonStr) {
+            editingTaskRow = row;
+            document.getElementById('task-editor-title').innerText = row === 0 ? '✨ 新增任務單元' : '✏️ 編輯任務單元';
+            document.getElementById('edit-task-class').value = classId || '';
+            document.getElementById('edit-task-unit').value = unit || '';
+            
+            const container = document.getElementById('word-list-container');
+            container.innerHTML = '';
+            
+            let words = [];
+            try { words = JSON.parse(decodeURIComponent(wordsJsonStr)); } catch(e) {}
+            
+            // 如果是空的，預設給 3 組空白輸入框
+            if (words.length === 0) {
+                for(let i=0; i<3; i++) addWordRow('', '');
+            } else {
+                words.forEach(w => addWordRow(w.en, w.zh));
+            }
+            
+            document.getElementById('taskEditorModal').style.display = 'flex';
+        }
+
+        function addWordRow(en, zh) {
+            const container = document.getElementById('word-list-container');
+            const row = document.createElement('div');
+            row.className = 'word-row';
+            row.innerHTML = `
+                <input type="text" class="word-input word-en" value="${en}" placeholder="Apple">
+                <input type="text" class="word-input word-zh" value="${zh}" placeholder="蘋果">
+                <button class="btn-del-word" onclick="this.parentElement.remove()" title="刪除此行">✖</button>
+            `;
+            container.appendChild(row);
+            // 讓卷軸自動滾到底部
+            const scrollArea = document.querySelector('#taskEditorModal .modal-scroll-area');
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+        }
+
+        function saveTaskData() {
+            const classId = document.getElementById('edit-task-class').value.trim();
+            const unit = document.getElementById('edit-task-unit').value.trim();
+            
+            if (!classId || !unit) {
+                alert("請填寫「班級代碼」與「單元名稱」！");
+                return;
+            }
+
+            // 收集所有填寫的單字
+            const enInputs = document.querySelectorAll('.word-en');
+            const zhInputs = document.querySelectorAll('.word-zh');
+            let wordsArray = [];
+            
+            for (let i = 0; i < enInputs.length; i++) {
+                const en = enInputs[i].value.trim();
+                const zh = zhInputs[i].value.trim();
+                // 只有英文有填寫才算數
+                if (en !== "") {
+                    wordsArray.push({ en: en, zh: zh });
+                }
+            }
+
+            if (wordsArray.length === 0) {
+                alert("請至少填寫一個英文單字！");
+                return;
+            }
+
+            const saveBtn = document.getElementById('save-task-btn');
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "⏳ 儲存中...";
+            saveBtn.style.pointerEvents = "none";
+
+            const formData = new URLSearchParams();
+            formData.append('row', editingTaskRow);
+            formData.append('classId', classId);
+            formData.append('unit', unit);
+            formData.append('words', JSON.stringify(wordsArray));
+
+            fetch(`${GAS_URL}?action=save_word_bank&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('taskEditorModal');
+                        fetchTaskData(); // 重新讀取資料，刷新列表
+                    } else {
+                        alert(data.error || "儲存失敗，請重試！");
+                    }
+                })
+                .catch(err => alert("網路連線超時，請檢查網路狀態！"))
+                .finally(() => {
+                    saveBtn.innerText = originalText;
+                    saveBtn.style.pointerEvents = "auto";
+                });
+        }
+
+        // =======================================================
+        // 📅 互動式防撞期日曆系統 (階段三核心邏輯)
+        // =======================================================
+        let calCurrentDate = new Date();
+        let calSelectingStart = null;
+        let calSelectingEnd = null;
+        let calTargetTask = { row: 0, classId: '', unit: '' };
+        let blockedDates = []; // 儲存該班級已經被佔用的日期
+
+        // 🚀 修改：加入 forceStartDate 參數
+        function openCalendarModal(row, classId, unit, forceStartDate = null) {
+            let existingSch = allSchedulesData.find(s => s.classId === classId && s.unit === unit);
+
+            // 🚀 核心：如果是「修改模式」，就顯示取消按鈕
+            const cancelBtn = document.getElementById('cal-cancel-btn');
+            if (existingSch) {
+                cancelBtn.style.display = 'block';
+                calTargetTask.row = existingSch.row; // 記錄行號以供刪除
+            } else {
+                cancelBtn.style.display = 'none';
+            }
+            
+            calTargetTask = { row: existingSch ? existingSch.row : 0, classId: classId, unit: unit };
+            document.getElementById('cal-task-info').innerText = `班級：${classId} | 單元：${unit} ${existingSch ? '(修改排程)' : ''}`;
+            
+            // 🚀 核心：如果是從空日期點過來的，強制覆蓋開始日！
+            calSelectingStart = forceStartDate || (existingSch ? existingSch.startDate : null);
+            calSelectingEnd = existingSch && !forceStartDate ? existingSch.endDate : null;
+
+            if (calSelectingStart && calSelectingEnd) {
+                 document.getElementById('cal-status-text').innerText = `✅ 已選擇：${calSelectingStart} ~ ${calSelectingEnd}`;
+                 document.getElementById('cal-status-text').style.color = "#2ecc71";
+            } else if (calSelectingStart) {
+                 // 🚀 如果只有開始日 (快速點擊進來的)
+                 document.getElementById('cal-status-text').innerText = `開始日期：${calSelectingStart}，請選擇「結束日期」`;
+                 document.getElementById('cal-status-text').style.color = "#f1c40f";
+            } else {
+                 document.getElementById('cal-status-text').innerText = "請點擊選擇「開始日期」";
+                 document.getElementById('cal-status-text').style.color = "#cbd5e1";
+            }
+            
+
+            // 🚀 Event 角色選單邏輯
+            const eventZone = document.getElementById('event-avatar-zone');
+            const eventSelect = document.getElementById('event-avatar-select');
+            if (classId.toUpperCase().includes('EVENT') || classId.includes('突發')) {
+                eventZone.style.display = 'flex';
+                eventSelect.innerHTML = '<option value="">-- 請選擇首領角色 --</option>';
+                allEventAvatars.forEach(av => {
+                    let sel = (existingSch && existingSch.avatar === av.id) ? 'selected' : '';
+                    eventSelect.innerHTML += `<option value="${av.id}" ${sel}>${av.id} - ${av.name}</option>`;
+                });
+            } else {
+                eventZone.style.display = 'none';
+                eventSelect.value = '';
+            }
+            
+            // 🚀 防撞期計算：把自己排除在外！
+            blockedDates = [];
+            allSchedulesData.forEach(sch => {
+                if (sch.classId === classId && sch.startDate && sch.endDate) {
+                    if (existingSch && sch.unit === unit) return; // 🌟 讓自己的舊日期可以被重新點選！
+
+                    let d = new Date(sch.startDate);
+                    let endD = new Date(sch.endDate);
+                    while (d <= endD) {
+                        blockedDates.push({ date: Utilities.formatDate(d, "GMT+8", "yyyy-MM-dd"), unit: sch.unit });
+                        d.setDate(d.getDate() + 1);
+                    }
+                }
+            });
+
+            calCurrentDate = calSelectingStart ? new Date(calSelectingStart) : new Date(); 
+            renderCalendar();
+            document.getElementById('calendarModal').style.display = 'flex';
+        }
+
+        // 🚀 執行取消排程 (刪除 Schedule_Bank 裡的這一行)
+        function deleteSchedule() {
+            if(!confirm(`確定要取消【${calTargetTask.unit}】的日期安排嗎？`)) return;
+            
+            const btn = document.getElementById('cal-cancel-btn');
+            btn.innerText = "⏳..."; btn.style.pointerEvents = "none";
+
+            const formData = new URLSearchParams();
+            formData.append('type', 'schedule');
+            formData.append('row', calTargetTask.row);
+
+            fetch(`${GAS_URL}?action=delete_task_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('calendarModal');
+                        fetchTaskData(); // 重新整理，彩帶就會消失
+                    } else {
+                        alert("取消失敗！");
+                    }
+                })
+                .finally(() => {
+                    btn.innerText = "取消排程"; btn.style.pointerEvents = "auto";
+                });
+        }
+
+        function changeMonth(offset) {
+            calCurrentDate.setMonth(calCurrentDate.getMonth() + offset);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = calCurrentDate.getFullYear();
+            const month = calCurrentDate.getMonth();
+            document.getElementById('cal-month-title').innerText = `${year}年 ${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1).getDay(); 
+            const daysInMonth = new Date(year, month + 1, 0).getDate(); 
+            const grid = document.getElementById('cal-grid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-day empty"></div>`; }
+
+            let todayStr = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd");
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                let cellDate = new Date(year, month, i);
+                let dateStr = Utilities.formatDate(cellDate, "GMT+8", "yyyy-MM-dd");
+                
+                let isPast = dateStr < todayStr;
+                let blockInfo = blockedDates.find(b => b.date === dateStr);
+                let isDisabled = !!blockInfo; 
+
+                let classNames = "cal-day";
+                let innerHtml = `<span class="day-num">${i}</span>`;
+                
+                if (isDisabled) {
+                    classNames += " disabled";
+                    if (isPast) {
+                        innerHtml += `<div class="cal-tiny-text" style="color:#7f8c8d;">已過期</div>`;
+                    } else {
+                        // 🚀 顯示佔用的單元名稱！
+                        let shortUnit = blockInfo.unit.length > 5 ? blockInfo.unit.substring(0,4)+'..' : blockInfo.unit;
+                        innerHtml += `<div class="cal-tiny-text" style="color:#ff7675;">${shortUnit}</div>`;
+                    }
+                } else if (isPast && !calSelectingStart) {
+                    classNames += " past-date"; // 只是暗一點，但還是可以點
+                }
+
+                if (calSelectingStart && dateStr === calSelectingStart) classNames += " selected";
+                if (calSelectingEnd && dateStr === calSelectingEnd) classNames += " selected";
+                if (calSelectingStart && calSelectingEnd && dateStr > calSelectingStart && dateStr < calSelectingEnd) classNames += " in-range";
+
+                grid.innerHTML += `<div class="${classNames}" onclick="handleDateClick('${dateStr}', ${isDisabled})">${innerHtml}</div>`;
+            }
+        }
+
+        function handleDateClick(dateStr, isDisabled) {
+            if (isDisabled) {
+                // 如果點到不能點的，給個震動或提示
+                document.getElementById('cal-status-text').innerText = "❌ 此日期已被其他單元佔用！";
+                document.getElementById('cal-status-text').style.color = "#e74c3c";
+                setTimeout(() => { document.getElementById('cal-status-text').style.color = "#cbd5e1"; }, 1500);
+                return;
+            }
+
+            if (!calSelectingStart || (calSelectingStart && calSelectingEnd)) {
+                // 第一次點擊，或是重新選擇：設定為開始日
+                calSelectingStart = dateStr;
+                calSelectingEnd = null;
+                document.getElementById('cal-status-text').innerText = `開始日期：${dateStr}，請選擇「結束日期」`;
+            } else {
+                // 第二次點擊：設定為結束日 (必須大於開始日)
+                if (dateStr < calSelectingStart) {
+                    // 如果點的比開始日早，就把開始日換過來
+                    calSelectingStart = dateStr;
+                    document.getElementById('cal-status-text').innerText = `開始日期：${dateStr}，請選擇「結束日期」`;
+                } else {
+                    // 🚀 防跨越撞期檢查：確保 Start 到 End 中間沒有包到 Disabled 的日子
+                    let isValid = true;
+                    let tempD = new Date(calSelectingStart);
+                    let targetD = new Date(dateStr);
+                    while (tempD <= targetD) {
+                        if (blockedDates.includes(Utilities.formatDate(tempD, "GMT+8", "yyyy-MM-dd"))) {
+                            isValid = false; break;
+                        }
+                        tempD.setDate(tempD.getDate() + 1);
+                    }
+
+                    if (!isValid) {
+                        document.getElementById('cal-status-text').innerText = "❌ 區間內包含已排定任務，請重新選擇！";
+                        document.getElementById('cal-status-text').style.color = "#e74c3c";
+                        calSelectingStart = null; // 重置
+                        setTimeout(() => { document.getElementById('cal-status-text').style.color = "#cbd5e1"; document.getElementById('cal-status-text').innerText = "請點擊選擇「開始日期」"; }, 2000);
+                    } else {
+                        calSelectingEnd = dateStr;
+                        document.getElementById('cal-status-text').innerText = `✅ 已選擇：${calSelectingStart} ~ ${calSelectingEnd}`;
+                        document.getElementById('cal-status-text').style.color = "#2ecc71";
+                    }
+                }
+            }
+            renderCalendar(); // 重新畫日曆
+        }
+
+        function submitSchedule() {
+            if (!calSelectingStart || !calSelectingEnd) {
+                alert("請完整選擇「開始日期」與「結束日期」！");
+                return;
+            }
+
+            const btn = document.getElementById('save-cal-btn');
+            const ogText = btn.innerText;
+            btn.innerText = "⏳ 寫入排程中...";
+            btn.style.pointerEvents = "none";
+
+            const formData = new URLSearchParams();
+            formData.append('classId', calTargetTask.classId);
+            formData.append('unit', calTargetTask.unit);
+            formData.append('startDate', calSelectingStart);
+            formData.append('endDate', calSelectingEnd);
+            formData.append('row', calTargetTask.row); // 🚀 送出 0 代表新增，送出數字代表覆寫！
+            formData.append('avatar', document.getElementById('event-avatar-select') ? document.getElementById('event-avatar-select').value : ""); // 🚀 把大魔王 ID 一併送出
+
+            fetch(`${GAS_URL}?action=save_schedule&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('calendarModal');
+                        fetchTaskData(); 
+                    } else {
+                        alert("排程失敗，請重試！");
+                    }
+                })
+                .catch(err => alert("連線超時！"))
+                .finally(() => {
+                    btn.innerText = ogText;
+                    btn.style.pointerEvents = "auto";
+                });
+        }
+
+        // =======================================================
+        // 🏗️ 視窗高度動態調整引擎 (Resizer Engine)
+        // =======================================================
+        const resizer = document.getElementById('tmResizer');
+        const calZone = document.querySelector('.tm-calendar-zone');
+        let isResizing = false;
+
+        const startResizing = (e) => { isResizing = true; document.body.style.cursor = 'ns-resize'; };
+        const stopResizing = () => { isResizing = false; document.body.style.cursor = 'default'; };
+
+        const resize = (e) => {
+            if (!isResizing) return;
+            // 取得手指或滑鼠的 Y 座標
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const headerHeight = document.querySelector('.tm-header').offsetHeight;
+            
+            // 計算新的高度，最小 60px (幾乎收合)，最大 70vh
+            let newHeight = clientY - headerHeight;
+            if (newHeight < 60) newHeight = 60;
+            if (newHeight > window.innerHeight * 0.7) newHeight = window.innerHeight * 0.7;
+            
+            calZone.style.height = newHeight + 'px';
+            calZone.style.minHeight = 'unset'; // 覆蓋掉原本的 min-height
+            
+            // 如果高度太小，隱藏日曆內容，只留標題
+            const calGrid = document.getElementById('top-cal-grid');
+            const calWeekdays = document.querySelector('.cal-weekdays');
+            if (newHeight < 150) {
+                calGrid.style.opacity = '0';
+                calWeekdays.style.opacity = '0';
+            } else {
+                calGrid.style.opacity = '1';
+                calWeekdays.style.opacity = '1';
+            }
+        };
+
+        // 綁定事件 (滑鼠)
+        resizer.addEventListener('mousedown', startResizing);
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResizing);
+
+        // 綁定事件 (觸控)
+        resizer.addEventListener('touchstart', startResizing);
+        window.addEventListener('touchmove', resize);
+        window.addEventListener('touchend', stopResizing);
+
+        // =======================================================
+        // 🧑‍🎓 學生管理系統 (階段四核心邏輯)
+        // =======================================================
+        let allStudentsData = [];
+        let filteredStudents = [];
+        let currentStuPage = 1;
+        const STU_PER_PAGE = 10;
+        let editingStuRow = 0; 
+        
+        let isBatchMode = false;
+        let selectedStuRows = new Set(); // 跨頁記錄打勾的學生
+
+        function openStudentManager() {
+            document.getElementById('menu-dropdown').classList.remove('show');
+            document.getElementById('mainCard').style.display = 'none';
+            document.getElementById('studentManagerView').style.display = 'flex';
+            fetchStudentList();
+        }
+
+        function closeStudentManager() {
+            document.getElementById('studentManagerView').style.display = 'none';
+            document.getElementById('mainCard').style.display = 'block';
+            // 離開時重置批量狀態
+            isBatchMode = false;
+            selectedStuRows.clear();
+            document.getElementById('sm-list-zone').classList.remove('batch-mode-active');
+            
+            // 🚀 徹底重置按鈕與隱藏批量工具列
+            const toggleBtn = document.getElementById('sm-batch-toggle-btn');
+            toggleBtn.innerText = "批量修改";
+            toggleBtn.style.background = "rgba(255,255,255,0.1)";
+            toggleBtn.style.color = "white";
+            document.querySelector('.sm-batch-bar').style.display = 'none';
+        }
+
+        function fetchStudentList() {
+            const listZone = document.getElementById('sm-list-zone');
+            listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取學生資料庫中...</p>';
+            
+            fetch(`${GAS_URL}?action=get_student_list&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) return listZone.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
+                    
+                    allStudentsData = data;
+                    
+                    // 建立班級下拉選單
+                    const classSet = new Set();
+                    allStudentsData.forEach(s => { classSet.add(s.classId); });
+                    const filterSelect = document.getElementById('sm-class-filter');
+                    const currentFilter = filterSelect.value;
+                    filterSelect.innerHTML = '<option value="">🏫 顯示全部學生</option>';
+                    Array.from(classSet).sort().forEach(cls => {
+                        filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
+                    });
+
+                    changeStuFilter(); 
+                });
+        }
+
+        function changeStuFilter() {
+            const filterClass = document.getElementById('sm-class-filter').value;
+            const searchStr = document.getElementById('sm-search').value.trim().toLowerCase();
+            
+            filteredStudents = allStudentsData.filter(s => {
+                // 下拉選單過濾
+                if (filterClass && s.classId !== filterClass) return false;
+                
+                // 搜尋列過濾 (比對 Name, UID, Type, ClassId)
+                if (searchStr) {
+                    const match = s.name.toLowerCase().includes(searchStr) || 
+                                  s.uid.toLowerCase().includes(searchStr) || 
+                                  s.type.includes(searchStr) || 
+                                  s.classId.toLowerCase().includes(searchStr);
+                    if (!match) return false;
+                }
+                return true;
+            });
+            
+            currentStuPage = 1;
+            renderStudentList();
+        }
+
+        function changeStuPage(direction) {
+            currentStuPage += direction;
+            renderStudentList();
+        }
+
+        function renderStudentList() {
+            const listZone = document.getElementById('sm-list-zone');
+            const prevBtn = document.getElementById('sm-prev-btn');
+            const nextBtn = document.getElementById('sm-next-btn');
+
+            if (filteredStudents.length === 0) {
+                listZone.innerHTML = '<p style="text-align:center; color:#7f8c8d; margin-top:40px; font-weight:bold;">找不到符合的學生資料</p>';
+                prevBtn.disabled = true; nextBtn.disabled = true;
+                return;
+            }
+
+            const totalPages = Math.ceil(filteredStudents.length / STU_PER_PAGE);
+            prevBtn.disabled = (currentStuPage === 1);
+            nextBtn.disabled = (currentStuPage === totalPages);
+
+            const startIdx = (currentStuPage - 1) * STU_PER_PAGE;
+            const pageStus = filteredStudents.slice(startIdx, startIdx + STU_PER_PAGE);
+
+            let html = '';
+            pageStus.forEach(stu => {
+                const isChecked = selectedStuRows.has(stu.row) ? 'checked' : '';
+                
+                // 點擊卡片觸發的行為：如果在批量模式就打勾，如果在一般模式就開啟編輯
+                const cardClickAction = isBatchMode 
+                    ? `onclick="document.getElementById('chk-${stu.row}').click()"` 
+                    : `onclick="openStudentEditor(${stu.row}, '${stu.uid}', '${stu.name}', '${stu.type}', '${stu.classId === '無' ? '' : stu.classId}')"`;
+
+                // 🚀 在這裡先處理好要顯示的 ID
+                let displayUid = stu.uid.includes('-') ? stu.uid.split('-')[1] : stu.uid;
+
+                html += `
+                <div class="task-card" style="cursor:pointer;" ${cardClickAction}>
+                    <input type="checkbox" id="chk-${stu.row}" class="stu-checkbox" value="${stu.row}" ${isChecked} onclick="event.stopPropagation(); toggleStuSelection(${stu.row}, this.checked)">
+                    <div class="task-info">
+                        <div class="task-class" style="border-color:${stu.type==='美語資優生'?'#f1c40f':'#3498db'}; color:${stu.type==='美語資優生'?'#f1c40f':'#3498db'};">
+                            ${stu.type} ${stu.classId !== '無' ? ' | ' + stu.classId : ''}
+                        </div>
+                        <div class="task-unit" style="font-size:20px;">${stu.name}</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">UID: ${displayUid}</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="btn-icon btn-schedule" title="編輯資料">✏️</button>
+                    </div>
+                </div>`;
+            });
+            listZone.innerHTML = html;
+        }
+
+        // --- ⚙️ 單一學生編輯 ---
+        function toggleStuClassInput(selectId, containerId) {
+            const type = document.getElementById(selectId).value;
+            document.getElementById(containerId).style.display = (type === '美語資優生') ? 'block' : 'none';
+        }
+
+        function openStudentEditor(row, uid, name, type, classId) {
+            if (isBatchMode) return; // 批量模式下不允許點開單一編輯
+            
+            editingStuRow = row;
+            document.getElementById('stu-editor-title').innerText = row === 0 ? '✨ 新增學生' : '✏️ 編輯學生資料';
+            document.getElementById('edit-stu-uid').value = uid;
+            document.getElementById('edit-stu-name').value = name;
+            document.getElementById('edit-stu-type').value = type;
+            document.getElementById('edit-stu-class').value = classId;
+            
+            // 🚀 核心控制：如果是新增學生(row=0)，隱藏刪除鍵；如果是編輯舊學生，顯示刪除鍵！
+            document.getElementById('del-stu-btn').style.display = row === 0 ? 'none' : 'block';
+            
+            toggleStuClassInput('edit-stu-type', 'edit-stu-class-container');
+            document.getElementById('studentEditorModal').style.display = 'flex';
+        }
+
+        function saveStudentData() {
+            let rawUid = document.getElementById('edit-stu-uid').value.trim();
+            let uid = rawUid.includes('-') ? rawUid : `${CURRENT_SCHOOL}-${rawUid}`;
+            const name = document.getElementById('edit-stu-name').value.trim();
+            const type = document.getElementById('edit-stu-type').value;
+            const classId = document.getElementById('edit-stu-class').value.trim();
+            
+            if (!uid || !name) { alert("UID 與姓名為必填欄位！"); return; }
+            if (type === "美語資優生" && !classId) { alert("美語資優生必須填寫班級代碼！"); return; }
+
+            const btn = document.getElementById('save-stu-btn');
+            btn.innerText = "⏳ 儲存中..."; btn.style.pointerEvents = "none";
+
+            const stuData = { row: editingStuRow, uid: uid, name: name, type: type, classId: classId };
+            const formData = new URLSearchParams();
+            formData.append('data', JSON.stringify(stuData));
+
+            fetch(`${GAS_URL}?action=save_student_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('studentEditorModal');
+                        fetchStudentList(); 
+                    } else { 
+                        // 🚀 攔截人數上限，跳出商業版提示
+                        if (data.error === "LIMIT_REACHED") {
+                            alert(`⚠️ 已達到校區學生人數上限（目前方案為 ${data.limit} 人）！\n\n您目前的系統授權已滿，若需擴充學生名額，請聯繫系統供應商進行方案升級。`);
+                        } else {
+                            alert(data.error || "儲存失敗！"); 
+                        }
+                    }
+                })
+                .finally(() => { btn.innerText = "💾 儲存"; btn.style.pointerEvents = "auto"; });
+        }
+
+        // --- 🗑️ 刪除單一學生邏輯 ---
+        function deleteStudentData() {
+            const name = document.getElementById('edit-stu-name').value.trim();
+            
+            // 🛑 核彈級安全鎖：要求手動打字
+            const userInput = prompt(`⚠️ 危險動作警告 ⚠️\n\n您即將徹底刪除學生【${name}】的所有資料！\n(包含點數、角色卡牌等，且完全無法復原)\n\n請在下方輸入「刪除」兩個字來確認執行：`);
+            
+            if (userInput !== "刪除") {
+                if (userInput !== null) {
+                    alert("❌ 輸入錯誤！安全鎖已啟動，取消刪除動作。");
+                }
+                return; 
+            }
+            
+            const btn = document.getElementById('del-stu-btn');
+            btn.innerText = "⏳..."; btn.style.pointerEvents = "none";
+
+            const formData = new URLSearchParams();
+            formData.append('row', editingStuRow);
+
+            fetch(`${GAS_URL}?action=delete_student_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('studentEditorModal');
+                        fetchStudentList(); // 刪除成功後重新洗牌名單
+                    } else { 
+                        alert("刪除失敗，請檢查權限！"); 
+                    }
+                })
+                .finally(() => {
+                    btn.innerHTML = "🗑️ 刪除"; 
+                    btn.style.pointerEvents = "auto";
+                });
+        }
+
+        function toggleBatchMode() {
+            isBatchMode = !isBatchMode;
+            const listZone = document.getElementById('sm-list-zone');
+            const toggleBtn = document.getElementById('sm-batch-toggle-btn');
+            const batchBar = document.querySelector('.sm-batch-bar'); // 🚀 抓出那條隱形的工具列
+            
+            if (isBatchMode) {
+                listZone.classList.add('batch-mode-active');
+                toggleBtn.innerText = "取消批量";
+                toggleBtn.style.background = "rgba(231, 76, 60, 0.2)";
+                toggleBtn.style.color = "#e74c3c";
+                batchBar.style.display = "flex"; // 🚀 強制讓它現形！
+            } else {
+                listZone.classList.remove('batch-mode-active');
+                toggleBtn.innerText = "批量修改";
+                toggleBtn.style.background = "rgba(255,255,255,0.1)";
+                toggleBtn.style.color = "white";
+                batchBar.style.display = "none"; // 🚀 關閉時隱藏起來
+                selectedStuRows.clear();
+                updateBatchCount();
+            }
+            renderStudentList(); // 重新渲染以顯示/隱藏 Checkbox
+        }
+
+        function toggleStuSelection(row, isChecked) {
+            if (isChecked) selectedStuRows.add(row);
+            else selectedStuRows.delete(row);
+            updateBatchCount();
+        }
+
+        function updateBatchCount() {
+            document.getElementById('sm-batch-count').innerText = `已勾選 ${selectedStuRows.size} 位學生`;
+            
+            // 🚀 連動更新「全選」按鈕的文字
+            const selectAllBtn = document.getElementById('sm-select-all-btn');
+            if (selectAllBtn && filteredStudents.length > 0) {
+                // 判斷：目前的「篩選名單」是否全部都已經在「勾選清單」裡面了？
+                const allSelected = filteredStudents.every(stu => selectedStuRows.has(stu.row));
+                selectAllBtn.innerText = allSelected ? "取消全選" : "全選";
+            }
+        }
+
+        // 🚀 新增：全選 / 取消全選引擎
+        function toggleSelectAll() {
+            if (filteredStudents.length === 0) return;
+            
+            const allSelected = filteredStudents.every(stu => selectedStuRows.has(stu.row));
+            
+            if (allSelected) {
+                // 如果目前的篩選名單「已經全勾了」，就把它們全部取消
+                filteredStudents.forEach(stu => selectedStuRows.delete(stu.row));
+            } else {
+                // 否則，把目前的篩選名單「全部打勾」(隱藏的跨頁學生也會被勾到！)
+                filteredStudents.forEach(stu => selectedStuRows.add(stu.row));
+            }
+            
+            updateBatchCount();
+            renderStudentList(); // 重新畫出名單上的打勾狀態
+        }
+
+        function openBatchEditor() {
+            if (selectedStuRows.size === 0) { alert("請先勾選至少一位學生！"); return; }
+            
+            // 重置表單
+            document.getElementById('batch-stu-type').value = "";
+            document.getElementById('batch-stu-class').value = "";
+            document.getElementById('batch-stu-name').value = "";
+            document.getElementById('batch-stu-uid').value = "";
+            toggleStuClassInput('batch-stu-type', 'batch-stu-class-container');
+            
+            document.getElementById('batchEditorModal').style.display = 'flex';
+        }
+
+        function saveBatchStudentData() {
+            const type = document.getElementById('batch-stu-type').value;
+            const classId = document.getElementById('batch-stu-class').value.trim();
+            const name = document.getElementById('batch-stu-name').value.trim();
+            const uid = document.getElementById('batch-stu-uid').value.trim();
+            
+            if (!type && !classId && !name && !uid) {
+                alert("您沒有設定任何修改內容！"); return;
+            }
+
+            if (type === "美語資優生" && !classId) {
+                alert("若將整批學生設為美語資優生，請務必統一填寫「班級代碼」！"); return;
+            }
+
+            if (!confirm(`確定要對選取的 ${selectedStuRows.size} 位學生執行批量修改嗎？\n(無法復原)`)) return;
+
+            const btn = document.getElementById('save-batch-btn');
+            btn.innerText = "⏳ 執行中..."; btn.style.pointerEvents = "none";
+
+            const updates = {};
+            if (type) updates.type = type;
+            if (classId) updates.classId = classId;
+            if (name) updates.name = name;
+            if (uid) updates.uid = uid;
+
+            const payload = {
+                rows: Array.from(selectedStuRows),
+                updates: updates
+            };
+
+            const formData = new URLSearchParams();
+            formData.append('data', JSON.stringify(payload));
+
+            fetch(`${GAS_URL}?action=batch_save_students&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('batchEditorModal');
+                        toggleBatchMode(); // 關閉批量模式
+                        fetchStudentList(); // 重新讀取
+                    } else { alert(data.error || "批量修改失敗！"); }
+                })
+                .finally(() => { btn.innerText = "🚀 確認批量修改"; btn.style.pointerEvents = "auto"; });
+        }
+        
+    </script>
+</body>
+</html>
