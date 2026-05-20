@@ -17,7 +17,6 @@
   <script src="global-audio.js"></script>
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
-  <script src="./tappie-api.js"></script>
 
   <style>
     :root { 
@@ -730,9 +729,9 @@
     window.onload = () => {
       if (!STUDENT_ID) { alert("找不到學生 ID，請重新刷卡！"); logoutToPortal(); return; }
 
-      TappieAPI.getDashboard(STUDENT_ID)
-        .then(rawData => {
-          const data = TappieAPI.toLegacyDashboard(rawData);
+      fetch(`${GAS_URL}?action=get_dashboard_data&id=${STUDENT_ID}`)
+        .then(res => res.json())
+        .then(data => {
           // 🚀 關鍵修復：檢查後端是否回報錯誤（例如：沒這間校區、沒這個學號）
           if (data.success === false || data.error) {
               alert("⚠️ 查無此帳號！請確認學生代號或校區代碼是否正確。");
@@ -1152,9 +1151,9 @@
         btnElement.innerText = "✨ 傳送中...";
         btnElement.style.pointerEvents = "none";
 
-        TappieAPI.getDashboard(STUDENT_ID)
-            .then(dash => {
-                const status = { canPlay: dash.usage.canPracticeVoice, count: dash.usage.voiceCount, limit: dash.usage.voiceLimit };
+        fetch(`${GAS_URL}?action=get_user_status&id=${STUDENT_ID}`)
+            .then(res => res.json())
+            .then(status => {
                 btnElement.innerText = originalText;
                 btnElement.style.pointerEvents = "auto";
                 if (!status.canPlay) { 
@@ -1256,7 +1255,8 @@
       loadingZone.style.display = 'flex';
       contentZone.style.display = 'none';
 
-      TappieAPI.getDiagnosticReport(STUDENT_ID, filter)
+      fetch(`${GAS_URL}?action=get_diagnostic_report&id=${STUDENT_ID}&filter=${filter}`)
+        .then(res => res.json())
         .then(data => {
           if (!data.success) {
             loadingZone.innerHTML = `<div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px;">⚠️ ${data.msg}</div>`;
@@ -1527,11 +1527,12 @@
               `;
               document.body.appendChild(loader);
 
-              TappieAPI.resolveStudentByCard(inputStr)
+              fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
+                .then(res => res.json())
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) window.location.replace(`admin.html?id=${data.uid}`);
-                      else window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                      else window.location.href = `dashboard.html?id=${data.uid}`;
                   } else { 
                       alert("❌ 查無此卡！請確認是否拿錯卡片。"); 
                       document.body.removeChild(loader); 
