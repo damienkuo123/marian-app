@@ -1805,6 +1805,7 @@
         致力於為教育機構提供最先進的 AI 口說訓練方案。
     </footer>
 
+    <script src="./tappie-api.js"></script>
     <script>
         // =======================================================
         // 🎛️ 分眾切換引擎 (Tab Switcher)
@@ -2022,15 +2023,14 @@
             btn.style.pointerEvents = "none";
             
             // 🚀 向 GAS 發送驗證請求，不再直接跳轉！
-            fetch(`${GAS_URL}?action=verify_manual_login&id=${encodeURIComponent(combinedUid)}`)
-                .then(res => res.json())
+            TappieAPI.resolveStudentByUid(combinedUid)
                 .then(data => {
                     if (data.success) {
                         btn.innerText = "✅ 驗證成功，傳送中...";
                         btn.style.background = "linear-gradient(135deg, #2ecc71, #27ae60)";
-                        setTimeout(() => { window.location.href = `dashboard.html?id=${combinedUid}`; }, 500);
+                        setTimeout(() => { window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid || combinedUid)}`; }, 500);
                     } else {
-                        alert(data.msg); // GAS 會回傳「沒有這個校區」或「查無此帳號」
+                        alert(data.message || data.msg || "查無此帳號");
                         btn.innerText = originalText;
                         btn.style.pointerEvents = "auto";
                     }
@@ -2112,8 +2112,7 @@
                         window.location.href = `dashboard.html?id=${extractedUid}`;
                     }, 300);
                 } else {
-                    fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
-                        .then(res => res.json())
+                    TappieAPI.resolveStudentByCard(inputStr)
                         .then(data => {
                             if (data.success) {
                                 msg.innerText = "✅ 驗證成功，傳送中...";
@@ -2121,7 +2120,7 @@
                                 statusDot.style.background = "var(--marian-green)";
                                 statusDot.style.boxShadow = "0 0 10px var(--marian-green)";
                                 setTimeout(() => {
-                                    window.location.href = `dashboard.html?id=${data.uid}`;
+                                    window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
                                 }, 300);
                             } else {
                                 showError();

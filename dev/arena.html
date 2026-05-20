@@ -14,6 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
+  <script src="./tappie-api.js"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1804,8 +1805,7 @@
         return;
     }
 
-    fetch(`${GAS_URL}?action=get_azure_token`)
-      .then(res => res.json())
+    TappieAPI.getAzureToken()
       .then(data => {
         if (data.success) {
           azureAuthToken = data.token;
@@ -1930,15 +1930,12 @@
 
   document.getElementById('start-btn').onclick = () => {
     document.getElementById('info-text').innerText = "正在載入題目...";
-    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data&unit=${encodeURIComponent(TARGET_UNIT)}`)
-      .then(res => res.json()).then(data => {
+    TappieAPI.getDashboard(STUDENT_ID).then(data => {
         if (!data.words || data.words.length === 0) { alert("題目為空"); return; }
         quizData = data.words; 
-        // 🚀 關鍵接線：讀取並套用 GAS 的計分規則
-        if (data.rule) {
-            systemPassScore = data.rule.passScore;
-            systemRewardTiers = data.rule.tiers;
-        }
+        // Supabase 版先使用預設通關規則
+        systemPassScore = 60;
+        systemRewardTiers = [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}];
         scores = new Array(quizData.length).fill(null);
         
         document.getElementById('total-display').innerText = quizData.length;
@@ -2432,17 +2429,19 @@
                                     abortController.abort(); // ⏱️ 10秒一到，無情斬斷連線！
                                 }, 12000);
 
-                                fetch(`${GAS_URL}?action=evaluate_speech_azure&word=${encodeURIComponent(targetWord)}&id=${STUDENT_ID}`, { 
-                                    method: 'POST', 
-                                    body: JSON.stringify(rawAzureData),
-                                    signal: abortController.signal // 🔗 綁定引爆線
-                                }).then(res => {
-                                    clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
-                                    return res.json();
+                                TappieAPI.submitPractice({
+                                    uid: STUDENT_ID,
+                                    unitName: TARGET_UNIT,
+                                    word: targetWord,
+                                    mode: MODE,
+                                    azureRaw: rawAzureData
                                 }).then(data => {
-                                    scores[currentIndex] = data.score; 
+                                    clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
+                                    return data;
+                                }).then(data => {
+                                    scores[currentIndex] = data.practice?.score ?? data.score; 
                                     if(!window.feedbacks) window.feedbacks = [];
-                                    window.feedbacks[currentIndex] = data.feedback;
+                                    window.feedbacks[currentIndex] = data.practice?.feedback || data.feedback || '已完成評分';
                                     
                                     // 🚀 成功！解除灰色裝甲，恢復原始紅色按鈕
                                     rb.classList.remove('processing-locked');
@@ -2589,23 +2588,11 @@
     
     const detailJSON = JSON.stringify(detailArr);
 
-    // 🚀 1. 網址瘦身：把 details 從網址裡面拔掉！只留輕量參數
-    const finalUrl = `${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`;
-    
-    // 🚀 2. 改走 POST 通道：把巨大資料裝進 body 裡面送！
-    fetch(finalUrl, { 
-        method: 'POST', 
-        body: detailJSON 
-    })
-      .then(() => { 
-        alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
-        window.location.href = `/dashboard.html?id=${STUDENT_ID}`; 
-      }).catch(err => {
-        // 如果遇到極端網路問題
-        console.log("Fetch 失敗", err);
-        alert("🎉 挑戰完成！(已進入背景備用存檔)");
-        window.location.href = `/dashboard.html?id=${STUDENT_ID}`;
-      });
+    // Supabase 版：每題在錄音完成時已經透過 submit-practice 寫入資料庫。
+    // 這裡只負責結束流程並返回大廳，避免重複加點或重複寫入。
+    console.log('Supabase practice details already saved:', detailArr);
+    alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！");
+    window.location.href = `/dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
   }
   
   function reRead(i) { 
@@ -3677,14 +3664,13 @@
               `;
               document.body.appendChild(loader);
 
-              fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
-                .then(res => res.json())
+              TappieAPI.resolveStudentByCard(inputStr)
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `dashboard.html?id=${data.uid}`;
+                          window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
                       }
                   } 
                   else { 
