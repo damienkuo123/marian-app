@@ -5,24 +5,24 @@
 
 const GlobalAudio = {
     soundUrls: {
-        click: '/audio/click.mp3',
-        popupOpen: '/audio/popupOpen.mp3',
-        popupClose: '/audio/popupClose.mp3',
-        countdown: '/audio/countdown.mp3',
-        fireNormal: '/audio/fireNormal.mp3',
-        fireUlt: '/audio/fireUlt.mp3',
-        hit: '/audio/hit.mp3',
-        cutin: '/audio/cutin.mp3',
-        victory: '/audio/victory.mp3',
-        shatter: '/audio/shatter.mp3'
+        click: './audio/click.mp3',
+        popupOpen: './audio/popupOpen.mp3',
+        popupClose: './audio/popupClose.mp3',
+        countdown: './audio/countdown.mp3',
+        fireNormal: './audio/fireNormal.mp3',
+        fireUlt: './audio/fireUlt.mp3',
+        hit: './audio/hit.mp3',
+        cutin: './audio/cutin.mp3',
+        victory: './audio/victory.mp3',
+        shatter: './audio/shatter.mp3'
     },
 
     bgm: {
-        dashboard: new Audio('/audio/cyberwave-orchestra-puzzle-game-loop-bright-casual-video-game-music-249201_low.mp3'), 
-        lobby: new Audio('/audio/決戦へ_low.mp3'),     
-        arenaNormal: new Audio('/audio/wind_feelings_low.mp3'), 
-        arenaBattle: new Audio('/audio/Devil_Disaster_low.mp3'), 
-        gacha: new Audio('/audio/Battle_in_the_Moonlight_low.mp3')        
+        dashboard: new Audio('./audio/cyberwave-orchestra-puzzle-game-loop-bright-casual-video-game-music-249201_low.mp3'), 
+        lobby: new Audio('./audio/決戦へ_low.mp3'),     
+        arenaNormal: new Audio('./audio/wind_feelings_low.mp3'), 
+        arenaBattle: new Audio('./audio/Devil_Disaster_low.mp3'), 
+        gacha: new Audio('./audio/Battle_in_the_Moonlight_low.mp3')        
     },
 
     audioCtx: null,
