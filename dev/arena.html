@@ -14,7 +14,6 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1284,7 +1283,7 @@
     (function() {
       const urlParams = new URLSearchParams(window.location.search);
       // 如果網址帶有 mode=battle，或是帶有 roomId (代表是對戰或突發事件)
-      if (urlParams.get('mode') === 'battle' || urlParams.get('roomId')) {
+      if (urlParams.get('mode') === 'battle' || urlParams.get('roomId') || urlParams.get('roomCode') || urlParams.get('code')) {
         document.getElementById('loading-screen').style.display = 'flex';
       }
     })();
@@ -1527,6 +1526,7 @@
   </div>
 </div>
 
+<script src="tappie-api.js?v=arena-battle-v1"></script>
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
   const params = new URLSearchParams(window.location.search);
@@ -1544,7 +1544,8 @@
   // 🚀 關鍵修復：如果是突發事件，強制給予 'battle' 模式；若不是，就讀取原本的 mode，都沒讀到才去 'challenge'
   const MODE = isEventMode ? 'battle' : (params.get('mode') || "challenge");
   
-  const ROOM_ID = params.get('roomId');
+  const ROOM_ID = params.get('roomId') || params.get('roomCode') || params.get('code');
+  const ROOM_CODE = params.get('roomCode') || params.get('code') || params.get('roomId') || '';
 
   let stream, mediaRecorder, chunks = [], quizData = [], scores = [], currentIndex = 0, isReReading = false;
   let systemPassScore = 60; 
@@ -1798,10 +1799,16 @@
   function fetchAzureToken() {
     // 檢查是否超過允許的拿鑰匙次數
     if (azureTokenFetchCount >= MAX_TOKEN_FETCHES) {
-        clearInterval(azureTokenInterval); // 停止輪詢
-        if (window.GlobalAudio) window.GlobalAudio.play('popupClose'); // 警告音
-        alert("⏱️ 你在練習區停留太久囉！\n請重新挑戰吧！");
-        window.location.href = `/dashboard.html?id=${STUDENT_ID}`; // 踢回大廳
+        clearInterval(azureTokenInterval);
+        if (window.GlobalAudio) window.GlobalAudio.play('popupClose');
+        alert("⏱️ 你在練習區停留太久囉！
+請重新挑戰吧！");
+        window.location.href = `/dashboard.html?id=${STUDENT_ID}`;
+        return;
+    }
+
+    if (!window.TappieAPI || !TappieAPI.getAzureToken) {
+        console.warn("TappieAPI 尚未載入，Azure token 暫時無法取得");
         return;
     }
 
@@ -1810,10 +1817,13 @@
         if (data.success) {
           azureAuthToken = data.token;
           azureRegionCode = data.region;
-          azureTokenFetchCount++; // 拿成功才 +1
-          console.log(`🛡️ 已取得 Azure 安全 Token (第 ${azureTokenFetchCount}/${MAX_TOKEN_FETCHES} 次)`);
+          azureTokenFetchCount++;
+          console.log(`🛡️ 已取得 Supabase Azure Token (第 ${azureTokenFetchCount}/${MAX_TOKEN_FETCHES} 次)`);
+        } else {
+          console.warn("Token 取得失敗", data);
         }
-      }).catch(err => console.error("Token 取得失敗", err));
+      })
+      .catch(err => console.error("Token 取得失敗", err));
   }
   
   // 🚀 1. 剛進來先拿第一把鑰匙
@@ -1930,12 +1940,15 @@
 
   document.getElementById('start-btn').onclick = () => {
     document.getElementById('info-text').innerText = "正在載入題目...";
-    TappieAPI.getDashboard(STUDENT_ID).then(data => {
+    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data&unit=${encodeURIComponent(TARGET_UNIT)}`)
+      .then(res => res.json()).then(data => {
         if (!data.words || data.words.length === 0) { alert("題目為空"); return; }
         quizData = data.words; 
-        // Supabase 版先使用預設通關規則
-        systemPassScore = 60;
-        systemRewardTiers = [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}];
+        // 🚀 關鍵接線：讀取並套用 GAS 的計分規則
+        if (data.rule) {
+            systemPassScore = data.rule.passScore;
+            systemRewardTiers = data.rule.tiers;
+        }
         scores = new Array(quizData.length).fill(null);
         
         document.getElementById('total-display').innerText = quizData.length;
@@ -2429,19 +2442,17 @@
                                     abortController.abort(); // ⏱️ 10秒一到，無情斬斷連線！
                                 }, 12000);
 
-                                TappieAPI.submitPractice({
-                                    uid: STUDENT_ID,
-                                    unitName: TARGET_UNIT,
-                                    word: targetWord,
-                                    mode: MODE,
-                                    azureRaw: rawAzureData
-                                }).then(data => {
+                                fetch(`${GAS_URL}?action=evaluate_speech_azure&word=${encodeURIComponent(targetWord)}&id=${STUDENT_ID}`, { 
+                                    method: 'POST', 
+                                    body: JSON.stringify(rawAzureData),
+                                    signal: abortController.signal // 🔗 綁定引爆線
+                                }).then(res => {
                                     clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
-                                    return data;
+                                    return res.json();
                                 }).then(data => {
-                                    scores[currentIndex] = data.practice?.score ?? data.score; 
+                                    scores[currentIndex] = data.score; 
                                     if(!window.feedbacks) window.feedbacks = [];
-                                    window.feedbacks[currentIndex] = data.practice?.feedback || data.feedback || '已完成評分';
+                                    window.feedbacks[currentIndex] = data.feedback;
                                     
                                     // 🚀 成功！解除灰色裝甲，恢復原始紅色按鈕
                                     rb.classList.remove('processing-locked');
@@ -2588,11 +2599,23 @@
     
     const detailJSON = JSON.stringify(detailArr);
 
-    // Supabase 版：每題在錄音完成時已經透過 submit-practice 寫入資料庫。
-    // 這裡只負責結束流程並返回大廳，避免重複加點或重複寫入。
-    console.log('Supabase practice details already saved:', detailArr);
-    alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！");
-    window.location.href = `/dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    // 🚀 1. 網址瘦身：把 details 從網址裡面拔掉！只留輕量參數
+    const finalUrl = `${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`;
+    
+    // 🚀 2. 改走 POST 通道：把巨大資料裝進 body 裡面送！
+    fetch(finalUrl, { 
+        method: 'POST', 
+        body: detailJSON 
+    })
+      .then(() => { 
+        alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
+        window.location.href = `/dashboard.html?id=${STUDENT_ID}`; 
+      }).catch(err => {
+        // 如果遇到極端網路問題
+        console.log("Fetch 失敗", err);
+        alert("🎉 挑戰完成！(已進入背景備用存檔)");
+        window.location.href = `/dashboard.html?id=${STUDENT_ID}`;
+      });
   }
   
   function reRead(i) { 
@@ -3664,13 +3687,14 @@
               `;
               document.body.appendChild(loader);
 
-              TappieAPI.resolveStudentByCard(inputStr)
+              fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
+                .then(res => res.json())
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                          window.location.href = `dashboard.html?id=${data.uid}`;
                       }
                   } 
                   else { 
@@ -4546,6 +4570,466 @@
           speakWordCloudCached(targetWord, 1.8, null, null, '-10%');
       }
   }
+</script>
+
+<script>
+/* =======================================================
+   ⚔️ Supabase Battle Mode Override v1
+   目的：Battle 模式改讀 get-battle-status.currentQuestion，不再吃舊 GAS 題目來源。
+   ======================================================= */
+(function(){
+  const qs = new URLSearchParams(window.location.search);
+  const isSupabaseBattle = qs.get('mode') === 'battle' && (qs.get('roomCode') || qs.get('roomId') || qs.get('code'));
+  const SUPA_ROOM_CODE = qs.get('roomCode') || qs.get('code') || qs.get('roomId') || '';
+
+  function battleApiReady() {
+    return window.TappieAPI &&
+      TappieAPI.getBattleStatus &&
+      TappieAPI.setArenaReady &&
+      TappieAPI.submitBattleScore;
+  }
+
+  function safeSetText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = text;
+  }
+
+  function getRoomKey(roomId) {
+    return { roomCode: SUPA_ROOM_CODE || roomId || ROOM_ID };
+  }
+
+  function toBattleQuiz(rounds) {
+    return (rounds || []).map(r => ({
+      en: r.word || r.word_text || '',
+      zh: r.zh || r.chinese_text || '',
+      roundNo: Number(r.roundNo || r.round_no || 1),
+      id: r.id
+    }));
+  }
+
+  function getMyOpScoresFromStatus(data) {
+    const meRole = data?.me?.role || 'host';
+    const myWins = Number(data?.me?.score || 0);
+    const opWins = Number(data?.opponent?.score || 0);
+    return { meRole, myWins, opWins };
+  }
+
+  async function supaStatus(roomId) {
+    if (!battleApiReady()) throw new Error('TappieAPI battle methods not loaded');
+    return await TappieAPI.getBattleStatus(STUDENT_ID, getRoomKey(roomId));
+  }
+
+  window.showPortal = async function() {
+    const portal = document.getElementById('battle-portal-overlay');
+    if (!portal) return;
+
+    portal.className = '';
+    void portal.offsetWidth;
+    portal.style.display = 'flex';
+
+    let pCount = 60;
+    const pTimer = setInterval(() => {
+      pCount--;
+      safeSetText('portal-countdown', pCount);
+      if (pCount <= 0) {
+        clearInterval(pTimer);
+        if (window.portalJump) window.portalJump();
+      }
+    }, 1000);
+
+    try {
+      const data = await supaStatus(ROOM_ID);
+      if (!data.success) throw new Error(data.message || data.error || 'get-battle-status failed');
+
+      const myName = data.me?.name || STUDENT_ID;
+      const opName = data.opponent?.name || '等待對手';
+
+      safeSetText('portal-my-name', myName);
+      safeSetText('portal-op-name', opName);
+
+      const myCardEl = document.getElementById('portal-my-card');
+      const opCardEl = document.getElementById('portal-op-card');
+      if (myCardEl) myCardEl.setAttribute('data-rarity', 'N');
+      if (opCardEl) opCardEl.setAttribute('data-rarity', 'N');
+
+      const myBg = document.getElementById('portal-my-bg');
+      const opBg = document.getElementById('portal-op-bg');
+      if (myBg) myBg.style.backgroundImage = "url('/assets/BOX_COVER_R.webp')";
+      if (opBg) opBg.style.backgroundImage = "url('/assets/BOX_COVER_R.webp')";
+
+      const myWrapper = document.getElementById('portal-my-wrapper');
+      const opWrapper = document.getElementById('portal-op-wrapper');
+      const vsSpark = document.querySelector('.portal-vs-spark');
+      if (myWrapper) { myWrapper.classList.remove('clash-in-my'); void myWrapper.offsetWidth; myWrapper.classList.add('clash-in-my'); }
+      if (opWrapper) { opWrapper.classList.remove('clash-in-op'); void opWrapper.offsetWidth; opWrapper.classList.add('clash-in-op'); }
+      if (vsSpark) { vsSpark.classList.remove('spark-active'); void vsSpark.offsetWidth; vsSpark.classList.add('spark-active'); }
+
+      const enterBtn = document.getElementById('portal-enter-btn');
+      if (enterBtn) {
+        enterBtn.innerText = '進入戰場';
+        enterBtn.classList.remove('portal-btn-hidden');
+        enterBtn.classList.add('portal-btn-show');
+      }
+
+      window.portalJump = () => {
+        sessionStorage.setItem('active_battle_room', SUPA_ROOM_CODE || ROOM_ID);
+        clearInterval(pTimer);
+        portal.style.display = 'none';
+        const arena = document.getElementById('battle-arena');
+        if (arena) {
+          arena.style.display = 'flex';
+          setTimeout(() => arena.classList.add('battle-ready'), 100);
+        }
+        fetchBattleDataAndStart(SUPA_ROOM_CODE || ROOM_ID);
+      };
+
+      setTimeout(() => { if (typeof initInteractiveHoloCards === 'function') initInteractiveHoloCards(); }, 500);
+
+    } catch(err) {
+      console.error('Supabase Portal Error:', err);
+      const enterBtn = document.getElementById('portal-enter-btn');
+      if (enterBtn) {
+        enterBtn.innerText = '強制進入';
+        enterBtn.classList.remove('portal-btn-hidden');
+        enterBtn.classList.add('portal-btn-show');
+      }
+      window.portalJump = () => {
+        clearInterval(pTimer);
+        portal.style.display = 'none';
+        document.getElementById('battle-arena').style.display = 'flex';
+        fetchBattleDataAndStart(SUPA_ROOM_CODE || ROOM_ID);
+      };
+    }
+  };
+
+  window.fetchBattleDataAndStart = async function(roomId) {
+    try {
+      const data = await supaStatus(roomId);
+      if (!data.success) {
+        alert(data.message || data.error || '房間失效');
+        window.location.href = `/lobby.html?id=${STUDENT_ID}`;
+        return;
+      }
+
+      battleQuizArr = toBattleQuiz(data.rounds);
+      if (!battleQuizArr.length) {
+        alert('題目為空：此房間沒有 battle_rounds 題目');
+        window.location.href = `/lobby.html?id=${STUDENT_ID}`;
+        return;
+      }
+
+      const currentRoundNo = Number(data.room?.currentRound || data.currentQuestion?.roundNo || 1);
+      currentBattleRound = Math.max(0, currentRoundNo - 1);
+      initArena(roomId);
+    } catch(err) {
+      console.error('fetchBattleDataAndStart failed', err);
+      alert('無法取得戰場資料：' + String(err.message || err));
+      window.location.href = `/lobby.html?id=${STUDENT_ID}`;
+    }
+  };
+
+  window.initArena = async function(roomId) {
+    safeSetText('target-word', '戰場同步中...');
+    safeSetText('battle-timer', '60');
+    safeSetText('round-num', '規則：先得 5 分者勝');
+    safeSetText('battle-info', '正在等待雙方就緒...');
+    const controls = document.getElementById('battle-controls');
+    if (controls) controls.style.visibility = 'hidden';
+
+    await updateArenaUI(roomId, true);
+
+    try {
+      const readyResult = await TappieAPI.setArenaReady({
+        uid: STUDENT_ID,
+        roomCode: SUPA_ROOM_CODE || roomId,
+        ready: true
+      });
+      if (!readyResult.success) throw new Error(readyResult.message || readyResult.error || 'ready failed');
+    } catch(err) {
+      console.error('setArenaReady failed', err);
+      safeSetText('battle-info', 'Ready 失敗：' + String(err.message || err));
+      return;
+    }
+
+    let waitCount = 60;
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = setInterval(async () => {
+      waitCount--;
+      safeSetText('battle-timer', waitCount);
+      const data = await supaStatus(roomId).catch(e => null);
+      if (!data || !data.success) return;
+      await updateArenaUI(roomId, false, data);
+
+      if (data.room?.status === 'active') {
+        clearInterval(syncTimer);
+        startRoundCountdown(roomId);
+      }
+      if (['cancelled','expired','finished'].includes(data.room?.status)) {
+        clearInterval(syncTimer);
+        alert('對戰已結束或取消');
+        window.location.href = `/lobby.html?id=${STUDENT_ID}`;
+      }
+      if (waitCount <= 0) {
+        clearInterval(syncTimer);
+        alert('等待超時');
+        window.location.href = `/lobby.html?id=${STUDENT_ID}`;
+      }
+    }, 2000);
+  };
+
+  window.updateArenaUI = async function(roomId, isInit = false, cachedData = null) {
+    const data = cachedData || await supaStatus(roomId);
+    if (!data || !data.success) return;
+
+    battleQuizArr = toBattleQuiz(data.rounds);
+    const currentRoundNo = Number(data.room?.currentRound || data.currentQuestion?.roundNo || 1);
+    currentBattleRound = Math.max(0, currentRoundNo - 1);
+
+    const scoreInfo = getMyOpScoresFromStatus(data);
+    myTotalWins = scoreInfo.myWins;
+    opTotalWins = scoreInfo.opWins;
+
+    safeSetText('op-name', data.opponent?.name || '等待對手');
+    const myRounds = document.getElementById('my-rounds');
+    const opRounds = document.getElementById('op-rounds');
+    if (myRounds && typeof renderDots === 'function') myRounds.innerHTML = renderDots(myTotalWins, true);
+    if (opRounds && typeof renderDots === 'function') opRounds.innerHTML = renderDots(opTotalWins, false);
+
+    const myBg = document.getElementById('my-card-bg');
+    const opBg = document.getElementById('op-card-bg');
+    if (myBg && !myBg.style.backgroundImage) myBg.style.backgroundImage = "url('/assets/BOX_COVER_R.webp')";
+    if (opBg && !opBg.style.backgroundImage) opBg.style.backgroundImage = "url('/assets/BOX_COVER_R.webp')";
+
+    safeSetText('round-num', `第 ${currentRoundNo} 局 / 先得 5 分獲勝`);
+    if (data.currentQuestion?.word) {
+      safeSetText('target-word', data.currentQuestion.word);
+    }
+  };
+
+  window.startRoundCountdown = function(roomId) {
+    if (readyTimer) clearInterval(readyTimer);
+    if (currentLimitTimer) clearInterval(currentLimitTimer);
+    if (waitOpTimer) clearInterval(waitOpTimer);
+
+    roundSubmitted = false;
+    isUltimateMode = false;
+
+    const rb = document.getElementById('battle-record-btn');
+    if (rb) {
+      rb.classList.remove('ultimate-record-btn', 'recording-active', 'ult-recording-active', 'processing-locked');
+      rb.innerHTML = '🎤';
+      rb.style.pointerEvents = 'auto';
+    }
+    const skillBtn = document.getElementById('skill-btn');
+    if (skillBtn) skillBtn.style.display = hasUsedSkill ? 'none' : 'block';
+    const hintBtn = document.getElementById('hint-btn');
+    if (hintBtn) hintBtn.style.display = 'block';
+
+    const q = battleQuizArr[currentBattleRound];
+    if (!q) {
+      safeSetText('target-word', '題目為空');
+      safeSetText('battle-info', '找不到目前回合題目');
+      return;
+    }
+
+    let count = 3;
+    safeSetText('target-word', 'READY?');
+    safeSetText('battle-timer', '');
+    const controls = document.getElementById('battle-controls');
+    if (controls) controls.style.visibility = 'hidden';
+    safeSetText('round-num', `第 ${currentBattleRound + 1} 局 / 先得 5 分獲勝`);
+
+    readyTimer = setInterval(() => {
+      safeSetText('battle-timer', count);
+      if (count > 0 && window.GlobalAudio) GlobalAudio.play('countdown');
+      count--;
+      if (count < 0) {
+        clearInterval(readyTimer);
+        safeSetText('target-word', q.en);
+        const wordEl = document.getElementById('target-word');
+        if (wordEl) {
+          const n = q.en.length;
+          wordEl.style.fontSize = n > 35 ? 'clamp(18px, 4vw, 26px)' : n > 20 ? 'clamp(24px, 5vw, 36px)' : n > 10 ? 'clamp(32px, 6vw, 48px)' : 'clamp(42px, 8vw, 64px)';
+        }
+        safeSetText('battle-timer', '');
+        const timerBox = document.getElementById('battle-timer-container');
+        if (timerBox) timerBox.style.display = 'flex';
+        if (controls) { controls.style.display = 'flex'; controls.style.visibility = 'visible'; }
+        const bBtn = document.getElementById('battle-record-btn');
+        if (bBtn) bBtn.style.pointerEvents = 'auto';
+      }
+    }, 1000);
+  };
+
+  function handleRoundResultFromResponse(roomId, data) {
+    if (!data || !data.success) return;
+
+    if (!data.roundComplete) {
+      safeSetText('battle-info', '等待對手...');
+      if (waitOpTimer) clearInterval(waitOpTimer);
+      waitOpTimer = setInterval(() => checkBoth(roomId), 2000);
+      return;
+    }
+
+    const round = data.round || {};
+    const battle = data.battle || {};
+    const isHostView = true; // scores below are raw host/guest; convert using status later if needed
+
+    supaStatus(roomId).then(status => {
+      const role = status?.me?.role || 'host';
+      const myS = role === 'host' ? Number(round.hostScore || 0) : Number(round.guestScore || 0);
+      const opS = role === 'host' ? Number(round.guestScore || 0) : Number(round.hostScore || 0);
+      myTotalWins = Number(status?.me?.score || battle.hostWins || 0);
+      opTotalWins = Number(status?.opponent?.score || battle.guestWins || 0);
+
+      const myRounds = document.getElementById('my-rounds');
+      const opRounds = document.getElementById('op-rounds');
+      if (myRounds && typeof renderDots === 'function') myRounds.innerHTML = renderDots(myTotalWins, true);
+      if (opRounds && typeof renderDots === 'function') opRounds.innerHTML = renderDots(opTotalWins, false);
+
+      const final = Boolean(data.battleFinished);
+      if (typeof triggerBattleAnimations === 'function') {
+        triggerBattleAnimations(myS, opS, final, myTotalWins, opTotalWins, false, false, null, null);
+      }
+
+      if (final) {
+        setTimeout(() => {
+          safeSetText('battle-info', battle.winnerRole === 'draw' ? '平手！' : '對戰結束！');
+          setTimeout(() => { window.location.href = `/lobby.html?id=${STUDENT_ID}`; }, 3000);
+        }, 2600);
+      } else {
+        setTimeout(() => {
+          updateArenaUI(roomId).then(() => startRoundCountdown(roomId));
+        }, 3000);
+      }
+    });
+  }
+
+  window.submitBattleScore = function(roomId, score) {
+    if (currentLimitTimer) clearInterval(currentLimitTimer);
+    const controls = document.getElementById('battle-controls');
+    if (controls) controls.style.visibility = 'hidden';
+
+    const myCard = document.getElementById('my-card');
+    if (myCard) myCard.classList.remove('charging-mana', 'ultimate-charging');
+    const bBtn = document.getElementById('battle-record-btn');
+    if (bBtn) bBtn.classList.remove('active', 'ult-active');
+
+    let finalScore = isUltimateMode ? score + 1000 : score;
+    const roundNo = currentBattleRound + 1;
+
+    safeSetText('battle-timer', `得分：${score}`);
+    safeSetText('battle-info', '等待對手...');
+
+    TappieAPI.submitBattleScore({
+      uid: STUDENT_ID,
+      roomCode: SUPA_ROOM_CODE || roomId,
+      roundNo,
+      score: finalScore
+    }).then(data => {
+      if (!data.success) {
+        console.error('submitBattleScore failed', data);
+        alert(data.message || data.error || '送出對戰分數失敗');
+        roundSubmitted = false;
+        if (controls) controls.style.visibility = 'visible';
+        return;
+      }
+      handleRoundResultFromResponse(roomId, data);
+    }).catch(err => {
+      console.error('submitBattleScore error', err);
+      alert('送出對戰分數失敗：' + String(err.message || err));
+      roundSubmitted = false;
+      if (controls) controls.style.visibility = 'visible';
+    });
+  };
+
+  window.checkBoth = async function(roomId) {
+    if (isChecking) return;
+    isChecking = true;
+    try {
+      const data = await supaStatus(roomId);
+      if (!data.success) return;
+
+      if (data.room?.status === 'finished') {
+        if (waitOpTimer) clearInterval(waitOpTimer);
+        const le = data.room?.lastEvent || {};
+        handleRoundResultFromResponse(roomId, {
+          success: true,
+          roundComplete: true,
+          battleFinished: true,
+          round: {
+            roundNo: le.roundNo,
+            hostScore: le.hostScore,
+            guestScore: le.guestScore,
+            winnerRole: le.roundWinnerRole
+          },
+          battle: {
+            status: 'finished',
+            hostWins: le.hostWins,
+            guestWins: le.guestWins,
+            winnerRole: le.battleWinnerRole
+          }
+        });
+        return;
+      }
+
+      const le = data.room?.lastEvent || {};
+      if (le.type === 'round_finished_next_round_started' && Number(le.nextRoundNo || 0) > currentBattleRound + 1) {
+        if (waitOpTimer) clearInterval(waitOpTimer);
+        handleRoundResultFromResponse(roomId, {
+          success: true,
+          roundComplete: true,
+          battleFinished: false,
+          round: {
+            roundNo: le.roundNo,
+            hostScore: le.hostScore,
+            guestScore: le.guestScore,
+            winnerRole: le.roundWinnerRole
+          },
+          battle: {
+            status: 'active',
+            currentRound: le.nextRoundNo,
+            hostWins: le.hostWins,
+            guestWins: le.guestWins
+          }
+        });
+      }
+    } finally {
+      isChecking = false;
+    }
+  };
+
+  window.playBattleHint = function() {
+    const hintBtn = document.getElementById('hint-btn');
+    if (hintBtn) {
+      hintBtn.style.transform = 'scale(0.9)';
+      setTimeout(() => hintBtn.style.transform = 'scale(1)', 150);
+    }
+    const targetWord = battleQuizArr[currentBattleRound]?.en;
+    if (targetWord) speakWordCloudCached(targetWord, 1.8, null, null, '-10%');
+  };
+
+  // 覆蓋整體 onload：battle 模式完全走 Supabase；非 battle 維持原流程。
+  if (isSupabaseBattle) {
+    window.onload = async () => {
+      document.getElementById('main-card').style.display = 'none';
+      document.getElementById('impact-overlay').classList.remove('active');
+      try {
+        globalMicStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 16000 }
+        });
+        if (!azureAuthToken && window.TappieAPI) await TappieAPI.getAzureToken().then(d => { if (d.success) { azureAuthToken = d.token; azureRegionCode = d.region; } });
+        buildDynamicPrizePool?.();
+        showPortal();
+        hideLoadingScreen();
+      } catch(err) {
+        console.error(err);
+        alert('請開啟麥克風權限才能對戰！');
+        hideLoadingScreen();
+      }
+    };
+  }
+})();
 </script>
   <div id="phonic-helper-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
   <div class="helper-card" style="background: white; width: 85%; max-width: 340px; border-radius: 25px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;">
