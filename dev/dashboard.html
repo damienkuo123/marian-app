@@ -17,7 +17,7 @@
   <script src="global-audio.js"></script>
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
-  <script src="./tappie-api.js?v=20260522-practice-fix1"></script>
+  <script src="./tappie-api.js?v=20260522-practice-v2"></script>
 
   <style>
     :root { 
@@ -992,7 +992,7 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`arena.html?id=${STUDENT_ID}&mode=challenge`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
         
       } else {
@@ -1008,7 +1008,7 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`arena.html?id=${STUDENT_ID}&mode=challenge`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
       }
 
@@ -1121,7 +1121,10 @@
       if (data.reviewUnits && data.reviewUnits.length > 0) {
         reviewGrid.innerHTML = data.reviewUnits.map(u => {
           const unitName = (typeof u === 'string') ? u : (u.unitName || u.name || '未命名單元');
-          return `<a href="#" onclick="event.preventDefault(); checkVoiceLimitAndGo('arena.html?id=${STUDENT_ID}&unit=' + encodeURIComponent(unitName) + '&mode=review', this)" class="btn-review">📖 ${unitName}</a>`;
+          const encodedUnitName = encodeURIComponent(unitName);
+          const encodedStudentId = encodeURIComponent(STUDENT_ID);
+          const targetUrl = `./arena.html?id=${encodedStudentId}&mode=review&unit=${encodedUnitName}`;
+          return `<a href="${targetUrl}" onclick="event.preventDefault(); checkVoiceLimitAndGo(this.getAttribute('href'), this)" class="btn-review">📖 ${unitName}</a>`;
         }).join('');
       } else {
         reviewGrid.innerHTML = `<div style="color:var(--text-sub);font-weight:900;text-align:center;padding:18px;">目前班級尚未建立自由練習單元</div>`;
@@ -1599,7 +1602,7 @@
 
           if (extractedUid) {
               if (adminAuth) window.location.replace(`admin.html?id=${extractedUid}`);
-              else window.location.href = `dashboard.html?id=${extractedUid}`;
+              else window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
           } else {
               const loader = document.createElement('div');
               loader.style = "position:fixed;inset:0; width:100vw; height:100dvh;background:radial-gradient(circle at center, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); font-family:sans-serif; transition:opacity 0.3s;";
@@ -1618,7 +1621,7 @@
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) window.location.replace(`admin.html?id=${data.uid}`);
-                      else window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                      else window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
                   } else { 
                       alert("❌ 查無此卡！請確認是否拿錯卡片。"); 
                       document.body.removeChild(loader); 
