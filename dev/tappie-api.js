@@ -1,143 +1,74 @@
-// tappie-api.js
-// Tappie Supabase Dev API Layer
-// 重要：請把 YOUR_PROJECT_REF 換成你的 Supabase 專案 ref。
-// 範例：https://abcd1234.supabase.co/functions/v1
-
-window.TappieAPI = {
+// tappie-api.js - Tappie Supabase Dev API Layer
+// 只要替換 YOUR_PROJECT_REF 即可。
+const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://YOUR_PROJECT_REF.supabase.co/functions/v1",
-
   endpoints: {
     resolveStudent: "/resolve-student",
     getDashboard: "/get-dashboard",
     getAzureToken: "/get-azure-token",
     submitPractice: "/submit-practice",
-    getDiagnosticReport: "/get-diagnostic-report"
+    getDiagnosticReport: "/get-diagnostic-report",
+    adminGetData: "/admin-get-data",
+    adminSaveStudents: "/admin-save-students",
+    adminSaveTasks: "/admin-save-tasks"
   },
-
-  async request(path, options = {}) {
-    const res = await fetch(`${this.supabaseBaseUrl}${path}`, options);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.success === false) {
-      const message = data.message || data.msg || data.error || `API error: ${res.status}`;
-      const err = new Error(message);
-      err.payload = data;
-      throw err;
-    }
-    return data;
+  async _get(path) {
+    const res = await fetch(this.supabaseBaseUrl + path);
+    return await res.json();
   },
-
-  resolveStudentByUid(uid) {
-    return this.request(`${this.endpoints.resolveStudent}?uid=${encodeURIComponent(uid)}`);
-  },
-
-  resolveStudentByCard(cardId) {
-    return this.request(`${this.endpoints.resolveStudent}?cardId=${encodeURIComponent(cardId)}`);
-  },
-
-  getDashboard(uid) {
-    return this.request(`${this.endpoints.getDashboard}?uid=${encodeURIComponent(uid)}`);
-  },
-
-  getAzureToken() {
-    return this.request(this.endpoints.getAzureToken);
-  },
-
-  submitPractice(payload) {
-    return this.request(this.endpoints.submitPractice, {
+  async _post(path, body) {
+    const res = await fetch(this.supabaseBaseUrl + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body)
     });
+    return await res.json();
   },
-
-  getDiagnosticReport(uid, filter = "unit") {
-    return this.request(`${this.endpoints.getDiagnosticReport}?uid=${encodeURIComponent(uid)}&filter=${encodeURIComponent(filter)}`);
+  async resolveStudentByUid(uid) {
+    return await this._get(`${this.endpoints.resolveStudent}?uid=${encodeURIComponent(uid)}`);
   },
-
-  // 將 Supabase get-dashboard 回傳格式轉成舊 dashboard.html 的 renderDashboard(data) 可吃的格式。
+  async resolveStudentByCard(cardId) {
+    return await this._get(`${this.endpoints.resolveStudent}?cardId=${encodeURIComponent(cardId)}`);
+  },
+  async getDashboard(uid) {
+    return await this._get(`${this.endpoints.getDashboard}?uid=${encodeURIComponent(uid)}`);
+  },
+  async getAzureToken() {
+    return await this._get(this.endpoints.getAzureToken);
+  },
+  async submitPractice(payload) {
+    return await this._post(this.endpoints.submitPractice, payload);
+  },
+  async getDiagnosticReport(uid, filter = "unit") {
+    return await this._get(`${this.endpoints.getDiagnosticReport}?uid=${encodeURIComponent(uid)}&filter=${encodeURIComponent(filter)}`);
+  },
+  async adminGetData(schoolCode = "TEST01", mode = "all") {
+    return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`);
+  },
+  async adminSaveStudents(payload) {
+    return await this._post(this.endpoints.adminSaveStudents, payload);
+  },
+  async adminSaveTasks(payload) {
+    return await this._post(this.endpoints.adminSaveTasks, payload);
+  },
   toLegacyDashboard(data) {
-    const student = data.student || {};
-    const usage = data.usage || {};
-    const currentUnit = data.currentUnit || null;
-    const leaderboard = data.leaderboard || [];
-    const recentAttempts = data.recentAttempts || [];
-
-    const lastScore = recentAttempts.length > 0 ? Number(recentAttempts[0].score || 0) : 0;
-    const missionCount = recentAttempts.length;
-
+    if (!data || !data.success) return data || { success: false };
     return {
       success: true,
-      uid: student.uid,
-      studentName: student.name || "Tappie 學生",
-      currentPoints: Number(student.points || 0),
-      studentType: student.studentType || "normal",
-      parentEmail: student.parentEmail || "",
-      currentUnit: currentUnit ? currentUnit.unitName : "未排定",
-      endDate: currentUnit ? formatMonthDay(currentUnit.endDate) : "--/--",
-      isCompleted: lastScore >= 60,
-      lastScore,
-      awardedPoints: calculateReward(lastScore),
-      missionCount,
-      leaderboard: leaderboard.map(item => ({
-        uid: item.uid,
-        name: item.name,
-        score: item.score
-      })),
-      reviewUnits: currentUnit ? [currentUnit.unitName] : [],
-      recentLogs: recentAttempts.map(item => ({
-        time: formatDateTime(item.createdAt),
-        reason: `${item.word || item.unitName || "口說練習"}`,
-        val: Number(item.score || 0)
-      })),
-      gamification: defaultGamification(),
-      logoUrl: "",
-      iconUrl: ""
+      studentName: data.student?.name || "-",
+      currentPoints: data.student?.points || 0,
+      studentType: data.student?.studentType || "normal",
+      classId: data.student?.classCode || "",
+      currentUnit: data.currentUnit?.unitName || "-",
+      endDate: data.currentUnit?.endDate || "-",
+      homework: data.recentAttempts?.[0] || null,
+      words: data.words || [],
+      leaderboard: data.leaderboard || [],
+      recentLogs: [],
+      email: data.student?.parentEmail || "",
+      raw: data
     };
   }
 };
-
-function calculateReward(score) {
-  const s = Number(score || 0);
-  if (s >= 80) return 30;
-  if (s >= 70) return 20;
-  if (s >= 60) return 10;
-  return 0;
-}
-
-function formatMonthDay(value) {
-  if (!value) return "--/--";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function formatDateTime(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function defaultGamification() {
-  return {
-    dailyChallenge: {
-      passScore: 60,
-      tiers: [
-        { min: 80, pts: 30 },
-        { min: 70, pts: 20 },
-        { min: 60, pts: 10 }
-      ]
-    },
-    mission: {
-      failThreshold: 5,
-      failBasePenalty: -250,
-      failPenaltyStep: 50,
-      goodThreshold: 10,
-      goodReward: 100,
-      perfectThreshold: 15,
-      perfectReward: 200
-    },
-    leaderboard: [100, 50, 30]
-  };
-}
+window.TappieAPI = TappieAPI;

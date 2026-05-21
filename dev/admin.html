@@ -12,6 +12,7 @@
   
     <link rel="apple-touch-icon" href="/assets/app-icon.png">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="./tappie-api.js"></script>
     <style>
         :root {
             --primary-color: #ffd700;
@@ -832,7 +833,7 @@
         }
 
         // 2. 🏠 建立目前運行的基礎常數
-        const CURRENT_SCHOOL = localStorage.getItem('tappie_school') || "TP01";
+        const CURRENT_SCHOOL = localStorage.getItem('tappie_school') || "TEST01";
         let ADMIN_SECRET = localStorage.getItem('tappie_admin_key');
         const authTime = localStorage.getItem('tappie_admin_key_time');
 
@@ -866,23 +867,28 @@
             document.getElementById('unauth-mask').style.display = 'flex';
         } else {
             // 🚀 修正：這裡換成了「反引號 ( ` )」，這樣變數才會被正確讀取！
-            fetch(`${GAS_URL}?action=verify_auth&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.valid) {
-                        // 密碼錯誤或隨便亂打，直接鎖定並清空假鑰匙
+            if (USE_SUPABASE_ADMIN) {
+                // Supabase dev 階段：只要 localStorage 有 admin key，就先開放測試後台。
+                // 正式版之後再接 admin-auth / RLS。
+                document.getElementById('role-text').innerText = "⭐ Supabase Dev 管理員";
+                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
+            } else {
+                fetch(`${GAS_URL}?action=verify_auth&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.valid) {
+                            document.getElementById('unauth-mask').style.display = 'flex';
+                            localStorage.removeItem('tappie_admin_key');
+                        } else if (data.role === "super") {
+                            document.getElementById('role-text').innerText = "⭐ 超級管理員權限";
+                            document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
+                        }
+                    })
+                    .catch(err => {
+                        alert("連線後端驗證失敗，請檢查網路連線。");
                         document.getElementById('unauth-mask').style.display = 'flex';
-                        localStorage.removeItem('tappie_admin_key');
-                    } else if (data.role === "super") {
-                        // 後端認證是超級管理員，解鎖進階 UI
-                        document.getElementById('role-text').innerText = "⭐ 超級管理員權限";
-                        document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
-                    }
-                })
-                .catch(err => {
-                    alert("連線後端驗證失敗，請檢查網路連線。");
-                    document.getElementById('unauth-mask').style.display = 'flex';
-                });
+                    });
+            }
         }
 
         
@@ -891,6 +897,43 @@
         let currentStudentId = null;
         let currentPointsValue = 0; 
         let scanTimer;
+        
+
+        // =======================================================
+        // 🧠 Supabase Admin API Adapter (Dev)
+        // =======================================================
+        const USE_SUPABASE_ADMIN = !!(window.TappieAPI && TappieAPI.mode && TappieAPI.mode.indexOf('supabase') !== -1);
+
+        async function adminGetData(mode = 'all') {
+            if (!window.TappieAPI || !TappieAPI.adminGetData) throw new Error('TappieAPI.adminGetData 尚未載入');
+            const data = await TappieAPI.adminGetData(CURRENT_SCHOOL, mode);
+            if (!data.success) throw new Error(data.message || data.error || 'admin-get-data failed');
+            return data;
+        }
+
+        async function adminSaveStudent(action, payload) {
+            if (!window.TappieAPI || !TappieAPI.adminSaveStudents) throw new Error('TappieAPI.adminSaveStudents 尚未載入');
+            const data = await TappieAPI.adminSaveStudents({ schoolCode: CURRENT_SCHOOL, action, ...payload });
+            if (!data.success) throw new Error(data.message || data.error || 'admin-save-students failed');
+            return data;
+        }
+
+        async function adminSaveTask(action, payload) {
+            if (!window.TappieAPI || !TappieAPI.adminSaveTasks) throw new Error('TappieAPI.adminSaveTasks 尚未載入');
+            const data = await TappieAPI.adminSaveTasks({ schoolCode: CURRENT_SCHOOL, action, ...payload });
+            if (!data.success) throw new Error(data.message || data.error || 'admin-save-tasks failed');
+            return data;
+        }
+
+        function toAdminStudentPayload(s) {
+            return {
+                studentName: s.name || s.studentName || '-',
+                currentPoints: Number(s.points || s.currentPoints || 0),
+                uid: s.uid,
+                recentLogs: s.recentLogs || []
+            };
+        }
+
         
         // 🚀 救命工具：補上前端日期格式化引擎 (沒有它排定按鈕會壞掉)
         const Utilities = {
@@ -1264,22 +1307,32 @@
         function fetchStudent(cardId) {
             if (actionUI.style.display === 'block') return;
 
-            // 🚀 【鎖鑰加工】：如果老師只刷了 "test"，自動幫他補上 "TP02-test"
             const rawId = String(cardId).trim();
             const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
-
-            // 🚀 【前端邊境攔截】：檢查這張卡的校區，跟管理員目前的校區是否一致？
             const targetSchool = finalUid.split('-')[0].toUpperCase();
             if (targetSchool !== CURRENT_SCHOOL) {
                 showError(`⛔ 越權警告：無法查詢 ${targetSchool} 校區的學生！`);
-                return; // 直接擋下，絕對不送給 GAS！
+                return;
             }
-            
+
             card.className = 'container loading';
             msg.innerText = "⏳ 讀取學生資料中...";
             msg.style.color = "#ffd700";
 
-            // 🚀 【統一參數】：我們統一把 finalUid 塞給 id 參數，讓後端優先抓取
+            if (USE_SUPABASE_ADMIN) {
+                TappieAPI.resolveStudentByUid(finalUid)
+                    .then(data => {
+                        if (data.success) {
+                            currentStudentId = data.uid;
+                            renderAdminUI(toAdminStudentPayload(data.student));
+                        } else {
+                            showError("❌ 查無此學生");
+                        }
+                    })
+                    .catch(err => { console.error(err); showError("⚠️ 網路連線異常"); });
+                return;
+            }
+
             fetch(`${GAS_URL}?action=get_admin_student_data&id=${encodeURIComponent(finalUid)}&secret=${ADMIN_SECRET}`)
                 .then(res => res.json())
                 .then(data => {
@@ -1295,18 +1348,24 @@
 
         // --- 2. 重新讀取學生資料時的 API 呼叫 ---
         function loadStudentData(uid) {
-            // 🚀 【鎖鑰加工】
             const rawId = String(uid).trim();
             const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
-
-            // 🚀 【前端邊境攔截】
             const targetSchool = finalUid.split('-')[0].toUpperCase();
             if (targetSchool !== CURRENT_SCHOOL) {
                 showError(`⛔ 越權警告：無法讀取 ${targetSchool} 校區的資料！`);
                 return; 
             }
 
-            // 🚀 【統一參數】
+            if (USE_SUPABASE_ADMIN) {
+                TappieAPI.resolveStudentByUid(finalUid)
+                    .then(data => {
+                        if (data.success) renderAdminUI(toAdminStudentPayload(data.student));
+                        else showError("❌ 無法讀取資料");
+                    })
+                    .catch(err => { console.error(err); showError("⚠️ 網路連線異常"); });
+                return;
+            }
+
             fetch(`${GAS_URL}?action=get_admin_student_data&id=${encodeURIComponent(finalUid)}&secret=${ADMIN_SECRET}`)
                 .then(res => res.json())
                 .then(data => {
@@ -1352,35 +1411,28 @@
 
         function send(val, btnElement) {
             if (!currentStudentId) return;
-            if (val >= 101 && !confirm(`確定要一次給予 ${val} 點嗎？`)) return;
-            if (val <= -101 && !confirm(`確定要一次扣除 ${Math.abs(val)} 點嗎？`)) return;
+            const originalText = btnElement ? btnElement.innerText : '';
+            if (btnElement) { btnElement.innerText = "⏳"; btnElement.style.pointerEvents = "none"; }
 
-            const allBtns = document.querySelectorAll('.btn-action');
-            allBtns.forEach(b => { b.style.pointerEvents = 'none'; b.style.opacity = '0.5'; });
-            
-            const originalText = btnElement.innerText;
-            btnElement.innerText = "⏳";
+            if (USE_SUPABASE_ADMIN) {
+                adminSaveStudent('adjust_points', {
+                    uid: currentStudentId,
+                    amount: val,
+                    note: val > 0 ? `管理員獎勵 +${val}` : `管理員扣點 ${val}`
+                })
+                .then(() => loadStudentData(currentStudentId))
+                .catch(err => alert(err.message || "點數調整失敗"))
+                .finally(() => { if (btnElement) { btnElement.innerText = originalText; btnElement.style.pointerEvents = "auto"; } });
+                return;
+            }
 
             fetch(`${GAS_URL}?action=admin_add_points&id=${currentStudentId}&val=${val}&secret=${ADMIN_SECRET}`)
                 .then(res => res.json())
-                .then(resData => {
-                    currentPointsValue += val;
-                    const ptsEl = document.getElementById('stu-points');
-                    ptsEl.innerText = `${currentPointsValue} PTS`;
-                    
-                    ptsEl.style.transform = "scale(1.3)";
-                    setTimeout(() => ptsEl.style.transform = "scale(1)", 300);
-
-                    loadStudentData(currentStudentId);
-
-                    allBtns.forEach(b => { b.style.pointerEvents = 'auto'; b.style.opacity = '1'; });
-                    btnElement.innerText = originalText;
+                .then(data => {
+                    if(data.success) loadStudentData(currentStudentId);
+                    else alert(data.error || "操作失敗");
                 })
-                .catch(err => {
-                    alert("加扣分失敗，請檢查網路！");
-                    allBtns.forEach(b => { b.style.pointerEvents = 'auto'; b.style.opacity = '1'; });
-                    btnElement.innerText = originalText;
-                });
+                .finally(() => { if (btnElement) { btnElement.innerText = originalText; btnElement.style.pointerEvents = "auto"; } });
         }
 
         function handleAdd(btnElement) { 
@@ -2258,19 +2310,30 @@
 
         // 🚀 新增：安全防護版刪除任務功能
         function deleteTaskData(row, unitName) {
-            // 改用 prompt 要求使用者手動輸入文字，杜絕手滑！
-            const userInput = prompt(`⚠️ 危險動作警告 ⚠️\n\n您即將徹底刪除【${unitName}】！\n(包含裡面的所有單字都會被清空，且無法復原)\n\n請在下方輸入「刪除」兩個字來確認執行：`);
-            
-            // 防呆檢查：如果按取消 (null)，或者打錯字，直接擋下！
+            const userInput = prompt(`⚠️ 危險動作警告 ⚠️
+
+您即將徹底刪除【${unitName}】！
+(包含裡面的所有單字都會被清空，且無法復原)
+
+請在下方輸入「刪除」兩個字來確認執行：`);
             if (userInput !== "刪除") {
-                if (userInput !== null) {
-                    alert("❌ 輸入錯誤！安全鎖已啟動，取消刪除動作。");
-                }
+                if (userInput !== null) alert("❌ 輸入錯誤！安全鎖已啟動，取消刪除動作。");
                 return; 
             }
-            
+            const task = allTasksData.find(t => Number(t.row) === Number(row)) || { unit: unitName };
             const listZone = document.getElementById('tm-list-zone');
             listZone.innerHTML = '<p style="text-align:center; color:#e74c3c; margin-top:40px; font-weight:bold;">🗑️ 正在刪除資料中...</p>';
+
+            if (USE_SUPABASE_ADMIN) {
+                adminSaveTask('delete_unit', {
+                    unitId: task.id || null,
+                    classCode: task.classId || '',
+                    unitName: task.unit || unitName
+                })
+                .then(() => fetchTaskData())
+                .catch(err => { alert(err.message || "刪除失敗"); renderTaskList(); });
+                return;
+            }
             
             const formData = new URLSearchParams();
             formData.append('type', 'word');
@@ -2279,7 +2342,7 @@
             fetch(`${GAS_URL}?action=delete_task_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) fetchTaskData(); // 重新讀取
+                    if (data.success) fetchTaskData();
                     else { alert("刪除失敗，請檢查權限！"); renderTaskList(); }
                 });
         }
@@ -2327,35 +2390,38 @@
         function saveTaskData() {
             const classId = document.getElementById('edit-task-class').value.trim();
             const unit = document.getElementById('edit-task-unit').value.trim();
-            
-            if (!classId || !unit) {
-                alert("請填寫「班級代碼」與「單元名稱」！");
-                return;
-            }
+            if (!classId || !unit) { alert("請填寫「班級代碼」與「單元名稱」！"); return; }
 
-            // 收集所有填寫的單字
             const enInputs = document.querySelectorAll('.word-en');
             const zhInputs = document.querySelectorAll('.word-zh');
             let wordsArray = [];
-            
             for (let i = 0; i < enInputs.length; i++) {
                 const en = enInputs[i].value.trim();
                 const zh = zhInputs[i].value.trim();
-                // 只有英文有填寫才算數
-                if (en !== "") {
-                    wordsArray.push({ en: en, zh: zh });
-                }
+                if (en !== "") wordsArray.push({ en, zh });
             }
-
-            if (wordsArray.length === 0) {
-                alert("請至少填寫一個英文單字！");
-                return;
-            }
+            if (wordsArray.length === 0) { alert("請至少填寫一個英文單字！"); return; }
 
             const saveBtn = document.getElementById('save-task-btn');
             const originalText = saveBtn.innerText;
             saveBtn.innerText = "⏳ 儲存中...";
             saveBtn.style.pointerEvents = "none";
+
+            if (USE_SUPABASE_ADMIN) {
+                adminSaveTask('save_unit', {
+                    unit: {
+                        classCode: classId,
+                        unitName: unit,
+                        unitType: (classId.toUpperCase().includes('EVENT') || classId.includes('突發')) ? 'event' : 'normal',
+                        displayOrder: editingTaskRow || 0,
+                        words: wordsArray
+                    }
+                })
+                .then(() => { closeModal('taskEditorModal'); fetchTaskData(); })
+                .catch(err => alert(err.message || "儲存失敗，請重試！"))
+                .finally(() => { saveBtn.innerText = originalText; saveBtn.style.pointerEvents = "auto"; });
+                return;
+            }
 
             const formData = new URLSearchParams();
             formData.append('row', editingTaskRow);
@@ -2368,16 +2434,11 @@
                 .then(data => {
                     if (data.success) {
                         closeModal('taskEditorModal');
-                        fetchTaskData(); // 重新讀取資料，刷新列表
-                    } else {
-                        alert(data.error || "儲存失敗，請重試！");
-                    }
+                        fetchTaskData();
+                    } else alert(data.error || "儲存失敗，請重試！");
                 })
                 .catch(err => alert("網路連線超時，請檢查網路狀態！"))
-                .finally(() => {
-                    saveBtn.innerText = originalText;
-                    saveBtn.style.pointerEvents = "auto";
-                });
+                .finally(() => { saveBtn.innerText = originalText; saveBtn.style.pointerEvents = "auto"; });
         }
 
         // =======================================================
@@ -2460,9 +2521,17 @@
         // 🚀 執行取消排程 (刪除 Schedule_Bank 裡的這一行)
         function deleteSchedule() {
             if(!confirm(`確定要取消【${calTargetTask.unit}】的日期安排嗎？`)) return;
-            
             const btn = document.getElementById('cal-cancel-btn');
             btn.innerText = "⏳..."; btn.style.pointerEvents = "none";
+
+            if (USE_SUPABASE_ADMIN) {
+                const existingSch = allSchedulesData.find(s => Number(s.row) === Number(calTargetTask.row) || (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit));
+                adminSaveTask('delete_schedule', { scheduleId: existingSch?.id || calTargetTask.id || calTargetTask.row })
+                    .then(() => { closeModal('calendarModal'); fetchTaskData(); })
+                    .catch(err => alert(err.message || "取消失敗！"))
+                    .finally(() => { btn.innerText = "取消排程"; btn.style.pointerEvents = "auto"; });
+                return;
+            }
 
             const formData = new URLSearchParams();
             formData.append('type', 'schedule');
@@ -2473,14 +2542,10 @@
                 .then(data => {
                     if (data.success) {
                         closeModal('calendarModal');
-                        fetchTaskData(); // 重新整理，彩帶就會消失
-                    } else {
-                        alert("取消失敗！");
-                    }
+                        fetchTaskData();
+                    } else alert("取消失敗！");
                 })
-                .finally(() => {
-                    btn.innerText = "取消排程"; btn.style.pointerEvents = "auto";
-                });
+                .finally(() => { btn.innerText = "取消排程"; btn.style.pointerEvents = "auto"; });
         }
 
         function changeMonth(offset) {
@@ -2592,13 +2657,32 @@
             btn.innerText = "⏳ 寫入排程中...";
             btn.style.pointerEvents = "none";
 
+            if (USE_SUPABASE_ADMIN) {
+                const existingSch = allSchedulesData.find(s => Number(s.row) === Number(calTargetTask.row) || (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit));
+                adminSaveTask('save_schedule', {
+                    schedule: {
+                        id: existingSch?.id || null,
+                        classCode: calTargetTask.classId,
+                        unitName: calTargetTask.unit,
+                        startDate: calSelectingStart,
+                        endDate: calSelectingEnd,
+                        eventAvatarId: document.getElementById('event-avatar-select') ? document.getElementById('event-avatar-select').value : '',
+                        isEvent: calTargetTask.classId.toUpperCase().includes('EVENT') || calTargetTask.classId.includes('突發')
+                    }
+                })
+                .then(() => { closeModal('calendarModal'); fetchTaskData(); })
+                .catch(err => alert(err.message || "排程失敗，請重試！"))
+                .finally(() => { btn.innerText = ogText; btn.style.pointerEvents = "auto"; });
+                return;
+            }
+
             const formData = new URLSearchParams();
             formData.append('classId', calTargetTask.classId);
             formData.append('unit', calTargetTask.unit);
             formData.append('startDate', calSelectingStart);
             formData.append('endDate', calSelectingEnd);
-            formData.append('row', calTargetTask.row); // 🚀 送出 0 代表新增，送出數字代表覆寫！
-            formData.append('avatar', document.getElementById('event-avatar-select') ? document.getElementById('event-avatar-select').value : ""); // 🚀 把大魔王 ID 一併送出
+            formData.append('row', calTargetTask.row);
+            formData.append('avatar', document.getElementById('event-avatar-select') ? document.getElementById('event-avatar-select').value : "");
 
             fetch(`${GAS_URL}?action=save_schedule&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
                 .then(res => res.json())
@@ -2606,15 +2690,10 @@
                     if (data.success) {
                         closeModal('calendarModal');
                         fetchTaskData(); 
-                    } else {
-                        alert("排程失敗，請重試！");
-                    }
+                    } else alert("排程失敗，請重試！");
                 })
                 .catch(err => alert("連線超時！"))
-                .finally(() => {
-                    btn.innerText = ogText;
-                    btn.style.pointerEvents = "auto";
-                });
+                .finally(() => { btn.innerText = ogText; btn.style.pointerEvents = "auto"; });
         }
 
         // =======================================================
@@ -2828,12 +2907,31 @@
             const name = document.getElementById('edit-stu-name').value.trim();
             const type = document.getElementById('edit-stu-type').value;
             const classId = document.getElementById('edit-stu-class').value.trim();
-            
             if (!uid || !name) { alert("UID 與姓名為必填欄位！"); return; }
             if (type === "美語資優生" && !classId) { alert("美語資優生必須填寫班級代碼！"); return; }
 
             const btn = document.getElementById('save-stu-btn');
             btn.innerText = "⏳ 儲存中..."; btn.style.pointerEvents = "none";
+
+            if (USE_SUPABASE_ADMIN) {
+                const original = allStudentsData.find(s => Number(s.row) === Number(editingStuRow)) || {};
+                adminSaveStudent('save_student', {
+                    student: {
+                        uid,
+                        cardId: uid,
+                        name,
+                        type,
+                        classId: type === "一般生" ? "" : classId,
+                        title: original.title || '',
+                        points: original.points || 0,
+                        parentEmail: original.parentEmail || ''
+                    }
+                })
+                .then(() => { closeModal('studentEditorModal'); fetchStudentList(); })
+                .catch(err => alert(err.message || "儲存失敗！"))
+                .finally(() => { btn.innerText = "💾 儲存"; btn.style.pointerEvents = "auto"; });
+                return;
+            }
 
             const stuData = { row: editingStuRow, uid: uid, name: name, type: type, classId: classId };
             const formData = new URLSearchParams();
@@ -2842,17 +2940,8 @@
             fetch(`${GAS_URL}?action=save_student_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) {
-                        closeModal('studentEditorModal');
-                        fetchStudentList(); 
-                    } else { 
-                        // 🚀 攔截人數上限，跳出商業版提示
-                        if (data.error === "LIMIT_REACHED") {
-                            alert(`⚠️ 已達到校區學生人數上限（目前方案為 ${data.limit} 人）！\n\n您目前的系統授權已滿，若需擴充學生名額，請聯繫系統供應商進行方案升級。`);
-                        } else {
-                            alert(data.error || "儲存失敗！"); 
-                        }
-                    }
+                    if (data.success) { closeModal('studentEditorModal'); fetchStudentList(); }
+                    else { alert(data.error || "儲存失敗！"); }
                 })
                 .finally(() => { btn.innerText = "💾 儲存"; btn.style.pointerEvents = "auto"; });
         }
@@ -2860,19 +2949,27 @@
         // --- 🗑️ 刪除單一學生邏輯 ---
         function deleteStudentData() {
             const name = document.getElementById('edit-stu-name').value.trim();
-            
-            // 🛑 核彈級安全鎖：要求手動打字
-            const userInput = prompt(`⚠️ 危險動作警告 ⚠️\n\n您即將徹底刪除學生【${name}】的所有資料！\n(包含點數、角色卡牌等，且完全無法復原)\n\n請在下方輸入「刪除」兩個字來確認執行：`);
-            
+            const userInput = prompt(`⚠️ 危險動作警告 ⚠️
+
+您即將停用學生【${name}】的帳號！
+歷史練習與點數紀錄會保留。
+
+請在下方輸入「刪除」兩個字來確認執行：`);
             if (userInput !== "刪除") {
-                if (userInput !== null) {
-                    alert("❌ 輸入錯誤！安全鎖已啟動，取消刪除動作。");
-                }
+                if (userInput !== null) alert("❌ 輸入錯誤！安全鎖已啟動，取消刪除動作。");
                 return; 
             }
-            
             const btn = document.getElementById('del-stu-btn');
             btn.innerText = "⏳..."; btn.style.pointerEvents = "none";
+
+            if (USE_SUPABASE_ADMIN) {
+                const target = allStudentsData.find(s => Number(s.row) === Number(editingStuRow));
+                adminSaveStudent('delete_student', { uid: target?.uid || document.getElementById('edit-stu-uid').value.trim() })
+                    .then(() => { closeModal('studentEditorModal'); fetchStudentList(); })
+                    .catch(err => alert(err.message || "刪除失敗，請檢查權限！"))
+                    .finally(() => { btn.innerHTML = "🗑️ 刪除"; btn.style.pointerEvents = "auto"; });
+                return;
+            }
 
             const formData = new URLSearchParams();
             formData.append('row', editingStuRow);
@@ -2880,17 +2977,10 @@
             fetch(`${GAS_URL}?action=delete_student_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) {
-                        closeModal('studentEditorModal');
-                        fetchStudentList(); // 刪除成功後重新洗牌名單
-                    } else { 
-                        alert("刪除失敗，請檢查權限！"); 
-                    }
+                    if (data.success) { closeModal('studentEditorModal'); fetchStudentList(); }
+                    else alert("刪除失敗，請檢查權限！");
                 })
-                .finally(() => {
-                    btn.innerHTML = "🗑️ 刪除"; 
-                    btn.style.pointerEvents = "auto";
-                });
+                .finally(() => { btn.innerHTML = "🗑️ 刪除"; btn.style.pointerEvents = "auto"; });
         }
 
         function toggleBatchMode() {
@@ -2971,42 +3061,51 @@
             const classId = document.getElementById('batch-stu-class').value.trim();
             const name = document.getElementById('batch-stu-name').value.trim();
             const uid = document.getElementById('batch-stu-uid').value.trim();
-            
-            if (!type && !classId && !name && !uid) {
-                alert("您沒有設定任何修改內容！"); return;
-            }
-
-            if (type === "美語資優生" && !classId) {
-                alert("若將整批學生設為美語資優生，請務必統一填寫「班級代碼」！"); return;
-            }
-
-            if (!confirm(`確定要對選取的 ${selectedStuRows.size} 位學生執行批量修改嗎？\n(無法復原)`)) return;
+            if (!type && !classId && !name && !uid) { alert("您沒有設定任何修改內容！"); return; }
+            if (type === "美語資優生" && !classId) { alert("若將整批學生設為美語資優生，請務必統一填寫「班級代碼」！"); return; }
+            if (!confirm(`確定要對選取的 ${selectedStuRows.size} 位學生執行批量修改嗎？
+(無法復原)`)) return;
 
             const btn = document.getElementById('save-batch-btn');
             btn.innerText = "⏳ 執行中..."; btn.style.pointerEvents = "none";
+
+            if (USE_SUPABASE_ADMIN) {
+                const selected = allStudentsData.filter(s => selectedStuRows.has(s.row));
+                const rows = selected.map((s, idx) => {
+                    let nextUid = s.uid;
+                    if (uid && selected.length === 1) nextUid = uid.includes('-') ? uid : `${CURRENT_SCHOOL}-${uid}`;
+                    return {
+                        uid: nextUid,
+                        cardId: nextUid,
+                        name: name || s.name,
+                        type: type || s.type,
+                        classId: (type === "一般生") ? "" : (classId || s.classId),
+                        title: s.title || '',
+                        points: s.points || 0,
+                        parentEmail: s.parentEmail || ''
+                    };
+                });
+                adminSaveStudent('batch_save_students', { students: rows })
+                    .then(() => { closeModal('batchEditorModal'); toggleBatchMode(); fetchStudentList(); })
+                    .catch(err => alert(err.message || "批量修改失敗！"))
+                    .finally(() => { btn.innerText = "🚀 確認批量修改"; btn.style.pointerEvents = "auto"; });
+                return;
+            }
 
             const updates = {};
             if (type) updates.type = type;
             if (classId) updates.classId = classId;
             if (name) updates.name = name;
             if (uid) updates.uid = uid;
-
-            const payload = {
-                rows: Array.from(selectedStuRows),
-                updates: updates
-            };
-
+            const payload = { rows: Array.from(selectedStuRows), updates: updates };
             const formData = new URLSearchParams();
             formData.append('data', JSON.stringify(payload));
 
             fetch(`${GAS_URL}?action=batch_save_students&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
                 .then(res => res.json())
                 .then(data => {
-                    if (data.success) {
-                        closeModal('batchEditorModal');
-                        toggleBatchMode(); // 關閉批量模式
-                        fetchStudentList(); // 重新讀取
-                    } else { alert(data.error || "批量修改失敗！"); }
+                    if (data.success) { closeModal('batchEditorModal'); toggleBatchMode(); fetchStudentList(); }
+                    else alert(data.error || "批量修改失敗！");
                 })
                 .finally(() => { btn.innerText = "🚀 確認批量修改"; btn.style.pointerEvents = "auto"; });
         }
