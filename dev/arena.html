@@ -14,6 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
+  <script src="./tappie-api.js"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1526,7 +1527,6 @@
   </div>
 </div>
 
-<script src="tappie-api.js?v=arena-battle-v3"></script>
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
   const params = new URLSearchParams(window.location.search);
@@ -1544,7 +1544,7 @@
   // 🚀 關鍵修復：如果是突發事件，強制給予 'battle' 模式；若不是，就讀取原本的 mode，都沒讀到才去 'challenge'
   const MODE = isEventMode ? 'battle' : (params.get('mode') || "challenge");
   
-  const ROOM_ID = params.get('roomId') || params.get('roomCode') || params.get('code');
+  const ROOM_ID = params.get('roomId');
 
   let stream, mediaRecorder, chunks = [], quizData = [], scores = [], currentIndex = 0, isReReading = false;
   let systemPassScore = 60; 
@@ -1805,8 +1805,7 @@
         return;
     }
 
-    fetch(`${GAS_URL}?action=get_azure_token`)
-      .then(res => res.json())
+    TappieAPI.getAzureToken()
       .then(data => {
         if (data.success) {
           azureAuthToken = data.token;
@@ -1931,15 +1930,12 @@
 
   document.getElementById('start-btn').onclick = () => {
     document.getElementById('info-text').innerText = "正在載入題目...";
-    fetch(`${GAS_URL}?id=${STUDENT_ID}&action=get_data&unit=${encodeURIComponent(TARGET_UNIT)}`)
-      .then(res => res.json()).then(data => {
+    TappieAPI.getDashboard(STUDENT_ID).then(data => {
         if (!data.words || data.words.length === 0) { alert("題目為空"); return; }
         quizData = data.words; 
-        // 🚀 關鍵接線：讀取並套用 GAS 的計分規則
-        if (data.rule) {
-            systemPassScore = data.rule.passScore;
-            systemRewardTiers = data.rule.tiers;
-        }
+        // Supabase 版先使用預設通關規則
+        systemPassScore = 60;
+        systemRewardTiers = [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}];
         scores = new Array(quizData.length).fill(null);
         
         document.getElementById('total-display').innerText = quizData.length;
@@ -2433,17 +2429,19 @@
                                     abortController.abort(); // ⏱️ 10秒一到，無情斬斷連線！
                                 }, 12000);
 
-                                fetch(`${GAS_URL}?action=evaluate_speech_azure&word=${encodeURIComponent(targetWord)}&id=${STUDENT_ID}`, { 
-                                    method: 'POST', 
-                                    body: JSON.stringify(rawAzureData),
-                                    signal: abortController.signal // 🔗 綁定引爆線
-                                }).then(res => {
-                                    clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
-                                    return res.json();
+                                TappieAPI.submitPractice({
+                                    uid: STUDENT_ID,
+                                    unitName: TARGET_UNIT,
+                                    word: targetWord,
+                                    mode: MODE,
+                                    azureRaw: rawAzureData
                                 }).then(data => {
-                                    scores[currentIndex] = data.score; 
+                                    clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
+                                    return data;
+                                }).then(data => {
+                                    scores[currentIndex] = data.practice?.score ?? data.score; 
                                     if(!window.feedbacks) window.feedbacks = [];
-                                    window.feedbacks[currentIndex] = data.feedback;
+                                    window.feedbacks[currentIndex] = data.practice?.feedback || data.feedback || '已完成評分';
                                     
                                     // 🚀 成功！解除灰色裝甲，恢復原始紅色按鈕
                                     rb.classList.remove('processing-locked');
@@ -2590,23 +2588,11 @@
     
     const detailJSON = JSON.stringify(detailArr);
 
-    // 🚀 1. 網址瘦身：把 details 從網址裡面拔掉！只留輕量參數
-    const finalUrl = `${GAS_URL}?id=${STUDENT_ID}&action=add_score&score=${avg}&mode=${MODE}`;
-    
-    // 🚀 2. 改走 POST 通道：把巨大資料裝進 body 裡面送！
-    fetch(finalUrl, { 
-        method: 'POST', 
-        body: detailJSON 
-    })
-      .then(() => { 
-        alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！"); 
-        window.location.href = `/dashboard.html?id=${STUDENT_ID}`; 
-      }).catch(err => {
-        // 如果遇到極端網路問題
-        console.log("Fetch 失敗", err);
-        alert("🎉 挑戰完成！(已進入背景備用存檔)");
-        window.location.href = `/dashboard.html?id=${STUDENT_ID}`;
-      });
+    // Supabase 版：每題在錄音完成時已經透過 submit-practice 寫入資料庫。
+    // 這裡只負責結束流程並返回大廳，避免重複加點或重複寫入。
+    console.log('Supabase practice details already saved:', detailArr);
+    alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！");
+    window.location.href = `/dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
   }
   
   function reRead(i) { 
@@ -3678,14 +3664,13 @@
               `;
               document.body.appendChild(loader);
 
-              fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
-                .then(res => res.json())
+              TappieAPI.resolveStudentByCard(inputStr)
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `dashboard.html?id=${data.uid}`;
+                          window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
                       }
                   } 
                   else { 
@@ -4576,318 +4561,5 @@
     </div>
   </div>
 </div>
-
-
-<script>
-/* =======================================================
-   ⚔️ Supabase Battle Mode HARD OVERRIDE v3
-   目標：完全繞過舊 GAS 題目來源與白色口說 challenge start。
-   進入 arena.html?id=...&mode=battle&roomCode=XXXXXX 後，直接讀 Supabase battle_rounds。
-   ======================================================= */
-(function(){
-  const qs = new URLSearchParams(window.location.search);
-  const SUPA_BATTLE_ROOM = qs.get('roomCode') || qs.get('code') || qs.get('roomId') || '';
-  const IS_SUPA_BATTLE = qs.get('mode') === 'battle' && !!SUPA_BATTLE_ROOM;
-  if (!IS_SUPA_BATTLE) return;
-
-  let supaBattleStarted = false;
-  let supaPollTimer = null;
-
-  function el(id) { return document.getElementById(id); }
-  function txt(id, value) { const node = el(id); if (node) node.innerText = value; }
-  function show(id, display='block') { const node = el(id); if (node) node.style.display = display; }
-  function hide(id) { const node = el(id); if (node) node.style.display = 'none'; }
-  function roomPayload() { return { roomCode: SUPA_BATTLE_ROOM }; }
-
-  function ensureAPI() {
-    if (!window.TappieAPI || !TappieAPI.getBattleStatus || !TappieAPI.setArenaReady || !TappieAPI.submitBattleScore) {
-      throw new Error('TappieAPI Battle methods 尚未載入，請確認 tappie-api.js 已更新且沒有被快取。');
-    }
-  }
-
-  function dots(wins, isMe) {
-    if (typeof renderDots === 'function') return renderDots(wins, isMe);
-    const cls = isMe ? 'dot-me' : 'dot-op';
-    let html = '';
-    for (let i = 0; i < 5; i++) html += `<div class="round-dot ${i < wins ? cls : ''}"></div>`;
-    return html;
-  }
-
-  function roundsToQuiz(rounds) {
-    return (rounds || []).map(r => ({
-      en: r.word || r.word_text || '',
-      zh: r.zh || r.chinese_text || '',
-      roundNo: Number(r.roundNo || r.round_no || 1),
-      id: r.id
-    })).filter(q => q.en);
-  }
-
-  async function loadSupaBattleStatus() {
-    ensureAPI();
-    const data = await TappieAPI.getBattleStatus(STUDENT_ID, roomPayload());
-    if (!data.success) throw new Error(data.message || data.error || 'get-battle-status failed');
-
-    window.supaBattleStatus = data;
-    battleQuizArr = roundsToQuiz(data.rounds);
-    window.battleQuizArr = battleQuizArr;
-
-    if (!battleQuizArr.length) {
-      throw new Error('此房間沒有 battle_rounds 題目。請回 lobby 重新建立房間。');
-    }
-
-    const currentRoundNo = Number(data.room?.currentRound || data.currentQuestion?.roundNo || 1);
-    currentBattleRound = Math.max(0, currentRoundNo - 1);
-    window.currentBattleRound = currentBattleRound;
-
-    myTotalWins = Number(data.me?.score || 0);
-    opTotalWins = Number(data.opponent?.score || 0);
-
-    return data;
-  }
-
-  async function renderSupaArenaStatus() {
-    const data = await loadSupaBattleStatus();
-
-    txt('my-name', data.me?.name || STUDENT_ID);
-    txt('op-name', data.opponent?.name || data.players?.guest?.name || '等待對手');
-
-    const myRounds = el('my-rounds');
-    const opRounds = el('op-rounds');
-    if (myRounds) myRounds.innerHTML = dots(myTotalWins, true);
-    if (opRounds) opRounds.innerHTML = dots(opTotalWins, false);
-
-    const q = data.currentQuestion;
-    if (q && q.word) {
-      txt('round-num', `第 ${q.roundNo || data.room?.currentRound || 1} 局 / 先得 5 分獲勝`);
-      if (data.room?.status === 'active') {
-        txt('target-word', q.word);
-        txt('battle-info', '請按麥克風開始錄音');
-      } else {
-        txt('target-word', 'READY?');
-        txt('battle-info', '等待雙方 Ready...');
-      }
-    }
-
-    const arena = el('battle-arena');
-    if (arena) {
-      arena.style.display = 'flex';
-      arena.classList.add('battle-ready');
-    }
-
-    return data;
-  }
-
-  async function startSupaBattleFlow() {
-    if (supaBattleStarted) return;
-    supaBattleStarted = true;
-    try {
-      hide('main-card');
-      hide('battle-portal-overlay');
-      const impact = el('impact-overlay');
-      if (impact) impact.classList.remove('active');
-      show('loading-screen','flex');
-      txt('loading-text', '載入 Supabase 戰場中...');
-
-      // 麥克風
-      try {
-        globalMicStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1, sampleRate: 16000 }
-        });
-      } catch (micErr) {
-        throw new Error('請開啟麥克風權限才能對戰');
-      }
-
-      // Azure token
-      try {
-        if (window.TappieAPI && TappieAPI.getAzureToken) {
-          const tokenData = await TappieAPI.getAzureToken();
-          if (tokenData.success) { azureAuthToken = tokenData.token; azureRegionCode = tokenData.region; }
-        }
-      } catch(e) { console.warn('Azure token preload failed', e); }
-
-      await renderSupaArenaStatus();
-
-      // 告訴後端我 ready
-      const readyData = await TappieAPI.setArenaReady({ uid: STUDENT_ID, roomCode: SUPA_BATTLE_ROOM, ready: true });
-      if (!readyData.success) throw new Error(readyData.message || readyData.error || 'Ready 失敗');
-
-      hide('loading-screen');
-      await waitUntilActiveThenStart();
-    } catch(err) {
-      console.error('[Supabase Battle v3] start failed:', err);
-      hide('loading-screen');
-      alert('無法進入對戰：' + String(err.message || err));
-      window.location.href = `/lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-    }
-  }
-
-  async function waitUntilActiveThenStart() {
-    if (supaPollTimer) clearInterval(supaPollTimer);
-    let tries = 0;
-    txt('battle-info', '等待雙方 Ready...');
-    txt('target-word', 'READY?');
-    show('battle-arena', 'flex');
-
-    async function tick() {
-      tries++;
-      const data = await renderSupaArenaStatus();
-
-      if (data.room?.status === 'finished') {
-        clearInterval(supaPollTimer);
-        showImpactOverlay(myTotalWins, opTotalWins, true);
-        return;
-      }
-      if (data.room?.status === 'cancelled' || data.room?.status === 'expired') {
-        clearInterval(supaPollTimer);
-        alert('對戰已取消或過期');
-        window.location.href = `/lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-        return;
-      }
-      if (data.room?.status === 'active') {
-        clearInterval(supaPollTimer);
-        startRoundCountdown(SUPA_BATTLE_ROOM);
-        return;
-      }
-      if (tries > 60) {
-        clearInterval(supaPollTimer);
-        alert('等待對手 Ready 超時');
-        window.location.href = `/lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-      }
-    }
-
-    await tick();
-    if (!supaPollTimer) supaPollTimer = setInterval(() => tick().catch(console.error), 1500);
-  }
-
-  // 覆蓋戰場狀態更新
-  updateArenaUI = async function(roomId, isInit = false) {
-    try { await renderSupaArenaStatus(); } catch(e) { console.error('updateArenaUI supabase failed', e); }
-  };
-
-  // 覆蓋取題/啟動
-  fetchBattleDataAndStart = async function(roomId) {
-    try {
-      await renderSupaArenaStatus();
-      startRoundCountdown(SUPA_BATTLE_ROOM);
-    } catch(err) {
-      console.error('fetchBattleDataAndStart supabase failed', err);
-      alert('無法取得戰場題目：' + String(err.message || err));
-      window.location.href = `/lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-    }
-  };
-
-  // 覆蓋 initArena，避免舊 GAS arena_ready
-  initArena = async function(roomId) {
-    await startSupaBattleFlow();
-  };
-
-  // 覆蓋送分
-  submitBattleScore = async function(roomId, score) {
-    if (currentLimitTimer) clearInterval(currentLimitTimer);
-    const controls = el('battle-controls');
-    if (controls) controls.style.visibility = 'hidden';
-    txt('battle-timer', `得分：${score}`);
-    txt('battle-info', '送出分數中...');
-
-    const roundNo = currentBattleRound + 1;
-    try {
-      const result = await TappieAPI.submitBattleScore({
-        uid: STUDENT_ID,
-        roomCode: SUPA_BATTLE_ROOM,
-        roundNo,
-        score
-      });
-      if (!result.success) throw new Error(result.message || result.error || 'submit-battle-score failed');
-
-      if (!result.roundComplete) {
-        txt('battle-info', '等待對手...');
-        waitForRoundResolution();
-        return;
-      }
-
-      if (result.battleFinished) {
-        myTotalWins = Number(result.battle?.winnerRole === 'draw' ? myTotalWins : result.battle?.hostWins || myTotalWins);
-        const finalStatus = await renderSupaArenaStatus().catch(() => null);
-        setTimeout(() => {
-          showImpactOverlay(myTotalWins, opTotalWins, true);
-          setTimeout(() => { window.location.href = `/lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, 4500);
-        }, 800);
-        return;
-      }
-
-      const nextRound = Number(result.battle?.currentRound || roundNo + 1);
-      currentBattleRound = Math.max(0, nextRound - 1);
-      await renderSupaArenaStatus();
-      setTimeout(() => startRoundCountdown(SUPA_BATTLE_ROOM), 1200);
-    } catch(err) {
-      console.error('submitBattleScore supabase failed', err);
-      txt('battle-info', '送分失敗：' + String(err.message || err));
-      alert('送分失敗：' + String(err.message || err));
-    }
-  };
-
-  function waitForRoundResolution() {
-    if (waitOpTimer) clearInterval(waitOpTimer);
-    let count = 0;
-    waitOpTimer = setInterval(async () => {
-      count++;
-      try {
-        const data = await renderSupaArenaStatus();
-        const q = data.currentQuestion;
-        const mySubmitted = data.me?.role === 'host' ? q?.hostSubmitted : q?.guestSubmitted;
-        const opSubmitted = data.me?.role === 'host' ? q?.guestSubmitted : q?.hostSubmitted;
-        if (data.room?.status === 'finished') {
-          clearInterval(waitOpTimer);
-          showImpactOverlay(myTotalWins, opTotalWins, true);
-          setTimeout(() => { window.location.href = `/lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, 4500);
-          return;
-        }
-        // 如果後端已推進下一回合，開始下一回合
-        const serverRoundNo = Number(data.room?.currentRound || 1);
-        if (serverRoundNo > currentBattleRound + 1 || (mySubmitted && opSubmitted)) {
-          clearInterval(waitOpTimer);
-          currentBattleRound = Math.max(0, serverRoundNo - 1);
-          setTimeout(() => startRoundCountdown(SUPA_BATTLE_ROOM), 1200);
-        }
-      } catch(e) { console.warn('waiting opponent failed', e); }
-      if (count > 30) {
-        clearInterval(waitOpTimer);
-        txt('battle-info', '等待對手逾時，請稍後重試');
-      }
-    }, 1500);
-  }
-
-  // 覆蓋一般開始按鈕：Battle mode 永遠不跑舊 get_data
-  function patchStartButton() {
-    const btn = el('start-btn');
-    if (!btn) return;
-    btn.style.display = 'inline-block';
-    btn.innerText = '進入對戰';
-    btn.onclick = function(ev) {
-      if (ev) ev.preventDefault();
-      startSupaBattleFlow();
-      return false;
-    };
-  }
-
-  // Battle mode 的 window.onload：不要進入白色口說 challenge 流程
-  window.onload = async function() {
-    patchStartButton();
-    txt('title-text', '⚔️ 1v1 對戰模式');
-    txt('info-text', '正在載入戰場...');
-    hide('main-card');
-    show('loading-screen', 'flex');
-    txt('loading-text', '載入戰場中...');
-    setTimeout(() => startSupaBattleFlow(), 200);
-  };
-
-  document.addEventListener('DOMContentLoaded', patchStartButton);
-  window.addEventListener('load', patchStartButton);
-
-  // 給手動測試
-  window.startSupaBattleFlow = startSupaBattleFlow;
-})();
-</script>
-
 </body>
 </html>
