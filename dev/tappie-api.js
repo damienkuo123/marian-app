@@ -18,7 +18,7 @@ const TappieAPI = {
     getBattleStatus: "/get-battle-status",
     setArenaReady: "/set-arena-ready",
     submitBattleScore: "/submit-battle-score",
-    cancelBattleRoom: "/cancel-battle-room"
+    cancelBattleRoom: "/cancel-battle-room",
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -71,7 +71,7 @@ const TappieAPI = {
   async joinBattleRoom(payload) {
     return await this._post(this.endpoints.joinBattleRoom, payload);
   },
-  async getBattleStatus({ uid, roomCode, roomId }) {
+  async getBattleStatus(uid, { roomCode = "", roomId = "" } = {}) {
     const qs = new URLSearchParams({ uid });
     if (roomCode) qs.set("roomCode", roomCode);
     if (roomId) qs.set("roomId", roomId);

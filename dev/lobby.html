@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
+  <script src="./tappie-api.js?v=20260521-lobby-level"></script>
 
   <style>
     /* =======================================================
@@ -803,7 +804,6 @@
     </div>
   </div>
 
-  <script src="tappie-api.js?v=20260521-lobby-mvp"></script>
   <script>
     // ⚠️ 請替換為你真實的 GAS 網址
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
@@ -1834,6 +1834,329 @@
       }, 1000);
     }
 
+
+
+    // =======================================================
+    // ✅ Supabase Lobby Level Patch v2
+    // 1v1 選級數：classCode = A1/A2/B1...，後端從該級數所有 active 單元抽 10 題
+    // =======================================================
+    (function installSupabaseLobbyLevelPatch(){
+      const SUPA_SCHOOL_CODE = (() => {
+        const p = new URLSearchParams(window.location.search);
+        if (p.get('school')) return p.get('school');
+        if (String(STUDENT_ID || '').includes('-')) return String(STUDENT_ID).split('-')[0];
+        return 'TEST01';
+      })();
+
+      function getSelectedBattleClassCode() {
+        return (document.getElementById('pvp-level')?.value || '').trim();
+      }
+
+      function getBattleClassListFromTasks(data) {
+        const set = new Set();
+        const words = data?.words || [];
+        words.forEach(item => {
+          const code = String(item.classId || item.classCode || item.class_code || '').trim();
+          if (!code) return;
+          if (code.toUpperCase().includes('EVENT')) return;
+          set.add(code);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+      }
+
+      window.loadAvailableClasses = async function loadAvailableClassesSupabase() {
+        const selector = document.getElementById('dynamic-difficulty-selector');
+        const levelInput = document.getElementById('pvp-level');
+        if (!selector || !levelInput) return;
+
+        selector.innerHTML = `<div style="color:#a4b0be;font-size:14px;font-weight:bold;padding:20px;">🔄 正在載入 Supabase 戰場級數...</div>`;
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+          const data = await TappieAPI.adminGetData(SUPA_SCHOOL_CODE, 'tasks');
+          if (!data?.success) throw new Error(data?.message || data?.error || 'admin-get-data failed');
+
+          const validClasses = getBattleClassListFromTasks(data);
+
+          if (validClasses.length === 0) {
+            selector.innerHTML = `<div style="color:#e74c3c;font-size:14px;font-weight:bold;padding:20px;">⚠️ Supabase 目前沒有可用級數</div>`;
+            levelInput.value = '';
+            return;
+          }
+
+          selector.innerHTML = '';
+          validClasses.forEach((classCode, index) => {
+            const btn = document.createElement('div');
+            btn.className = `diff-btn ${index === 0 ? 'active' : ''}`;
+            btn.innerText = classCode;
+            btn.onclick = function() {
+              selectDifficulty(this, classCode);
+              refreshLobby();
+            };
+            selector.appendChild(btn);
+          });
+
+          levelInput.value = validClasses[0];
+        } catch (err) {
+          console.error('Supabase 戰場級數載入失敗:', err);
+          selector.innerHTML = `<div style="color:#e74c3c;font-size:14px;font-weight:bold;padding:20px;">🚨 連線失敗，請重試<br><span style="font-size:11px;color:#95a5a6;">${String(err.message || err)}</span></div>`;
+          levelInput.value = '';
+        }
+      };
+
+      window.goToBattleRoom = async function goToBattleRoomSupabase() {
+        const btn = document.querySelector('.btn-battle');
+        const originalText = btn ? btn.innerHTML : '';
+        if (btn) {
+          btn.innerHTML = '📡 連線 Supabase...';
+          btn.style.pointerEvents = 'none';
+        }
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+
+          const dashboard = await TappieAPI.getDashboard(STUDENT_ID);
+          const selectedClassCode = getSelectedBattleClassCode();
+          const lobby = await TappieAPI.getLobbyData(STUDENT_ID, selectedClassCode);
+
+          if (!dashboard?.success) throw new Error(dashboard?.message || dashboard?.error || 'dashboard failed');
+          if (!lobby?.success) throw new Error(lobby?.message || lobby?.error || 'lobby failed');
+
+          globalUserStatus = {
+            canPlay: dashboard.usage?.canPracticeVoice !== false,
+            count: dashboard.usage?.voiceCount ?? 0,
+            limit: dashboard.usage?.voiceLimit ?? 80,
+            canPlayBattle: lobby.usage?.canCreateBattle !== false,
+            battleCount: lobby.usage?.battleCount ?? 0,
+            battleLimit: lobby.usage?.battleLimit ?? 2,
+            rawDashboard: dashboard,
+            rawLobby: lobby
+          };
+
+          renderStaminaUI();
+
+          document.getElementById('battle-view').classList.add('active');
+          document.getElementById('armory-view').classList.add('slide-out');
+
+          refreshLobby();
+          if (lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+          lobbyRefreshTimer = setInterval(refreshLobby, 4000);
+        } catch (err) {
+          console.error('Supabase 戰場入口失敗:', err);
+          alert('⚠️ 無法取得戰場資料：' + String(err.message || err));
+        } finally {
+          if (btn) {
+            btn.innerHTML = originalText;
+            btn.style.pointerEvents = 'auto';
+          }
+        }
+      };
+
+      window.refreshLobby = async function refreshLobbySupabase() {
+        const container = document.getElementById('pvp-room-list');
+        const signal = document.getElementById('radar-signal-count');
+        if (!container) return;
+
+        const classCode = getSelectedBattleClassCode();
+
+        if (!classCode) {
+          container.innerHTML = `
+            <div class="radar-container">
+              <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">請先選擇戰場級數</p>
+            </div>`;
+          if (signal) signal.innerText = '0 個信號';
+          return;
+        }
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+          const data = await TappieAPI.getLobbyData(STUDENT_ID, classCode);
+          if (!data?.success) throw new Error(data?.message || data?.error || 'get-lobby-data failed');
+
+          // 同步更新體力狀態，避免建房前用舊資料判斷
+          if (globalUserStatus) {
+            globalUserStatus.canPlayBattle = data.usage?.canCreateBattle !== false;
+            globalUserStatus.battleCount = data.usage?.battleCount ?? globalUserStatus.battleCount;
+            globalUserStatus.battleLimit = data.usage?.battleLimit ?? globalUserStatus.battleLimit;
+            renderStaminaUI();
+          }
+
+          const rooms = data.rooms || [];
+          if (signal) signal.innerText = `${rooms.length} 個信號`;
+
+          if (rooms.length === 0) {
+            container.innerHTML = `
+              <div class="radar-container">
+                <div class="radar-beam"></div>
+                <div class="radar-beam" style="animation-delay:1s;"></div>
+                <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">正在掃描 ${classCode} 戰場...</p>
+              </div>`;
+            return;
+          }
+
+          const now = Date.now();
+          container.innerHTML = rooms.map(room => {
+            const isMyRoom = !!room.isOwnRoom;
+            const remain = Math.max(0, Math.floor((new Date(room.expiresAt).getTime() - now) / 1000));
+            const btnHtml = isMyRoom
+              ? `<button class="btn-join" style="background:rgba(255,255,255,0.1);color:#a4b0be;cursor:not-allowed;box-shadow:none;border:1px solid rgba(255,255,255,0.2);" disabled>⏳ 等待中</button>`
+              : `<button class="btn-join" onclick="joinBattle('${room.roomCode}')">⚔️ 加入</button>`;
+
+            return `
+              <div class="room-item" style="${isMyRoom ? 'border-left-color:#2ecc71;' : ''}">
+                <div class="room-info">
+                  <span class="room-name">${room.hostName || '未知玩家'} 的 ${room.classCode || classCode} 戰場</span>
+                  <span class="room-meta">級數: ${room.classCode || classCode}｜題庫: ${room.unitName || '全單元挑戰'}｜⏱ ${remain}s</span>
+                </div>
+                ${btnHtml}
+              </div>`;
+          }).join('');
+        } catch (err) {
+          console.error('Supabase 掃描戰場失敗:', err);
+          if (signal) signal.innerText = '0 個信號';
+          container.innerHTML = `
+            <div class="radar-container">
+              <p style="font-size:15px;margin-top:25px;color:#e74c3c;font-weight:900;letter-spacing:2px;line-height:1.6;">⚠️ 戰場掃描失敗<br><span style="font-size:12px;color:#95a5a6;">${String(err.message || err)}</span></p>
+            </div>`;
+        }
+      };
+
+      window.createBattleRoom = async function createBattleRoomSupabase() {
+        if (!checkBattleLimits()) return;
+
+        const classCode = getSelectedBattleClassCode();
+        if (!classCode) {
+          alert('請先選擇 1v1 戰場級數，例如 A1');
+          return;
+        }
+
+        const createBtn = document.getElementById('create-room-btn');
+        createBtn.innerText = '⏳ 建立中...';
+        createBtn.style.pointerEvents = 'none';
+        createBtn.style.filter = 'grayscale(1)';
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+          const data = await TappieAPI.createBattleRoom({
+            uid: STUDENT_ID,
+            classCode,
+            battleType: 'pvp',
+            rewardPoints: 50
+          });
+
+          if (!data?.success) throw new Error(data?.message || data?.error || 'create-battle-room failed');
+
+          currentRoomId = data.room?.roomCode;
+          createBtn.innerText = '❌ 取消戰場';
+          createBtn.style.pointerEvents = 'auto';
+          createBtn.style.filter = 'hue-rotate(320deg)';
+          createBtn.onclick = () => cancelMyRoom();
+
+          showToast(`⚔️ ${classCode} 戰場已建立`);
+          console.log('Battle quiz source:', data.quizSource, data.quizPreview);
+
+          if (battleStatusTimer) clearInterval(battleStatusTimer);
+          battleStatusTimer = setInterval(checkRoomStatus, 2500);
+          if (roomExpireTimer) clearTimeout(roomExpireTimer);
+          roomExpireTimer = setTimeout(() => { if (currentRoomId) cancelMyRoom(true); }, 120000);
+
+          // 更新體力數字
+          if (globalUserStatus && data.usage?.ok) {
+            globalUserStatus.battleCount = data.usage.count ?? globalUserStatus.battleCount;
+            globalUserStatus.battleLimit = data.usage.limit ?? globalUserStatus.battleLimit;
+            globalUserStatus.canPlayBattle = globalUserStatus.battleCount < globalUserStatus.battleLimit;
+            renderStaminaUI();
+          }
+
+          refreshLobby();
+        } catch (err) {
+          console.error('Supabase 建立戰場失敗:', err);
+          alert('⚠️ 建立戰場失敗：' + String(err.message || err));
+          createBtn.innerText = '建立 1v1 戰場';
+          createBtn.style.pointerEvents = 'auto';
+          createBtn.style.filter = 'none';
+          createBtn.onclick = () => createBattleRoom();
+        }
+      };
+
+      window.cancelMyRoom = async function cancelMyRoomSupabase(isTimeout = false) {
+        if (currentRoomId && window.TappieAPI) {
+          try {
+            await TappieAPI.cancelBattleRoom({
+              uid: STUDENT_ID,
+              roomCode: currentRoomId,
+              reason: isTimeout ? 'lobby_timeout' : 'player_cancelled'
+            });
+          } catch (err) {
+            console.warn('取消戰場失敗:', err);
+          }
+        }
+
+        if (battleStatusTimer) clearInterval(battleStatusTimer);
+        if (roomExpireTimer) clearTimeout(roomExpireTimer);
+        currentRoomId = null;
+
+        const createBtn = document.getElementById('create-room-btn');
+        createBtn.innerText = '建立 1v1 戰場';
+        createBtn.style.filter = 'none';
+        createBtn.style.pointerEvents = 'auto';
+        createBtn.onclick = () => createBattleRoom();
+
+        if (isTimeout) alert('已超過 2 分鐘無人挑戰，戰場自動關閉。');
+        refreshLobby();
+      };
+
+      window.joinBattle = async function joinBattleSupabase(roomCode) {
+        if (!checkBattleLimits()) return;
+
+        if (currentRoomId) {
+          await cancelMyRoom(false);
+        }
+
+        if (lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+        const list = document.getElementById('pvp-room-list');
+        if (list) list.innerHTML = '<p style="color:var(--gold);text-align:center;font-weight:bold;letter-spacing:2px;margin-top:20px;">🔗 正在建立 Supabase 連線...</p>';
+
+        try {
+          const data = await TappieAPI.joinBattleRoom({
+            uid: STUDENT_ID,
+            roomCode
+          });
+          if (!data?.success) throw new Error(data?.message || data?.error || 'join-battle-room failed');
+          jumpToBattle(data.room?.roomCode || roomCode);
+        } catch (err) {
+          console.error('加入 Supabase 戰場失敗:', err);
+          alert('戰場已關閉、滿員，或無法加入：' + String(err.message || err));
+          refreshLobby();
+          lobbyRefreshTimer = setInterval(refreshLobby, 4000);
+        }
+      };
+
+      window.checkRoomStatus = async function checkRoomStatusSupabase() {
+        if (!currentRoomId || !window.TappieAPI) return;
+        try {
+          const data = await TappieAPI.getBattleStatus(STUDENT_ID, { roomCode: currentRoomId });
+          if (!data?.success) return;
+          if (data.room?.status === 'ready' || data.room?.status === 'active') {
+            if (battleStatusTimer) clearInterval(battleStatusTimer);
+            jumpToBattle(currentRoomId);
+          }
+        } catch (err) {
+          console.warn('檢查戰場狀態失敗:', err);
+        }
+      };
+
+      window.jumpToBattle = function jumpToBattleSupabase(roomCode) {
+        const targetUrl = `${GITHUB_APP_URL}arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=battle&roomCode=${encodeURIComponent(roomCode)}`;
+        window.location.href = targetUrl;
+      };
+
+      window.onload = () => {
+        initLobby();
+        loadAvailableClasses();
+      };
+    })();
+
     // 🚀 靜置自動登出
     let idleTimer;
     const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = "index.html"; }, 180000); };
@@ -1953,268 +2276,5 @@
     })();
     
   </script>
-
-
-<!-- =======================================================
-     Supabase Lobby MVP Overrides
-     目的：保留原本視覺，將 PvP Lobby 主線改接 Supabase Edge Functions
-     ======================================================= -->
-<script>
-(function() {
-  const SUPABASE_LOBBY_MVP = true;
-  const SCHOOL_CODE = new URLSearchParams(window.location.search).get('school') || 'TEST01';
-  let currentLobbyData = null;
-  let currentUnitName = '';
-
-  function normalizeAvatarAssets(avatars) {
-    const map = {};
-    (avatars || []).forEach(a => {
-      const id = a.id || a.avatarId;
-      if (!id) return;
-      map[id] = {
-        name: a.name || id,
-        img: a.fullImg || a.full_img_url || a.fullImgUrl || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
-        mask: a.mask || a.mask_url || '',
-        rarity: a.rarity || 'N',
-        category: a.category || a.theme || '一般',
-        cost: a.cost || 500,
-        endTime: a.endTime || a.end_time || ''
-      };
-    });
-    if (!Object.keys(map).length) {
-      map['A001'] = { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般', cost: 500 };
-    }
-    return map;
-  }
-
-  async function loadSupabaseLobbyData() {
-    if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
-    const [dashboard, lobby, settings] = await Promise.all([
-      TappieAPI.getDashboard(STUDENT_ID),
-      TappieAPI.getLobbyData(STUDENT_ID),
-      TappieAPI.adminGetData(SCHOOL_CODE, 'settings').catch(() => ({ success: false, avatars: [] }))
-    ]);
-    if (!dashboard.success) throw new Error(dashboard.message || dashboard.error || 'Dashboard 載入失敗');
-    if (!lobby.success) throw new Error(lobby.message || lobby.error || 'Lobby 載入失敗');
-    currentLobbyData = lobby;
-    currentUnitName = lobby.currentUnit?.unitName || dashboard.currentUnit?.unitName || '';
-
-    globalUserStatus = {
-      canPlay: dashboard.usage?.canPracticeVoice !== false,
-      count: dashboard.usage?.voiceCount || 0,
-      limit: dashboard.usage?.voiceLimit || 80,
-      canPlayBattle: lobby.usage?.canCreateBattle !== false,
-      battleCount: lobby.usage?.battleCount || 0,
-      battleLimit: lobby.usage?.battleLimit || 2
-    };
-
-    return { dashboard, lobby, settings };
-  }
-
-  window.initLobby = async function initLobbySupabase() {
-    try {
-      const { dashboard, settings } = await loadSupabaseLobbyData();
-      characterAssets = normalizeAvatarAssets(settings.avatars || []);
-
-      document.getElementById('header-name').innerText = dashboard.student?.name || STUDENT_ID;
-      document.getElementById('header-points').innerText = `${dashboard.student?.points || 0} PTS`;
-
-      userEquipped = dashboard.student?.equippedAvatarId || 'A001';
-      const allAvatarIds = Object.keys(characterAssets);
-      userUnlocked = Array.from(new Set([userEquipped, 'A001', ...allAvatarIds])).filter(Boolean);
-
-      const rarityWeight = { 'UR': 5, 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
-      userUnlocked.sort((a, b) => {
-        const wA = characterAssets[a] ? (rarityWeight[characterAssets[a].rarity] || 0) : 0;
-        const wB = characterAssets[b] ? (rarityWeight[characterAssets[b].rarity] || 0) : 0;
-        return wB - wA;
-      });
-
-      renderCarousel();
-      if (typeof checkEventStatus === 'function') checkEventStatus();
-    } catch (e) {
-      console.error('Supabase Lobby 載入失敗：', e);
-      document.getElementById('hero-name').innerText = '⚠️ Lobby 載入失敗';
-      characterAssets = { 'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' } };
-      userUnlocked = ['A001'];
-      userEquipped = 'A001';
-      renderCarousel();
-    }
-  };
-
-  window.refreshLobby = async function refreshLobbySupabase() {
-    try {
-      const data = await TappieAPI.getLobbyData(STUDENT_ID);
-      currentLobbyData = data;
-      if (data.currentUnit?.unitName) currentUnitName = data.currentUnit.unitName;
-
-      const container = document.getElementById('pvp-room-list');
-      const signal = document.getElementById('radar-signal-count');
-      if (!container) return;
-
-      if (!data.success) {
-        container.innerHTML = `<p style="color:#e74c3c; text-align:center; font-weight:900; margin-top:20px;">⚠️ ${data.message || data.error || '戰場掃描失敗'}</p>`;
-        return;
-      }
-
-      globalUserStatus = {
-        ...(globalUserStatus || {}),
-        canPlayBattle: data.usage?.canCreateBattle !== false,
-        battleCount: data.usage?.battleCount || 0,
-        battleLimit: data.usage?.battleLimit || 2
-      };
-      if (typeof renderStaminaUI === 'function') renderStaminaUI();
-
-      const rooms = data.rooms || [];
-      if (signal) signal.innerText = `${rooms.length} 個信號`;
-
-      if (!rooms.length) {
-        container.innerHTML = `
-          <div class="radar-container">
-            <div class="radar-beam"></div>
-            <div style="font-weight:900; letter-spacing:2px; color:#a4b0be;">目前沒有等待中的戰場</div>
-            <div style="font-size:12px; margin-top:8px; color:rgba(255,255,255,.45);">建立一個 1v1 戰場，等待同學加入</div>
-          </div>`;
-        return;
-      }
-
-      container.innerHTML = rooms.map(room => {
-        const isMyRoom = !!room.isOwnRoom;
-        const btnHtml = isMyRoom
-          ? `<button class="btn-join" style="background:rgba(255,255,255,0.1); color:#a4b0be; box-shadow:none; border:1px solid rgba(255,255,255,0.2);" onclick="cancelMyRoom(false)">❌ 取消</button>`
-          : `<button class="btn-join" onclick="joinBattle('${room.roomCode || room.roomId}')">⚔️ 加入</button>`;
-        return `
-          <div class="room-item" style="${isMyRoom ? 'border-left-color:#2ecc71;' : ''}">
-            <div class="room-info">
-              <span class="room-name">${room.hostName || '未知玩家'} 的戰場</span>
-              <span class="room-meta">單元: ${room.unitName || currentUnitName || '目前單元'} | 獎勵: ${room.rewardPoints || 50} PTS</span>
-            </div>
-            ${btnHtml}
-          </div>`;
-      }).join('');
-    } catch (err) {
-      console.error('Supabase 掃描失敗:', err);
-      const container = document.getElementById('pvp-room-list');
-      if (container) container.innerHTML = `<p style="color:#e74c3c; text-align:center; font-weight:900;">⚠️ 戰場掃描失敗：${err.message || err}</p>`;
-    }
-  };
-
-  window.createBattleRoom = async function createBattleRoomSupabase() {
-    if (!checkBattleLimits()) return;
-    const createBtn = document.getElementById('create-room-btn');
-    createBtn.innerText = '⏳ 建立中...';
-    createBtn.style.pointerEvents = 'none';
-    createBtn.style.filter = 'grayscale(1)';
-
-    try {
-      const data = await TappieAPI.createBattleRoom({
-        uid: STUDENT_ID,
-        unitName: currentUnitName || undefined,
-        battleType: 'pvp',
-        rewardPoints: 50
-      });
-      if (!data.success) throw new Error(data.message || data.error || '建立戰場失敗');
-
-      currentRoomId = data.room?.roomCode || data.room?.id;
-      createBtn.innerText = '❌ 取消戰場';
-      createBtn.style.pointerEvents = 'auto';
-      createBtn.style.filter = 'hue-rotate(320deg)';
-      createBtn.onclick = () => cancelMyRoom(false);
-
-      if (battleStatusTimer) clearInterval(battleStatusTimer);
-      battleStatusTimer = setInterval(checkRoomStatus, 3000);
-      if (roomExpireTimer) clearTimeout(roomExpireTimer);
-      roomExpireTimer = setTimeout(() => { if (currentRoomId) cancelMyRoom(true); }, 30 * 60 * 1000);
-      await refreshLobby();
-      showToast('戰場已建立！');
-    } catch (err) {
-      alert(`建立戰場失敗：${err.message || err}`);
-      createBtn.innerText = '建立 1v1 戰場';
-      createBtn.style.pointerEvents = 'auto';
-      createBtn.style.filter = 'none';
-      createBtn.onclick = () => createBattleRoom();
-    }
-  };
-
-  window.cancelMyRoom = async function cancelMyRoomSupabase(isTimeout = false) {
-    if (currentRoomId) {
-      try {
-        await TappieAPI.cancelBattleRoom({ uid: STUDENT_ID, roomCode: currentRoomId, reason: isTimeout ? 'timeout' : 'player_cancelled' });
-      } catch (e) { console.warn('取消房間失敗', e); }
-      if (battleStatusTimer) clearInterval(battleStatusTimer);
-      currentRoomId = null;
-    }
-
-    const createBtn = document.getElementById('create-room-btn');
-    createBtn.innerText = '建立 1v1 戰場';
-    createBtn.style.pointerEvents = 'auto';
-    createBtn.style.filter = 'none';
-    createBtn.onclick = () => createBattleRoom();
-    if (isTimeout) alert('等待時間已結束，戰場自動關閉。');
-    await refreshLobby();
-  };
-
-  window.joinBattle = async function joinBattleSupabase(roomCodeOrId) {
-    if (!checkBattleLimits()) return;
-    if (currentRoomId) {
-      try { await TappieAPI.cancelBattleRoom({ uid: STUDENT_ID, roomCode: currentRoomId, reason: 'join_other_room' }); } catch (e) {}
-      currentRoomId = null;
-    }
-    if (lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
-    document.getElementById('pvp-room-list').innerHTML = '<p style="color:var(--gold); text-align:center; font-weight:bold; letter-spacing:2px; margin-top:20px;">🔗 正在建立連線...</p>';
-    try {
-      const data = await TappieAPI.joinBattleRoom({ uid: STUDENT_ID, roomCode: roomCodeOrId });
-      if (!data.success) throw new Error(data.message || data.error || '加入失敗');
-      jumpToBattle(data.room?.roomCode || roomCodeOrId);
-    } catch (err) {
-      alert(`戰場已關閉或滿員：${err.message || err}`);
-      await refreshLobby();
-      lobbyRefreshTimer = setInterval(refreshLobby, 4000);
-    }
-  };
-
-  window.checkRoomStatus = async function checkRoomStatusSupabase() {
-    if (!currentRoomId) return;
-    try {
-      const data = await TappieAPI.getBattleStatus({ uid: STUDENT_ID, roomCode: currentRoomId });
-      if (data.success && ['ready', 'active'].includes(data.room?.status)) {
-        if (battleStatusTimer) clearInterval(battleStatusTimer);
-        jumpToBattle(currentRoomId);
-      }
-    } catch (e) { console.warn('房間狀態檢查失敗', e); }
-  };
-
-  window.jumpToBattle = function jumpToBattleSupabase(roomCodeOrId) {
-    window.location.href = `${GITHUB_APP_URL}arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=battle&roomCode=${encodeURIComponent(roomCodeOrId)}`;
-  };
-
-  window.goToBattleRoom = async function goToBattleRoomSupabase() {
-    const btn = document.querySelector('.btn-battle');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '📡 連線中...';
-    btn.style.pointerEvents = 'none';
-    try {
-      await loadSupabaseLobbyData();
-      btn.innerHTML = originalText;
-      btn.style.pointerEvents = 'auto';
-      renderStaminaUI();
-      document.getElementById('battle-view').classList.add('active');
-      document.getElementById('armory-view').classList.add('slide-out');
-      await refreshLobby();
-      if (lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
-      lobbyRefreshTimer = setInterval(refreshLobby, 4000);
-    } catch (err) {
-      btn.innerHTML = originalText;
-      btn.style.pointerEvents = 'auto';
-      alert(`網路連線異常，無法進入戰場：${err.message || err}`);
-    }
-  };
-
-  window.startAiChallenge = function startAiChallengeDisabled(level) {
-    alert('Supabase Dev 版目前先開放 1v1 真人對戰。AI 對戰會在 PvP 主線穩定後再接。');
-  };
-})();
-</script>
-
 </body>
 </html>
