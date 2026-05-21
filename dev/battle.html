@@ -1577,7 +1577,7 @@
   (function installSupabaseBattleLegacyAdapter(){
     if (window.__tappieSupabaseBattleLegacyAdapterInstalled) return;
     window.__tappieSupabaseBattleLegacyAdapterInstalled = true;
-    window.__tappieSupabaseBattleAdapterVersion = "v3-reward-claim";
+    window.__tappieSupabaseBattleAdapterVersion = "v5-finish-reward";
 
     const originalFetch = window.fetch.bind(window);
     const DEFAULT_CARD_IMG = '/assets/BOX_COVER_SSR.webp';
@@ -1776,8 +1776,21 @@
       }
 
       if (action === 'claim_timeout_win') {
-        // timeout 發獎先保持 no-op，避免干擾既有動畫流程。
-        return jsonResponse({ success: true, status: 'OK' });
+        const room = roomIdentifier || ROOM_ID;
+        let statusData = null;
+        try { statusData = await getSupabaseBattleStatus(room); } catch (_) {}
+        const myRole = statusData?.me?.role || 'host';
+        let data = null;
+        if (TappieAPI.finishBattleRoom) {
+          data = await TappieAPI.finishBattleRoom({
+            uid: STUDENT_ID,
+            roomCode: isUuidLike(room) ? '' : room,
+            roomId: isUuidLike(room) ? room : '',
+            winnerRole: myRole,
+            reason: 'timeout'
+          });
+        }
+        return jsonResponse({ success: true, status: 'Finished', raw: data || statusData || null });
       }
 
       if (action === 'claim_gacha') {
@@ -4893,6 +4906,231 @@
           speakWordCloudCached(targetWord, 1.8, null, null, '-10%');
       }
   }
+
+
+  // =======================================================
+  // 🛡️ Supabase Battle Finish / Timeout / Reward Patch v5
+  // 目的：
+  // 1) 正常打滿 5 分時，不再誤判成「對方中離」。
+  // 2) 超時 / 中離時，先呼叫 finish-battle-room 讓後端正式 finished，再進盲盒。
+  // 3) 領獎仍交給 claim-gacha v4，依照 window.wonPoints / window.wonAvatars 發放。
+  // =======================================================
+  (function installSupabaseBattleFinishPatchV5(){
+    if (window.__tappieBattleFinishPatchV5Installed) return;
+    window.__tappieBattleFinishPatchV5Installed = true;
+
+    const originalCheckBothV5 = (typeof checkBoth === 'function') ? checkBoth : null;
+
+    function v5RoomArg(roomId) {
+      const room = String(roomId || ROOM_ID || '').trim();
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(room)) {
+        return { roomId: room };
+      }
+      return { roomCode: room };
+    }
+
+    async function v5Status(roomId) {
+      if (!window.TappieAPI || !TappieAPI.getBattleStatus) throw new Error('TappieAPI.getBattleStatus 尚未載入');
+      return await TappieAPI.getBattleStatus(STUDENT_ID, v5RoomArg(roomId));
+    }
+
+    async function v5FinishRoom(roomId, winnerRole, reason) {
+      if (!window.TappieAPI || !TappieAPI.finishBattleRoom) {
+        console.warn('finishBattleRoom 尚未接上，略過後端正式結算');
+        return null;
+      }
+      return await TappieAPI.finishBattleRoom({
+        uid: STUDENT_ID,
+        ...v5RoomArg(roomId),
+        winnerRole,
+        reason
+      });
+    }
+
+    function v5MyRole(statusData) {
+      return statusData?.me?.role || 'host';
+    }
+
+    function v5WinnerRole(statusData) {
+      const hostId = statusData?.players?.host?.id;
+      const guestId = statusData?.players?.guest?.id;
+      const winnerId = statusData?.room?.winnerStudentId;
+      if (winnerId && hostId && winnerId === hostId) return 'host';
+      if (winnerId && guestId && winnerId === guestId) return 'guest';
+      const hostScore = Number(statusData?.room?.hostWins || statusData?.players?.host?.score || 0);
+      const guestScore = Number(statusData?.room?.guestWins || statusData?.players?.guest?.score || 0);
+      if (hostScore > guestScore) return 'host';
+      if (guestScore > hostScore) return 'guest';
+      return 'draw';
+    }
+
+    function v5DidIWin(statusData) {
+      const wr = v5WinnerRole(statusData);
+      return wr !== 'draw' && wr === v5MyRole(statusData);
+    }
+
+    function v5OpponentName() {
+      const el = document.getElementById('op-name');
+      return el?.innerText || '對手';
+    }
+
+    function v5ShowGachaEntrance(delayMs = 1800) {
+      setTimeout(() => {
+        const triggerOverlay = document.getElementById('gacha-trigger-overlay');
+        const enterBtn = document.getElementById('btn-enter-gacha');
+        if (!triggerOverlay || !enterBtn) {
+          console.warn('找不到 gacha trigger overlay，直接進入 initGacha');
+          if (typeof initGacha === 'function') initGacha(v5OpponentName());
+          return;
+        }
+        triggerOverlay.style.display = 'flex';
+        setTimeout(() => { triggerOverlay.style.opacity = '1'; }, 50);
+        enterBtn.onclick = () => {
+          const impact = document.getElementById('impact-overlay');
+          if (impact) impact.classList.remove('active');
+          triggerOverlay.style.display = 'none';
+          if (window.GlobalAudio) GlobalAudio.playGachaBGM();
+          if (typeof initGacha === 'function') initGacha(v5OpponentName());
+        };
+      }, delayMs);
+    }
+
+    async function v5HandleFinished(statusData, reasonHint = 'normal') {
+      try {
+        if (waitOpTimer) { clearInterval(waitOpTimer); waitOpTimer = null; }
+        if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+        if (opponentWaitTimer) { clearTimeout(opponentWaitTimer); opponentWaitTimer = null; }
+      } catch (_) {}
+      isChecking = false;
+      sessionStorage.removeItem('active_battle_room');
+
+      const reason = statusData?.room?.lastEvent?.finishReason || reasonHint || 'normal';
+      const didWin = v5DidIWin(statusData);
+
+      if (didWin) {
+        // 正常 finished 不顯示「對方中離」。只有 timeout/disconnect/surrender 才提示對手異常。
+        if (['timeout', 'disconnect', 'surrender'].includes(reason)) {
+          alert('對手未完成對戰，系統已正式判定您獲勝！🎉');
+        }
+        if (typeof showImpactOverlay === 'function') showImpactOverlay(5, 0, true, null, null);
+        v5ShowGachaEntrance(2200);
+      } else {
+        if (['timeout', 'disconnect', 'surrender'].includes(reason)) {
+          alert('您未完成對戰，系統已判定對手獲勝。');
+        }
+        if (typeof showImpactOverlay === 'function') showImpactOverlay(0, 5, true, null, null);
+        setTimeout(() => {
+          window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=battle-v5`;
+        }, 4200);
+      }
+    }
+
+    // 覆蓋 checkBoth：先辨識 Supabase finished；正常 finished 不再誤判「對手中離」。
+    checkBoth = async function(roomId) {
+      if (isChecking) return;
+      isChecking = true;
+      try {
+        const statusData = await v5Status(roomId);
+        if (statusData?.success && statusData?.room?.status === 'finished') {
+          await v5HandleFinished(statusData, 'normal');
+          return;
+        }
+        isChecking = false;
+        if (originalCheckBothV5) return originalCheckBothV5(roomId);
+      } catch (err) {
+        console.warn('v5 checkBoth fallback:', err);
+        isChecking = false;
+        if (originalCheckBothV5) return originalCheckBothV5(roomId);
+      }
+    };
+
+    // 覆蓋 submitBattleScore：最後一分若後端回 battleFinished，不再走原本「送太晚 / 對方中離」分支。
+    submitBattleScore = function(roomId, score) {
+      if (currentLimitTimer) clearInterval(currentLimitTimer);
+      const controls = document.getElementById('battle-controls');
+      if (controls) controls.style.visibility = 'hidden';
+
+      const myCard = document.getElementById('my-card');
+      if (myCard) myCard.classList.remove('charging-mana', 'ultimate-charging');
+      const bBtn = document.getElementById('battle-record-btn');
+      if (bBtn) bBtn.classList.remove('active', 'ult-active');
+
+      let finalScore = score;
+      if (isUltimateMode) finalScore = score + 1000;
+
+      const timer = document.getElementById('battle-timer');
+      const info = document.getElementById('battle-info');
+      if (timer) timer.innerHTML = `<span class="neon-score">得分：${score}</span>`;
+      if (info) info.innerText = '等待對手...';
+
+      const realScore = Math.max(0, Math.min(100, Math.round(finalScore > 500 ? finalScore - 1000 : finalScore)));
+      const roundNo = Number(currentBattleRound || 0) + 1;
+
+      (async () => {
+        try {
+          const data = await TappieAPI.submitBattleScore({
+            uid: STUDENT_ID,
+            ...v5RoomArg(roomId),
+            roundNo,
+            score: realScore
+          });
+
+          if (!data?.success) throw new Error(data?.message || data?.error || 'submitBattleScore failed');
+
+          if (data.battleFinished || data?.battle?.status === 'finished') {
+            const statusData = await v5Status(roomId);
+            await v5HandleFinished(statusData, 'normal');
+            return;
+          }
+
+          // 如果本回合已完成但尚未結束，交給 checkBoth/原本動畫流程。
+          if (data.roundComplete) {
+            isChecking = false;
+            checkBoth(roomId);
+            return;
+          }
+
+          if (waitOpTimer) clearInterval(waitOpTimer);
+          let maxWaitChecks = 12;
+
+          const waitWrapper = async () => {
+            const opNameElement = document.getElementById('op-name');
+            const isOpponentAI = opNameElement && (opNameElement.innerText.includes('Ai') || opNameElement.innerText.includes('活動'));
+            if (!isOpponentAI) maxWaitChecks--;
+
+            if (maxWaitChecks <= 0) {
+              clearInterval(waitOpTimer);
+              waitOpTimer = null;
+              try {
+                const beforeFinish = await v5Status(roomId);
+                const myRole = v5MyRole(beforeFinish);
+                const finishData = await v5FinishRoom(roomId, myRole, 'timeout');
+                const afterFinish = await v5Status(roomId);
+                await v5HandleFinished(afterFinish, 'timeout');
+              } catch (err) {
+                console.error('finish-battle-room timeout failed:', err);
+                alert('對手等待逾時，但後端正式結算失敗：' + String(err.message || err));
+              }
+              return;
+            }
+
+            checkBoth(roomId);
+          };
+
+          isChecking = false;
+          waitWrapper();
+          waitOpTimer = setInterval(waitWrapper, 2000);
+        } catch (err) {
+          console.error('submitBattleScore v5 failed:', err);
+          isChecking = false;
+          alert('送出對戰分數失敗：' + String(err.message || err));
+          const controls = document.getElementById('battle-controls');
+          if (controls) controls.style.visibility = 'visible';
+        }
+      })();
+    };
+  })();
+
 </script>
   <div id="phonic-helper-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
   <div class="helper-card" style="background: white; width: 85%; max-width: 340px; border-radius: 25px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;">

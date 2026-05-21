@@ -19,6 +19,7 @@ const TappieAPI = {
     setArenaReady: "/set-arena-ready",
     submitBattleScore: "/submit-battle-score",
     cancelBattleRoom: "/cancel-battle-room",
+    finishBattleRoom: "/finish-battle-room",
     getAvatarShop: "/get-avatar-shop",
     equipAvatar: "/equip-avatar",
     claimGacha: "/claim-gacha",
@@ -88,6 +89,15 @@ const TappieAPI = {
   },
   async cancelBattleRoom(payload) {
     return await this._post(this.endpoints.cancelBattleRoom, payload);
+  },
+  async finishBattleRoom(payload = {}) {
+    const qs = new URLSearchParams();
+    if (payload.uid) qs.set("uid", payload.uid);
+    if (payload.roomCode) qs.set("roomCode", payload.roomCode);
+    if (payload.roomId) qs.set("roomId", payload.roomId);
+    if (payload.winnerRole) qs.set("winnerRole", payload.winnerRole);
+    if (payload.reason) qs.set("reason", payload.reason);
+    return await this._get(`${this.endpoints.finishBattleRoom}?${qs.toString()}`);
   },
   async getAvatarShop(uid) {
     return await this._get(`${this.endpoints.getAvatarShop}?uid=${encodeURIComponent(uid)}`);
