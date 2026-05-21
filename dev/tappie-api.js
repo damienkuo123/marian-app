@@ -96,17 +96,27 @@ const TappieAPI = {
     return await this._post(this.endpoints.equipAvatar, payload);
   },
   async claimGacha(payload = {}) {
-    // claim-gacha v3 支援 GET；用 GET 避免 Supabase Test POST / iOS POST 快取問題。
+    // claim-gacha v4：前端抽到什麼，後端就發什麼。
+    // 用 GET 方便 iOS / browser debug，也避開 Supabase Dashboard Test POST 不穩。
     const qs = new URLSearchParams();
     if (payload.uid) qs.set("uid", payload.uid);
-    if (payload.free !== undefined) qs.set("free", String(!!payload.free));
     if (payload.source) qs.set("source", payload.source);
-    if (payload.costPoints !== undefined) qs.set("costPoints", String(payload.costPoints));
+    if (payload.roomCode) qs.set("roomCode", payload.roomCode);
+
+    const addPoints = payload.addPoints ?? payload.points ?? payload.legacyAddPoints ?? 0;
+    qs.set("addPoints", String(addPoints));
+
+    const avatars = payload.avatars || payload.avatarIds || payload.legacyAvatars || [];
+    if (Array.isArray(avatars) && avatars.length) qs.set("avatars", avatars.join(","));
+    if (typeof avatars === "string" && avatars.trim()) qs.set("avatars", avatars.trim());
+
     if (payload.unlockPhrase) qs.set("unlockPhrase", payload.unlockPhrase);
     if (payload.unlockScore !== undefined && payload.unlockScore !== null) qs.set("unlockScore", String(payload.unlockScore));
-    if (payload.roomCode) qs.set("roomCode", payload.roomCode);
-    if (payload.legacyAddPoints !== undefined) qs.set("legacyAddPoints", String(payload.legacyAddPoints));
-    if (Array.isArray(payload.legacyAvatars) && payload.legacyAvatars.length) qs.set("legacyAvatars", payload.legacyAvatars.join(","));
+
+    if (payload.metadata) {
+      try { qs.set("metadata", JSON.stringify(payload.metadata)); } catch (_) {}
+    }
+
     return await this._get(`${this.endpoints.claimGacha}?${qs.toString()}`);
   },
   toLegacyDashboard(data) {
