@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-event-boss-mvp1"></script>
+  <script src="./tappie-api.js?v=20260522-boss-ui-fix1"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -2425,7 +2425,7 @@
             console.warn('portal entry timeout resolve failed', e);
           }
           alert('因為你未進入戰場，故對戰取消。');
-          window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=minimal-v31`;
+          window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
       }
     }, 1000);
 
@@ -3423,7 +3423,7 @@
             
             setTimeout(() => {
                 window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-            }, 4500); // 讓他看完敗北動畫再踢回大廳
+            }, 6500); // 讓他看完敗北動畫再踢回大廳
             return;
         }
 
@@ -3463,7 +3463,7 @@
                               if (window.GlobalAudio) GlobalAudio.playGachaBGM();
                               initGacha(opponentName);
                           };
-                      }, 3500);
+                      }, 6500);
                   });
                 return;
             }
@@ -3718,7 +3718,7 @@
                     if (window.GlobalAudio) GlobalAudio.playGachaBGM();
                     initGacha(opponentName);
                 };
-            }, 3500);
+            }, 6500);
             return;
         }
 
@@ -3812,13 +3812,13 @@
                                   
                                   initGacha(opponentName);
                               };
-                          }, 3500); // 👈 這裡控制結算畫面停留多久才跳出按鈕
+                          }, 6500); // 👈 這裡控制結算畫面停留多久才跳出按鈕
 
                       } else {
                           // 我方敗北... 延遲一下再回大廳，讓玩家看清楚結果
                           setTimeout(() => {
                               window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-                          }, 4500);
+                          }, 6500);
                       }
                   } 
                   else { 
@@ -4641,7 +4641,7 @@
             claimBtn.innerText = "返回大廳";
             claimBtn.style.pointerEvents = "auto";
             claimBtn.onclick = () => {
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=reward4`;
+                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
             };
 
         } catch (err) {
@@ -4654,7 +4654,7 @@
             claimBtn.innerText = "返回大廳";
             claimBtn.style.pointerEvents = "auto";
             claimBtn.onclick = () => {
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=reward4`;
+                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
             };
         }
     };
@@ -5059,8 +5059,8 @@
       }
 
       if (typeof showImpactOverlay === 'function') showImpactOverlay(myScore, opScore, true, myImg, opImg);
-      if (won) showGachaEntrance(3500);
-      else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=judge-final`; }, 5200);
+      if (won) showGachaEntrance(6500);
+      else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, 7000);
     }
 
     function renderScoreDots(statusData) {
@@ -5410,7 +5410,7 @@
     return winnerRole !== 'draw' && winnerRole === myRoleOf(data);
   }
 
-  function showGachaEntranceStrict(delayMs = 3500) {
+  function showGachaEntranceStrict(delayMs = 6500) {
     setTimeout(() => {
       const triggerOverlay = document.getElementById('gacha-trigger-overlay');
       const enterBtn = document.getElementById('btn-enter-gacha');
@@ -5439,8 +5439,8 @@
     const myScore = isMeHost(fresh) ? num(fresh.room?.hostWins) : num(fresh.room?.guestWins);
     const opScore = isMeHost(fresh) ? num(fresh.room?.guestWins) : num(fresh.room?.hostWins);
     if (typeof showImpactOverlay === 'function') showImpactOverlay(myScore, opScore, true, myImg, opImg);
-    if (won) showGachaEntranceStrict(3500);
-    else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=sync-v3`; }, 5200);
+    if (won) showGachaEntranceStrict(6500);
+    else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, 7000);
   }
 
   function buildResultFromStatusRound(status, roundNo) {
@@ -5561,7 +5561,7 @@
         : '因為對方中離，所以對戰取消。';
     }
     alert(msg);
-    window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=minimal-v31`;
+    window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
   }
 
   function showWaitingForBothReady(status) {
@@ -6184,6 +6184,60 @@
         }
       })();
     };
+  })();
+  </script>
+
+
+
+  <!-- =======================================================
+       ✅ Boss UI Fix v1
+       - 回 lobby 一律清除 v= 參數，只保留 id
+       - 最終勝負立繪至少停留 6.5 秒後才顯示抽獎 / 返回
+       ======================================================= -->
+  <script>
+  (function installBossUiFixV1(){
+    const cleanLobbyUrl = () => `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    window.TappieCleanLobbyUrl = cleanLobbyUrl;
+    window.TappieReturnLobbyClean = function(){ window.location.href = cleanLobbyUrl(); };
+
+    function forceCleanLobbyLinks(){
+      document.querySelectorAll('a[href*="lobby.html"]').forEach(a => {
+        try { a.setAttribute('href', cleanLobbyUrl()); } catch(_) {}
+      });
+    }
+    setInterval(forceCleanLobbyLinks, 1500);
+
+    // 防止最後一擊後，抽獎按鈕太快蓋掉 WIN / LOSE 立繪。
+    function keepImpactVisibleForFinal(){
+      const overlay = document.getElementById('impact-overlay');
+      if (!overlay || !overlay.classList.contains('is-final')) return;
+      overlay.classList.add('active');
+      overlay.classList.remove('fade-out');
+    }
+
+    const patchLater = () => {
+      try {
+        if (typeof window.showGachaEntranceStrict === 'function' && !window.showGachaEntranceStrict.__bossUiFix) {
+          const old = window.showGachaEntranceStrict;
+          window.showGachaEntranceStrict = function(delayMs){
+            keepImpactVisibleForFinal();
+            return old.call(this, Math.max(Number(delayMs || 0), 6500));
+          };
+          window.showGachaEntranceStrict.__bossUiFix = true;
+        }
+        if (typeof window.showGachaEntrance === 'function' && !window.showGachaEntrance.__bossUiFix) {
+          const old = window.showGachaEntrance;
+          window.showGachaEntrance = function(delayMs){
+            keepImpactVisibleForFinal();
+            return old.call(this, Math.max(Number(delayMs || 0), 6500));
+          };
+          window.showGachaEntrance.__bossUiFix = true;
+        }
+      } catch(e) { console.warn('Boss UI Fix patchLater failed', e); }
+    };
+    patchLater();
+    setTimeout(patchLater, 1000);
+    setTimeout(patchLater, 3000);
   })();
   </script>
 
