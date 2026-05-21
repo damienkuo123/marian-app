@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-sync-v3"></script>
+  <script src="./tappie-api.js?v=20260522-minimal-v31"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1358,7 +1358,7 @@
 <div id="battle-portal-overlay" style="display:none;">
   
   <div class="portal-timer-modern">
-    <span class="portal-hint">請於倒數前點擊按鈕</span>
+    <span class="portal-hint">請於 60 秒內點擊進入戰場</span>
     <span class="portal-timer-numbers">00:<span id="portal-countdown">60</span></span>
   </div>
 
@@ -1577,7 +1577,7 @@
   (function installSupabaseBattleLegacyAdapter(){
     if (window.__tappieSupabaseBattleLegacyAdapterInstalled) return;
     window.__tappieSupabaseBattleLegacyAdapterInstalled = true;
-    window.__tappieSupabaseBattleAdapterVersion = "v6-animation-skill-timeout";
+    window.__tappieSupabaseBattleAdapterVersion = "v31-minimal-rules";
 
     const originalFetch = window.fetch.bind(window);
     const DEFAULT_CARD_IMG = '/assets/BOX_COVER_SSR.webp';
@@ -2408,12 +2408,24 @@
     let pCount = 60;
     
     // 啟動頂部倒數計時
-    const pTimer = setInterval(() => {
+    const pTimer = setInterval(async () => {
       pCount--;
-      document.getElementById('portal-countdown').innerText = pCount;
+      const el = document.getElementById('portal-countdown');
+      if (el) el.innerText = Math.max(0, pCount);
       if(pCount <= 0) { 
-          clearInterval(pTimer); 
-          if (window.portalJump) window.portalJump(); 
+          clearInterval(pTimer);
+          try {
+            const roomPayload = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(ROOM_ID || ''))
+              ? { roomId: ROOM_ID }
+              : { roomCode: ROOM_ID };
+            if (window.TappieAPI && TappieAPI.resolveBattleTimeout) {
+              await TappieAPI.resolveBattleTimeout({ uid: STUDENT_ID, ...roomPayload });
+            }
+          } catch (e) {
+            console.warn('portal entry timeout resolve failed', e);
+          }
+          alert('因為你未進入戰場，故對戰取消。');
+          window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=minimal-v31`;
       }
     }, 1000);
 
@@ -5522,8 +5534,34 @@
       if (data?.error !== 'deadline_not_reached') console.warn('resolve timeout ignored:', data);
       return data;
     }
+    if (data.battleCancelled) {
+      const fresh = await getStatusStrict(roomId).catch(() => null);
+      await handleBattleCancelledStrict(fresh, data);
+      return data;
+    }
     await processJudgeResultStrict(roomId, data);
     return data;
+  }
+
+  async function handleBattleCancelledStrict(status, fallback = {}) {
+    stopAllBattleTimersV3();
+    sessionStorage.removeItem('active_battle_room');
+    const role = myRoleOf(status || latestBattleStatus || {});
+    const room = status?.room || fallback?.room || {};
+    const offenderRole = room.offenderRole || room.lastEvent?.offenderRole || fallback?.result?.offenderRole || '';
+    const cancelReason = room.cancelReason || room.lastEvent?.cancelReason || fallback?.result?.cancelReason || 'cancelled';
+    let msg = '對戰已取消。';
+    if (cancelReason === 'entry_timeout') {
+      msg = offenderRole === role
+        ? '因為你未進入戰場，故對戰取消。'
+        : '因為對方未進入戰場，所以對戰取消。';
+    } else if (cancelReason === 'opponent_left') {
+      msg = offenderRole === role
+        ? '因為你中離，所以對戰取消。'
+        : '因為對方中離，所以對戰取消。';
+    }
+    alert(msg);
+    window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=minimal-v31`;
   }
 
   function showWaitingForBothReady(status) {
@@ -5532,10 +5570,18 @@
     const word = document.getElementById('target-word');
     const hReady = Boolean(status?.room?.hostReady);
     const gReady = Boolean(status?.room?.guestReady);
+    const readyDeadline = status?.room?.readyDeadline || status?.room?.lastEvent?.readyDeadline || null;
+    let remainText = '';
+    if (readyDeadline) {
+      const remain = Math.max(0, Math.ceil((new Date(readyDeadline).getTime() - Date.now()) / 1000));
+      remainText = `｜等待剩餘 ${remain} 秒`;
+      if (timer) timer.innerText = remain > 0 ? remain : 0;
+    } else if (timer) {
+      timer.innerText = '';
+    }
     if (word) word.innerText = '等待雙方進入戰場';
-    if (timer) timer.innerText = '';
     if (info) {
-      info.innerText = `同步中：房主 ${hReady ? '✅' : '⌛'}　挑戰者 ${gReady ? '✅' : '⌛'}`;
+      info.innerText = `同步中：房主 ${hReady ? '✅' : '⌛'}　挑戰者 ${gReady ? '✅' : '⌛'}${remainText}`;
       info.style.color = '#f1c40f';
     }
   }
@@ -5566,9 +5612,22 @@
             renderScoreDotsStrict(status);
             if (typeof updateArenaUI === 'function') updateArenaUI(roomId, true);
 
+            if (status.room?.status === 'cancelled' || status.room?.status === 'expired') {
+              stopStrictSyncTimer();
+              await handleBattleCancelledStrict(status);
+              return;
+            }
+
             if (status.room?.status === 'finished') {
               stopStrictSyncTimer();
               await showFinishedStrict(status, status.room?.finishReason || 'normal');
+              return;
+            }
+
+            if (status.room?.status === 'ready' && status.room?.readyDeadline && Date.now() > new Date(status.room.readyDeadline).getTime()) {
+              stopStrictSyncTimer();
+              const result = await handleTimeoutStrict(roomId);
+              if (result?.battleCancelled) return;
               return;
             }
 
@@ -5603,6 +5662,10 @@
         return null;
       });
       if (!status?.success) return;
+      if (status.room?.status === 'cancelled' || status.room?.status === 'expired') {
+        await handleBattleCancelledStrict(status);
+        return;
+      }
       if (status.room?.status === 'finished') {
         await showFinishedStrict(status, status.room?.finishReason || 'normal');
         return;
@@ -5676,9 +5739,10 @@
     currentLimitTimer = setInterval(async () => {
       const status = await getStatusStrict(roomId).catch(() => null);
       const q = status?.currentQuestion;
-      if (!q || status?.room?.status === 'finished') {
+      if (!q || status?.room?.status === 'finished' || status?.room?.status === 'cancelled' || status?.room?.status === 'expired') {
         clearInterval(currentLimitTimer); currentLimitTimer = null;
-        if (status?.room?.status === 'finished') await showFinishedStrict(status, status.room?.finishReason || 'normal');
+        if (status?.room?.status === 'cancelled' || status?.room?.status === 'expired') await handleBattleCancelledStrict(status);
+        else if (status?.room?.status === 'finished') await showFinishedStrict(status, status.room?.finishReason || 'normal');
         return;
       }
       const remainingMs = q.deadline ? new Date(q.deadline).getTime() - Date.now() : 0;
