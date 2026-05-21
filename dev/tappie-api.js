@@ -95,9 +95,19 @@ const TappieAPI = {
   async equipAvatar(payload) {
     return await this._post(this.endpoints.equipAvatar, payload);
   },
-  async claimGacha(payload) {
-    // claim-gacha 目前支援 GET / POST；前端正式使用 POST。
-    return await this._post(this.endpoints.claimGacha, payload);
+  async claimGacha(payload = {}) {
+    // claim-gacha v3 支援 GET；用 GET 避免 Supabase Test POST / iOS POST 快取問題。
+    const qs = new URLSearchParams();
+    if (payload.uid) qs.set("uid", payload.uid);
+    if (payload.free !== undefined) qs.set("free", String(!!payload.free));
+    if (payload.source) qs.set("source", payload.source);
+    if (payload.costPoints !== undefined) qs.set("costPoints", String(payload.costPoints));
+    if (payload.unlockPhrase) qs.set("unlockPhrase", payload.unlockPhrase);
+    if (payload.unlockScore !== undefined && payload.unlockScore !== null) qs.set("unlockScore", String(payload.unlockScore));
+    if (payload.roomCode) qs.set("roomCode", payload.roomCode);
+    if (payload.legacyAddPoints !== undefined) qs.set("legacyAddPoints", String(payload.legacyAddPoints));
+    if (Array.isArray(payload.legacyAvatars) && payload.legacyAvatars.length) qs.set("legacyAvatars", payload.legacyAvatars.join(","));
+    return await this._get(`${this.endpoints.claimGacha}?${qs.toString()}`);
   },
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };

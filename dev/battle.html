@@ -1577,7 +1577,7 @@
   (function installSupabaseBattleLegacyAdapter(){
     if (window.__tappieSupabaseBattleLegacyAdapterInstalled) return;
     window.__tappieSupabaseBattleLegacyAdapterInstalled = true;
-    window.__tappieSupabaseBattleAdapterVersion = "v2-avatar-gacha";
+    window.__tappieSupabaseBattleAdapterVersion = "v3-reward-claim";
 
     const originalFetch = window.fetch.bind(window);
     const DEFAULT_CARD_IMG = '/assets/BOX_COVER_SSR.webp';
@@ -4483,34 +4483,88 @@
       }, 400); 
   }
 
-  // 顯示戰利品並發送 GAS
+  // 顯示戰利品並發送 Supabase claim-gacha
   function showGachaSummary() {
     const listEl = document.getElementById('gacha-won-list');
     let html = "";
 
-    // 顯示所有抽到的獎項真名 (含重複提示)
+    // 先保留原本前端盲盒動畫算出的戰利品摘要
     gachaWonItems.forEach(item => {
         html += `<div style="font-size: 14px; line-height: 1.6; font-weight: bold;">${item.realLabel}</div>`;
     });
+
+    if (!html) {
+        html = `<div style="font-size: 14px; line-height: 1.6; font-weight: bold;">準備領取戰鬥盲盒獎勵...</div>`;
+    }
 
     listEl.innerHTML = html;
     document.getElementById('gacha-summary-popup').classList.add('show');
 
     const claimBtn = document.getElementById('gacha-claim-btn');
-    claimBtn.onclick = () => {
+    claimBtn.onclick = async () => {
         claimBtn.innerText = "發放獎勵中...";
         claimBtn.style.pointerEvents = "none";
-        
-        // 🚀 將結算好的總點數與新角色送給後端
-        const avatarsParam = window.wonAvatars.length > 0 ? `&avatars=${window.wonAvatars.join(',')}` : '';
-        const finalUrl = `${GAS_URL}?action=claim_gacha&id=${STUDENT_ID}&roomId=${ROOM_ID}&winnerId=${STUDENT_ID}&addPoints=${window.wonPoints}${avatarsParam}`;
-        
-        // 成功發送獎勵後，跳轉回對戰大廳
-        fetch(finalUrl, { mode: 'no-cors' }).then(() => {
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-        }).catch(() => {
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
-        });
+
+        try {
+            let data = null;
+
+            if (window.TappieAPI && TappieAPI.claimGacha) {
+                data = await TappieAPI.claimGacha({
+                    uid: STUDENT_ID,
+                    free: true,
+                    source: 'battle_reward',
+                    roomCode: ROOM_ID,
+                    legacyAddPoints: window.wonPoints || 0,
+                    legacyAvatars: window.wonAvatars || []
+                });
+            } else {
+                const qs = new URLSearchParams({
+                    uid: STUDENT_ID,
+                    free: 'true',
+                    source: 'battle_reward',
+                    roomCode: ROOM_ID || ''
+                });
+                data = await fetch(`${TappieAPI.supabaseBaseUrl}/claim-gacha?${qs.toString()}`).then(r => r.json());
+            }
+
+            if (!data || !data.success) {
+                throw new Error(data?.message || data?.error || 'Supabase claim-gacha failed');
+            }
+
+            const result = data.result || {};
+            const avatar = result.avatar || {};
+            const title = result.isDuplicate ? '重複角色補償' : '新角色解鎖';
+            const comp = Number(result.compensationPoints || 0);
+            const after = data.points?.after;
+
+            listEl.innerHTML += `
+              <div style="margin-top: 18px; padding: 14px; border-radius: 18px; background: rgba(0,0,0,0.45); border: 1px solid rgba(241,196,15,0.45);">
+                <div style="font-size: 16px; color:#f1c40f; font-weight:900; letter-spacing:1px;">✅ Supabase 領獎成功</div>
+                <div style="font-size: 14px; margin-top: 8px;">${title}：${avatar.name || result.avatarId || 'Avatar'}</div>
+                ${comp ? `<div style="font-size: 14px; margin-top: 4px;">補償點數：+${comp}</div>` : ''}
+                ${after !== undefined ? `<div style="font-size: 14px; margin-top: 4px;">最新點數：${after}</div>` : ''}
+              </div>
+            `;
+
+            claimBtn.innerText = "返回大廳";
+            claimBtn.style.pointerEvents = "auto";
+            claimBtn.onclick = () => {
+                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=reward3`;
+            };
+
+        } catch (err) {
+            console.error('Supabase claim gacha failed:', err);
+            listEl.innerHTML += `
+              <div style="margin-top: 18px; padding: 14px; border-radius: 18px; background: rgba(231,76,60,0.18); border: 1px solid rgba(231,76,60,0.6); color:#fff;">
+                ⚠️ 領獎失敗：${String(err.message || err)}
+              </div>
+            `;
+            claimBtn.innerText = "返回大廳";
+            claimBtn.style.pointerEvents = "auto";
+            claimBtn.onclick = () => {
+                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=reward3`;
+            };
+        }
     };
   }
   // =======================================================
