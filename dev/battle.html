@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-sync-v3"></script>
+  <script src="./tappie-api.js?v=20260522-rules-v4"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -5787,6 +5787,273 @@
         if (controls) controls.style.visibility = 'visible';
       }
     })();
+  };
+
+})();
+</script>
+
+<script>
+// =======================================================
+// 🧑‍⚖️ Battle Rules v4 Frontend Adapter
+// 1) Ready 等待 60 秒；逾時取消。
+// 2) 每回合倒數以後端 10 秒 deadline 為準。
+// 3) 倒數結束只呼叫 resolve-battle-timeout，由後端判定。
+// 4) 連續兩回合未錄音的取消 / 判勝提示。
+// =======================================================
+(function installBattleRulesV4(){
+  if (window.__tappieBattleRulesV4Installed) return;
+  window.__tappieBattleRulesV4Installed = true;
+
+  const POLL_MS = 1000;
+  const GRACE_MS = 5000;
+  let rulesV4ReadyTimer = null;
+  let rulesV4RoundTimer = null;
+
+  function isUuidLike(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
+  }
+
+  function roomArg(roomId) {
+    const room = String(roomId || ROOM_ID || '').trim();
+    return isUuidLike(room) ? { roomId: room } : { roomCode: room };
+  }
+
+  function myRoleOf(status) {
+    return status?.me?.role || 'host';
+  }
+
+  function num(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  async function getStatus(roomId) {
+    if (!window.TappieAPI || !TappieAPI.getBattleStatus) throw new Error('TappieAPI.getBattleStatus 尚未載入');
+    const data = await TappieAPI.getBattleStatus(STUDENT_ID, roomArg(roomId));
+    if (!data || !data.success) throw new Error(data?.message || data?.error || 'getBattleStatus failed');
+    return data;
+  }
+
+  async function resolveTimeout(roomId) {
+    if (!window.TappieAPI || !TappieAPI.resolveBattleTimeout) throw new Error('TappieAPI.resolveBattleTimeout 尚未載入');
+    return await TappieAPI.resolveBattleTimeout({ uid: STUDENT_ID, ...roomArg(roomId) });
+  }
+
+  function stopRulesTimers() {
+    if (rulesV4ReadyTimer) { clearInterval(rulesV4ReadyTimer); rulesV4ReadyTimer = null; }
+    if (rulesV4RoundTimer) { clearInterval(rulesV4RoundTimer); rulesV4RoundTimer = null; }
+  }
+
+  function isMeWinner(status) {
+    const myRole = myRoleOf(status);
+    const winnerId = status?.room?.winnerStudentId;
+    const hostId = status?.players?.host?.id;
+    const guestId = status?.players?.guest?.id;
+    let winnerRole = 'draw';
+    if (winnerId && hostId && winnerId === hostId) winnerRole = 'host';
+    if (winnerId && guestId && winnerId === guestId) winnerRole = 'guest';
+    if (winnerRole === 'draw') {
+      if (num(status?.room?.hostWins) > num(status?.room?.guestWins)) winnerRole = 'host';
+      else if (num(status?.room?.guestWins) > num(status?.room?.hostWins)) winnerRole = 'guest';
+    }
+    return winnerRole !== 'draw' && winnerRole === myRole;
+  }
+
+  function showBattleNoticeAndExit(message, isWin = false) {
+    stopRulesTimers();
+    const word = document.getElementById('target-word');
+    const info = document.getElementById('battle-info');
+    const timer = document.getElementById('battle-timer');
+    const controls = document.getElementById('battle-controls');
+    if (controls) controls.style.visibility = 'hidden';
+    if (timer) timer.innerText = '';
+    if (word) word.innerText = isWin ? 'WIN' : 'BATTLE CANCELLED';
+    if (info) {
+      info.innerText = message;
+      info.style.color = isWin ? '#f1c40f' : '#ff7675';
+    }
+    alert(message);
+    if (!isWin) {
+      setTimeout(() => {
+        window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=rules-v4`;
+      }, 900);
+    }
+  }
+
+  function handleCancelledStatus(status) {
+    const role = myRoleOf(status);
+    const offender = status?.room?.offenderRole || status?.room?.lastEvent?.offenderRole;
+    const reason = status?.room?.cancelReason || status?.room?.finishReason || status?.room?.lastEvent?.cancelReason || status?.room?.lastEvent?.finishReason;
+
+    let msg = '對戰已取消。';
+    if (reason === 'ready_timeout') {
+      msg = offender === role ? '因為你未進入戰場，故對戰取消。' : '因為對方中離，所以對戰取消。';
+    } else if (reason === 'disconnect_cancelled_low_score' || reason === 'both_disconnect') {
+      msg = offender === role || offender === 'both' ? '因為你未錄音，故對戰取消。' : '因為對方中離，所以對戰取消。';
+    } else {
+      msg = offender === role ? '因為你未完成對戰，故對戰取消。' : '因為對方中離，所以對戰取消。';
+    }
+
+    showBattleNoticeAndExit(msg, false);
+  }
+
+  async function handleFinishedStatus(status) {
+    const reason = status?.room?.finishReason || status?.room?.lastEvent?.finishReason || 'normal';
+    const role = myRoleOf(status);
+    const offender = status?.room?.offenderRole || status?.room?.lastEvent?.offenderRole;
+    const myScore = role === 'host' ? num(status?.room?.hostWins) : num(status?.room?.guestWins);
+
+    if (reason === 'disconnect_win') {
+      if (offender === role) {
+        showBattleNoticeAndExit('因為你連續兩回合未錄音，系統判定你中離。', false);
+        return;
+      }
+      if (isMeWinner(status)) {
+        // 交回原本 finished 流程，讓 Win / 盲盒照常跑；同時提示原因。
+        const info = document.getElementById('battle-info');
+        if (info) {
+          info.innerText = `因對手中離，且你已獲得 ${myScore} 分，故判獲勝。`;
+          info.style.color = '#f1c40f';
+        }
+      }
+    }
+
+    // 讓原本 sync-v3 的 checkBoth / finished 流程接管動畫與領獎。
+    if (typeof window.checkBoth === 'function') {
+      try { await window.checkBoth(ROOM_ID); return; } catch (e) { console.warn('checkBoth fallback failed', e); }
+    }
+  }
+
+  function showWaitingForReadyV4(status, roomId) {
+    const timer = document.getElementById('battle-timer');
+    const info = document.getElementById('battle-info');
+    const word = document.getElementById('target-word');
+    const hReady = Boolean(status?.room?.hostReady);
+    const gReady = Boolean(status?.room?.guestReady);
+    const deadline = status?.room?.readyDeadline;
+    let remaining = '';
+    if (deadline) {
+      const ms = new Date(deadline).getTime() - Date.now();
+      remaining = Math.max(0, Math.ceil(ms / 1000));
+      if (timer) timer.innerText = remaining;
+      if (ms <= 0) {
+        resolveTimeout(roomId).then(async (data) => {
+          if (data?.success) {
+            const s = await getStatus(roomId).catch(() => null);
+            if (s?.room?.status === 'cancelled') handleCancelledStatus(s);
+          }
+        }).catch(err => console.warn('ready timeout resolve failed', err));
+      }
+    } else {
+      if (timer) timer.innerText = '';
+    }
+    if (word) word.innerText = '等待雙方進入戰場';
+    if (info) {
+      info.innerText = `同步中：房主 ${hReady ? '✅' : '⌛'}　挑戰者 ${gReady ? '✅' : '⌛'}${deadline ? `｜等待 ${remaining} 秒` : ''}`;
+      info.style.color = '#f1c40f';
+    }
+  }
+
+  window.initArena = initArena = function(roomId) {
+    try { if (readyTimer) clearInterval(readyTimer); } catch(_) {}
+    try { if (syncTimer) clearInterval(syncTimer); } catch(_) {}
+    try { if (waitOpTimer) clearInterval(waitOpTimer); } catch(_) {}
+    try { if (currentLimitTimer) clearInterval(currentLimitTimer); } catch(_) {}
+    stopRulesTimers();
+
+    currentBattleRound = 0;
+    roundSubmitted = false;
+    isChecking = false;
+
+    const controls = document.getElementById('battle-controls');
+    if (controls) controls.style.visibility = 'hidden';
+    const word = document.getElementById('target-word');
+    if (word) word.innerText = '戰場同步中...';
+    const timer = document.getElementById('battle-timer');
+    if (timer) timer.innerText = '';
+    const info = document.getElementById('battle-info');
+    if (info) { info.innerText = '正在向後端裁判報到...'; info.style.color = '#a4b0be'; }
+
+    (async () => {
+      try {
+        if (!window.TappieAPI || !TappieAPI.setArenaReady) throw new Error('TappieAPI.setArenaReady 尚未載入');
+        await TappieAPI.setArenaReady({ uid: STUDENT_ID, ...roomArg(roomId), ready: true });
+        rulesV4ReadyTimer = setInterval(async () => {
+          try {
+            const status = await getStatus(roomId);
+            if (status.room?.status === 'cancelled') {
+              handleCancelledStatus(status);
+              return;
+            }
+            if (status.room?.status === 'finished') {
+              await handleFinishedStatus(status);
+              return;
+            }
+            const ready = Boolean(status.room?.hostReady && status.room?.guestReady);
+            const active = status.room?.status === 'active' && status.currentQuestion?.status === 'active';
+            if (!ready || !active) {
+              showWaitingForReadyV4(status, roomId);
+              return;
+            }
+            stopRulesTimers();
+            if (typeof startRoundCountdown === 'function') startRoundCountdown(roomId);
+          } catch (e) {
+            console.warn('等待雙方 Ready 同步中...', e);
+          }
+        }, POLL_MS);
+      } catch (err) {
+        alert('進入戰場同步失敗：' + String(err.message || err));
+      }
+    })();
+  };
+
+  // 覆蓋回合倒數顯示：以後端 deadline 為準，deadline 到只呼叫後端裁判。
+  window.startRecordingBattle = startRecordingBattle = function(roomId) {
+    try { if (currentLimitTimer) clearInterval(currentLimitTimer); } catch(_) {}
+    stopRulesTimers();
+    rulesV4RoundTimer = setInterval(async () => {
+      try {
+        const status = await getStatus(roomId);
+        if (status.room?.status === 'cancelled') {
+          handleCancelledStatus(status);
+          return;
+        }
+        if (status.room?.status === 'finished') {
+          await handleFinishedStatus(status);
+          return;
+        }
+        const q = status.currentQuestion;
+        if (!q || q.status !== 'active') return;
+        const remainingMs = q.deadline ? new Date(q.deadline).getTime() - Date.now() : 0;
+        const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
+        const timer = document.getElementById('battle-timer');
+        if (timer) timer.innerText = remaining;
+        if (remainingMs <= -GRACE_MS && !roundSubmitted) {
+          roundSubmitted = true;
+          stopRulesTimers();
+          const controls = document.getElementById('battle-controls');
+          if (controls) controls.style.visibility = 'hidden';
+          if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+          const data = await resolveTimeout(roomId);
+          if (!data?.success) {
+            if (data?.error !== 'deadline_not_reached') console.warn('resolve timeout ignored:', data);
+            return;
+          }
+          const fresh = await getStatus(roomId).catch(() => null);
+          if (fresh?.room?.status === 'cancelled') {
+            handleCancelledStatus(fresh);
+            return;
+          }
+          if (fresh?.room?.status === 'finished') {
+            await handleFinishedStatus(fresh);
+            return;
+          }
+          if (typeof startRoundCountdown === 'function') startRoundCountdown(roomId);
+        }
+      } catch (err) {
+        console.warn('rules v4 round timer failed', err);
+      }
+    }, 500);
   };
 
 })();
