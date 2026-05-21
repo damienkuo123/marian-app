@@ -21,6 +21,7 @@ const TappieAPI = {
     cancelBattleRoom: "/cancel-battle-room",
     createAiBattleRoom: "/create-ai-battle-room",
     submitAiBattleScore: "/submit-ai-battle-score",
+    getCurrentEvent: "/get-current-event",
     finishBattleRoom: "/finish-battle-room",
     resolveBattleTimeout: "/resolve-battle-timeout",
     getAvatarShop: "/get-avatar-shop",
@@ -98,6 +99,9 @@ const TappieAPI = {
   },
   async submitAiBattleScore(payload) {
     return await this._post(this.endpoints.submitAiBattleScore, payload);
+  },
+  async getCurrentEvent(uid) {
+    return await this._get(`${this.endpoints.getCurrentEvent}?uid=${encodeURIComponent(uid)}`);
   },
   async finishBattleRoom(payload = {}) {
     const qs = new URLSearchParams();
