@@ -5870,9 +5870,9 @@
     const ROOM_CODE_FOR_AI = params.get('roomCode') || params.get('roomId') || params.get('code') || '';
     const AI_LEVEL_FROM_URL = params.get('aiLevel') || '';
     const AI_IMG_MAP = {
-      '初階Ai': '/assets/Ai_m.webp',
-      '中階Ai': '/assets/Ai_l.webp',
-      '高階Ai': '/assets/Ai_h.webp',
+      '初階Ai': '/assets/Ai_L1.webp',
+      '中階Ai': '/assets/Ai_M1.webp',
+      '高階Ai': '/assets/Ai_H1.webp',
       '活動Boss': '/assets/BOX_COVER_SSR.webp'
     };
 
@@ -5881,9 +5881,9 @@
     // AI_MED: R，mask = /assets/Ai_M1_tr.webp
     // AI_HARD: SR，mask = /assets/Ai_H1_tr.webp
     const AI_AVATAR_MAP = {
-      '初階Ai': { id:'AI_EASY', name:'初階Ai', img:'/assets/Ai_m.webp', fullImg:'/assets/Ai_m.webp', mask:'', rarity:'N', theme:'theme-tech', category:'ai' },
-      '中階Ai': { id:'AI_MED', name:'中階Ai', img:'/assets/Ai_l.webp', fullImg:'/assets/Ai_l.webp', mask:'/assets/Ai_M1_tr.webp', rarity:'R', theme:'theme-tech', category:'ai' },
-      '高階Ai': { id:'AI_HARD', name:'高階Ai', img:'/assets/Ai_h.webp', fullImg:'/assets/Ai_h.webp', mask:'/assets/Ai_H1_tr.webp', rarity:'SR', theme:'theme-tech', category:'ai' },
+      '初階Ai': { id:'AI_EASY', name:'初階Ai', img:'/assets/Ai_L1.webp', fullImg:'/assets/Ai_L1.webp', mask:'', rarity:'N', theme:'theme-tech', category:'ai' },
+      '中階Ai': { id:'AI_MED', name:'中階Ai', img:'/assets/Ai_M1.webp', fullImg:'/assets/Ai_M1.webp', mask:'/assets/Ai_M1_tr.webp', rarity:'R', theme:'theme-tech', category:'ai' },
+      '高階Ai': { id:'AI_HARD', name:'高階Ai', img:'/assets/Ai_H1.webp', fullImg:'/assets/Ai_H1.webp', mask:'/assets/Ai_H1_tr.webp', rarity:'SR', theme:'theme-tech', category:'ai' },
       '活動Boss': { id:'AI_BOSS', name:'活動Boss', img:'/assets/BOX_COVER_SSR.webp', fullImg:'/assets/BOX_COVER_SSR.webp', mask:'', rarity:'SSR', theme:'theme-magic', category:'boss' }
     };
 
@@ -6028,6 +6028,161 @@
         return new Response(JSON.stringify({ success:false, status:'Error', message:String(err.message || err) }), { status: 500, headers: { 'Content-Type':'application/json' }});
       }
       return previousFetch(input, init);
+    };
+  })();
+  </script>
+
+
+
+  <!-- =======================================================
+       ✅ AI Battle v3 Final Adapter
+       - AI 送分不再走 PvP submit-battle-score
+       - 建房時已預先生成 10 回合 AI 分數
+       - Avatar 優先吃 Supabase avatars 表，fallback 才用 Google Sheet 原始路徑
+       ======================================================= -->
+  <script>
+  (function installAiBattleV3FinalAdapter(){
+    const params = new URLSearchParams(window.location.search);
+    const UID = params.get('id') || window.STUDENT_ID || '';
+    const ROOM = params.get('roomCode') || params.get('roomId') || params.get('code') || window.ROOM_ID || '';
+    const POLL_MS_LOCAL = 900;
+
+    const fallbackAvatarByName = (name) => {
+      const n = String(name || '');
+      if (n.includes('初階')) return { id:'AI_EASY', name:'初階Ai', fullImg:'/assets/Ai_L1.webp', mask:'', rarity:'N', theme:'theme-magic', category:'ai' };
+      if (n.includes('中階')) return { id:'AI_MED', name:'中階Ai', fullImg:'/assets/Ai_M1.webp', mask:'/assets/Ai_M1_tr.webp', rarity:'R', theme:'theme-magic', category:'ai' };
+      if (n.includes('高階')) return { id:'AI_HARD', name:'高階Ai', fullImg:'/assets/Ai_H1.webp', mask:'/assets/Ai_H1_tr.webp', rarity:'SR', theme:'theme-fire', category:'ai' };
+      if (n.includes('Boss') || n.includes('活動')) return { id:'AI_BOSS', name:'活動Boss', fullImg:'/assets/BOX_COVER_SSR.webp', mask:'', rarity:'SSR', theme:'theme-magic', category:'boss' };
+      return { id:'AI_MED', name:'中階Ai', fullImg:'/assets/Ai_M1.webp', mask:'/assets/Ai_M1_tr.webp', rarity:'R', theme:'theme-magic', category:'ai' };
+    };
+
+    function isAiStatus(status){
+      const t = String(status?.room?.battleType || '').toLowerCase();
+      return t === 'ai' || t === 'boss';
+    }
+
+    function roomArgLocal(room){
+      const r = String(room || ROOM || '');
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r)
+        ? { roomId: r }
+        : { roomCode: r };
+    }
+
+    async function getAiStatus(room){
+      if (!window.TappieAPI || !TappieAPI.getBattleStatus) throw new Error('TappieAPI.getBattleStatus 尚未載入');
+      return await TappieAPI.getBattleStatus(UID, roomArgLocal(room));
+    }
+
+    // 補強 AI avatar 顯示：優先吃 get-battle-status 回傳的 players.guest.avatar。
+    function applyAiAvatarFromStatus(status){
+      try {
+        if (!isAiStatus(status)) return;
+        const guest = status?.players?.guest || {};
+        const aiName = guest.name || status?.opponent?.name || '中階Ai';
+        const fallback = fallbackAvatarByName(aiName);
+        const avatar = guest.avatar || status?.opponent?.avatar || fallback;
+        const img = avatar.fullImg || avatar.full_img_url || avatar.img || fallback.fullImg;
+        const mask = avatar.mask || avatar.mask_url || fallback.mask || '';
+        const rarity = avatar.rarity || fallback.rarity || 'R';
+        const theme = avatar.theme || avatar.category || fallback.theme || 'theme-magic';
+
+        window.characterAssets = window.characterAssets || {};
+        window.characterAssets[guest.avatarId || fallback.id] = { name: aiName, img, mask, rarity, theme };
+        window.characterAssets[aiName] = { name: aiName, img, mask, rarity, theme };
+
+        const opCard = document.getElementById('op-card');
+        const opCardBg = document.getElementById('op-card-bg');
+        if (opCardBg && img) opCardBg.style.backgroundImage = `url('${img}')`;
+        if (opCard) {
+          opCard.setAttribute('data-rarity', rarity);
+          if (mask) {
+            opCard.classList.add('masked');
+            opCard.style.setProperty('--mask', mask.includes('url(') ? mask : `url('${mask}')`);
+          } else {
+            opCard.classList.remove('masked');
+            opCard.style.removeProperty('--mask');
+          }
+        }
+      } catch (e) {
+        console.warn('applyAiAvatarFromStatus failed', e);
+      }
+    }
+
+    const previousCheckBoth = window.checkBoth;
+    window.checkBoth = checkBoth = async function(roomId){
+      try {
+        const status = await getAiStatus(roomId).catch(()=>null);
+        if (isAiStatus(status)) applyAiAvatarFromStatus(status);
+      } catch(_e) {}
+      return previousCheckBoth ? previousCheckBoth(roomId) : undefined;
+    };
+
+    const previousSubmit = window.submitBattleScore;
+    window.submitBattleScore = submitBattleScore = function(roomId, score){
+      (async () => {
+        const status = await getAiStatus(roomId).catch(()=>null);
+        if (!isAiStatus(status)) {
+          if (previousSubmit) return previousSubmit(roomId, score);
+          throw new Error('submitBattleScore 原始函式不存在');
+        }
+
+        // AI 模式：直接送 submit-ai-battle-score，後端同回合產生 AI 分數並 resolved。
+        if (currentLimitTimer) { clearInterval(currentLimitTimer); currentLimitTimer = null; }
+        const controls = document.getElementById('battle-controls');
+        if (controls) controls.style.visibility = 'hidden';
+        const myCard = document.getElementById('my-card');
+        if (myCard) myCard.classList.remove('charging-mana', 'ultimate-charging');
+        const bBtn = document.getElementById('battle-record-btn');
+        if (bBtn) bBtn.classList.remove('active','ult-active','recording-active','ult-recording-active');
+
+        const skillRequested = Boolean(isUltimateMode);
+        const realScore = Math.max(0, Math.min(100, Math.round(Number(score || 0))));
+        const roundNo = Number(currentBattleRound || 0) + 1;
+        pendingRoundNo = roundNo;
+        const timer = document.getElementById('battle-timer');
+        const info = document.getElementById('battle-info');
+        if (timer) timer.innerHTML = `<span class="neon-score">得分：${realScore}</span>`;
+        if (info) info.innerText = skillRequested ? '技能重擊已送出，AI 裁判判定中...' : 'AI 裁判判定中...';
+
+        try {
+          if (!window.TappieAPI || !TappieAPI.submitAiBattleScore) throw new Error('TappieAPI.submitAiBattleScore 尚未載入');
+          const result = await TappieAPI.submitAiBattleScore({
+            uid: UID,
+            ...roomArgLocal(roomId),
+            roundNo,
+            score: realScore,
+            skillUsed: skillRequested,
+            skillType: skillRequested ? 'power_strike' : undefined,
+            detailJson: { adapter: 'ai-v3-final', skillRequested, clientRoundIndex: currentBattleRound }
+          });
+
+          if (!result?.success) throw new Error(result?.message || result?.error || 'submit-ai-battle-score failed');
+          if (skillRequested) hasUsedSkill = true;
+
+          // 讓既有動畫流程用後端資料處理，不直接手動改 UI。
+          if (waitOpTimer) clearInterval(waitOpTimer);
+          waitOpTimer = setInterval(async () => {
+            try {
+              const st = await getAiStatus(roomId);
+              applyAiAvatarFromStatus(st);
+              const r = (st.rounds || []).find(x => Number(x.roundNo) === Number(roundNo));
+              if (st.room?.status === 'finished' || (r && (r.status === 'finished' || r.status === 'timeout'))) {
+                clearInterval(waitOpTimer); waitOpTimer = null;
+                if (previousCheckBoth) return previousCheckBoth(roomId);
+              }
+            } catch(e) { console.warn('AI v3 wait resolved failed', e); }
+          }, POLL_MS_LOCAL);
+
+          // AI 後端已經立即 resolved，立即觸發一次既有處理。
+          setTimeout(() => { if (previousCheckBoth) previousCheckBoth(roomId); }, 150);
+        } catch (err) {
+          console.error('submitBattleScore AI v3 failed:', err);
+          alert('送出 AI 對戰分數失敗：' + String(err.message || err));
+          roundSubmitted = false;
+          isChecking = false;
+          if (controls) controls.style.visibility = 'visible';
+        }
+      })();
     };
   })();
   </script>
