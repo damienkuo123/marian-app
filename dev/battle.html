@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Tappie 1v1 Battle</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+  <script src="./tappie-api.js?v=20260521-battle-html-v1"></script>
+  <style>
+    :root {
+      --bg:#080d17; --panel:rgba(18,25,38,.72); --line:rgba(255,255,255,.14);
+      --gold:#f1c40f; --blue:#00d2d3; --red:#e74c3c; --green:#2ecc71; --muted:#95a5a6;
+      --shadow:0 24px 70px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.08);
+    }
+    *{box-sizing:border-box} html,body{margin:0;width:100%;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:white;}
+    body{overflow-x:hidden;padding:env(safe-area-inset-top) 14px max(22px,env(safe-area-inset-bottom));}
+    .orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:.35;z-index:0;pointer-events:none;animation:float 12s infinite alternate ease-in-out}.o1{width:340px;height:340px;background:#0066cc;left:-140px;top:-80px}.o2{width:400px;height:400px;background:#8e44ad;right:-170px;bottom:-130px}.o3{width:260px;height:260px;background:#f39c12;left:35%;top:35%;opacity:.18}@keyframes float{to{transform:translate(30px,-25px) scale(1.12)}}
+    .app{position:relative;z-index:1;max-width:760px;margin:0 auto;padding-top:14px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.back{border:1px solid var(--line);background:rgba(255,255,255,.08);color:white;border-radius:16px;padding:12px 14px;font-weight:900}.title{text-align:center;flex:1}.title h1{font-size:20px;margin:0 0 4px;font-weight:1000;letter-spacing:2px}.title p{margin:0;font-size:12px;color:var(--muted);font-weight:800;letter-spacing:1px}.pill{border:1px solid rgba(241,196,15,.45);background:rgba(241,196,15,.12);color:var(--gold);border-radius:999px;padding:8px 10px;font-size:12px;font-weight:1000;white-space:nowrap}.glass{background:var(--panel);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px)}
+    .scoreboard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:18px;margin-bottom:14px}.player{text-align:center;min-width:0}.role{font-size:11px;color:var(--muted);font-weight:900;letter-spacing:2px}.name{font-size:17px;font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}.score{font-size:42px;font-weight:1000;line-height:1;color:var(--blue);text-shadow:0 0 22px rgba(0,210,211,.35)}.vs{font-size:18px;color:var(--gold);font-weight:1000;letter-spacing:2px;text-shadow:0 0 18px rgba(241,196,15,.45)}.ready-dot{margin-top:8px;font-size:12px;font-weight:900;color:#7f8c8d}.ready-dot.on{color:var(--green)}
+    .status{padding:16px;margin-bottom:14px;text-align:center;font-weight:900;line-height:1.6;color:#dfe6e9}.status strong{color:var(--gold)}
+    .question{padding:22px;margin-bottom:14px;text-align:center}.round{font-size:13px;color:var(--gold);font-weight:1000;letter-spacing:2px;margin-bottom:10px}.word{font-size:48px;font-weight:1000;line-height:1.05;color:#fff;text-shadow:0 8px 25px rgba(0,0,0,.5),0 0 35px rgba(0,210,211,.18);word-break:break-word}.zh{margin-top:10px;color:#bdc3c7;font-size:20px;font-weight:900}.deadline{margin-top:12px;color:var(--muted);font-size:13px;font-weight:800}.actions{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}.btn{width:100%;border:none;border-radius:22px;padding:17px 18px;font-size:18px;font-weight:1000;letter-spacing:2px;color:white;box-shadow:0 12px 30px rgba(0,0,0,.32);transition:.15s}.btn:active{transform:scale(.97)}.btn-ready{background:linear-gradient(135deg,#27ae60,#1e8449)}.btn-rec{background:linear-gradient(135deg,#e74c3c,#c0392b)}.btn-rec.recording{background:linear-gradient(135deg,#0066cc,#004c99);animation:pulse 1.4s infinite}.btn-test{background:rgba(255,255,255,.09);border:1px solid var(--line);font-size:14px;color:#dfe6e9}.btn-cancel{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.35);font-size:14px;color:#ffb8b8}.btn[disabled]{filter:grayscale(1);opacity:.55;box-shadow:none}@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,102,204,.55)}100%{box-shadow:0 0 0 22px rgba(0,102,204,0)}}
+    .result{display:none;padding:16px;margin-bottom:14px;text-align:left;line-height:1.6}.result.show{display:block}.result h3{margin:0 0 8px;font-size:16px;color:var(--gold)}.result pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.25);border-radius:14px;padding:12px;color:#dfe6e9;max-height:160px;overflow:auto;font-size:12px}.rounds{padding:16px}.rounds h3{font-size:15px;margin:0 0 12px;color:#dfe6e9;letter-spacing:1px}.round-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.round-chip{border:1px solid var(--line);border-radius:14px;padding:9px 6px;text-align:center;background:rgba(255,255,255,.05);font-size:12px;font-weight:900;color:#b2bec3}.round-chip.active{border-color:var(--gold);color:var(--gold);box-shadow:0 0 16px rgba(241,196,15,.18)}.round-chip.done{border-color:rgba(46,204,113,.45);color:#55efc4}.round-chip.timeout{border-color:rgba(231,76,60,.35);color:#fab1a0}.loading{position:fixed;inset:0;background:rgba(8,13,23,.96);z-index:10;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;text-align:center}.spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.16);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.hidden{display:none!important}@media(min-width:700px){.word{font-size:64px}.score{font-size:58px}.title h1{font-size:26px}.app{padding-top:28px}.scoreboard{padding:26px}.question{padding:34px}}
+  </style>
+</head>
+<body>
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div id="loading" class="loading"><div class="spinner"></div><div style="font-weight:1000;letter-spacing:2px;color:var(--gold);">載入 1v1 戰場中...</div><div id="loading-sub" style="color:var(--muted);font-size:13px;font-weight:800;"></div></div>
+  <main class="app">
+    <div class="top">
+      <button class="back" onclick="goLobby()">← 大廳</button>
+      <div class="title"><h1>⚔️ 1v1 對戰</h1><p id="room-info">ROOM</p></div>
+      <div id="room-pill" class="pill">--</div>
+    </div>
+    <section class="scoreboard glass">
+      <div class="player"><div class="role">HOST</div><div id="host-name" class="name">-</div><div id="host-ready" class="ready-dot">未準備</div></div>
+      <div><div id="scoreline" class="score">0 : 0</div><div class="vs">VS</div></div>
+      <div class="player"><div class="role">GUEST</div><div id="guest-name" class="name">-</div><div id="guest-ready" class="ready-dot">未準備</div></div>
+    </section>
+    <section id="status-box" class="status glass">讀取戰場狀態...</section>
+    <section id="question-box" class="question glass">
+      <div id="round-label" class="round">ROUND --</div>
+      <div id="word" class="word">---</div>
+      <div id="zh" class="zh">---</div>
+      <div id="deadline" class="deadline"></div>
+    </section>
+    <section class="actions">
+      <button id="ready-btn" class="btn btn-ready" onclick="readyUp()">✅ 準備開始</button>
+      <button id="record-btn" class="btn btn-rec" onclick="recordAndSubmit()" disabled>🎙️ 開始錄音</button>
+      <button id="test-btn" class="btn btn-test" onclick="submitTestScore()">🧪 測試送分 85</button>
+      <button class="btn btn-cancel" onclick="cancelBattle()">取消 / 離開戰場</button>
+    </section>
+    <section id="result" class="result glass"><h3>本次結果</h3><div id="result-text"></div><pre id="debug-json" style="display:none;"></pre></section>
+    <section class="rounds glass"><h3>回合進度</h3><div id="round-grid" class="round-grid"></div></section>
+  </main>
+
+<script>
+  const qs = new URLSearchParams(location.search);
+  const STUDENT_ID = qs.get('id') || qs.get('uid') || '';
+  const ROOM_CODE = qs.get('roomCode') || qs.get('code') || '';
+  let battleStatus = null;
+  let pollTimer = null;
+  let isSubmitting = false;
+  let lastRenderedRound = null;
+
+  function goLobby(){ location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }
+  function setLoading(show, text=''){
+    document.getElementById('loading').classList.toggle('hidden', !show);
+    document.getElementById('loading-sub').innerText = text || '';
+  }
+  function showResult(text, obj){
+    document.getElementById('result').classList.add('show');
+    document.getElementById('result-text').innerHTML = text;
+    const dbg = document.getElementById('debug-json');
+    if(obj){ dbg.style.display='block'; dbg.textContent = JSON.stringify(obj, null, 2); } else { dbg.style.display='none'; }
+  }
+  function mySubmitted(status){
+    const q = status?.currentQuestion;
+    if(!q) return false;
+    return status.me?.role === 'host' ? !!q.hostSubmitted : !!q.guestSubmitted;
+  }
+  function isActivePlayable(status){
+    return status?.room?.status === 'active' && status?.currentQuestion && !mySubmitted(status) && !isSubmitting;
+  }
+  async function loadStatus(showFullLoading=false){
+    if(!STUDENT_ID || !ROOM_CODE){
+      setLoading(false);
+      document.getElementById('status-box').innerHTML = '⚠️ 缺少學生 ID 或 roomCode';
+      return;
+    }
+    if(showFullLoading) setLoading(true, ROOM_CODE);
+    try{
+      const data = await TappieAPI.getBattleStatus(STUDENT_ID, { roomCode: ROOM_CODE });
+      if(!data?.success) throw new Error(data?.message || data?.error || 'get-battle-status failed');
+      battleStatus = data;
+      render(data);
+      setLoading(false);
+    }catch(err){
+      console.error(err);
+      setLoading(false);
+      document.getElementById('status-box').innerHTML = `⚠️ 戰場讀取失敗<br><span style="font-size:12px;color:#95a5a6;">${String(err.message || err)}</span>`;
+    }
+  }
+  function render(data){
+    const room=data.room||{}, me=data.me||{}, opponent=data.opponent||{}, q=data.currentQuestion;
+    document.getElementById('room-info').innerText = `${room.unitName || '全單元挑戰'}｜${room.roomCode || ROOM_CODE}`;
+    document.getElementById('room-pill').innerText = room.status || '--';
+    document.getElementById('host-name').innerText = data.players?.host?.name || room.hostName || '-';
+    document.getElementById('guest-name').innerText = data.players?.guest?.name || room.guestName || '等待中';
+    document.getElementById('scoreline').innerText = `${room.hostWins ?? 0} : ${room.guestWins ?? 0}`;
+    document.getElementById('host-ready').innerText = room.hostReady ? 'READY' : '未準備';
+    document.getElementById('guest-ready').innerText = room.guestReady ? 'READY' : '未準備';
+    document.getElementById('host-ready').classList.toggle('on', !!room.hostReady);
+    document.getElementById('guest-ready').classList.toggle('on', !!room.guestReady);
+
+    const readyBtn=document.getElementById('ready-btn');
+    const recBtn=document.getElementById('record-btn');
+    if(room.status === 'ready'){
+      readyBtn.style.display='block';
+      readyBtn.disabled = !!me.ready;
+      readyBtn.innerText = me.ready ? '✅ 已準備，等待對手' : '✅ 準備開始';
+      recBtn.disabled = true;
+      document.getElementById('status-box').innerHTML = `等待雙方 Ready。你是 <strong>${me.role === 'host' ? '房主' : '挑戰者'}</strong>。`;
+    } else if(room.status === 'active'){
+      readyBtn.style.display='none';
+      recBtn.disabled = !isActivePlayable(data);
+      if(mySubmitted(data)){
+        document.getElementById('status-box').innerHTML = `第 ${room.currentRound} 回合分數已送出，等待對手...`;
+      } else {
+        document.getElementById('status-box').innerHTML = `第 <strong>${room.currentRound}</strong> 回合進行中，請唸出題目。`;
+      }
+    } else if(room.status === 'finished'){
+      readyBtn.style.display='none'; recBtn.disabled=true;
+      const win = room.winnerStudentId ? '對戰結束' : '平手結束';
+      document.getElementById('status-box').innerHTML = `🏁 ${win}｜比分 <strong>${room.hostWins}:${room.guestWins}</strong>`;
+    } else {
+      readyBtn.style.display='none'; recBtn.disabled=true;
+      document.getElementById('status-box').innerHTML = `目前房間狀態：<strong>${room.status}</strong>`;
+    }
+
+    if(q){
+      document.getElementById('round-label').innerText = `ROUND ${q.roundNo || room.currentRound || '-'}`;
+      document.getElementById('word').innerText = q.word || '---';
+      document.getElementById('zh').innerText = q.zh || '';
+      document.getElementById('deadline').innerText = q.deadline ? `倒數截止：${new Date(q.deadline).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}` : '';
+      if(lastRenderedRound !== q.roundNo){
+        lastRenderedRound = q.roundNo;
+        document.getElementById('result').classList.remove('show');
+      }
+    } else {
+      document.getElementById('round-label').innerText = 'ROUND --';
+      document.getElementById('word').innerText = '尚無題目';
+      document.getElementById('zh').innerText = '';
+      document.getElementById('deadline').innerText = '';
+    }
+    const grid=document.getElementById('round-grid');
+    grid.innerHTML=(data.rounds||[]).map(r=>{
+      const cls = r.status === 'active' ? 'active' : (r.status === 'finished' ? 'done' : (r.status === 'timeout' ? 'timeout' : ''));
+      return `<div class="round-chip ${cls}">${r.roundNo}<br>${r.hostScore ?? '-'}:${r.guestScore ?? '-'}</div>`;
+    }).join('');
+  }
+  async function readyUp(){
+    try{
+      const data = await TappieAPI.setArenaReady({ uid: STUDENT_ID, roomCode: ROOM_CODE, ready: true });
+      if(!data?.success) throw new Error(data?.message || data?.error || 'ready failed');
+      showResult(data.bothReady ? '⚔️ 雙方已準備，對戰開始！' : '✅ 已準備，等待對手。');
+      await loadStatus(false);
+    }catch(err){ alert('Ready 失敗：' + String(err.message || err)); }
+  }
+  function parseAzureScore(raw){
+    const pa = raw?.NBest?.[0]?.PronunciationAssessment || raw?.PronunciationAssessment || null;
+    return Math.round(Number(pa?.PronScore ?? pa?.AccuracyScore ?? 0));
+  }
+  async function recordAndSubmit(){
+    if(!battleStatus?.currentQuestion) return alert('目前沒有題目');
+    const word = battleStatus.currentQuestion.word;
+    const roundNo = battleStatus.currentQuestion.roundNo;
+    isSubmitting = true;
+    const btn=document.getElementById('record-btn');
+    btn.disabled=true; btn.classList.add('recording'); btn.innerText='🎧 聆聽中...';
+    try{
+      if(!window.SpeechSDK) throw new Error('Azure Speech SDK 尚未載入');
+      const tok = await TappieAPI.getAzureToken();
+      if(!tok?.success) throw new Error(tok?.message || tok?.error || 'Azure token failed');
+      const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(tok.token, tok.region);
+      speechConfig.speechRecognitionLanguage = 'en-US';
+      const assessmentConfig = new SpeechSDK.PronunciationAssessmentConfig(
+        word,
+        SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
+        SpeechSDK.PronunciationAssessmentGranularity.Phoneme,
+        true
+      );
+      assessmentConfig.applyTo(speechConfig);
+      const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+      recognizer.recognizeOnceAsync(async result => {
+        try{
+          const rawText = result.properties.getProperty(SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult);
+          const raw = rawText ? JSON.parse(rawText) : {};
+          const score = parseAzureScore(raw);
+          await submitScore(score, raw, { word, roundNo, recognizedText: result.text || '' });
+        } catch(e){ alert('送出分數失敗：' + String(e.message || e)); }
+        finally { recognizer.close(); isSubmitting=false; btn.classList.remove('recording'); btn.innerText='🎙️ 開始錄音'; await loadStatus(false); }
+      }, err => {
+        recognizer.close(); isSubmitting=false; btn.classList.remove('recording'); btn.innerText='🎙️ 開始錄音'; btn.disabled=false;
+        alert('錄音辨識失敗：' + String(err));
+      });
+    }catch(err){
+      isSubmitting=false; btn.classList.remove('recording'); btn.innerText='🎙️ 開始錄音'; btn.disabled=false;
+      alert('錄音啟動失敗：' + String(err.message || err));
+    }
+  }
+  async function submitTestScore(){
+    if(!battleStatus?.currentQuestion) return alert('目前沒有題目');
+    const score = Math.floor(75 + Math.random()*20);
+    await submitScore(score, { mock:true }, { source:'dev-test' });
+    await loadStatus(false);
+  }
+  async function submitScore(score, azureRaw, detailJson){
+    const q = battleStatus.currentQuestion;
+    if(!q) throw new Error('目前沒有題目');
+    isSubmitting=true;
+    const data = await TappieAPI.submitBattleScore({
+      uid: STUDENT_ID,
+      roomCode: ROOM_CODE,
+      roundNo: q.roundNo,
+      score,
+      azureRaw,
+      detailJson
+    });
+    isSubmitting=false;
+    if(!data?.success) throw new Error(data?.message || data?.error || 'submit-battle-score failed');
+    if(data.battleFinished){
+      showResult(`🏁 對戰結束！<br>本次分數：<strong>${score}</strong><br>勝方：<strong>${data.battle?.winnerRole || '-'}</strong>`, data);
+    } else if(data.roundComplete){
+      showResult(`✅ 本回合完成！<br>你本次分數：<strong>${score}</strong><br>進入下一回合。`, data);
+    } else {
+      showResult(`✅ 分數已送出：<strong>${score}</strong><br>等待對手送出。`, data);
+    }
+  }
+  async function cancelBattle(){
+    if(!confirm('確定要取消 / 離開戰場嗎？')) return;
+    try{ await TappieAPI.cancelBattleRoom({ uid: STUDENT_ID, roomCode: ROOM_CODE, reason:'player_leave_battle_html' }); }catch(e){}
+    goLobby();
+  }
+  function startPolling(){
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer=setInterval(()=>loadStatus(false), 2200);
+  }
+  window.addEventListener('load', async ()=>{
+    await loadStatus(true);
+    startPolling();
+  });
+  window.addEventListener('beforeunload', ()=>{ if(pollTimer) clearInterval(pollTimer); });
+</script>
+</body>
+</html>
