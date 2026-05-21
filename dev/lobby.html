@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-dashboard-lobby-fix-v1"></script>
+  <script src="./tappie-api.js?v=20260522-challenge-v2"></script>
 
   <style>
     /* =======================================================
@@ -1114,8 +1114,15 @@
       rarities.forEach(rarity => {
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
-          
-          if (char.category === "限定") {
+
+          const category = String(char.category || "一般").trim();
+          const isEvent = category === "活動" || category.toLowerCase() === "event";
+          const isSystemAi = ["AI_EASY", "AI_MED", "AI_HARD"].includes(id) || (id === "AI_BOSS" && !isEvent);
+
+          // AI 對手角色不進商店；活動 Boss 只有 category=活動 時才顯示為活動限定。
+          if (isSystemAi) return false;
+
+          if (category === "限定") {
             if (char.endTime) {
               const end = new Date(char.endTime);
               if (now > end) return false; 

@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-dashboard-lobby-fix-v1"></script>
+  <script src="./tappie-api.js?v=20260522-challenge-v2"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -2604,11 +2604,40 @@
     
     const detailJSON = JSON.stringify(detailArr);
 
-    // Supabase 版：每題在錄音完成時已經透過 submit-practice 寫入資料庫。
-    // 這裡只負責結束流程並返回大廳，避免重複加點或重複寫入。
-    console.log('Supabase practice details already saved:', detailArr);
-    alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！");
-    window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    // Supabase 版規則：
+    // review = 自由練習，只記錄逐題練習，不發點、不計今日挑戰次數。
+    // challenge = 今日挑戰，完成整套題目後才依總平均與 admin 規則發點、記任務次數。
+    if (MODE === 'review') {
+      console.log('Supabase review details saved as per-word attempts only:', detailArr);
+      alert("👍 練習辛苦了！");
+      window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+      return;
+    }
+
+    TappieAPI.claimPracticeChallenge({
+      uid: STUDENT_ID,
+      unitName: ACTIVE_UNIT_NAME || TARGET_UNIT,
+      averageScore: avg,
+      details: detailArr
+    }).then(data => {
+      if (!data || data.success === false) {
+        btn.innerText = "完成挑戰並領獎";
+        btn.style.pointerEvents = "auto";
+        btn.style.backgroundColor = "#27ae60";
+        alert(data?.message || data?.detail || "今日挑戰送出失敗，請稍後再試。");
+        return;
+      }
+
+      const added = Number(data.points?.added || data.rewardPoints || 0);
+      alert(added > 0 ? `🎉 挑戰完成！獲得 ${added} 點` : "🎉 挑戰完成！");
+      window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    }).catch(err => {
+      console.error(err);
+      btn.innerText = "完成挑戰並領獎";
+      btn.style.pointerEvents = "auto";
+      btn.style.backgroundColor = "#27ae60";
+      alert("今日挑戰送出失敗，請檢查網路後再試。");
+    });
   }
   
   function reRead(i) { 

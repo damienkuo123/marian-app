@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Dashboard/Lobby Fix v1 - practice units, activity timeline, avatar purchase
+// Challenge Reward Fix v2 - separates review attempts from daily challenge completion
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -10,6 +10,7 @@ const TappieAPI = {
     getPracticeData: "/get-practice-data",
     getAzureToken: "/get-azure-token",
     submitPractice: "/submit-practice",
+    claimPracticeChallenge: "/claim-practice-challenge",
     getDiagnosticReport: "/get-diagnostic-report",
     adminGetData: "/admin-get-data",
     adminSaveStudents: "/admin-save-students",
@@ -54,8 +55,8 @@ const TappieAPI = {
     return await this._get(`${this.endpoints.getPracticeData}?${qs.toString()}`);
   },
   async getDashboard(uid) {
-    // Merge base dashboard with source-of-truth practice units and student activity timeline.
     const base = await this._get(`${this.endpoints.getDashboard}?uid=${encodeURIComponent(uid)}`);
+
     try {
       const practice = await this.getPracticeUnits(uid);
       if (practice && practice.success) {
@@ -69,6 +70,7 @@ const TappieAPI = {
     } catch (err) {
       console.warn("getPracticeUnits merge failed", err);
     }
+
     try {
       const activity = await this.getStudentActivity(uid);
       if (activity && activity.success) {
@@ -78,10 +80,12 @@ const TappieAPI = {
     } catch (err) {
       console.warn("getStudentActivity merge failed", err);
     }
+
     return base;
   },
   async getAzureToken() { return await this._get(this.endpoints.getAzureToken); },
   async submitPractice(payload) { return await this._post(this.endpoints.submitPractice, payload); },
+  async claimPracticeChallenge(payload = {}) { return await this._post(this.endpoints.claimPracticeChallenge, payload); },
   async getDiagnosticReport(uid, filter = "unit") { return await this._get(`${this.endpoints.getDiagnosticReport}?uid=${encodeURIComponent(uid)}&filter=${encodeURIComponent(filter)}`); },
   async adminGetData(schoolCode = "TEST01", mode = "all") { return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
@@ -117,14 +121,14 @@ const TappieAPI = {
   },
   async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
+
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
     const student = data.student || {};
     const currentUnit = data.currentUnit || null;
-    const recentAttempts = data.recentAttempts || [];
-    const reviewUnits = (data.reviewUnits || []).map(u => typeof u === 'string' ? u : (u.unitName || u.unit_name || u.name || '')).filter(Boolean);
-    const lastScore = recentAttempts.length > 0 ? Number(recentAttempts[0].score || recentAttempts[0].averageScore || 0) : 0;
-    const missionCount = Number(data.missionCount ?? data.practice?.missionCount ?? recentAttempts.length);
+    const currentCompletion = currentUnit?.completion || {};
+    const bestScore = Number(currentCompletion.bestScore ?? currentCompletion.lastScore ?? 0);
+
     return {
       success: true,
       uid: student.uid,
@@ -136,13 +140,17 @@ const TappieAPI = {
       currentUnit: currentUnit ? currentUnit.unitName : "未排定",
       currentUnitId: currentUnit ? currentUnit.unitId : "",
       endDate: currentUnit ? formatMonthDay(currentUnit.endDate) : "--/--",
-      isCompleted: lastScore >= 60,
-      lastScore,
-      awardedPoints: calculateReward(lastScore),
-      missionCount,
+      isCompleted: Boolean(currentCompletion.completedToday || bestScore > 0),
+      lastScore: bestScore,
+      awardedPoints: Number(currentCompletion.bestReward ?? currentCompletion.lastReward ?? 0),
+      missionCount: Number(data.missionCount ?? currentCompletion.completionCount ?? 0),
       leaderboard: (data.leaderboard || []).map(item => ({ uid: item.uid, name: item.name, score: item.score })),
-      reviewUnits,
-      recentLogs: (data.recentLogs || []).length ? data.recentLogs : recentAttempts.map(item => ({ type:"points", time: formatDateTime(item.createdAt), title: `${item.word || item.unitName || "口說練習"}`, reason: `${item.word || item.unitName || "口說練習"}`, val: Number(item.score || item.averageScore || 0) })),
+      reviewUnits: (data.reviewUnits || []).map(u => typeof u === 'string' ? u : ({
+        unitId: u.unitId || u.id,
+        unitName: u.unitName || u.unit_name || u.name || '',
+        wordCount: u.wordCount || u.word_count || 0
+      })).filter(u => typeof u === 'string' ? !!u : !!u.unitName),
+      recentLogs: Array.isArray(data.recentLogs) ? data.recentLogs : [],
       gamification: data.gamification || defaultGamification(),
       usage: data.usage || {},
       logoUrl: data.logoUrl || "",
@@ -153,7 +161,18 @@ const TappieAPI = {
 };
 window.TappieAPI = TappieAPI;
 
-function calculateReward(score) { const s = Number(score || 0); if (s >= 80) return 30; if (s >= 70) return 20; if (s >= 60) return 10; return 0; }
-function formatMonthDay(value) { if (!value) return "--/--"; const d = new Date(value); if (Number.isNaN(d.getTime())) return String(value); return `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")}`; }
-function formatDateTime(value) { if (!value) return ""; const d = new Date(value); if (Number.isNaN(d.getTime())) return String(value); return `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
-function defaultGamification() { return { dailyChallenge: { passScore: 60, tiers: [{min:80,pts:30},{min:70,pts:20},{min:60,pts:10}] }, mission: { failThreshold:5, failBasePenalty:-250, failPenaltyStep:50, goodThreshold:10, goodReward:100, perfectThreshold:15, perfectReward:200 }, leaderboard:[100,50,30], gachaPicks: { "初階Ai":1, "中階Ai":2, "高階Ai":3, "玩家對戰":3, "活動Boss":1 } }; }
+function formatMonthDay(value) {
+  if (!value) return "--/--";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function defaultGamification() {
+  return {
+    dailyChallenge: { passScore: 60, tiers: [{min:80,pts:30},{min:70,pts:20},{min:60,pts:10}] },
+    mission: { failThreshold:5, failBasePenalty:-250, failPenaltyStep:50, goodThreshold:10, goodReward:100, perfectThreshold:15, perfectReward:200 },
+    leaderboard:[100,50,30],
+    gachaPicks: { "初階Ai":1, "中階Ai":2, "高階Ai":3, "玩家對戰":3, "活動Boss":1 }
+  };
+}
