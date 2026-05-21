@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260521-lobby-level"></script>
+  <script src="./tappie-api.js?v=20260521-lobby-v3"></script>
 
   <style>
     /* =======================================================
@@ -913,36 +913,73 @@
 
     async function initLobby() {
       try {
-        const res = await fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`);
-        const data = await res.json();
-        
-        // 🚀 關鍵修復：檢查是否有錯誤
-        if (data.success === false || data.error) {
+        if (!window.TappieAPI) throw new Error("TappieAPI 尚未載入");
+
+        const dashboardRaw = await TappieAPI.getDashboard(STUDENT_ID);
+        const dashboard = TappieAPI.toLegacyDashboard(dashboardRaw);
+
+        if (!dashboardRaw || dashboardRaw.success === false || dashboard.success === false || dashboard.error) {
             alert("⚠️ 查無此帳號或權限不足！");
-            window.location.href = "index.html"; // 強制踢回首頁
+            window.location.href = "index.html";
             return;
         }
-                
-        characterAssets = data.assets;
-        document.getElementById('header-name').innerText = data.profile.name || STUDENT_ID;
-        document.getElementById('header-points').innerText = `${data.profile.points} PTS`;
-        userUnlocked = (data.profile.unlocked || "A001").split(',').map(s => s.trim()).filter(s => s !== "");
-        userEquipped = data.profile.equipped || "A001"; 
+
+        const schoolCode = (() => {
+          const p = new URLSearchParams(window.location.search);
+          if (p.get('school')) return p.get('school');
+          if (String(STUDENT_ID || '').includes('-')) return String(STUDENT_ID).split('-')[0];
+          return 'TEST01';
+        })();
+
+        // 角色資產：Supabase 第一階段若沒有完整 AvatarShop，就先用安全預設角色，避免 lobby 因 data.assets 不存在而中斷。
+        characterAssets = {
+          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' }
+        };
+
+        try {
+          const settings = await TappieAPI.adminGetData(schoolCode, 'settings');
+          if (settings && settings.success && Array.isArray(settings.avatars)) {
+            settings.avatars.forEach(a => {
+              const id = a.avatarId || a.id;
+              if (!id) return;
+              characterAssets[id] = {
+                name: a.name || id,
+                img: a.fullImg || a.full_img_url || a.img || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
+                mask: a.mask || '',
+                rarity: a.rarity || 'N',
+                category: a.category || '一般'
+              };
+            });
+          }
+        } catch (assetErr) {
+          console.warn('Supabase 角色資產載入失敗，使用預設角色:', assetErr);
+        }
+
+        document.getElementById('header-name').innerText = dashboard.studentName || STUDENT_ID;
+        document.getElementById('header-points').innerText = `${dashboard.currentPoints || 0} PTS`;
+
+        const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboard.raw?.student?.equippedAvatarId || 'A001';
+        userEquipped = equippedFromDashboard || 'A001';
+
+        // Supabase MVP 尚未完整搬 student_avatars 時，至少讓已裝備角色和 A001 可以顯示。
+        userUnlocked = Array.from(new Set(['A001', userEquipped].filter(Boolean)));
 
         const rarityWeight = { 'UR': 5, 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
         userUnlocked.sort((a, b) => {
           const wA = characterAssets[a] ? (rarityWeight[characterAssets[a].rarity] || 0) : 0;
           const wB = characterAssets[b] ? (rarityWeight[characterAssets[b].rarity] || 0) : 0;
-          return wB - wA; 
+          return wB - wA;
         });
 
         renderCarousel();
-        checkEventStatus();
+
+        // 事件 Boss 仍保留舊系統路徑，Supabase PvP MVP 不依賴它。若舊 GAS 不可用，不能阻斷 Lobby。
+        try { checkEventStatus(); } catch (eventErr) { console.warn('活動狀態略過:', eventErr); }
       } catch (e) {
-        console.error("載入失敗：", e);
+        console.error("Supabase Lobby 載入失敗：", e);
         document.getElementById('hero-name').innerText = "⚠️ 離線預設模式";
         characterAssets = {
-          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' }, 
+          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' },
         };
         userUnlocked = ["A001"];
         userEquipped = "A001";
