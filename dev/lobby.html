@@ -931,25 +931,48 @@
           return 'TEST01';
         })();
 
-        // 角色資產：Supabase 第一階段若沒有完整 AvatarShop，就先用安全預設角色，避免 lobby 因 data.assets 不存在而中斷。
+        // 角色資產：正式改由 Supabase get-avatar-shop 載入，包含已解鎖角色與目前裝備角色。
         characterAssets = {
           'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' }
         };
 
+        let avatarShopData = null;
         try {
-          const settings = await TappieAPI.adminGetData(schoolCode, 'settings');
-          if (settings && settings.success && Array.isArray(settings.avatars)) {
-            settings.avatars.forEach(a => {
+          if (window.TappieAPI && TappieAPI.getAvatarShop) {
+            avatarShopData = await TappieAPI.getAvatarShop(STUDENT_ID);
+          }
+          if (avatarShopData && avatarShopData.success && Array.isArray(avatarShopData.avatars)) {
+            avatarShopData.avatars.forEach(a => {
               const id = a.avatarId || a.id;
               if (!id) return;
               characterAssets[id] = {
                 name: a.name || id,
                 img: a.fullImg || a.full_img_url || a.img || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
-                mask: a.mask || '',
+                mask: a.mask || a.mask_url || '',
                 rarity: a.rarity || 'N',
-                category: a.category || '一般'
+                category: a.category || '一般',
+                cost: a.cost || 0,
+                endTime: a.endTime || a.end_time || null,
+                owned: !!a.owned,
+                equipped: !!a.equipped
               };
             });
+          } else {
+            const settings = await TappieAPI.adminGetData(schoolCode, 'settings');
+            if (settings && settings.success && Array.isArray(settings.avatars)) {
+              settings.avatars.forEach(a => {
+                const id = a.avatarId || a.id;
+                if (!id) return;
+                characterAssets[id] = {
+                  name: a.name || id,
+                  img: a.fullImg || a.full_img_url || a.img || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
+                  mask: a.mask || '',
+                  rarity: a.rarity || 'N',
+                  category: a.category || '一般',
+                  cost: a.cost || 0
+                };
+              });
+            }
           }
         } catch (assetErr) {
           console.warn('Supabase 角色資產載入失敗，使用預設角色:', assetErr);
@@ -958,11 +981,12 @@
         document.getElementById('header-name').innerText = dashboard.studentName || STUDENT_ID;
         document.getElementById('header-points').innerText = `${dashboard.currentPoints || 0} PTS`;
 
-        const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboard.raw?.student?.equippedAvatarId || 'A001';
+        const equippedFromShop = avatarShopData?.student?.equippedAvatarId || avatarShopData?.student?.equipped_avatar_id || null;
+        const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboard.raw?.student?.equippedAvatarId || equippedFromShop || 'A001';
         userEquipped = equippedFromDashboard || 'A001';
 
-        // Supabase MVP 尚未完整搬 student_avatars 時，至少讓已裝備角色和 A001 可以顯示。
-        userUnlocked = Array.from(new Set(['A001', userEquipped].filter(Boolean)));
+        const unlockedFromShop = Array.isArray(avatarShopData?.unlockedAvatarIds) ? avatarShopData.unlockedAvatarIds : [];
+        userUnlocked = Array.from(new Set(['A001', userEquipped, ...unlockedFromShop].filter(Boolean)));
 
         const rarityWeight = { 'UR': 5, 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
         userUnlocked.sort((a, b) => {
@@ -1104,6 +1128,10 @@
       rarities.forEach(rarity => {
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
+          // 角色兌換所不顯示 AI / 活動 Boss 類角色；已獲得時仍會出現在上方角色展示與可裝備清單。
+          const category = String(char.category || '');
+          if (id === 'AI_BOSS' || id === 'AI_EASY' || id === 'AI_MED' || id === 'AI_HARD') return false;
+          if (category.includes('AI') || category.includes('活動') || category.includes('Boss')) return false;
           
           if (char.category === "限定") {
             if (char.endTime) {

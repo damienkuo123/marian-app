@@ -17,7 +17,6 @@
   <script src="global-audio.js"></script>
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
-  <script src="./tappie-api.js"></script>
 
   <style>
     :root { 
@@ -262,6 +261,7 @@
     /* Chrome 專用：箭頭朝上彈跳 */
     @keyframes bounce-up { 0%, 100% { transform: translateY(0) rotate(180deg); } 50% { transform: translateY(-10px) rotate(180deg); } }
   </style>
+  <script src="./tappie-api.js?v=20260522-usage-v1"></script>
 </head>
 
 <body>
@@ -730,9 +730,9 @@
     window.onload = () => {
       if (!STUDENT_ID) { alert("找不到學生 ID，請重新刷卡！"); logoutToPortal(); return; }
 
-      TappieAPI.getDashboard(STUDENT_ID)
-        .then(rawData => {
-          const data = TappieAPI.toLegacyDashboard(rawData);
+      fetch(`${GAS_URL}?action=get_dashboard_data&id=${STUDENT_ID}`)
+        .then(res => res.json())
+        .then(data => {
           // 🚀 關鍵修復：檢查後端是否回報錯誤（例如：沒這間校區、沒這個學號）
           if (data.success === false || data.error) {
               alert("⚠️ 查無此帳號！請確認學生代號或校區代碼是否正確。");
@@ -1152,13 +1152,26 @@
         btnElement.innerText = "✨ 傳送中...";
         btnElement.style.pointerEvents = "none";
 
-        TappieAPI.getDashboard(STUDENT_ID)
-            .then(dash => {
-                const status = { canPlay: dash.usage.canPracticeVoice, count: dash.usage.voiceCount, limit: dash.usage.voiceLimit };
+        (async () => {
+            try {
+                let status = null;
+                if (window.TappieAPI && TappieAPI.getDashboard) {
+                    const dash = await TappieAPI.getDashboard(STUDENT_ID);
+                    status = {
+                        canPlay: dash?.usage?.canPracticeVoice !== false,
+                        count: dash?.usage?.voiceCount ?? 0,
+                        limit: dash?.usage?.voiceLimit ?? 80
+                    };
+                } else {
+                    const res = await fetch(`${GAS_URL}?action=get_user_status&id=${STUDENT_ID}`);
+                    status = await res.json();
+                }
+
                 btnElement.innerText = originalText;
                 btnElement.style.pointerEvents = "auto";
                 if (!status.canPlay) { 
-                    alert(`⚠️ 今日語音練習已達上限 (${status.count}/${status.limit}次)\n為了保護喉嚨，請明天再來練習吧！`);
+                    alert(`⚠️ 今日語音練習已達上限 (${status.count}/${status.limit}次)
+為了保護喉嚨，請明天再來練習吧！`);
                     if (disabledText) {
                         btnElement.className = "btn btn-disabled";
                         btnElement.innerText = disabledText;
@@ -1167,12 +1180,12 @@
                 } else {
                     window.location.href = targetUrl;
                 }
-            })
-            .catch(err => {
+            } catch (err) {
                 btnElement.innerText = originalText;
                 btnElement.style.pointerEvents = "auto";
                 alert("網路連線異常，無法進入練習！");
-            });
+            }
+        })();
     }
 
     // =======================================================
@@ -1248,348 +1261,224 @@
         }
     };
 
-    async function loadDiagnosticReport() {
-      const filter = document.getElementById('diag-time-filter').value || 'unit';
+    function loadDiagnosticReport() {
+      const filter = document.getElementById('diag-time-filter').value;
       const loadingZone = document.getElementById('diag-loading');
       const contentZone = document.getElementById('diag-content');
 
       loadingZone.style.display = 'flex';
       contentZone.style.display = 'none';
-      loadingZone.innerHTML = `
-        <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
-          <div class="spinner"></div>
-          <div style="font-weight:900; color:var(--text-sub);">診斷報告載入中...</div>
-        </div>
-      `;
 
-      try {
-        if (!window.TappieAPI || !TappieAPI.getDiagnosticReport) {
-          throw new Error("TappieAPI 尚未載入，請確認 tappie-api.js 有放在 dashboard.html 的主程式碼前面。");
-        }
+      fetch(`${GAS_URL}?action=get_diagnostic_report&id=${STUDENT_ID}&filter=${filter}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) {
+            loadingZone.innerHTML = `<div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px;">⚠️ ${data.msg}</div>`;
+            return;
+          }
 
-        const data = await TappieAPI.getDiagnosticReport(STUDENT_ID, filter);
+          // 🚀 0. 渲染頂部三大指標 (精熟度、PR、進步)
+          const stats = data.stats;
+          document.getElementById('diag-mastery-val').innerText = stats.mastery;
+          document.getElementById('diag-mastery-bar').style.width = `${stats.mastery}%`;
+          
+          // ... 原本的程式碼 ...
+          document.getElementById('diag-pr-val').innerText = stats.prValue;
+          
+          const progEl = document.getElementById('diag-progress-val');
+          
+          // 🚀 修復：把 === 0 的情況也顯示出來，並加上「首次練習」的判斷
+          if (stats.progress > 0) {
+             progEl.innerText = `+${stats.progress}`;
+             progEl.style.color = 'var(--marian-green)';
+          } else if (stats.progress < 0) {
+             progEl.innerText = stats.progress;
+             progEl.style.color = 'var(--marian-red)';
+          } else if (stats.progress === 0 && data.stats.overall > 0) {
+             // 分數一樣，沒進步也沒退步
+             progEl.innerText = "+0";
+             progEl.style.color = 'var(--text-main)';
+          } else {
+             // 連一次練習都沒有，或是真的算不出來
+             progEl.innerText = "-";
+             progEl.style.color = 'var(--text-sub)';
+          } // (這是進步幅度 else 條件的結尾括號)
 
-        if (!data.success) {
-          loadingZone.innerHTML = `
-            <div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px;">
-              ⚠️ ${data.message || data.msg || data.error || '尚無學習紀錄'}
-            </div>
-          `;
-          return;
-        }
+          // ==========================================
+          // 🚀 新增：渲染 Chart.js 動態雷達圖 (瑪麗安五大核心)
+          // ==========================================
+          // 🚀 1. 精準計算「發音穩定度」
+          const totalPCount = stats.totalPhonemesCount || 1; // 避免除以 0
+          // 從 data.weakPhonemes 陣列中還原出總弱音素數量 (因為前端只收到 top3，但每個 top3 裡面有 examples 的長度代表出現次數)
+          // 但最精準的做法是直接拿總計，這裡我們用估算或是你在 GAS 如果有傳完整的數量更好。
+          // 這裡我們暫用原本的算法改進：
+          let weakCountEst = 0;
+          data.weakPhonemes.forEach(wp => weakCountEst += wp.examples.length);
+          const stabilityScore = Math.max(0, Math.round(((totalPCount - weakCountEst) / totalPCount) * 100)); 
+          
+          const ctx = document.getElementById('radarChart').getContext('2d');
+          
+          if(window.myRadarChart) { window.myRadarChart.destroy(); }
 
-        const stats = data.stats || {};
-        const radar = data.radar || {};
+          // 🚀 2. 建立白話文辭典
+          const tooltipsDict = {
+            '發音準確': '系統運用聲學技術，精準比對寶貝每個發音與母語人士的相似度。',
+            '語句流暢': '評估寶貝開口時的語速、停頓與自然度，分數越高代表開口越有自信。',
+            '拼音完整': '偵測是否有漏唸單字或跳過發音的情況。滿分代表每個字都有努力唸出來！',
+            '單元精熟': '本單元所有挑戰過的單字中，成功達到 80 分以上高標的單字佔比。',
+            '發音穩定': '分析口腔肌肉的控制力。失誤越少、發音越穩，此項分數就越高。'
+          };
 
-        // 🚀 0. 渲染頂部三大指標：精熟度、PR、進步幅度
-        const mastery = Number(stats.mastery ?? 0);
-        document.getElementById('diag-mastery-val').innerText = mastery;
-        document.getElementById('diag-mastery-bar').style.width = `${Math.max(0, Math.min(100, mastery))}%`;
-
-        document.getElementById('diag-pr-val').innerText = stats.prValue ?? 0;
-
-        const progEl = document.getElementById('diag-progress-val');
-        const progress = Number(stats.progress ?? 0);
-
-        if (progress > 0) {
-          progEl.innerText = `+${progress}`;
-          progEl.style.color = 'var(--marian-green)';
-        } else if (progress < 0) {
-          progEl.innerText = progress;
-          progEl.style.color = 'var(--marian-red)';
-        } else if ((stats.overall ?? 0) > 0) {
-          progEl.innerText = "+0";
-          progEl.style.color = 'var(--text-main)';
-        } else {
-          progEl.innerText = "-";
-          progEl.style.color = 'var(--text-sub)';
-        }
-
-        // 🚀 1. 雷達圖：恢復接近 GAS 版的五大核心視覺
-        renderDiagnosticRadar(stats, radar);
-
-        // 🌟 2. 流暢度大圓環與 AI 教練短評
-        renderDiagnosticSummary(stats);
-
-        // 🌟 3. 發音肌肉 X 光機：Top 3 強項 + Top 3 弱項，可點擊展開教學
-        renderPhonemeXray(data);
-
-        // 🌟 4. 精益求精單字 Top 3
-        renderWeakWords(data.weakWords || []);
-
-        loadingZone.style.display = 'none';
-        contentZone.style.display = 'flex';
-        isDiagLoaded = true;
-
-      } catch (err) {
-        console.error("診斷報告載入失敗：", err);
-        loadingZone.innerHTML = `
-          <div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px; line-height:1.6;">
-            ⚠️ 診斷報告載入失敗<br>
-            <span style="font-size:12px; color:#7f8c8d;">${String(err.message || err)}</span>
-          </div>
-        `;
-      }
-    }
-
-    function renderDiagnosticRadar(stats, radar) {
-      const radarCanvas = document.getElementById('radarChart');
-      if (!radarCanvas || !window.Chart) return;
-
-      const ctx = radarCanvas.getContext('2d');
-
-      if (window.diagnosticRadarChart) {
-        window.diagnosticRadarChart.destroy();
-      }
-
-      const radarData = [
-        clampScore(radar.pronunciationAccuracy ?? stats.pronunciation ?? stats.overall ?? 0),
-        clampScore(radar.sentenceFluency ?? stats.fluency ?? 0),
-        clampScore(radar.spellingCompleteness ?? stats.completeness ?? 0),
-        clampScore(radar.unitMastery ?? stats.mastery ?? 0),
-        clampScore(radar.pronunciationStability ?? stats.accuracy ?? 0)
-      ];
-
-      const labelNotes = {
-        '發音準確': '單字微觀物理發音精確度',
-        '語句流暢': '語速、停頓與連音自然度',
-        '拼音完整': '字首、字尾是否漏音',
-        '單元精熟': '本單元達 80 分以上的單字比例',
-        '發音穩定': '音素錯誤率的反向指標'
-      };
-
-      window.diagnosticRadarChart = new Chart(ctx, {
-        type: 'radar',
-        data: {
-          labels: ['發音準確', '語句流暢', '拼音完整', '單元精熟', '發音穩定'],
-          datasets: [{
-            label: '瑪麗安五大核心',
-            data: radarData,
-            fill: true,
-            backgroundColor: 'rgba(0, 102, 204, 0.16)',
-            borderColor: 'rgba(0, 102, 204, 0.95)',
-            pointBackgroundColor: '#ffffff',
-            pointBorderColor: 'rgba(0, 102, 204, 1)',
-            pointHoverBackgroundColor: '#f1c40f',
-            pointHoverBorderColor: '#ffffff',
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            borderWidth: 3,
-            tension: 0.25
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: {
-            duration: 900,
-            easing: 'easeOutQuart'
-          },
-          scales: {
-            r: {
-              min: 0,
-              max: 100,
-              beginAtZero: true,
-              angleLines: { color: 'rgba(0,0,0,0.08)' },
-              grid: { color: 'rgba(0,0,0,0.08)' },
-              pointLabels: {
-                color: '#1a252f',
-                font: { size: 12, weight: '900' }
+          // 繪製華麗雷達圖
+          window.myRadarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+              labels: ['發音準確', '語句流暢', '拼音完整', '單元精熟', '發音穩定'],
+              datasets: [{
+                label: '能力指標',
+                data: [stats.overall, stats.fluency, stats.completeness, stats.mastery, stabilityScore],
+                backgroundColor: 'rgba(0, 102, 204, 0.15)', 
+                borderColor: '#0066cc',
+                pointBackgroundColor: '#f1c40f', 
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#f1c40f',
+                borderWidth: 2,
+                // 🚀 觸控升級：視覺上黃點稍微放大，但觸控感應區放大 8 倍！
+                pointRadius: 5,
+                pointHitRadius: 30, 
+                pointHoverRadius: 8
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                r: {
+                  angleLines: { color: 'rgba(0,0,0,0.1)' },
+                  grid: { color: 'rgba(0,0,0,0.05)' },
+                  pointLabels: {
+                    font: { size: 12, family: "'PingFang TC', sans-serif", weight: 'bold' },
+                    color: '#7f8c8d'
+                  },
+                  // 🚀 關鍵修復：強制釘死原點為 0，最高 100，解決 76 分看起來不到一半的問題！
+                  min: 0,
+                  max: 100,
+                  beginAtZero: true,
+                  ticks: { display: false, stepSize: 20 }
+                }
               },
-              ticks: {
-                display: false,
-                stepSize: 20
-              }
-            }
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: 'rgba(30, 41, 59, 0.96)',
-              titleColor: '#ffffff',
-              bodyColor: '#e2e8f0',
-              borderColor: 'rgba(255,255,255,0.18)',
-              borderWidth: 1,
-              padding: 12,
-              displayColors: false,
-              callbacks: {
-                label: function(context) {
-                  const label = context.label || '';
-                  const score = context.formattedValue || 0;
-                  return `${score} 分｜${labelNotes[label] || '能力指標'}`;
+              plugins: {
+                legend: { display: false }, 
+                tooltip: { 
+                  backgroundColor: 'rgba(15, 23, 42, 0.95)', // 更深邃的高級黑
+                  titleFont: { size: 16, family: "'PingFang TC', sans-serif", weight: '900' },
+                  titleColor: '#f1c40f', // 標題變金色
+                  bodyFont: { size: 13, weight: 'bold', lineHeight: 1.5 },
+                  bodyColor: '#e2e8f0',
+                  padding: 15,
+                  cornerRadius: 12,
+                  displayColors: false,
+                  // 🚀 攔截預設 Tooltip，替換成我們的白話文
+                  callbacks: {
+                    title: function(context) {
+                       const label = context[0].label;
+                       const score = context[0].raw;
+                       return `${label}：${score} 分`;
+                    },
+                    label: function(context) {
+                       // 將超過一定字數的字串折行，讓 tooltip 不要太長
+                       const text = tooltipsDict[context.label];
+                       if (text.length > 20) {
+                           return [text.substring(0, 18), text.substring(18)];
+                       }
+                       return text;
+                    }
+                  }
                 }
               }
             }
+          });
+          // ==========================================
+
+          // 🌟 1. 流暢度大圓環與 AI 短評
+          const fluency = data.stats.fluency || 0;
+          document.getElementById('diag-fluency-score').innerText = fluency;
+          contentZone.style.setProperty('--fluency', fluency);
+
+          let summary = "";
+          if (fluency >= 90) summary = "寶貝充滿自信，開口極其流暢！接下來我們專注在『字尾子音』的細節，就能達到母語水準喔！";
+          else if (fluency >= 70) summary = "開口表現很不錯！如果遇到長句子可以稍微放慢語速，字字唸清楚會更好喔。";
+          else summary = "寶貝還在適應英文的節奏，家長可以多用「自由練習」區陪孩子大聲朗讀，建立開口自信！";
+          document.getElementById('diag-summary-text').innerText = summary;
+
+          // 🌟 2. 音素 X 光機渲染器
+          const strongContainer = document.getElementById('diag-strong-phonemes');
+          const topStrong = data.strongPhonemes.slice(0, 3);
+          if (topStrong.length === 0) {
+            strongContainer.innerHTML = `<span style="color:#7f8c8d; font-size:13px; font-weight:bold;">持續收集中...</span>`;
+          } else {
+            strongContainer.innerHTML = topStrong.map(item => {
+              return `<span style="background: rgba(46, 204, 113, 0.2); color: #27ae60; padding: 6px 12px; border-radius: 10px; font-weight: 900; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display:inline-flex; align-items:center; gap:4px;">
+                        /${item.p}/ 
+                        <span style="font-size:11px; opacity:0.8; font-weight:bold;">${item.examples.join(', ')}</span>
+                      </span>`;
+            }).join('');
           }
-        }
-      });
-    }
 
-    function renderDiagnosticSummary(stats) {
-      const fluency = clampScore(stats.fluency ?? 0);
-      const fluencyScoreEl = document.getElementById('diag-fluency-score');
-      const summaryEl = document.getElementById('diag-summary-text');
-      const contentZone = document.getElementById('diag-content');
-
-      if (fluencyScoreEl) fluencyScoreEl.innerText = fluency;
-      if (contentZone) contentZone.style.setProperty('--fluency', fluency);
-
-      let summary = "";
-      if (fluency >= 90) {
-        summary = "寶貝充滿自信，開口極其流暢！接下來我們專注在『字尾子音』的細節，就能達到更自然的口說表現喔！";
-      } else if (fluency >= 70) {
-        summary = "開口表現很不錯！如果遇到長句子可以稍微放慢語速，字字唸清楚會更好喔。";
-      } else if (fluency > 0) {
-        summary = "寶貝還在適應英文的節奏，家長可以多用「自由練習」區陪孩子大聲朗讀，建立開口自信！";
-      } else {
-        summary = "目前資料還不夠多。完成幾次口說練習後，AI 教練會開始給出更精準的短評。";
-      }
-
-      if (summaryEl) summaryEl.innerText = summary;
-    }
-
-    function renderPhonemeXray(data) {
-      const strongContainer = document.getElementById('diag-strong-phonemes');
-      const weakContainer = document.getElementById('diag-weak-phonemes');
-
-      const strongPhonemes = normalizePhonemeItems(data.strongPhonemes || []).slice(0, 3);
-      const weakPhonemes = normalizePhonemeItems(data.weakPhonemes || []).slice(0, 3);
-
-      if (strongContainer) {
-        if (strongPhonemes.length === 0) {
-          strongContainer.innerHTML = `<span style="color:#7f8c8d; font-size:13px; font-weight:bold;">持續收集中...</span>`;
-        } else {
-          strongContainer.innerHTML = strongPhonemes.map(item => `
-            <span style="background: rgba(46, 204, 113, 0.2); color: #27ae60; padding: 6px 12px; border-radius: 10px; font-weight: 900; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display:inline-flex; align-items:center; gap:5px;">
-              /${escapeHtml(item.p)}/
-              <span style="font-size:11px; opacity:0.8; font-weight:bold;">${escapeHtml(item.examples.join(', ') || '-')}</span>
-              <span style="font-size:11px; background:rgba(255,255,255,0.65); color:#27ae60; padding:2px 6px; border-radius:8px;">${item.score}</span>
-            </span>
-          `).join('');
-        }
-      }
-
-      if (weakContainer) {
-        if (weakPhonemes.length === 0) {
-          weakContainer.innerHTML = `<div style="text-align:center; color:#2ecc71; font-size:13px; font-weight:900; padding:10px;">太棒了！目前沒有相對弱點 🎉</div>`;
-        } else {
-          weakContainer.innerHTML = weakPhonemes.map(item => {
-            const tip = getPhonemeTipSafe(item.p);
-            const examples = item.examples.join(', ') || '-';
-            return `
-              <div class="weak-phoneme-card" onclick="togglePhonemeTip(this)" style="background:white; border-radius:12px; border:1px solid rgba(231,76,60,0.15); overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.03); cursor:pointer;">
-                <div style="padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
-                  <div style="display:flex; flex-direction:column; gap:3px;">
-                    <span style="font-size:18px; font-weight:900; color:#c0392b;">/${escapeHtml(item.p)}/</span>
-                    <span style="font-size:11px; color:#7f8c8d; font-weight:bold;">例字：${escapeHtml(examples)}</span>
+          const weakContainer = document.getElementById('diag-weak-phonemes');
+          const topWeak = data.weakPhonemes.slice(0, 3);
+          if (topWeak.length === 0) {
+            weakContainer.innerHTML = `<div style="text-align:center; color:#2ecc71; font-size:13px; font-weight:900; padding:10px;">太棒了！目前沒有相對弱點 🎉</div>`;
+          } else {
+            weakContainer.innerHTML = topWeak.map(item => {
+              const tip = typeof getPhonemeTip === 'function' ? getPhonemeTip(item.p) : "請多聽標準發音練習！";
+              return `
+                <div style="background: white; border-radius: 12px; border: 1px solid rgba(231,76,60,0.2); overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                  <div onclick="togglePhonemeTip(this)" style="display:flex; justify-content:space-between; align-items:center; padding: 12px 15px; cursor:pointer;">
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                      <span style="font-size: 18px; font-weight: 900; color: #c0392b;">/${item.p}/</span>
+                      <button onclick="playPhonemeAudio(event, '${item.p}')" style="background:rgba(231,76,60,0.1); border:none; border-radius:50%; width:28px; height:28px; font-size:14px; display:flex; justify-content:center; align-items:center; color:#c0392b; cursor:pointer;">🔊</button>
+                      <span style="font-size: 12px; color: var(--text-sub); font-weight: bold;">如: ${item.examples.join(', ')}</span>
+                    </div>
+                    <div class="toggle-icon" style="color: #c0392b; transition: 0.3s; font-size: 12px;">▼</div>
                   </div>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <button onclick="playPhonemeAudio(event, '${escapeAttribute(item.p)}')" style="border:none; background:rgba(0,102,204,0.08); color:#0066cc; border-radius:10px; padding:6px 8px; font-weight:900; cursor:pointer;">🔊</button>
-                    <span style="font-size:13px; font-weight:900; color:#c0392b; background:rgba(231,76,60,0.08); padding:4px 8px; border-radius:10px;">${item.score} 分</span>
-                    <span class="toggle-icon" style="font-size:16px; color:#95a5a6; transition:0.3s;">⌄</span>
+                  <div style="display:none; padding: 0 15px 15px 15px; background: rgba(231,76,60,0.02);">
+                    <div style="border-top: 1px dashed rgba(231,76,60,0.2); padding-top: 10px; font-size: 13px; color: #d35400; font-weight: bold; line-height: 1.6;">
+                      💡 <b>家長陪練秘訣：</b><br>${tip}
+                    </div>
                   </div>
                 </div>
+              `;
+            }).join('');
+          }
+
+          // 🌟 3. 單字擊破清單 
+          const weakWordsContainer = document.getElementById('diag-weak-words-list');
+          if (data.weakWords.length === 0) {
+            weakWordsContainer.innerHTML = `<div style="text-align:center; color:#2ecc71; font-size:14px; font-weight:900; padding:15px; background:rgba(46,204,113,0.1); border-radius:12px;">太厲害了！本單元發音都很棒 🎉</div>`;
+          } else {
+            weakWordsContainer.innerHTML = data.weakWords.map(w => `
+              <div style="background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; padding: 16px; text-align: left; box-shadow: 0 8px 20px rgba(0,0,0,0.04);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span style="font-size:18px; font-weight:900; color:var(--text-main);">${w.word}</span>
+                  <span style="font-size:14px; font-weight:900; color:var(--marian-red); background:rgba(231,76,60,0.1); padding:4px 10px; border-radius:12px; border: 1px solid rgba(231,76,60,0.3);">${w.score} 分</span>
+                </div>
+                <div style="font-size:14px; color:var(--text-sub); line-height:1.6; font-weight:bold;">${w.feedback}</div>
               </div>
-              <div class="phoneme-tip-box" style="display:none; background:rgba(255,255,255,0.78); border:1px solid rgba(255,255,255,0.95); border-radius:12px; padding:12px 14px; margin-top:-5px; font-size:13px; color:#2c3e50; line-height:1.7; font-weight:bold;">
-                💡 ${escapeHtml(tip)}
-              </div>
-            `;
-          }).join('');
-        }
-      }
+            `).join('');
+          }
+
+          loadingZone.style.display = 'none';
+          contentZone.style.display = 'flex';
+          isDiagLoaded = true;
+
+        })
+        .catch(err => {
+          loadingZone.innerHTML = `<div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px;">⚠️ 網路異常，無法載入報告</div>`;
+        });
     }
-
-    function renderWeakWords(words) {
-      const weakWordsContainer = document.getElementById('diag-weak-words-list');
-      if (!weakWordsContainer) return;
-
-      const weakWords = normalizeWeakWords(words).slice(0, 3);
-
-      if (weakWords.length === 0) {
-        weakWordsContainer.innerHTML = `
-          <div style="text-align:center; color:#2ecc71; font-size:14px; font-weight:900; padding:15px; background:rgba(46,204,113,0.1); border-radius:12px;">
-            太厲害了！本單元發音都很棒 🎉
-          </div>
-        `;
-        return;
-      }
-
-      weakWordsContainer.innerHTML = weakWords.map(w => `
-        <div style="background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; padding: 16px; text-align: left; box-shadow: 0 8px 20px rgba(0,0,0,0.04);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <span style="font-size:18px; font-weight:900; color:var(--text-main);">${escapeHtml(w.word)}</span>
-            <span style="font-size:14px; font-weight:900; color:var(--marian-red); background:rgba(231,76,60,0.1); padding:4px 10px; border-radius:12px; border: 1px solid rgba(231,76,60,0.3);">${w.score} 分</span>
-          </div>
-          <div style="font-size:14px; color:var(--text-sub); line-height:1.6; font-weight:bold;">${escapeHtml(w.feedback)}</div>
-        </div>
-      `).join('');
-    }
-
-    function normalizeWeakWords(words) {
-      return words.map(w => {
-        const score = Math.round(Number(w.score ?? w.avgScore ?? w.lastScore ?? w.maxScore ?? 0));
-        let feedback = w.feedback ?? w.lastFeedback ?? "";
-
-        if (typeof feedback === "object" && feedback !== null) {
-          feedback =
-            feedback.text ||
-            feedback.feedback ||
-            feedback.message ||
-            JSON.stringify(feedback);
-        }
-
-        if (!feedback) {
-          feedback = "建議放慢速度，重新聽一次示範，注意開頭音與結尾音。";
-        }
-
-        return {
-          word: w.word || "",
-          score,
-          feedback
-        };
-      });
-    }
-
-    function normalizePhonemeItems(items) {
-      return items.map(item => {
-        const p = item.p || item.phoneme || item.Phoneme || "";
-        const score = Math.round(Number(item.score ?? item.avg ?? item.AccuracyScore ?? 0));
-        const examples = Array.isArray(item.examples) ? item.examples : [];
-        return { p, score, examples };
-      }).filter(item => item.p);
-    }
-
-    function getPhonemeTipSafe(phoneme) {
-      try {
-        if (typeof getPhonemeTip === "function") return getPhonemeTip(phoneme);
-        if (window.PHONEME_TIPS && window.PHONEME_TIPS[phoneme]) return window.PHONEME_TIPS[phoneme];
-      } catch (e) {}
-
-      return "可以先聽示範音，再用慢速跟讀，讓嘴型與舌位更穩定。";
-    }
-
-    function clampScore(value) {
-      const num = Number(value);
-      if (!Number.isFinite(num)) return 0;
-      return Math.max(0, Math.min(100, Math.round(num)));
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    function escapeAttribute(value) {
-      return String(value ?? "")
-        .replaceAll("\\", "\\\\")
-        .replaceAll("'", "\\'")
-        .replaceAll('"', "&quot;");
-    }
-
+    
     // 🚀 補回這兩行：靜置自動登出
     let idleTimer;
     const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = "index.html"; }, 180000); };
@@ -1652,11 +1541,12 @@
               `;
               document.body.appendChild(loader);
 
-              TappieAPI.resolveStudentByCard(inputStr)
+              fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
+                .then(res => res.json())
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) window.location.replace(`admin.html?id=${data.uid}`);
-                      else window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                      else window.location.href = `dashboard.html?id=${data.uid}`;
                   } else { 
                       alert("❌ 查無此卡！請確認是否拿錯卡片。"); 
                       document.body.removeChild(loader); 
