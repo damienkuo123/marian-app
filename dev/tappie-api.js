@@ -20,6 +20,7 @@ const TappieAPI = {
     submitBattleScore: "/submit-battle-score",
     cancelBattleRoom: "/cancel-battle-room",
     finishBattleRoom: "/finish-battle-room",
+    resolveBattleTimeout: "/resolve-battle-timeout",
     getAvatarShop: "/get-avatar-shop",
     equipAvatar: "/equip-avatar",
     claimGacha: "/claim-gacha",
@@ -98,6 +99,14 @@ const TappieAPI = {
     if (payload.winnerRole) qs.set("winnerRole", payload.winnerRole);
     if (payload.reason) qs.set("reason", payload.reason);
     return await this._get(`${this.endpoints.finishBattleRoom}?${qs.toString()}`);
+  },
+
+  async resolveBattleTimeout(payload = {}) {
+    const qs = new URLSearchParams();
+    if (payload.uid) qs.set("uid", payload.uid);
+    if (payload.roomCode) qs.set("roomCode", payload.roomCode);
+    if (payload.roomId) qs.set("roomId", payload.roomId);
+    return await this._get(`${this.endpoints.resolveBattleTimeout}?${qs.toString()}`);
   },
   async getAvatarShop(uid) {
     return await this._get(`${this.endpoints.getAvatarShop}?uid=${encodeURIComponent(uid)}`);
