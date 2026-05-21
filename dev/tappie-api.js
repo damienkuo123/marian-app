@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Practice Units Fix v2 - excludes event units from practice and keeps battle/event API
+// Dashboard/Lobby Fix v1 - practice units, activity timeline, avatar purchase
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -28,7 +28,9 @@ const TappieAPI = {
     resolveBattleTimeout: "/resolve-battle-timeout",
     getAvatarShop: "/get-avatar-shop",
     equipAvatar: "/equip-avatar",
-    claimGacha: "/claim-gacha"
+    claimGacha: "/claim-gacha",
+    purchaseAvatar: "/purchase-avatar",
+    getStudentActivity: "/get-student-activity"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -52,7 +54,7 @@ const TappieAPI = {
     return await this._get(`${this.endpoints.getPracticeData}?${qs.toString()}`);
   },
   async getDashboard(uid) {
-    // Merge base dashboard with source-of-truth practice units.
+    // Merge base dashboard with source-of-truth practice units and student activity timeline.
     const base = await this._get(`${this.endpoints.getDashboard}?uid=${encodeURIComponent(uid)}`);
     try {
       const practice = await this.getPracticeUnits(uid);
@@ -61,10 +63,20 @@ const TappieAPI = {
         base.usage = { ...(base.usage || {}), ...(practice.usage || {}) };
         base.currentUnit = practice.currentUnit || null;
         base.reviewUnits = practice.reviewUnits || [];
+        base.missionCount = practice.missionCount ?? base.missionCount;
         base.practice = practice;
       }
     } catch (err) {
       console.warn("getPracticeUnits merge failed", err);
+    }
+    try {
+      const activity = await this.getStudentActivity(uid);
+      if (activity && activity.success) {
+        base.recentLogs = activity.items || [];
+        base.activity = activity;
+      }
+    } catch (err) {
+      console.warn("getStudentActivity merge failed", err);
     }
     return base;
   },
@@ -103,6 +115,8 @@ const TappieAPI = {
     if (payload.metadata) { try { qs.set("metadata", JSON.stringify(payload.metadata)); } catch (_) {} }
     return await this._get(`${this.endpoints.claimGacha}?${qs.toString()}`);
   },
+  async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
+  async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
     const student = data.student || {};
@@ -110,7 +124,7 @@ const TappieAPI = {
     const recentAttempts = data.recentAttempts || [];
     const reviewUnits = (data.reviewUnits || []).map(u => typeof u === 'string' ? u : (u.unitName || u.unit_name || u.name || '')).filter(Boolean);
     const lastScore = recentAttempts.length > 0 ? Number(recentAttempts[0].score || recentAttempts[0].averageScore || 0) : 0;
-    const missionCount = recentAttempts.length;
+    const missionCount = Number(data.missionCount ?? data.practice?.missionCount ?? recentAttempts.length);
     return {
       success: true,
       uid: student.uid,
@@ -128,7 +142,7 @@ const TappieAPI = {
       missionCount,
       leaderboard: (data.leaderboard || []).map(item => ({ uid: item.uid, name: item.name, score: item.score })),
       reviewUnits,
-      recentLogs: (data.recentLogs || []).length ? data.recentLogs : recentAttempts.map(item => ({ time: formatDateTime(item.createdAt), reason: `${item.word || item.unitName || "口說練習"}`, val: Number(item.score || item.averageScore || 0) })),
+      recentLogs: (data.recentLogs || []).length ? data.recentLogs : recentAttempts.map(item => ({ type:"points", time: formatDateTime(item.createdAt), title: `${item.word || item.unitName || "口說練習"}`, reason: `${item.word || item.unitName || "口說練習"}`, val: Number(item.score || item.averageScore || 0) })),
       gamification: data.gamification || defaultGamification(),
       usage: data.usage || {},
       logoUrl: data.logoUrl || "",

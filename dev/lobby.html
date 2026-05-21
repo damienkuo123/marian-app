@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-practice-v2"></script>
+  <script src="./tappie-api.js?v=20260522-dashboard-lobby-fix-v1"></script>
 
   <style>
     /* =======================================================
@@ -931,23 +931,29 @@
           return 'TEST01';
         })();
 
-        // 角色資產：Supabase 第一階段若沒有完整 AvatarShop，就先用安全預設角色，避免 lobby 因 data.assets 不存在而中斷。
+        // 角色資產：以 Supabase get-avatar-shop 為主，保留預設 A001 防止空畫面。
         characterAssets = {
-          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' }
+          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般', cost: 0 }
         };
 
+        let avatarShop = null;
         try {
-          const settings = await TappieAPI.adminGetData(schoolCode, 'settings');
-          if (settings && settings.success && Array.isArray(settings.avatars)) {
-            settings.avatars.forEach(a => {
+          avatarShop = await TappieAPI.getAvatarShop(STUDENT_ID);
+          if (avatarShop && avatarShop.success && Array.isArray(avatarShop.avatars)) {
+            avatarShop.avatars.forEach(a => {
               const id = a.avatarId || a.id;
               if (!id) return;
               characterAssets[id] = {
                 name: a.name || id,
                 img: a.fullImg || a.full_img_url || a.img || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
-                mask: a.mask || '',
+                mask: a.mask || a.mask_url || '',
                 rarity: a.rarity || 'N',
-                category: a.category || '一般'
+                category: a.category || '一般',
+                cost: Number(a.cost || 0),
+                startTime: a.startTime || a.start_time || null,
+                endTime: a.endTime || a.end_time || null,
+                owned: Boolean(a.owned),
+                equipped: Boolean(a.equipped)
               };
             });
           }
@@ -956,13 +962,15 @@
         }
 
         document.getElementById('header-name').innerText = dashboard.studentName || STUDENT_ID;
-        document.getElementById('header-points').innerText = `${dashboard.currentPoints || 0} PTS`;
+        const livePoints = Number(avatarShop?.student?.points ?? dashboard.currentPoints ?? 0);
+        document.getElementById('header-points').innerText = `${livePoints} PTS`;
 
-        const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboard.raw?.student?.equippedAvatarId || 'A001';
+        const equippedFromDashboard = avatarShop?.student?.equippedAvatarId || dashboardRaw.student?.equippedAvatarId || dashboard.raw?.student?.equippedAvatarId || 'A001';
         userEquipped = equippedFromDashboard || 'A001';
 
-        // Supabase MVP 尚未完整搬 student_avatars 時，至少讓已裝備角色和 A001 可以顯示。
-        userUnlocked = Array.from(new Set(['A001', userEquipped].filter(Boolean)));
+        // 角色展示區只顯示已擁有角色與目前裝備角色；活動 Boss 抽到後會從 student_avatars 顯示在這裡。
+        const ownedIds = Array.isArray(avatarShop?.unlockedAvatarIds) ? avatarShop.unlockedAvatarIds : [];
+        userUnlocked = Array.from(new Set(['A001', userEquipped, ...ownedIds].filter(Boolean)));
 
         const rarityWeight = { 'UR': 5, 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
         userUnlocked.sort((a, b) => {
@@ -1070,17 +1078,19 @@
       btn.innerText = "連線中...";
       btn.classList.add('is-equipped');
 
-      fetch(`${GAS_URL}?action=equip_avatar&id=${STUDENT_ID}&avatarId=${currentCenteredId}`)
-        .then(res => res.json()).then(data => {
+      TappieAPI.equipAvatar({ uid: STUDENT_ID, avatarId: currentCenteredId })
+        .then(data => {
           if(data.success) {
             userEquipped = currentCenteredId;
             updateCenterInfo(currentCenteredId); 
             showToast("裝備成功！");
+          } else {
+            showToast(data.message || "尚未解鎖此角色");
+            updateCenterInfo(userEquipped);
           }
         }).catch(() => {
-          userEquipped = currentCenteredId;
-          updateCenterInfo(currentCenteredId);
-          showToast("裝備成功！(離線模式)");
+          showToast("裝備失敗，請稍後再試");
+          updateCenterInfo(userEquipped);
         });
     }
 
@@ -1163,52 +1173,47 @@
     let isPurchasing = false;
 
     function buyCharacter(id, cost) {
-      // 1. 防禦：如果已經有購買請求在跑，直接擋掉所有新的點擊！
       if (isPurchasing) {
           console.log("角色解鎖中...");
           return;
       }
-      
-      // 2. 瀏覽器確認視窗
       if (!confirm(`確定要花費 ${cost} 點兌換此角色嗎？`)) return;
-      
-      // 3. 進入購買狀態：全域上鎖
+
       isPurchasing = true;
 
-      // 4. 尋找畫面上所有的購買按鈕，將它們全部變灰並鎖定 (避免他跑去點別隻角色)
       const allBuyBtns = document.querySelectorAll('.btn-buy');
       allBuyBtns.forEach(btn => {
-          if (!btn.disabled) { // 只改那些原本可以按的
-              btn.dataset.originalText = btn.innerText; // 記住原本的字
+          if (!btn.disabled) {
+              btn.dataset.originalText = btn.innerText;
               btn.innerText = "⏳ 處理中...";
               btn.style.pointerEvents = "none";
               btn.style.filter = "grayscale(1)";
           }
       });
 
-      // 5. 蓋上一層隱形的防護網，徹底阻擋任何可能的觸控操作
       const purchaseBlocker = document.createElement('div');
       purchaseBlocker.id = "purchase-blocker";
       purchaseBlocker.style.cssText = "position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); color: #f1c40f; font-size: 24px; font-weight: 900; letter-spacing: 2px;";
       purchaseBlocker.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;"><div class="spinner" style="width:40px; height:40px; border-width:4px; margin-bottom:15px;"></div>角色解鎖中...</div>`;
       document.body.appendChild(purchaseBlocker);
 
-      // 6. 發送請求給 GAS
-      fetch(`${GAS_URL}?action=purchase_avatar&id=${STUDENT_ID}&avatarId=${id}`)
-        .then(res => res.json())
+      TappieAPI.purchaseAvatar({ uid: STUDENT_ID, avatarId: id })
         .then(data => {
-          // 解除全域鎖定
           isPurchasing = false;
           const blocker = document.getElementById('purchase-blocker');
           if (blocker) blocker.remove();
 
-          alert(data.msg);
-          
+          alert(data.message || data.msg || (data.success ? "兌換成功！" : "兌換失敗"));
+
           if (data.success) {
-              // 成功的話直接重整畫面
-              location.reload(); 
+              if (!userUnlocked.includes(id)) userUnlocked.push(id);
+              if (characterAssets[id]) characterAssets[id].owned = true;
+              if (data.student && typeof data.student.points !== 'undefined') {
+                document.getElementById('header-points').innerText = `${data.student.points} PTS`;
+              }
+              renderCarousel();
+              renderShop();
           } else {
-              // 如果失敗 (例如點數不足)，恢復所有按鈕的狀態
               allBuyBtns.forEach(btn => {
                   if (btn.dataset.originalText) {
                       btn.innerText = btn.dataset.originalText;
@@ -1224,8 +1229,6 @@
           if (blocker) blocker.remove();
 
           alert("連線失敗，請稍後再試。");
-          
-          // 恢復按鈕狀態
           allBuyBtns.forEach(btn => {
               if (btn.dataset.originalText) {
                   btn.innerText = btn.dataset.originalText;
@@ -1235,13 +1238,6 @@
           });
         });
     }
-
-    // =======================================================
-    // 🔍 展示模式與 3D 引擎 (完全不變！)
-    // =======================================================
-    const modal = document.getElementById('showcase-modal');
-    const modalCard = document.getElementById('modal-card');
-    let holoEngineActive = false;
 
     function openShowcase(id) {
       const char = characterAssets[id];

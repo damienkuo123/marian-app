@@ -17,7 +17,7 @@
   <script src="global-audio.js"></script>
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
-  <script src="./tappie-api.js?v=20260522-practice-v2"></script>
+  <script src="./tappie-api.js?v=20260522-dashboard-lobby-fix-v1"></script>
 
   <style>
     :root { 
@@ -1116,38 +1116,53 @@
         lbContainer.innerHTML = lbHtml;
       }
 
-      // 自由練習區渲染：顯示學生班級底下所有 active unit
+      // 自由練習區渲染：顯示學生所屬班級底下「全部 active 非活動單元」
       const reviewGrid = document.getElementById('review-grid');
-      if (data.reviewUnits && data.reviewUnits.length > 0) {
-        reviewGrid.innerHTML = data.reviewUnits.map(u => {
+      const reviewUnits = Array.isArray(data.reviewUnits) ? data.reviewUnits : [];
+      if (reviewUnits.length > 0) {
+        reviewGrid.innerHTML = reviewUnits.map(u => {
           const unitName = (typeof u === 'string') ? u : (u.unitName || u.name || '未命名單元');
-          const encodedUnitName = encodeURIComponent(unitName);
-          const encodedStudentId = encodeURIComponent(STUDENT_ID);
-          const targetUrl = `./arena.html?id=${encodedStudentId}&mode=review&unit=${encodedUnitName}`;
-          return `<a href="${targetUrl}" onclick="event.preventDefault(); checkVoiceLimitAndGo(this.getAttribute('href'), this)" class="btn-review">📖 ${unitName}</a>`;
+          const wordCount = (typeof u === 'object' && u.wordCount) ? ` <span style="font-size:11px;color:var(--text-sub);">(${u.wordCount})</span>` : "";
+          const targetUrl = `./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=review&unit=${encodeURIComponent(unitName)}`;
+          return `<button type="button" onclick="checkVoiceLimitAndGo('${targetUrl}', this, '今日練習已達上限')" class="btn-review">📖 ${escapeHtml(unitName)}${wordCount}</button>`;
         }).join('');
       } else {
         reviewGrid.innerHTML = `<div style="color:var(--text-sub);font-weight:900;text-align:center;padding:18px;">目前班級尚未建立自由練習單元</div>`;
       }
 
-      // 點數明細 (這原本就在最外面，保持不變)
+      // 點數與角色明細：點數、角色解鎖依時間排序混合顯示
       const logContainer = document.getElementById('log-container');
-      if (!data.recentLogs || data.recentLogs.length === 0) {
+      const logs = Array.isArray(data.recentLogs) ? data.recentLogs : [];
+      if (logs.length === 0) {
         logContainer.innerHTML = `<p style="text-align:center; color:var(--text-sub); font-weight:bold;">尚無紀錄</p>`;
       } else {
-        logContainer.innerHTML = data.recentLogs.map(log => {
-          let valClass = log.val >= 0 ? "log-plus" : "log-minus";
-          let valText = log.val >= 0 ? `+${log.val}` : log.val;
+        logContainer.innerHTML = logs.map(log => {
+          const type = log.type || 'points';
+          const isAvatar = type === 'avatar';
+          const amount = Number(log.val ?? log.amount ?? 0);
+          const valClass = amount >= 0 ? "log-plus" : "log-minus";
+          const valText = isAvatar ? "角色" : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
+          const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
+          const sub = escapeHtml(log.sub || log.note || '');
+          const time = escapeHtml(log.time || '');
+          const icon = log.icon || (isAvatar ? '🎴' : (amount >= 0 ? '✨' : '⚠️'));
           return `
-            <div class="log-row">
-              <span><span style="color:var(--text-sub); font-size:13px; margin-right:12px; font-weight:normal;">${log.time}</span> ${log.reason || '系統變更'}</span>
-              <span class="${valClass}">${valText} 點</span>
+            <div class="log-row" style="align-items:flex-start; gap:12px;">
+              <span style="display:flex; gap:10px; align-items:flex-start; flex:1; min-width:0;">
+                <span style="font-size:20px; line-height:1.2;">${icon}</span>
+                <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+                  <span>${title}</span>
+                  ${sub ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${sub}</span>` : ''}
+                  <span style="color:var(--text-sub); font-size:12px; font-weight:normal;">${time}</span>
+                </span>
+              </span>
+              <span class="${valClass}" style="white-space:nowrap;">${valText}</span>
             </div>`;
         }).join('');
       }
     }
 
-    function goToLobby() { window.location.href = `lobby.html?id=${STUDENT_ID}`; }
+    function goToLobby() { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }
     function logoutToPortal() {
       if (confirm("確定要登出並回到刷卡頁面嗎？")) {
         window.location.href = "index.html"; 
