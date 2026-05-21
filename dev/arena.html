@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-challenge-v2"></script>
+  <script src="./tappie-api.js?v=20260522-challenge-reward-v3"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -2455,9 +2455,16 @@
                                     clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
                                     return data;
                                 }).then(data => {
-                                    scores[currentIndex] = data.practice?.score ?? data.score; 
+                                    const practiceResult = data.practice || data.attempt || data;
+                                    const scoreValue = Number(
+                                      practiceResult.score ??
+                                      practiceResult.averageScore ??
+                                      practiceResult.average_score ??
+                                      data.score ?? 0
+                                    );
+                                    scores[currentIndex] = Number.isFinite(scoreValue) ? Math.round(scoreValue) : 0;
                                     if(!window.feedbacks) window.feedbacks = [];
-                                    window.feedbacks[currentIndex] = data.practice?.feedback || data.feedback || '已完成評分';
+                                    window.feedbacks[currentIndex] = practiceResult.feedback || data.feedback || makeLocalFeedback(scores[currentIndex], targetWord);
                                     
                                     // 🚀 成功！解除灰色裝甲，恢復原始紅色按鈕
                                     rb.classList.remove('processing-locked');
@@ -2522,6 +2529,17 @@
     };
   }
 
+
+  function makeLocalFeedback(score, word) {
+    const s = Number(score || 0);
+    if (s >= 90) return `太棒了！${word} 的發音很清楚，節奏也很穩。`;
+    if (s >= 80) return `很接近了！${word} 整體不錯，可以再注意尾音是否完整。`;
+    if (s >= 70) return `有進步！請放慢速度，把 ${word} 的每個音節唸完整。`;
+    if (s >= 60) return `再試一次會更好，先聽示範音，再跟著唸 ${word}。`;
+    if (s > 0) return `這次比較不清楚，建議重新聽示範，慢慢唸出 ${word}。`;
+    return `這次沒有成功辨識，請靠近麥克風再唸一次 ${word}。`;
+  }
+
   function showSummary() {
     document.getElementById('studio').style.display = 'none';
     document.getElementById('summary').style.display = 'block';
@@ -2583,7 +2601,7 @@
     submitBtn.onclick = handleClaimReward;
   }
 
-  function handleClaimReward() {
+  async function handleClaimReward() {
     const btn = document.getElementById('submit-btn');
     const avg = parseInt(document.getElementById('total-avg').innerText);
     
@@ -2601,43 +2619,47 @@
         azure_report: (typeof azureReports !== 'undefined' && azureReports[i]) ? azureReports[i] : null
       });
     });
-    
     const detailJSON = JSON.stringify(detailArr);
 
-    // Supabase 版規則：
-    // review = 自由練習，只記錄逐題練習，不發點、不計今日挑戰次數。
-    // challenge = 今日挑戰，完成整套題目後才依總平均與 admin 規則發點、記任務次數。
     if (MODE === 'review') {
-      console.log('Supabase review details saved as per-word attempts only:', detailArr);
+      console.log('Supabase review details already saved:', detailArr);
       alert("👍 練習辛苦了！");
       window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
       return;
     }
 
-    TappieAPI.claimPracticeChallenge({
-      uid: STUDENT_ID,
-      unitName: ACTIVE_UNIT_NAME || TARGET_UNIT,
-      averageScore: avg,
-      details: detailArr
-    }).then(data => {
-      if (!data || data.success === false) {
-        btn.innerText = "完成挑戰並領獎";
-        btn.style.pointerEvents = "auto";
-        btn.style.backgroundColor = "#27ae60";
-        alert(data?.message || data?.detail || "今日挑戰送出失敗，請稍後再試。");
-        return;
+    try {
+      if (!window.TappieAPI || typeof TappieAPI.claimPracticeChallenge !== 'function') {
+        throw new Error('claimPracticeChallenge 尚未載入');
       }
-
-      const added = Number(data.points?.added || data.rewardPoints || 0);
-      alert(added > 0 ? `🎉 挑戰完成！獲得 ${added} 點` : "🎉 挑戰完成！");
+      const unitNameForClaim = ACTIVE_UNIT_NAME || TARGET_UNIT || '';
+      const claim = await TappieAPI.claimPracticeChallenge({
+        uid: STUDENT_ID,
+        unitName: unitNameForClaim,
+        averageScore: avg,
+        details: detailArr
+      });
+      if (!claim?.success) {
+        throw new Error(claim?.message || claim?.error || '今日挑戰送出失敗');
+      }
+      const added = Number(claim.points?.added ?? claim.deltaPoints ?? 0);
+      const reward = Number(claim.rewardPoints ?? 0);
+      const previous = Number(claim.previousBestReward ?? 0);
+      if (claim.reissued) {
+        alert(`🎉 今日挑戰完成！本次換發獎勵：原 ${previous} 點 → 新 ${reward} 點，本次補發 ${added} 點。`);
+      } else if (added > 0) {
+        alert(`🎉 今日挑戰完成！獲得 ${added} 點！`);
+      } else {
+        alert(`🎉 今日挑戰完成！本次已記錄，但沒有新增點數。`);
+      }
       window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
-    }).catch(err => {
-      console.error(err);
-      btn.innerText = "完成挑戰並領獎";
+    } catch (err) {
+      console.error('今日挑戰送出失敗:', err);
+      alert('⚠️ 今日挑戰送出失敗：' + String(err.message || err));
+      btn.innerText = "送出挑戰";
       btn.style.pointerEvents = "auto";
       btn.style.backgroundColor = "#27ae60";
-      alert("今日挑戰送出失敗，請檢查網路後再試。");
-    });
+    }
   }
   
   function reRead(i) { 

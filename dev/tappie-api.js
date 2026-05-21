@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Challenge Reward Fix v2 - separates review attempts from daily challenge completion
+// Challenge Reward Fix v3 - separates review attempts from daily challenge completion
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
