@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-sync-v3"></script>
+  <script src="./tappie-api.js?v=20260522-ai-mvp1"></script>
 
   <style>
     /* =======================================================
@@ -2313,5 +2313,133 @@
     })();
     
   </script>
+
+    <!-- =======================================================
+         ✅ Supabase AI Battle Migration MVP Patch
+         保留原本初階Ai / 中階Ai / 高階Ai / 活動Boss 名稱，不重新命名。
+         ======================================================= -->
+    <script>
+    (function installSupabaseAiBattlePatch(){
+      function getSelectedClassCodeForAi(){
+        const levelInput = document.getElementById('pvp-level');
+        if (levelInput && levelInput.value) return levelInput.value.trim();
+        if (window.globalUserStatus?.rawDashboard?.student?.classCode) return window.globalUserStatus.rawDashboard.student.classCode;
+        return '';
+      }
+
+      function clearOwnPvpRoomIfAny(){
+        if (!window.currentRoomId || !window.TappieAPI) return Promise.resolve();
+        const room = window.currentRoomId;
+        window.currentRoomId = null;
+        return TappieAPI.cancelBattleRoom({ uid: STUDENT_ID, roomCode: room, reason: 'switch_to_ai_battle' }).catch(()=>{});
+      }
+
+      function jumpToAiBattle(roomCode, level, extraQuery=''){
+        const qs = new URLSearchParams({
+          id: STUDENT_ID,
+          roomCode: roomCode,
+          mode: 'ai',
+          aiLevel: level,
+          v: 'ai-mvp1'
+        });
+        if (extraQuery) {
+          const extra = new URLSearchParams(extraQuery.replace(/^\?/, ''));
+          extra.forEach((v,k)=>qs.set(k,v));
+        }
+        window.location.href = `./battle.html?${qs.toString()}`;
+      }
+
+      window.startAiChallenge = async function startAiChallengeSupabase(level){
+        if (typeof checkBattleLimits === 'function' && !checkBattleLimits()) return;
+        if (window.aiTimerInterval) return;
+
+        await clearOwnPvpRoomIfAny();
+
+        const overlay = document.getElementById('ai-countdown-overlay');
+        if (overlay) overlay.style.display = 'flex';
+
+        let count = 5;
+        const aiTimerEl = document.getElementById('ai-timer');
+        const aiMsgEl = document.getElementById('ai-msg');
+        if (aiTimerEl) aiTimerEl.innerText = count;
+        if (aiMsgEl) aiMsgEl.innerText = `連線至 ${level}...`;
+
+        window.aiTimerInterval = setInterval(async () => {
+          count--;
+          if (aiTimerEl) aiTimerEl.innerText = count;
+          if (count > 0) return;
+
+          clearInterval(window.aiTimerInterval);
+          window.aiTimerInterval = null;
+          if (aiMsgEl) aiMsgEl.innerText = '🚀 傳送中...';
+
+          try {
+            if (!window.TappieAPI || !TappieAPI.createAiBattleRoom) throw new Error('TappieAPI.createAiBattleRoom 尚未載入');
+            const classCode = getSelectedClassCodeForAi();
+            if (!classCode) throw new Error('請先選擇級數，例如 A1');
+
+            const data = await TappieAPI.createAiBattleRoom({
+              uid: STUDENT_ID,
+              classCode,
+              level,
+              battleType: 'ai'
+            });
+
+            if (!data?.success) throw new Error(data?.message || data?.error || 'create-ai-battle-room failed');
+            jumpToAiBattle(data.room?.roomCode, level);
+          } catch (err) {
+            console.error('Supabase AI 對戰建立失敗:', err);
+            alert('AI 對戰連線失敗：' + String(err.message || err));
+            if (typeof cancelAiChallenge === 'function') cancelAiChallenge();
+            else if (overlay) overlay.style.display = 'none';
+          }
+        }, 1000);
+      };
+
+      window.startEventChallenge = async function startEventChallengeSupabase(eventClassCode, eventAvatarId){
+        if (typeof checkBattleLimits === 'function' && !checkBattleLimits()) return;
+        if (window.aiTimerInterval) return;
+
+        await clearOwnPvpRoomIfAny();
+
+        const overlay = document.getElementById('ai-countdown-overlay');
+        if (overlay) overlay.style.display = 'flex';
+        let count = 5;
+        const aiTimerEl = document.getElementById('ai-timer');
+        const aiMsgEl = document.getElementById('ai-msg');
+        if (aiTimerEl) aiTimerEl.innerText = count;
+        if (aiMsgEl) aiMsgEl.innerText = '連線至 突發事件...';
+
+        window.aiTimerInterval = setInterval(async () => {
+          count--;
+          if (aiTimerEl) aiTimerEl.innerText = count;
+          if (count > 0) return;
+
+          clearInterval(window.aiTimerInterval);
+          window.aiTimerInterval = null;
+          if (aiMsgEl) aiMsgEl.innerText = '🚀 傳送中...';
+
+          try {
+            if (!window.TappieAPI || !TappieAPI.createAiBattleRoom) throw new Error('TappieAPI.createAiBattleRoom 尚未載入');
+            const data = await TappieAPI.createAiBattleRoom({
+              uid: STUDENT_ID,
+              classCode: eventClassCode,
+              level: '活動Boss',
+              battleType: 'boss',
+              eventAvatar: eventAvatarId
+            });
+            if (!data?.success) throw new Error(data?.message || data?.error || 'create-ai-battle-room failed');
+            jumpToAiBattle(data.room?.roomCode, '活動Boss', `isEvent=true&eventAvatar=${encodeURIComponent(eventAvatarId || '')}`);
+          } catch (err) {
+            console.error('Supabase 活動 Boss 建立失敗:', err);
+            alert('活動載入失敗：' + String(err.message || err));
+            if (typeof cancelAiChallenge === 'function') cancelAiChallenge();
+            else if (overlay) overlay.style.display = 'none';
+          }
+        }, 1000);
+      };
+    })();
+    </script>
+
 </body>
 </html>

@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-minimal-v31"></script>
+  <script src="./tappie-api.js?v=20260522-ai-mvp1"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -5855,6 +5855,151 @@
 
 })();
 </script>
+
+
+  <!-- =======================================================
+       ✅ Supabase AI Battle Runtime Patch MVP
+       - 保留原本戰場 CSS / 動畫 / 盲盒
+       - mode=ai / battle_type=ai 時，送分改走 submit-ai-battle-score
+       - AI 名稱保留：初階Ai / 中階Ai / 高階Ai / 活動Boss
+       ======================================================= -->
+  <script>
+  (function installSupabaseAiBattleRuntimePatch(){
+    const params = new URLSearchParams(window.location.search);
+    const STUDENT_ID_FOR_AI = params.get('id') || window.STUDENT_ID || '';
+    const ROOM_CODE_FOR_AI = params.get('roomCode') || params.get('roomId') || params.get('code') || '';
+    const AI_LEVEL_FROM_URL = params.get('aiLevel') || '';
+    const AI_IMG_MAP = {
+      '初階Ai': '/assets/Ai_m.webp',
+      '中階Ai': '/assets/Ai_l.webp',
+      '高階Ai': '/assets/Ai_h.webp',
+      '活動Boss': '/assets/BOX_COVER_SSR.webp'
+    };
+
+    function isUuidLikeAi(value){
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
+    }
+
+    function aiImageByName(name){
+      const n = String(name || AI_LEVEL_FROM_URL || '');
+      if (n.includes('初階')) return AI_IMG_MAP['初階Ai'];
+      if (n.includes('中階')) return AI_IMG_MAP['中階Ai'];
+      if (n.includes('高階')) return AI_IMG_MAP['高階Ai'];
+      if (n.includes('活動Boss') || n.includes('突發') || n.includes('Boss')) return AI_IMG_MAP['活動Boss'];
+      return '/assets/Ai_m.webp';
+    }
+
+    async function getStatusForAiPatch(room){
+      if (!window.TappieAPI || !TappieAPI.getBattleStatus) throw new Error('TappieAPI.getBattleStatus 尚未載入');
+      const arg = isUuidLikeAi(room) ? { roomId: room } : { roomCode: room };
+      return await TappieAPI.getBattleStatus(STUDENT_ID_FOR_AI, arg);
+    }
+
+    function normalizeAiLegacyStatus(data){
+      const room = data?.room || {};
+      const players = data?.players || {};
+      const host = players.host || {};
+      const guest = players.guest || {};
+      const rounds = Array.isArray(data?.rounds) ? data.rounds : [];
+      const meRole = data?.me?.role || 'host';
+      const isMeHost = meRole === 'host';
+      const aiName = guest.name || data?.opponent?.name || AI_LEVEL_FROM_URL || '初階Ai';
+      const aiImg = guest.avatar?.fullImg || guest.avatar?.full_img_url || aiImageByName(aiName);
+      const hostImg = host.avatar?.fullImg || host.avatar?.full_img_url || '/assets/gacha-box.png';
+      const hostScores = rounds.map(r => {
+        if (!r.hostSubmitted) return -1;
+        const base = Number(r.hostScore ?? 0);
+        return r.hostSkillUsed ? base + 1000 : base;
+      });
+      const guestScores = rounds.map(r => {
+        if (!r.guestSubmitted) return -1;
+        const base = Number(r.guestScore ?? 0);
+        return r.guestSkillUsed ? base + 1000 : base;
+      });
+      const quiz = rounds.map(r => ({
+        en: r.word || '',
+        zh: r.zh || '',
+        img: r.img || '',
+        roundNo: r.roundNo
+      })).filter(q => q.en);
+
+      return {
+        success: true,
+        status: room.status === 'finished' ? 'Active' : (room.status === 'cancelled' ? 'Canceled' : 'Active'),
+        roomId: room.roomCode || ROOM_CODE_FOR_AI,
+        roomCode: room.roomCode || ROOM_CODE_FOR_AI,
+        hostId: STUDENT_ID_FOR_AI,
+        guestId: 'AI_PLAYER',
+        winnerId: room.status === 'finished'
+          ? ((Number(data?.me?.score || 0) > Number(data?.opponent?.score || 0)) ? STUDENT_ID_FOR_AI : 'AI_PLAYER')
+          : '',
+        hostName: host.name || data?.me?.name || '玩家',
+        guestName: aiName,
+        opponentName: aiName,
+        hostImg,
+        guestImg: aiImg,
+        opponentImg: aiImg,
+        hostRarity: host.avatar?.rarity || 'SSR',
+        guestRarity: guest.avatar?.rarity || 'SSR',
+        hostMask: host.avatar?.mask || '',
+        guestMask: guest.avatar?.mask || '',
+        hostScores,
+        guestScores,
+        quiz,
+        currentRound: room.currentRound || 1,
+        raw: data
+      };
+    }
+
+    const previousFetch = window.fetch;
+    window.fetch = async function(input, init){
+      const urlString = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+      try {
+        if (urlString && typeof GAS_URL !== 'undefined' && urlString.includes(GAS_URL)) {
+          const url = new URL(urlString);
+          const action = url.searchParams.get('action') || '';
+          const room = url.searchParams.get('roomId') || url.searchParams.get('roomCode') || ROOM_CODE_FOR_AI;
+
+          if (action === 'arena_ready') {
+            const status = await getStatusForAiPatch(room).catch(()=>null);
+            if (status?.room?.battleType === 'ai' || status?.room?.battleType === 'boss') {
+              return new Response(JSON.stringify({ success: true, status: 'Active', raw: status }), { headers: { 'Content-Type': 'application/json' }});
+            }
+          }
+
+          if (action === 'get_battle_status') {
+            const status = await getStatusForAiPatch(room);
+            if (status?.room?.battleType === 'ai' || status?.room?.battleType === 'boss') {
+              return new Response(JSON.stringify(normalizeAiLegacyStatus(status)), { headers: { 'Content-Type': 'application/json' }});
+            }
+          }
+
+          if (action === 'submit_battle_score') {
+            const status = await getStatusForAiPatch(room).catch(()=>null);
+            if (status?.room?.battleType === 'ai' || status?.room?.battleType === 'boss') {
+              if (!window.TappieAPI || !TappieAPI.submitAiBattleScore) throw new Error('TappieAPI.submitAiBattleScore 尚未載入');
+              const rawRound = Number(url.searchParams.get('round') || 0);
+              const roundNo = rawRound <= 0 ? 1 : rawRound + 1;
+              let rawScore = Number(url.searchParams.get('score') || 0);
+              const skillUsed = rawScore > 500;
+              let score = skillUsed ? Math.max(0, rawScore - 1000) : rawScore;
+              score = Math.max(0, Math.min(100, Math.round(score)));
+              const payload = isUuidLikeAi(room)
+                ? { uid: STUDENT_ID_FOR_AI, roomId: room, roundNo, score, skillUsed, skillType: skillUsed ? 'power_strike' : '' }
+                : { uid: STUDENT_ID_FOR_AI, roomCode: room, roundNo, score, skillUsed, skillType: skillUsed ? 'power_strike' : '' };
+              const result = await TappieAPI.submitAiBattleScore(payload);
+              return new Response(JSON.stringify({ success: !!result?.success, status: 'OK', raw: result }), { headers: { 'Content-Type': 'application/json' }});
+            }
+          }
+        }
+      } catch (err) {
+        console.error('AI Battle Runtime Patch Error:', err);
+        return new Response(JSON.stringify({ success:false, status:'Error', message:String(err.message || err) }), { status: 500, headers: { 'Content-Type':'application/json' }});
+      }
+      return previousFetch(input, init);
+    };
+  })();
+  </script>
 
 </body>
 </html>
