@@ -1128,10 +1128,12 @@
       rarities.forEach(rarity => {
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
-          // 角色兌換所不顯示 AI / 活動 Boss 類角色；已獲得時仍會出現在上方角色展示與可裝備清單。
+          // 角色兌換所：一般 AI 對手不顯示；活動角色可以顯示，但按鈕會是「活動限定」且不能兌換。
           const category = String(char.category || '');
-          if (id === 'AI_BOSS' || id === 'AI_EASY' || id === 'AI_MED' || id === 'AI_HARD') return false;
-          if (category.includes('AI') || category.includes('活動') || category.includes('Boss')) return false;
+          const isEventCategory = category.includes('活動');
+          if (id === 'AI_EASY' || id === 'AI_MED' || id === 'AI_HARD') return false;
+          if (id === 'AI_BOSS' && !isEventCategory) return false;
+          if ((category.includes('AI') || category.includes('Boss')) && !isEventCategory) return false;
           
           if (char.category === "限定") {
             if (char.endTime) {

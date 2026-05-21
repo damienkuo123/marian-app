@@ -261,7 +261,6 @@
     /* Chrome 專用：箭頭朝上彈跳 */
     @keyframes bounce-up { 0%, 100% { transform: translateY(0) rotate(180deg); } 50% { transform: translateY(-10px) rotate(180deg); } }
   </style>
-  <script src="./tappie-api.js?v=20260522-usage-v1"></script>
 </head>
 
 <body>
@@ -1152,26 +1151,13 @@
         btnElement.innerText = "✨ 傳送中...";
         btnElement.style.pointerEvents = "none";
 
-        (async () => {
-            try {
-                let status = null;
-                if (window.TappieAPI && TappieAPI.getDashboard) {
-                    const dash = await TappieAPI.getDashboard(STUDENT_ID);
-                    status = {
-                        canPlay: dash?.usage?.canPracticeVoice !== false,
-                        count: dash?.usage?.voiceCount ?? 0,
-                        limit: dash?.usage?.voiceLimit ?? 80
-                    };
-                } else {
-                    const res = await fetch(`${GAS_URL}?action=get_user_status&id=${STUDENT_ID}`);
-                    status = await res.json();
-                }
-
+        fetch(`${GAS_URL}?action=get_user_status&id=${STUDENT_ID}`)
+            .then(res => res.json())
+            .then(status => {
                 btnElement.innerText = originalText;
                 btnElement.style.pointerEvents = "auto";
                 if (!status.canPlay) { 
-                    alert(`⚠️ 今日語音練習已達上限 (${status.count}/${status.limit}次)
-為了保護喉嚨，請明天再來練習吧！`);
+                    alert(`⚠️ 今日語音練習已達上限 (${status.count}/${status.limit}次)\n為了保護喉嚨，請明天再來練習吧！`);
                     if (disabledText) {
                         btnElement.className = "btn btn-disabled";
                         btnElement.innerText = disabledText;
@@ -1180,12 +1166,12 @@
                 } else {
                     window.location.href = targetUrl;
                 }
-            } catch (err) {
+            })
+            .catch(err => {
                 btnElement.innerText = originalText;
                 btnElement.style.pointerEvents = "auto";
                 alert("網路連線異常，無法進入練習！");
-            }
-        })();
+            });
     }
 
     // =======================================================
