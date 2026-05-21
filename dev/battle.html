@@ -1571,13 +1571,13 @@
 
 
   // =======================================================
-  // 🔌 Supabase Battle Legacy Adapter v2 - Avatar + Gacha
+  // 🔌 Supabase Battle Legacy Adapter v6 - Animation + Skill + Timeout
   // 目的：保留原 arena.html 的戰場 UI / 錄音 / 特效，只攔截舊 GAS Battle API，轉接 Supabase。
   // =======================================================
   (function installSupabaseBattleLegacyAdapter(){
     if (window.__tappieSupabaseBattleLegacyAdapterInstalled) return;
     window.__tappieSupabaseBattleLegacyAdapterInstalled = true;
-    window.__tappieSupabaseBattleAdapterVersion = "v5-finish-reward";
+    window.__tappieSupabaseBattleAdapterVersion = "v6-animation-skill-timeout";
 
     const originalFetch = window.fetch.bind(window);
     const DEFAULT_CARD_IMG = '/assets/BOX_COVER_SSR.webp';
@@ -1639,12 +1639,25 @@
       const hostId = isMeHost ? STUDENT_ID : 'HOST_PLAYER';
       const guestId = isMeHost ? 'GUEST_PLAYER' : STUDENT_ID;
 
-      const hostScores = rounds.map(r => r.hostSubmitted ? Number(r.hostScore ?? 0) : -1);
-      const guestScores = rounds.map(r => r.guestSubmitted ? Number(r.guestScore ?? 0) : -1);
+      const hostScores = rounds.map(r => {
+        if (!r.hostSubmitted) return -1;
+        const base = Number(r.hostScore ?? 0);
+        return r.hostSkillUsed ? base + 1000 : base;
+      });
+      const guestScores = rounds.map(r => {
+        if (!r.guestSubmitted) return -1;
+        const base = Number(r.guestScore ?? 0);
+        return r.guestSkillUsed ? base + 1000 : base;
+      });
 
       let legacyStatus = 'Active';
       const roomStatus = data.room?.status;
-      if (roomStatus === 'finished') legacyStatus = 'Finished';
+      const finishReason = data.room?.lastEvent?.finishReason || data.room?.lastEvent?.reason || 'normal';
+      // 正常打完的 finished 仍交給原本 checkBoth() 播完整回合動畫與結算。
+      // 只有 timeout / disconnect / surrender / client_finish 才走舊版 Finished 快速結算分支。
+      if (roomStatus === 'finished') {
+        legacyStatus = ['timeout', 'disconnect', 'surrender', 'client_finish', 'manual'].includes(finishReason) ? 'Finished' : 'Active';
+      }
       else if (roomStatus === 'cancelled' || roomStatus === 'expired') legacyStatus = 'Canceled';
       else if (roomStatus === 'waiting' || roomStatus === 'ready' || roomStatus === 'active') legacyStatus = 'Active';
 
@@ -1753,16 +1766,29 @@
         const room = roomIdentifier;
         const rawRound = Number(url.searchParams.get('round') || 0);
         const roundNo = rawRound <= 0 ? 1 : rawRound + 1; // 原 arena 內部是 0-based，Supabase 是 1-based。
-        let score = Number(url.searchParams.get('score') || 0);
-        if (score > 500) score = Math.max(0, score - 1000); // 原大招會 +1000，Supabase 先存真實分數。
+        let rawScore = Number(url.searchParams.get('score') || 0);
+        const skillUsed = rawScore > 500;
+        let score = skillUsed ? Math.max(0, rawScore - 1000) : rawScore;
         score = Math.max(0, Math.min(100, Math.round(score)));
-        const payload = isUuidLike(room)
-          ? { uid: STUDENT_ID, roomId: room, roundNo, score }
-          : { uid: STUDENT_ID, roomCode: room, roundNo, score };
-        const data = await TappieAPI.submitBattleScore(payload);
-        if (data?.battleFinished) {
-          return jsonResponse({ success: true, status: 'Finished', raw: data });
+
+        // 掛機 / 沒錄音 / 回合倒數歸零：直接由後端正式結算為對方勝，不再一路打到最後。
+        if (score <= 0 && TappieAPI.finishBattleRoom) {
+          let statusData = null;
+          try { statusData = await getSupabaseBattleStatus(room); } catch (_) {}
+          const myRole = statusData?.me?.role || 'host';
+          const winnerRole = myRole === 'host' ? 'guest' : 'host';
+          const finishPayload = isUuidLike(room)
+            ? { uid: STUDENT_ID, roomId: room, winnerRole, reason: 'timeout' }
+            : { uid: STUDENT_ID, roomCode: room, winnerRole, reason: 'timeout' };
+          const finishData = await TappieAPI.finishBattleRoom(finishPayload);
+          return jsonResponse({ success: !!finishData?.success, status: 'Finished', raw: finishData, timeoutLoss: true });
         }
+
+        const payload = isUuidLike(room)
+          ? { uid: STUDENT_ID, roomId: room, roundNo, score, skillUsed, detailJson: { skillUsed, adapter: 'battle_v6' } }
+          : { uid: STUDENT_ID, roomCode: room, roundNo, score, skillUsed, detailJson: { skillUsed, adapter: 'battle_v6' } };
+        const data = await TappieAPI.submitBattleScore(payload);
+        // 即使最後一分已經讓後端 finished，也回 OK，讓原本 checkBoth() 播完光球 / 受傷 / 碎裂 / 勝利動畫。
         return jsonResponse({ success: !!data?.success, status: 'OK', raw: data });
       }
 
@@ -3047,9 +3073,11 @@
             let realGuest = guestScore > 500 ? guestScore - 1000 : guestScore;
 
             if (realHost > realGuest) {
-                isMeHost ? myTotalWins++ : opTotalWins++; 
+                const inc = isMU ? 2 : 1;
+                isMeHost ? myTotalWins += inc : opTotalWins += inc; 
             } else if (realGuest > realHost) {
-                isMeHost ? opTotalWins++ : myTotalWins++; 
+                const inc = isOU ? 2 : 1;
+                isMeHost ? opTotalWins += inc : myTotalWins += inc; 
             }
         }
         
