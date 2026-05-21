@@ -1526,7 +1526,7 @@
   </div>
 </div>
 
-<script src="tappie-api.js?v=arena-battle-v1"></script>
+<script src="tappie-api.js?v=arena-battle-v2"></script>
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
   const params = new URLSearchParams(window.location.search);
@@ -5031,6 +5031,107 @@
   }
 })();
 </script>
+
+<script>
+/* =======================================================
+   ⚔️ Supabase Battle Mode Hotfix v2
+   修正：「開始挑戰」仍跑舊 GAS get_data，導致題目為空。
+   Battle mode 下，開始按鈕一律改走 get-battle-status.currentQuestion。
+   ======================================================= */
+(function(){
+  const qs = new URLSearchParams(window.location.search);
+  const isBattleMode = qs.get('mode') === 'battle' && (qs.get('roomCode') || qs.get('roomId') || qs.get('code'));
+  const roomKey = qs.get('roomCode') || qs.get('code') || qs.get('roomId') || '';
+  if (!isBattleMode) return;
+
+  function safeShow(el, display='block') { if (el) el.style.display = display; }
+  function safeHide(el) { if (el) el.style.display = 'none'; }
+  function safeText(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
+
+  async function ensureSupabaseBattleLoaded() {
+    if (!window.TappieAPI || !TappieAPI.getBattleStatus) {
+      throw new Error('TappieAPI Battle methods 尚未載入，請確認 tappie-api.js 已更新。');
+    }
+    const data = await TappieAPI.getBattleStatus(STUDENT_ID, { roomCode: roomKey });
+    if (!data.success) throw new Error(data.message || data.error || 'get-battle-status failed');
+
+    // 直接以後端 battle_rounds 作為唯一題目來源
+    window.battleQuizArr = (data.rounds || []).map(r => ({
+      en: r.word || r.word_text || '',
+      zh: r.zh || r.chinese_text || '',
+      roundNo: Number(r.roundNo || r.round_no || 1),
+      id: r.id
+    })).filter(q => q.en);
+
+    const currentRoundNo = Number(data.room?.currentRound || data.currentQuestion?.roundNo || 1);
+    window.currentBattleRound = Math.max(0, currentRoundNo - 1);
+
+    if (!window.battleQuizArr.length) {
+      throw new Error('此房間沒有 battle_rounds 題目，請重新建立房間。');
+    }
+    return data;
+  }
+
+  async function enterSupabaseBattle() {
+    try {
+      safeText('info-text', '正在同步 Supabase 對戰題目...');
+      const data = await ensureSupabaseBattleLoaded();
+
+      const main = document.getElementById('main-card');
+      const setup = document.getElementById('setup-zone');
+      const progress = document.getElementById('progress-container');
+      const studio = document.getElementById('studio');
+      safeHide(main);
+      safeHide(setup);
+      safeHide(progress);
+      safeHide(studio);
+
+      // 優先顯示 VS Portal；若 Portal 函式不存在，就直接進戰場
+      if (typeof window.showPortal === 'function') {
+        await window.showPortal();
+      } else {
+        const arena = document.getElementById('battle-arena');
+        safeShow(arena, 'flex');
+        if (typeof window.fetchBattleDataAndStart === 'function') {
+          window.fetchBattleDataAndStart(roomKey);
+        }
+      }
+    } catch (err) {
+      console.error('[Supabase Battle v2] enter failed:', err);
+      alert('無法取得戰場資料：' + String(err.message || err));
+      window.location.href = `/lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    }
+  }
+
+  function patchStartButton() {
+    const btn = document.getElementById('start-btn');
+    if (!btn) return;
+    btn.style.display = 'inline-block';
+    btn.innerText = '進入對戰';
+    btn.onclick = (ev) => {
+      if (ev) ev.preventDefault();
+      enterSupabaseBattle();
+      return false;
+    };
+  }
+
+  // 立刻覆蓋一次，避免舊 onclick 被保留
+  patchStartButton();
+
+  // DOM / load 後再覆蓋一次，避免原始腳本稍後重綁 onclick
+  document.addEventListener('DOMContentLoaded', patchStartButton);
+  window.addEventListener('load', () => {
+    patchStartButton();
+    // Battle mode 下不要顯示一般練習文案
+    safeText('title-text', '⚔️ 1v1 對戰模式');
+    safeText('info-text', '請按「進入對戰」同步戰場題目');
+  });
+
+  // 暴露給手動測試
+  window.enterSupabaseBattle = enterSupabaseBattle;
+})();
+</script>
+
   <div id="phonic-helper-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
   <div class="helper-card" style="background: white; width: 85%; max-width: 340px; border-radius: 25px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;">
     <div id="helper-avatar-box" style="width: 100px; height: 100px; background: #eaeff2; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 50px; border: 4px solid var(--gold);">
