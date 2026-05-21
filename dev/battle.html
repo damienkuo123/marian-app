@@ -5876,17 +5876,39 @@
       '活動Boss': '/assets/BOX_COVER_SSR.webp'
     };
 
+    // ✅ 沿用原 GAS 的 AI 角色 ID / 稀有度 / mask 規則
+    // AI_EASY: N，不套 mask
+    // AI_MED: R，mask = /assets/Ai_M1_tr.webp
+    // AI_HARD: SR，mask = /assets/Ai_H1_tr.webp
+    const AI_AVATAR_MAP = {
+      '初階Ai': { id:'AI_EASY', name:'初階Ai', img:'/assets/Ai_m.webp', fullImg:'/assets/Ai_m.webp', mask:'', rarity:'N', theme:'theme-tech', category:'ai' },
+      '中階Ai': { id:'AI_MED', name:'中階Ai', img:'/assets/Ai_l.webp', fullImg:'/assets/Ai_l.webp', mask:'/assets/Ai_M1_tr.webp', rarity:'R', theme:'theme-tech', category:'ai' },
+      '高階Ai': { id:'AI_HARD', name:'高階Ai', img:'/assets/Ai_h.webp', fullImg:'/assets/Ai_h.webp', mask:'/assets/Ai_H1_tr.webp', rarity:'SR', theme:'theme-tech', category:'ai' },
+      '活動Boss': { id:'AI_BOSS', name:'活動Boss', img:'/assets/BOX_COVER_SSR.webp', fullImg:'/assets/BOX_COVER_SSR.webp', mask:'', rarity:'SSR', theme:'theme-magic', category:'boss' }
+    };
+
+    function aiAvatarByName(name){
+      const n = String(name || AI_LEVEL_FROM_URL || '');
+      if (n.includes('初階')) return AI_AVATAR_MAP['初階Ai'];
+      if (n.includes('中階')) return AI_AVATAR_MAP['中階Ai'];
+      if (n.includes('高階')) return AI_AVATAR_MAP['高階Ai'];
+      if (n.includes('活動Boss') || n.includes('突發') || n.includes('Boss')) return AI_AVATAR_MAP['活動Boss'];
+      return AI_AVATAR_MAP['初階Ai'];
+    }
+
+    // 讓原本 arena 的 characterAssets 查得到 AI 圖鑑資料
+    window.characterAssets = window.characterAssets || {};
+    Object.values(AI_AVATAR_MAP).forEach(a => {
+      window.characterAssets[a.id] = { name:a.name, img:a.img, mask:a.mask, rarity:a.rarity, theme:a.theme };
+      window.characterAssets[a.name] = { name:a.name, img:a.img, mask:a.mask, rarity:a.rarity, theme:a.theme };
+    });
+
     function isUuidLikeAi(value){
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
     }
 
     function aiImageByName(name){
-      const n = String(name || AI_LEVEL_FROM_URL || '');
-      if (n.includes('初階')) return AI_IMG_MAP['初階Ai'];
-      if (n.includes('中階')) return AI_IMG_MAP['中階Ai'];
-      if (n.includes('高階')) return AI_IMG_MAP['高階Ai'];
-      if (n.includes('活動Boss') || n.includes('突發') || n.includes('Boss')) return AI_IMG_MAP['活動Boss'];
-      return '/assets/Ai_m.webp';
+      return aiAvatarByName(name).img || '/assets/Ai_m.webp';
     }
 
     async function getStatusForAiPatch(room){
@@ -5904,7 +5926,9 @@
       const meRole = data?.me?.role || 'host';
       const isMeHost = meRole === 'host';
       const aiName = guest.name || data?.opponent?.name || AI_LEVEL_FROM_URL || '初階Ai';
-      const aiImg = guest.avatar?.fullImg || guest.avatar?.full_img_url || aiImageByName(aiName);
+      const fallbackAiAvatar = aiAvatarByName(aiName);
+      const aiAvatar = guest.avatar || fallbackAiAvatar;
+      const aiImg = aiAvatar?.fullImg || aiAvatar?.full_img_url || aiAvatar?.img || aiImageByName(aiName);
       const hostImg = host.avatar?.fullImg || host.avatar?.full_img_url || '/assets/gacha-box.png';
       const hostScores = rounds.map(r => {
         if (!r.hostSubmitted) return -1;
@@ -5940,9 +5964,11 @@
         guestImg: aiImg,
         opponentImg: aiImg,
         hostRarity: host.avatar?.rarity || 'SSR',
-        guestRarity: guest.avatar?.rarity || 'SSR',
+        guestRarity: aiAvatar?.rarity || 'N',
         hostMask: host.avatar?.mask || '',
-        guestMask: guest.avatar?.mask || '',
+        guestMask: aiAvatar?.mask || aiAvatar?.mask_url || '',
+        hostTheme: host.avatar?.theme || host.avatar?.category || 'theme-magic',
+        guestTheme: aiAvatar?.theme || aiAvatar?.category || 'theme-tech',
         hostScores,
         guestScores,
         quiz,
@@ -5988,7 +6014,12 @@
                 ? { uid: STUDENT_ID_FOR_AI, roomId: room, roundNo, score, skillUsed, skillType: skillUsed ? 'power_strike' : '' }
                 : { uid: STUDENT_ID_FOR_AI, roomCode: room, roundNo, score, skillUsed, skillType: skillUsed ? 'power_strike' : '' };
               const result = await TappieAPI.submitAiBattleScore(payload);
-              return new Response(JSON.stringify({ success: !!result?.success, status: 'OK', raw: result }), { headers: { 'Content-Type': 'application/json' }});
+              // 回傳舊版可接受的 OK，同時保留 raw，後續 checkBoth 會再抓 get_battle_status。
+              // 若後端回傳錯誤，直接把 message 傳回，避免前端靜默顯示 0。
+              if (!result?.success) {
+                return new Response(JSON.stringify({ success:false, status:'Error', message: result?.message || result?.error || 'submit-ai-battle-score failed', raw: result }), { status: 500, headers: { 'Content-Type': 'application/json' }});
+              }
+              return new Response(JSON.stringify({ success: true, status: 'OK', raw: result, hostScore: result?.round?.hostScore, guestScore: result?.round?.guestScore, aiScore: result?.round?.guestScore }), { headers: { 'Content-Type': 'application/json' }});
             }
           }
         }
