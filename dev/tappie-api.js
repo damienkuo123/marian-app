@@ -2,7 +2,7 @@
 // 只要替換 YOUR_PROJECT_REF 即可。
 const TappieAPI = {
   mode: "supabase-dev",
-  supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
+  supabaseBaseUrl: "https://YOUR_PROJECT_REF.supabase.co/functions/v1",
   endpoints: {
     resolveStudent: "/resolve-student",
     getDashboard: "/get-dashboard",

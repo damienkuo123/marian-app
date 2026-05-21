@@ -837,6 +837,10 @@
         let ADMIN_SECRET = localStorage.getItem('tappie_admin_key');
         const authTime = localStorage.getItem('tappie_admin_key_time');
 
+        // 🧪 Supabase Dev 測試模式：?secret=dev 強制開放超級管理員選單。
+        const USE_SUPABASE_ADMIN = !!(window.TappieAPI && TappieAPI.mode && TappieAPI.mode.indexOf('supabase') !== -1);
+        const IS_DEV_SUPER_ADMIN = USE_SUPABASE_ADMIN && ADMIN_SECRET === "dev";
+
         // ⏳ 檢查是否超過 1 小時 (3600000毫秒)
         if (ADMIN_SECRET && authTime) {
             const now = new Date().getTime();
@@ -867,11 +871,17 @@
             document.getElementById('unauth-mask').style.display = 'flex';
         } else {
             // 🚀 修正：這裡換成了「反引號 ( ` )」，這樣變數才會被正確讀取！
-            if (USE_SUPABASE_ADMIN) {
-                // Supabase dev 階段：只要 localStorage 有 admin key，就先開放測試後台。
+            if (IS_DEV_SUPER_ADMIN) {
+                // Supabase dev 階段：?secret=dev 直接開放超級管理員測試權限。
                 // 正式版之後再接 admin-auth / RLS。
-                document.getElementById('role-text').innerText = "⭐ Supabase Dev 管理員";
+                console.log("🧪 Supabase Dev 超級管理員模式啟用", { school: CURRENT_SCHOOL });
+                document.getElementById('role-text').innerText = "⭐ Supabase Dev 超級管理員";
                 document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
+                document.getElementById('unauth-mask').style.display = 'none';
+            } else if (USE_SUPABASE_ADMIN) {
+                // Supabase dev 但不是 dev 密鑰：保留專屬管理員，不開超級選單。
+                document.getElementById('role-text').innerText = "專屬管理員權限";
+                document.getElementById('unauth-mask').style.display = 'none';
             } else {
                 fetch(`${GAS_URL}?action=verify_auth&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
                     .then(res => res.json())
@@ -902,7 +912,6 @@
         // =======================================================
         // 🧠 Supabase Admin API Adapter (Dev)
         // =======================================================
-        const USE_SUPABASE_ADMIN = !!(window.TappieAPI && TappieAPI.mode && TappieAPI.mode.indexOf('supabase') !== -1);
 
         async function adminGetData(mode = 'all') {
             if (!window.TappieAPI || !TappieAPI.adminGetData) throw new Error('TappieAPI.adminGetData 尚未載入');
@@ -2091,6 +2100,30 @@
         function fetchTaskData() {
             const listZone = document.getElementById('tm-list-zone');
             listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取任務庫中...</p>';
+
+            if (USE_SUPABASE_ADMIN) {
+                adminGetData('tasks')
+                    .then(data => {
+                        allTasksData = data.words || [];
+                        allSchedulesData = (data.schedules || []).map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
+                        allEventAvatars = data.eventAvatars || [];
+
+                        const classSet = new Set();
+                        allTasksData.forEach(t => { if (t.classId) classSet.add(t.classId); });
+                        const filterSelect = document.getElementById('tm-class-filter');
+                        const currentFilter = filterSelect.value;
+                        filterSelect.innerHTML = '<option value="">🏫 請選擇班級</option>';
+                        Array.from(classSet).sort().forEach(cls => {
+                            filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
+                        });
+                        changeTaskFilter();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        listZone.innerHTML = `<p style="color:#e74c3c;">讀取失敗：${err.message}</p>`;
+                    });
+                return;
+            }
             
             fetch(`${GAS_URL}?action=get_task_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
                 .then(res => res.json())
@@ -2098,8 +2131,8 @@
                     if (data.error) return listZone.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
                     
                     allTasksData = data.words;
-                    allSchedulesData = data.schedules;      // 🚀 抓取所有排程
-                    allEventAvatars = data.eventAvatars;    // 🚀 抓取所有活動角色
+                    allSchedulesData = data.schedules;
+                    allEventAvatars = data.eventAvatars;
                     
                     const classSet = new Set();
                     allTasksData.forEach(t => { if (t.classId) classSet.add(t.classId); });
@@ -2109,7 +2142,6 @@
                     Array.from(classSet).sort().forEach(cls => {
                         filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
                     });
-
                     changeTaskFilter(); 
                 });
         }
@@ -2780,6 +2812,27 @@
         function fetchStudentList() {
             const listZone = document.getElementById('sm-list-zone');
             listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取學生資料庫中...</p>';
+
+            if (USE_SUPABASE_ADMIN) {
+                adminGetData('students')
+                    .then(data => {
+                        allStudentsData = data.students || [];
+                        const classSet = new Set();
+                        allStudentsData.forEach(s => { if (s.classId) classSet.add(s.classId); });
+                        const filterSelect = document.getElementById('sm-class-filter');
+                        const currentFilter = filterSelect.value;
+                        filterSelect.innerHTML = '<option value="">🏫 顯示全部學生</option>';
+                        Array.from(classSet).sort().forEach(cls => {
+                            filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
+                        });
+                        changeStuFilter();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        listZone.innerHTML = `<p style="color:#e74c3c;">讀取失敗：${err.message}</p>`;
+                    });
+                return;
+            }
             
             fetch(`${GAS_URL}?action=get_student_list&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
                 .then(res => res.json())
@@ -2787,8 +2840,6 @@
                     if (data.error) return listZone.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
                     
                     allStudentsData = data;
-                    
-                    // 建立班級下拉選單
                     const classSet = new Set();
                     allStudentsData.forEach(s => { classSet.add(s.classId); });
                     const filterSelect = document.getElementById('sm-class-filter');
@@ -2797,7 +2848,6 @@
                     Array.from(classSet).sort().forEach(cls => {
                         filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
                     });
-
                     changeStuFilter(); 
                 });
         }
