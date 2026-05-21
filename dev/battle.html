@@ -1571,12 +1571,13 @@
 
 
   // =======================================================
-  // 🔌 Supabase Battle Legacy Adapter v1
+  // 🔌 Supabase Battle Legacy Adapter v2 - Avatar + Gacha
   // 目的：保留原 arena.html 的戰場 UI / 錄音 / 特效，只攔截舊 GAS Battle API，轉接 Supabase。
   // =======================================================
   (function installSupabaseBattleLegacyAdapter(){
     if (window.__tappieSupabaseBattleLegacyAdapterInstalled) return;
     window.__tappieSupabaseBattleLegacyAdapterInstalled = true;
+    window.__tappieSupabaseBattleAdapterVersion = "v2-avatar-gacha";
 
     const originalFetch = window.fetch.bind(window);
     const DEFAULT_CARD_IMG = '/assets/BOX_COVER_SSR.webp';
@@ -1603,6 +1604,22 @@
       return await TappieAPI.getBattleStatus(STUDENT_ID, arg);
     }
 
+    function avatarImageUrl(avatar) {
+      return avatar?.fullImg || avatar?.full_img_url || avatar?.img || avatar?.url || DEFAULT_CARD_IMG;
+    }
+
+    function avatarMaskUrl(avatar) {
+      return avatar?.mask || avatar?.mask_url || '';
+    }
+
+    function avatarRarity(avatar) {
+      return String(avatar?.rarity || 'SSR').toUpperCase();
+    }
+
+    function avatarTheme(avatar) {
+      return avatar?.theme || avatar?.category || 'default';
+    }
+
     function toLegacyStatus(data) {
       if (!data || !data.success) {
         return { status: 'NotFound', message: data?.message || data?.error || 'battle status not found' };
@@ -1612,8 +1629,13 @@
       const meRole = data.me?.role || 'host';
       const isMeHost = meRole === 'host';
 
-      const hostName = data.players?.host?.name || '房主';
-      const guestName = data.players?.guest?.name || '挑戰者';
+      const host = data.players?.host || {};
+      const guest = data.players?.guest || {};
+      const hostAvatar = host.avatar || null;
+      const guestAvatar = guest.avatar || null;
+
+      const hostName = host.name || '房主';
+      const guestName = guest.name || '挑戰者';
       const hostId = isMeHost ? STUDENT_ID : 'HOST_PLAYER';
       const guestId = isMeHost ? 'GUEST_PLAYER' : STUDENT_ID;
 
@@ -1640,8 +1662,35 @@
         roundNo: r.roundNo || r.round_no
       })).filter(q => q.en);
 
-      const hostImg = DEFAULT_CARD_IMG;
-      const guestImg = DEFAULT_CARD_IMG;
+      const hostImg = avatarImageUrl(hostAvatar);
+      const guestImg = avatarImageUrl(guestAvatar);
+      const hostRarity = avatarRarity(hostAvatar);
+      const guestRarity = avatarRarity(guestAvatar);
+      const hostMask = avatarMaskUrl(hostAvatar);
+      const guestMask = avatarMaskUrl(guestAvatar);
+      const hostTheme = avatarTheme(hostAvatar);
+      const guestTheme = avatarTheme(guestAvatar);
+
+      // 讓原本 arena 的 characterAssets fallback 也能吃到 Supabase avatar。
+      window.characterAssets = window.characterAssets || {};
+      if (host.avatarId || hostAvatar?.id) {
+        window.characterAssets[host.avatarId || hostAvatar.id] = {
+          name: hostName,
+          img: hostImg,
+          mask: hostMask,
+          rarity: hostRarity,
+          theme: hostTheme
+        };
+      }
+      if (guest.avatarId || guestAvatar?.id) {
+        window.characterAssets[guest.avatarId || guestAvatar.id] = {
+          name: guestName,
+          img: guestImg,
+          mask: guestMask,
+          rarity: guestRarity,
+          theme: guestTheme
+        };
+      }
 
       return {
         success: true,
@@ -1657,12 +1706,14 @@
         hostImg,
         guestImg,
         opponentImg: isMeHost ? guestImg : hostImg,
-        hostRarity: 'SSR',
-        guestRarity: 'SSR',
-        hostMask: '',
-        guestMask: '',
-        hostTheme: 'default',
-        guestTheme: 'default',
+        hostRarity,
+        guestRarity,
+        hostMask,
+        guestMask,
+        hostTheme,
+        guestTheme,
+        hostAvatar,
+        guestAvatar,
         hostScores,
         guestScores,
         quiz,
@@ -1724,9 +1775,33 @@
         return jsonResponse({ success: !!data?.success, status: 'Canceled', raw: data });
       }
 
-      if (action === 'claim_timeout_win' || action === 'claim_gacha') {
-        // MVP 階段先不處理盲盒 / timeout 發獎，避免卡住原動畫流程。
+      if (action === 'claim_timeout_win') {
+        // timeout 發獎先保持 no-op，避免干擾既有動畫流程。
         return jsonResponse({ success: true, status: 'OK' });
+      }
+
+      if (action === 'claim_gacha') {
+        // 將原本 GAS 盲盒領獎導向 Supabase claim-gacha。
+        // 目前 claim-gacha 以抽角色 / 重複補償為主；原本前端 wonPoints 仍保留在 metadata。
+        const roomCode = roomIdentifier || ROOM_ID;
+        const addPoints = Number(url.searchParams.get('addPoints') || 0);
+        const avatars = String(url.searchParams.get('avatars') || '').split(',').filter(Boolean);
+        let data;
+        if (TappieAPI.claimGacha) {
+          data = await TappieAPI.claimGacha({
+            uid: STUDENT_ID,
+            free: true,
+            source: 'battle_gacha',
+            roomCode,
+            legacyAddPoints: addPoints,
+            legacyAvatars: avatars
+          });
+        } else {
+          const qs = new URLSearchParams({ uid: STUDENT_ID, free: 'true', source: 'battle_gacha' });
+          if (roomCode) qs.set('roomCode', roomCode);
+          data = await fetch(`${TappieAPI.supabaseBaseUrl}/claim-gacha?${qs.toString()}`).then(r => r.json());
+        }
+        return jsonResponse({ success: !!data?.success, status: data?.success ? 'OK' : 'Error', raw: data });
       }
 
       return null;

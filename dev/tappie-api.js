@@ -19,6 +19,9 @@ const TappieAPI = {
     setArenaReady: "/set-arena-ready",
     submitBattleScore: "/submit-battle-score",
     cancelBattleRoom: "/cancel-battle-room",
+    getAvatarShop: "/get-avatar-shop",
+    equipAvatar: "/equip-avatar",
+    claimGacha: "/claim-gacha",
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -85,6 +88,16 @@ const TappieAPI = {
   },
   async cancelBattleRoom(payload) {
     return await this._post(this.endpoints.cancelBattleRoom, payload);
+  },
+  async getAvatarShop(uid) {
+    return await this._get(`${this.endpoints.getAvatarShop}?uid=${encodeURIComponent(uid)}`);
+  },
+  async equipAvatar(payload) {
+    return await this._post(this.endpoints.equipAvatar, payload);
+  },
+  async claimGacha(payload) {
+    // claim-gacha 目前支援 GET / POST；前端正式使用 POST。
+    return await this._post(this.endpoints.claimGacha, payload);
   },
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
