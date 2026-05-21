@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-judge-hotfix1"></script>
+  <script src="./tappie-api.js?v=20260522-sync-v3"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -5276,5 +5276,521 @@
     </div>
   </div>
 </div>
+
+
+<script>
+// =======================================================
+// 🧑‍⚖️ Battle Strict Sync Hotfix v3
+// 修正：
+// 1) 不能單方按「進入戰場」就自己開始。
+// 2) 必須雙方都 setArenaReady 後，由後端 active + deadline 才開始。
+// 3) 回合倒數以後端 round_deadline 為準。
+// 4) 一方送分後等待舊回合 finished，不再用 hostScores.length 誤判。
+// 5) 逾時只呼叫 resolve-battle-timeout，由後端判定。
+// =======================================================
+(function installBattleStrictSyncV3(){
+  if (window.__tappieBattleStrictSyncV3Installed) return;
+  window.__tappieBattleStrictSyncV3Installed = true;
+
+  const POLL_MS = 1000;
+  const GRACE_MS = 5000;
+  let strictSyncTimer = null;
+  let pendingRoundNo = null;
+  let latestBattleStatus = null;
+
+  function isUuidLike(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
+  }
+
+  function roomArg(roomId) {
+    const room = String(roomId || ROOM_ID || '').trim();
+    return isUuidLike(room) ? { roomId: room } : { roomCode: room };
+  }
+
+  async function getStatusStrict(roomId) {
+    if (!window.TappieAPI || !TappieAPI.getBattleStatus) throw new Error('TappieAPI.getBattleStatus 尚未載入');
+    const data = await TappieAPI.getBattleStatus(STUDENT_ID, roomArg(roomId));
+    if (!data || !data.success) throw new Error(data?.message || data?.error || 'getBattleStatus failed');
+    latestBattleStatus = data;
+    return data;
+  }
+
+  async function resolveTimeoutStrict(roomId) {
+    if (!window.TappieAPI || !TappieAPI.resolveBattleTimeout) throw new Error('TappieAPI.resolveBattleTimeout 尚未載入');
+    const data = await TappieAPI.resolveBattleTimeout({ uid: STUDENT_ID, ...roomArg(roomId) });
+    if (!data || !data.success) return data;
+    return data;
+  }
+
+  function stopStrictSyncTimer() {
+    if (strictSyncTimer) {
+      clearInterval(strictSyncTimer);
+      strictSyncTimer = null;
+    }
+  }
+
+  function stopAllBattleTimersV3() {
+    try { if (readyTimer) clearInterval(readyTimer); } catch(_) {}
+    try { if (syncTimer) clearInterval(syncTimer); } catch(_) {}
+    try { if (waitOpTimer) clearInterval(waitOpTimer); } catch(_) {}
+    try { if (currentLimitTimer) clearInterval(currentLimitTimer); } catch(_) {}
+    try { if (battleTimeout) clearTimeout(battleTimeout); } catch(_) {}
+    readyTimer = null;
+    syncTimer = null;
+    waitOpTimer = null;
+    currentLimitTimer = null;
+    battleTimeout = null;
+    stopStrictSyncTimer();
+  }
+
+  function myRoleOf(data) { return data?.me?.role || 'host'; }
+  function isMeHost(data) { return myRoleOf(data) === 'host'; }
+  function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+
+  function updateQuizFromStatus(data) {
+    battleQuizArr = (data.rounds || []).map(r => ({
+      en: r.word || '',
+      zh: r.zh || '',
+      img: r.img || '',
+      roundNo: r.roundNo,
+      deadline: r.deadline,
+      status: r.status
+    })).filter(q => q.en);
+    currentBattleRound = Math.max(0, num(data.room?.currentRound || 1) - 1);
+  }
+
+  function renderScoreDotsStrict(data) {
+    const myScore = isMeHost(data) ? num(data.room?.hostWins) : num(data.room?.guestWins);
+    const opScore = isMeHost(data) ? num(data.room?.guestWins) : num(data.room?.hostWins);
+    myTotalWins = myScore;
+    opTotalWins = opScore;
+    const myRounds = document.getElementById('my-rounds');
+    const opRounds = document.getElementById('op-rounds');
+    if (myRounds && typeof renderDots === 'function') myRounds.innerHTML = renderDots(myScore, true);
+    if (opRounds && typeof renderDots === 'function') opRounds.innerHTML = renderDots(opScore, false);
+  }
+
+  function getImagesFromStatus(data) {
+    const myA = data?.me?.avatar || null;
+    const opA = data?.opponent?.avatar || null;
+    const myImg = myA?.fullImg || myA?.full_img_url || window.currentMyImg || null;
+    const opImg = opA?.fullImg || opA?.full_img_url || window.currentOpImg || null;
+    if (myA) {
+      window.currentMyRarity = myA.rarity || window.currentMyRarity || 'N';
+      window.currentMyMask = myA.mask || myA.mask_url || window.currentMyMask || '';
+    }
+    if (opA) {
+      window.currentOpRarity = opA.rarity || window.currentOpRarity || 'N';
+      window.currentOpMask = opA.mask || opA.mask_url || window.currentOpMask || '';
+    }
+    return { myImg, opImg };
+  }
+
+  function didIWinStrict(data) {
+    const winnerId = data?.room?.winnerStudentId;
+    const hostId = data?.players?.host?.id;
+    const guestId = data?.players?.guest?.id;
+    let winnerRole = 'draw';
+    if (winnerId && hostId && winnerId === hostId) winnerRole = 'host';
+    else if (winnerId && guestId && winnerId === guestId) winnerRole = 'guest';
+    else if (num(data?.room?.hostWins) > num(data?.room?.guestWins)) winnerRole = 'host';
+    else if (num(data?.room?.guestWins) > num(data?.room?.hostWins)) winnerRole = 'guest';
+    return winnerRole !== 'draw' && winnerRole === myRoleOf(data);
+  }
+
+  function showGachaEntranceStrict(delayMs = 3500) {
+    setTimeout(() => {
+      const triggerOverlay = document.getElementById('gacha-trigger-overlay');
+      const enterBtn = document.getElementById('btn-enter-gacha');
+      if (!triggerOverlay || !enterBtn) {
+        if (typeof initGacha === 'function') initGacha(document.getElementById('op-name')?.innerText || '對手');
+        return;
+      }
+      triggerOverlay.style.display = 'flex';
+      setTimeout(() => { triggerOverlay.style.opacity = '1'; }, 50);
+      enterBtn.onclick = () => {
+        const impact = document.getElementById('impact-overlay');
+        if (impact) impact.classList.remove('active');
+        triggerOverlay.style.display = 'none';
+        if (window.GlobalAudio) GlobalAudio.playGachaBGM();
+        if (typeof initGacha === 'function') initGacha(document.getElementById('op-name')?.innerText || '對手');
+      };
+    }, delayMs);
+  }
+
+  async function showFinishedStrict(data, reasonHint = 'normal') {
+    stopAllBattleTimersV3();
+    sessionStorage.removeItem('active_battle_room');
+    const fresh = data?.success ? data : await getStatusStrict(ROOM_ID).catch(() => data);
+    const won = didIWinStrict(fresh);
+    const { myImg, opImg } = getImagesFromStatus(fresh);
+    const myScore = isMeHost(fresh) ? num(fresh.room?.hostWins) : num(fresh.room?.guestWins);
+    const opScore = isMeHost(fresh) ? num(fresh.room?.guestWins) : num(fresh.room?.hostWins);
+    if (typeof showImpactOverlay === 'function') showImpactOverlay(myScore, opScore, true, myImg, opImg);
+    if (won) showGachaEntranceStrict(3500);
+    else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}&v=sync-v3`; }, 5200);
+  }
+
+  function buildResultFromStatusRound(status, roundNo) {
+    const r = (status.rounds || []).find(x => num(x.roundNo) === num(roundNo)) || status.currentQuestion || {};
+    const hostDelta = num(r.hostScoreDelta);
+    const guestDelta = num(r.guestScoreDelta);
+    const hostSkillSuccess = Boolean(r.hostSkillUsed && hostDelta >= 2);
+    const guestSkillSuccess = Boolean(r.guestSkillUsed && guestDelta >= 2);
+    let winnerRole = 'draw';
+    if (num(r.hostScore) > num(r.guestScore)) winnerRole = 'host';
+    else if (num(r.guestScore) > num(r.hostScore)) winnerRole = 'guest';
+    return {
+      success: true,
+      roundComplete: true,
+      battleFinished: status.room?.status === 'finished',
+      round: {
+        roundNo: num(roundNo),
+        hostScore: num(r.hostScore),
+        guestScore: num(r.guestScore),
+        winnerRole,
+        scoreDelta: { host: hostDelta, guest: guestDelta },
+        skillEffect: {
+          host: { used: Boolean(r.hostSkillUsed), success: hostSkillSuccess, delta: hostDelta, type: r.hostSkillUsed ? 'power_strike' : null },
+          guest: { used: Boolean(r.guestSkillUsed), success: guestSkillSuccess, delta: guestDelta, type: r.guestSkillUsed ? 'power_strike' : null }
+        }
+      },
+      battle: {
+        status: status.room?.status,
+        finishReason: status.room?.finishReason,
+        currentRound: status.room?.currentRound,
+        hostWins: status.room?.hostWins,
+        guestWins: status.room?.guestWins,
+        winnerStudentId: status.room?.winnerStudentId
+      }
+    };
+  }
+
+  async function processJudgeResultStrict(roomId, resultData) {
+    const status = await getStatusStrict(roomId).catch(() => latestBattleStatus);
+    if (status?.success) {
+      updateQuizFromStatus(status);
+      renderScoreDotsStrict(status);
+      getImagesFromStatus(status);
+    }
+    const myIsHost = status ? isMeHost(status) : true;
+    const round = resultData?.round || {};
+    const battle = resultData?.battle || {};
+    const myRoundScore = myIsHost ? num(round.hostScore) : num(round.guestScore);
+    const opRoundScore = myIsHost ? num(round.guestScore) : num(round.hostScore);
+    const skillEffect = round.skillEffect || {};
+    const mySkill = myIsHost ? skillEffect.host : skillEffect.guest;
+    const opSkill = myIsHost ? skillEffect.guest : skillEffect.host;
+    const isMyUlt = Boolean(mySkill?.success);
+    const isOpUlt = Boolean(opSkill?.success);
+    const nextHostWins = num(battle.hostWins ?? status?.room?.hostWins);
+    const nextGuestWins = num(battle.guestWins ?? status?.room?.guestWins);
+    const myNextWins = myIsHost ? nextHostWins : nextGuestWins;
+    const opNextWins = myIsHost ? nextGuestWins : nextHostWins;
+    const imgs = status?.success ? getImagesFromStatus(status) : { myImg: null, opImg: null };
+    const isFinal = Boolean(resultData?.battleFinished || battle.status === 'finished' || status?.room?.status === 'finished');
+
+    if (typeof triggerBattleAnimations === 'function') {
+      triggerBattleAnimations(myRoundScore, opRoundScore, isFinal, myNextWins, opNextWins, isMyUlt, isOpUlt, imgs.myImg, imgs.opImg);
+    } else if (typeof showImpactOverlay === 'function') {
+      showImpactOverlay(myRoundScore, opRoundScore, isFinal, imgs.myImg, imgs.opImg);
+    }
+
+    const animWait = (isMyUlt || isOpUlt ? 1500 : 0) + (isFinal ? 6200 : 4800);
+    setTimeout(async () => {
+      const overlay = document.getElementById('impact-overlay');
+      if (overlay) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => overlay.classList.remove('active', 'fade-out'), 650);
+      }
+      const fresh = await getStatusStrict(roomId).catch(() => status);
+      if (fresh?.success) renderScoreDotsStrict(fresh);
+      if (isFinal || fresh?.room?.status === 'finished') {
+        await showFinishedStrict(fresh || status || {}, fresh?.room?.finishReason || 'normal');
+      } else {
+        updateQuizFromStatus(fresh || status || {});
+        roundSubmitted = false;
+        isChecking = false;
+        startRoundCountdown(roomId);
+      }
+    }, animWait);
+  }
+
+  async function handleTimeoutStrict(roomId) {
+    const data = await resolveTimeoutStrict(roomId);
+    if (!data?.success) {
+      if (data?.error !== 'deadline_not_reached') console.warn('resolve timeout ignored:', data);
+      return data;
+    }
+    await processJudgeResultStrict(roomId, data);
+    return data;
+  }
+
+  function showWaitingForBothReady(status) {
+    const timer = document.getElementById('battle-timer');
+    const info = document.getElementById('battle-info');
+    const word = document.getElementById('target-word');
+    const hReady = Boolean(status?.room?.hostReady);
+    const gReady = Boolean(status?.room?.guestReady);
+    if (word) word.innerText = '等待雙方進入戰場';
+    if (timer) timer.innerText = '';
+    if (info) {
+      info.innerText = `同步中：房主 ${hReady ? '✅' : '⌛'}　挑戰者 ${gReady ? '✅' : '⌛'}`;
+      info.style.color = '#f1c40f';
+    }
+  }
+
+  // 取代原本 initArena：不再用 hostScores.length 誤判，也不設本地 60 秒等待勝負。
+  window.initArena = initArena = function(roomId) {
+    stopAllBattleTimersV3();
+    currentBattleRound = 0;
+    roundSubmitted = false;
+    isChecking = false;
+    const controls = document.getElementById('battle-controls');
+    if (controls) controls.style.visibility = 'hidden';
+    const word = document.getElementById('target-word');
+    if (word) word.innerText = '戰場同步中...';
+    const timer = document.getElementById('battle-timer');
+    if (timer) timer.innerText = '';
+    const info = document.getElementById('battle-info');
+    if (info) { info.innerText = '正在向後端裁判報到...'; info.style.color = '#a4b0be'; }
+
+    (async () => {
+      try {
+        if (!window.TappieAPI || !TappieAPI.setArenaReady) throw new Error('TappieAPI.setArenaReady 尚未載入');
+        await TappieAPI.setArenaReady({ uid: STUDENT_ID, ...roomArg(roomId), ready: true });
+        strictSyncTimer = setInterval(async () => {
+          try {
+            const status = await getStatusStrict(roomId);
+            updateQuizFromStatus(status);
+            renderScoreDotsStrict(status);
+            if (typeof updateArenaUI === 'function') updateArenaUI(roomId, true);
+
+            if (status.room?.status === 'finished') {
+              stopStrictSyncTimer();
+              await showFinishedStrict(status, status.room?.finishReason || 'normal');
+              return;
+            }
+
+            const ready = Boolean(status.room?.hostReady && status.room?.guestReady);
+            const active = status.room?.status === 'active' && status.currentQuestion?.status === 'active';
+            if (!ready || !active) {
+              showWaitingForBothReady(status);
+              return;
+            }
+
+            stopStrictSyncTimer();
+            startRoundCountdown(roomId);
+          } catch (e) {
+            console.warn('等待雙方 Ready 同步中...', e);
+          }
+        }, POLL_MS);
+      } catch (err) {
+        alert('進入戰場同步失敗：' + String(err.message || err));
+      }
+    })();
+  };
+
+  // 取代原本 startRoundCountdown：題目與倒數都以後端 currentQuestion / deadline 為準。
+  window.startRoundCountdown = startRoundCountdown = function(roomId) {
+    stopAllBattleTimersV3();
+    roundSubmitted = false;
+    isChecking = false;
+
+    (async () => {
+      const status = await getStatusStrict(roomId).catch(err => {
+        console.error('startRoundCountdown getStatus failed', err);
+        return null;
+      });
+      if (!status?.success) return;
+      if (status.room?.status === 'finished') {
+        await showFinishedStrict(status, status.room?.finishReason || 'normal');
+        return;
+      }
+      updateQuizFromStatus(status);
+      renderScoreDotsStrict(status);
+      const q = status.currentQuestion;
+      if (!q || q.status !== 'active') {
+        // 尚未 active，回到等候雙方 ready / 後端啟動回合。
+        initArena(roomId);
+        return;
+      }
+
+      const myCard = document.getElementById('my-card');
+      const opCard = document.getElementById('op-card');
+      const arenaBg = document.getElementById('battle-arena');
+      const stageCenter = document.querySelector('.arena-stage-center');
+      if(myCard) myCard.classList.remove('charging-mana', 'ultimate-charging', 'winner-glory', 'loser-shatter', 'take-damage');
+      if(opCard) opCard.classList.remove('charging-mana', 'ultimate-charging', 'winner-glory', 'loser-shatter', 'take-damage');
+      if(arenaBg) arenaBg.classList.remove('screen-flash-red', 'screen-flash-cyan', 'screen-flash-gold', 'ultimate-mode-bg');
+      if(stageCenter) stageCenter.classList.remove('hide-stage');
+      isUltimateMode = false;
+      const target = document.getElementById('target-word');
+      if (target) target.classList.remove('ultimate-word');
+      const rb = document.getElementById('battle-record-btn');
+      if (rb) { rb.classList.remove('ultimate-record-btn','recording-active','ult-recording-active','processing-locked'); rb.innerHTML = '🎤'; rb.style.pointerEvents='auto'; }
+      const skillBtn = document.getElementById('skill-btn');
+      if (skillBtn) { skillBtn.style.display = hasUsedSkill ? 'none' : 'block'; skillBtn.style.pointerEvents='auto'; }
+      const hintBtn = document.getElementById('hint-btn');
+      if (hintBtn) { hintBtn.style.display = 'block'; hintBtn.style.pointerEvents='auto'; }
+      const controls = document.getElementById('battle-controls');
+      if (controls) controls.style.visibility = 'hidden';
+      const roundNum = document.getElementById('round-num');
+      if (roundNum) roundNum.innerText = `第 ${q.roundNo} 局 / 先得 5 分獲勝`;
+      if (target) target.innerText = 'READY?';
+      const info = document.getElementById('battle-info');
+      if (info) { info.innerText = '後端裁判已啟動本回合'; info.style.color = '#a4b0be'; }
+
+      let preCount = 3;
+      readyTimer = setInterval(() => {
+        const timer = document.getElementById('battle-timer');
+        if (timer) timer.innerText = preCount > 0 ? preCount : '';
+        if (preCount > 0 && window.GlobalAudio) GlobalAudio.play('countdown');
+        preCount--;
+        if (preCount < 0) {
+          clearInterval(readyTimer); readyTimer = null;
+          showActiveQuestionAndTimer(roomId, q);
+        }
+      }, 1000);
+    })();
+  };
+
+  function showActiveQuestionAndTimer(roomId, q) {
+    const target = document.getElementById('target-word');
+    if (target) {
+      target.innerText = q.word || '';
+      const len = (q.word || '').length;
+      if (len > 35) target.style.fontSize = 'clamp(18px, 4vw, 26px)';
+      else if (len > 20) target.style.fontSize = 'clamp(24px, 5vw, 36px)';
+      else if (len > 10) target.style.fontSize = 'clamp(32px, 6vw, 48px)';
+      else target.style.fontSize = 'clamp(42px, 8vw, 64px)';
+    }
+    const controls = document.getElementById('battle-controls');
+    if (controls) { controls.style.display='flex'; controls.style.visibility='visible'; }
+    startRecordingBattle(roomId);
+  }
+
+  // 取代原本本地 10 秒總回合倒數：以後端 deadline 顯示，deadline 到只呼叫裁判。
+  window.startRecordingBattle = startRecordingBattle = function(roomId) {
+    if(currentLimitTimer) clearInterval(currentLimitTimer);
+    currentLimitTimer = setInterval(async () => {
+      const status = await getStatusStrict(roomId).catch(() => null);
+      const q = status?.currentQuestion;
+      if (!q || status?.room?.status === 'finished') {
+        clearInterval(currentLimitTimer); currentLimitTimer = null;
+        if (status?.room?.status === 'finished') await showFinishedStrict(status, status.room?.finishReason || 'normal');
+        return;
+      }
+      const remainingMs = q.deadline ? new Date(q.deadline).getTime() - Date.now() : 0;
+      const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
+      const timer = document.getElementById('battle-timer');
+      if (timer) timer.innerText = remaining;
+      if (remainingMs <= -GRACE_MS && !roundSubmitted) {
+        clearInterval(currentLimitTimer); currentLimitTimer = null;
+        roundSubmitted = true;
+        const controls = document.getElementById('battle-controls');
+        if (controls) controls.style.visibility = 'hidden';
+        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+        await handleTimeoutStrict(roomId);
+      }
+    }, 500);
+  };
+
+  // 取代 checkBoth：直接看後端該回合是否 resolved，不用 hostScores.length。
+  window.checkBoth = checkBoth = async function(roomId) {
+    if (isChecking) return;
+    isChecking = true;
+    try {
+      const status = await getStatusStrict(roomId);
+      const roundNo = pendingRoundNo || (currentBattleRound + 1);
+      const r = (status.rounds || []).find(x => num(x.roundNo) === num(roundNo));
+      if (status.room?.status === 'finished') {
+        const result = buildResultFromStatusRound(status, roundNo);
+        await processJudgeResultStrict(roomId, result);
+        return;
+      }
+      if (r && (r.status === 'finished' || r.status === 'timeout')) {
+        const result = buildResultFromStatusRound(status, roundNo);
+        await processJudgeResultStrict(roomId, result);
+        return;
+      }
+      isChecking = false;
+    } catch (err) {
+      console.warn('checkBoth strict failed', err);
+      isChecking = false;
+    }
+  };
+
+  // 取代 submitBattleScore：送出後等待「該回合」被後端 resolved，而不是等目前 currentQuestion。
+  window.submitBattleScore = submitBattleScore = function(roomId, score) {
+    if (currentLimitTimer) { clearInterval(currentLimitTimer); currentLimitTimer = null; }
+    const controls = document.getElementById('battle-controls');
+    if (controls) controls.style.visibility = 'hidden';
+    const myCard = document.getElementById('my-card');
+    if (myCard) myCard.classList.remove('charging-mana', 'ultimate-charging');
+    const bBtn = document.getElementById('battle-record-btn');
+    if (bBtn) bBtn.classList.remove('active','ult-active','recording-active','ult-recording-active');
+    const skillRequested = Boolean(isUltimateMode);
+    const realScore = Math.max(0, Math.min(100, Math.round(score)));
+    const roundNo = Number(currentBattleRound || 0) + 1;
+    pendingRoundNo = roundNo;
+    const timer = document.getElementById('battle-timer');
+    const info = document.getElementById('battle-info');
+    if (timer) timer.innerHTML = `<span class="neon-score">得分：${realScore}</span>`;
+    if (info) info.innerText = skillRequested ? '技能重擊已送出，等待後端裁判...' : '等待對手...';
+
+    (async () => {
+      try {
+        if (!window.TappieAPI || !TappieAPI.submitBattleScore) throw new Error('TappieAPI.submitBattleScore 尚未載入');
+        const data = await TappieAPI.submitBattleScore({
+          uid: STUDENT_ID,
+          ...roomArg(roomId),
+          roundNo,
+          score: realScore,
+          skillUsed: skillRequested,
+          skillType: skillRequested ? 'power_strike' : undefined,
+          detailJson: { adapter: 'sync-v3', skillRequested, clientRoundIndex: currentBattleRound }
+        });
+        if (!data?.success) {
+          if (data?.error === 'round_deadline_passed') {
+            await handleTimeoutStrict(roomId);
+            return;
+          }
+          throw new Error(data?.message || data?.error || 'submitBattleScore failed');
+        }
+        if (skillRequested) hasUsedSkill = true;
+        if (data.roundComplete || data.battleFinished) {
+          await processJudgeResultStrict(roomId, data);
+          return;
+        }
+        if (waitOpTimer) clearInterval(waitOpTimer);
+        waitOpTimer = setInterval(async () => {
+          try {
+            const status = await getStatusStrict(roomId);
+            const r = (status.rounds || []).find(x => num(x.roundNo) === num(roundNo));
+            if (status.room?.status === 'finished' || (r && (r.status === 'finished' || r.status === 'timeout'))) {
+              clearInterval(waitOpTimer); waitOpTimer = null;
+              await processJudgeResultStrict(roomId, buildResultFromStatusRound(status, roundNo));
+              return;
+            }
+            if (r?.deadline && Date.now() > new Date(r.deadline).getTime() + GRACE_MS) {
+              clearInterval(waitOpTimer); waitOpTimer = null;
+              await handleTimeoutStrict(roomId);
+            }
+          } catch (e) { console.warn('waiting resolved poll failed', e); }
+        }, POLL_MS);
+      } catch (err) {
+        console.error('submitBattleScore sync-v3 failed:', err);
+        alert('送出對戰分數失敗：' + String(err.message || err));
+        roundSubmitted = false;
+        isChecking = false;
+        if (controls) controls.style.visibility = 'visible';
+      }
+    })();
+  };
+
+})();
+</script>
+
 </body>
 </html>
