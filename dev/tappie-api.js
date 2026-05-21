@@ -11,7 +11,14 @@ const TappieAPI = {
     getDiagnosticReport: "/get-diagnostic-report",
     adminGetData: "/admin-get-data",
     adminSaveStudents: "/admin-save-students",
-    adminSaveTasks: "/admin-save-tasks"
+    adminSaveTasks: "/admin-save-tasks",
+    getLobbyData: "/get-lobby-data",
+    createBattleRoom: "/create-battle-room",
+    joinBattleRoom: "/join-battle-room",
+    getBattleStatus: "/get-battle-status",
+    setArenaReady: "/set-arena-ready",
+    submitBattleScore: "/submit-battle-score",
+    cancelBattleRoom: "/cancel-battle-room"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -51,6 +58,33 @@ const TappieAPI = {
   },
   async adminSaveTasks(payload) {
     return await this._post(this.endpoints.adminSaveTasks, payload);
+  },
+
+  async getLobbyData(uid, classCode = "") {
+    const qs = new URLSearchParams({ uid });
+    if (classCode) qs.set("classCode", classCode);
+    return await this._get(`${this.endpoints.getLobbyData}?${qs.toString()}`);
+  },
+  async createBattleRoom(payload) {
+    return await this._post(this.endpoints.createBattleRoom, payload);
+  },
+  async joinBattleRoom(payload) {
+    return await this._post(this.endpoints.joinBattleRoom, payload);
+  },
+  async getBattleStatus({ uid, roomCode, roomId }) {
+    const qs = new URLSearchParams({ uid });
+    if (roomCode) qs.set("roomCode", roomCode);
+    if (roomId) qs.set("roomId", roomId);
+    return await this._get(`${this.endpoints.getBattleStatus}?${qs.toString()}`);
+  },
+  async setArenaReady(payload) {
+    return await this._post(this.endpoints.setArenaReady, payload);
+  },
+  async submitBattleScore(payload) {
+    return await this._post(this.endpoints.submitBattleScore, payload);
+  },
+  async cancelBattleRoom(payload) {
+    return await this._post(this.endpoints.cancelBattleRoom, payload);
   },
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
