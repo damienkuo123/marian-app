@@ -1601,16 +1601,27 @@
     }
 
     function cancelAiChallenge() {
-      if(aiTimerInterval) { 
+      // ✅ 取消舊版 GAS 倒數 timer
+      if (typeof aiTimerInterval !== 'undefined' && aiTimerInterval) { 
         clearInterval(aiTimerInterval); 
         aiTimerInterval = null; 
       }
-      document.getElementById('ai-countdown-overlay').style.display = 'none';
-
-      // 🚀 關鍵修復：玩家手動取消倒數時，務必解除活動按鈕的點擊封印！
+    
+      // ✅ 取消新版 Supabase AI / Boss 倒數 timer
+      if (window.aiTimerInterval) {
+        clearInterval(window.aiTimerInterval);
+        window.aiTimerInterval = null;
+      }
+    
+      // ✅ 加一道取消旗標，避免 async setInterval 已經進入最後一秒時仍繼續送出
+      window.aiTeleportCancelled = true;
+    
+      const overlay = document.getElementById('ai-countdown-overlay');
+      if (overlay) overlay.style.display = 'none';
+    
       const eventBanner = document.querySelector('.event-banner');
       if (eventBanner) {
-          eventBanner.style.pointerEvents = 'auto';
+        eventBanner.style.pointerEvents = 'auto';
       }
     }
 
@@ -2458,14 +2469,18 @@
         const aiMsgEl = document.getElementById('ai-msg');
         if (aiTimerEl) aiTimerEl.innerText = count;
         if (aiMsgEl) aiMsgEl.innerText = `連線至 ${level}...`;
+        window.aiTeleportCancelled = false;
 
         window.aiTimerInterval = setInterval(async () => {
           count--;
           if (aiTimerEl) aiTimerEl.innerText = count;
           if (count > 0) return;
-
+        
           clearInterval(window.aiTimerInterval);
           window.aiTimerInterval = null;
+        
+          if (window.aiTeleportCancelled) return;
+        
           if (aiMsgEl) aiMsgEl.innerText = '🚀 傳送中...';
 
           try {
@@ -2594,13 +2609,18 @@
         const aiMsgEl = document.getElementById('ai-msg');
         if (aiTimerEl) aiTimerEl.innerText = count;
         if (aiMsgEl) aiMsgEl.innerText = '連線至 活動Boss...';
+        window.aiTeleportCancelled = false;
 
         window.aiTimerInterval = setInterval(async () => {
           count--;
           if (aiTimerEl) aiTimerEl.innerText = count;
           if (count > 0) return;
+        
           clearInterval(window.aiTimerInterval);
           window.aiTimerInterval = null;
+        
+          if (window.aiTeleportCancelled) return;
+        
           if (aiMsgEl) aiMsgEl.innerText = '🚀 傳送中...';
 
           try {
