@@ -751,6 +751,24 @@
         .catch(err => { alert("連線失敗，請檢查網路狀態！"); console.error(err); });
     };
 
+
+    function formatLogTimestamp(value) {
+      if (!value) return '';
+      const raw = String(value).trim();
+      // 已經是後端格式好的中文時間時，直接沿用，避免重複轉換。
+      if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw;
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) return raw;
+      return date.toLocaleString('zh-TW', {
+        timeZone: 'Asia/Taipei',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    }
+
     function maskEmail(email) {
       if (!email) return "";
       const parts = email.split('@');
@@ -1156,8 +1174,8 @@
           const valClass = amount >= 0 ? "log-plus" : "log-minus";
           const valText = isAvatar ? "角色" : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
           const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
-          const sub = escapeHtml(log.sub || log.note || '');
-          const time = escapeHtml(log.time || '');
+          const rawTime = log.time || log.createdAt || log.created_at || log.timestamp || '';
+          const time = escapeHtml(formatLogTimestamp(rawTime));
           const icon = log.icon || (isAvatar ? '🎴' : (amount >= 0 ? '✨' : '⚠️'));
           return `
             <div class="log-row" style="align-items:flex-start; gap:12px;">
@@ -1165,8 +1183,7 @@
                 <span style="font-size:20px; line-height:1.2;">${icon}</span>
                 <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
                   <span>${title}</span>
-                  ${sub ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${sub}</span>` : ''}
-                  <span style="color:var(--text-sub); font-size:12px; font-weight:normal;">${time}</span>
+                  ${time ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${time}</span>` : ''}
                 </span>
               </span>
               <span class="${valClass}" style="white-space:nowrap;">${valText}</span>
