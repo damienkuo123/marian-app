@@ -17,7 +17,7 @@
   <script src="global-audio.js"></script>
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
-  <script src="./tappie-api.js?v=20260522-micro-polish-v1"></script>
+  <script src="./tappie-api.js?v=20260522-micro-polish-v2"></script>
 
   <style>
     :root { 
@@ -751,15 +751,6 @@
         .catch(err => { alert("連線失敗，請檢查網路狀態！"); console.error(err); });
     };
 
-
-    function formatLogTime(value) {
-      if (!value) return "";
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return String(value);
-      const pad = n => String(n).padStart(2, '0');
-      return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-
     function maskEmail(email) {
       if (!email) return "";
       const parts = email.split('@');
@@ -785,16 +776,17 @@
       document.getElementById('parent-email-input').focus();
     }
 
-    async function subscribeEmail() {
+    function subscribeEmail() {
       const emailInput = document.getElementById('parent-email-input');
       let email = emailInput.value.trim();
       const msgEl = document.getElementById('email-msg');
       const btn = document.getElementById('email-submit-btn');
+      const unsubscribe = email === "" && currentParentEmail !== "";
 
       if (email === "") {
          if (currentParentEmail !== "") {
              if (!confirm("⚠️ 確定要取消訂閱 專屬學習週報 嗎？\n取消後您將不會再收到。")) {
-                 emailInput.value = currentParentEmail; 
+                 emailInput.value = currentParentEmail;
                  return;
              }
          } else {
@@ -812,44 +804,151 @@
       msgEl.innerText = "⏳ 系統設定中...";
       btn.style.pointerEvents = "none";
 
-      try {
-        if (!window.TappieAPI || typeof TappieAPI.updateWeeklyReport !== 'function') {
-          throw new Error('updateWeeklyReport 尚未載入');
-        }
-
-        const res = await TappieAPI.updateWeeklyReport({
-          uid: STUDENT_ID,
-          parentEmail: email,
-          subscribed: !!email
-        });
-
-        if (res && res.success) {
-          currentParentEmail = email;
-          if (email === "") {
-              msgEl.style.color = '#7f8c8d';
-              msgEl.innerText = "ℹ️ 已成功取消訂閱。";
-              btn.innerText = "訂閱";
-              document.getElementById('email-display-zone').style.display = 'none';
-              document.getElementById('email-edit-zone').style.display = 'flex';
-          } else {
-              msgEl.style.color = '#2ecc71';
-              msgEl.innerText = "✅ 綁定成功！每週五見囉！";
-              setTimeout(() => showEmailDisplay(email), 1500);
+      (async () => {
+        try {
+          if (!window.TappieAPI || typeof TappieAPI.updateWeeklyReport !== 'function') {
+            throw new Error('updateWeeklyReport 尚未載入');
           }
-        } else {
-          msgEl.style.color = '#e74c3c';
-          msgEl.innerText = "❌ 設定失敗，請稍後再試。";
-        }
-      } catch (err) {
-        console.error('update weekly report failed:', err);
-        msgEl.style.color = '#e74c3c';
-        msgEl.innerText = "⚠️ 網路錯誤，請檢查連線。";
-      } finally {
-        btn.style.pointerEvents = "auto";
-      }
-    }
 
-    // ==========================================
+          const data = await TappieAPI.updateWeeklyReport({
+            uid: STUDENT_ID,
+            parentEmail: unsubscribe ? "" : email,
+            subscribed: !unsubscribe
+          });
+
+          if (data && data.success) {
+            currentParentEmail = unsubscribe ? "" : email;
+            if (unsubscribe) {
+                msgEl.style.color = '#7f8c8d';
+                msgEl.innerText = "ℹ️ 已成功取消訂閱。";
+                btn.innerText = "訂閱";
+                emailInput.value = "";
+                document.getElementById('email-display-zone').style.display = 'none';
+                document.getElementById('email-edit-zone').style.display = 'flex';
+            } else {
+                msgEl.style.color = '#2ecc71';
+                msgEl.innerText = "✅ 綁定成功！每週五見囉！";
+                setTimeout(() => showEmailDisplay(email), 1500);
+            }
+          } else {
+            msgEl.style.color = '#e74c3c';
+            msgEl.innerText = data?.message || "❌ 設定失敗，請稍後再試。";
+          }
+        } catch (err) {
+          console.error('update-weekly-report failed:', err);
+          msgEl.style.color = '#e74c3c';
+          msgEl.innerText = "⚠️ 網路錯誤，請檢查連線。";
+        } finally {
+          btn.style.pointerEvents = "auto";
+        }
+      })();
+    }
+    
+    function renderDashboard(data) {
+      // 🚀 1. 客製化視覺與動態 App 打包引擎
+      if (data.logoUrl) {
+          const logoEl = document.getElementById('student-avatar');
+          if (logoEl) logoEl.src = data.logoUrl;
+      }
+      
+      // 決定 App 的 Icon (有客製化就用客製化，沒有就用預設)
+      const finalIconUrl = data.iconUrl ? data.iconUrl : "/assets/app-icon.png";
+      
+      // 動態替換 iOS 的加入主畫面圖示
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+      if (!appleIcon) {
+          appleIcon = document.createElement('link');
+          appleIcon.rel = "apple-touch-icon";
+          document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = finalIconUrl;
+
+      // 🌟 魔法核心：動態生成 Android PWA 安裝檔 (Manifest)
+      // 把 App 名稱改成學生的專屬名字！
+      const manifestJSON = {
+          "name": `Tappie - ${data.studentName}`,
+          "short_name": data.studentName,
+          "start_url": window.location.href, // 🚀 殺手級功能：點開直接免刷卡登入！
+          "display": "standalone",
+          "background_color": "#eaeff2",
+          "theme_color": "#0066cc",
+          "icons": [
+              {
+                  "src": finalIconUrl,
+                  "sizes": "192x192 512x512",
+                  "type": "image/png",
+                  "purpose": "any maskable"
+              }
+          ]
+      };
+
+      // 將 JSON 轉為虛擬檔案 (Blob)
+      const blob = new Blob([JSON.stringify(manifestJSON)], { type: 'application/json' });
+      const manifestUrl = URL.createObjectURL(blob);
+
+      // 替換或建立 HTML 裡的 <link rel="manifest">
+      let manifestLink = document.querySelector('link[rel="manifest"]');
+      if (!manifestLink) {
+          manifestLink = document.createElement('link');
+          manifestLink.rel = "manifest";
+          document.head.appendChild(manifestLink);
+      }
+      manifestLink.href = manifestUrl;
+
+
+      // 🚀 2. 原本的資料渲染...
+      document.getElementById('student-name').innerText = data.studentName;
+      document.getElementById('current-points').innerText = data.currentPoints;
+
+      if (data.parentEmail && data.parentEmail.includes('@')) {
+          currentParentEmail = data.parentEmail;
+          document.getElementById('parent-email-input').value = currentParentEmail;
+          showEmailDisplay(currentParentEmail);
+      } else {
+          document.getElementById('email-display-zone').style.display = 'none';
+          document.getElementById('email-edit-zone').style.display = 'flex';
+          document.getElementById('email-submit-btn').innerText = "訂閱";
+      }
+      
+      if (data.leaderboard && data.leaderboard.length > 0) {
+        let myRank = -1;
+        for (let i = 0; i < Math.min(3, data.leaderboard.length); i++) {
+            if (data.leaderboard[i].uid === STUDENT_ID) {
+                myRank = i;
+                break;
+            }
+        }
+        
+        if (myRank !== -1) {
+            const badge = document.getElementById('honor-title');
+            if (myRank === 0) badge.innerText = `🏆 ${data.currentUnit} 第一名`;
+            else if (myRank === 1) badge.innerText = `🌟 ${data.currentUnit} 第二名`;
+            else if (myRank === 2) badge.innerText = `🔥 ${data.currentUnit} 第三名`;
+            
+            badge.classList.remove('hidden');
+        }
+      }
+
+      // 👑 權限判定：拔除鎖頭與顯示專屬功能
+      if (data.studentType === "美語資優生") {
+        // 🔓 拔掉底部導航的鎖頭，允許切換！
+        document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.remove('locked'));
+        // 顯示專屬的 Email 訂閱區塊
+        document.getElementById('newsletter-zone').classList.remove('hidden'); 
+      } else {
+        // 🔒 一般生：確保鎖頭存在 (HTML裡已經預設有加了，這裡只是保險)
+        document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.add('locked'));
+        // 隱藏專屬的 Email 訂閱區塊
+        document.getElementById('newsletter-zone').classList.add('hidden');
+      }
+
+      // 📊 以下的數據渲染，不管是不是資優生都照常執行！
+      // 這樣當一般生偷偷用開發者工具把 .locked 拿掉時，看到的也是正確的數據，而不是空版。
+
+      // 🚀 關鍵第一步：先把 Admin 的遊戲設定抓出來！
+      const gami = data.gamification;
+
+      // ==========================================
       // 🎯 今日挑戰 Box 渲染 (動態計算得分版)
       // ==========================================
       const unitText = data.currentUnit || "未排定";
@@ -1057,10 +1156,8 @@
           const valClass = amount >= 0 ? "log-plus" : "log-minus";
           const valText = isAvatar ? "角色" : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
           const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
-          const rawTime = log.time || log.createdAt || log.created_at || log.timestamp || log.date || '';
-          const time = escapeHtml(formatLogTime(rawTime));
-          const rawSub = log.sub || log.note || '';
-          const sub = escapeHtml(rawSub && rawSub !== log.title && rawSub !== log.reason ? rawSub : '');
+          const sub = escapeHtml(log.sub || log.note || '');
+          const time = escapeHtml(log.time || '');
           const icon = log.icon || (isAvatar ? '🎴' : (amount >= 0 ? '✨' : '⚠️'));
           return `
             <div class="log-row" style="align-items:flex-start; gap:12px;">
@@ -1068,8 +1165,8 @@
                 <span style="font-size:20px; line-height:1.2;">${icon}</span>
                 <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
                   <span>${title}</span>
-                  ${time ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${time}</span>` : ''}
                   ${sub ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${sub}</span>` : ''}
+                  <span style="color:var(--text-sub); font-size:12px; font-weight:normal;">${time}</span>
                 </span>
               </span>
               <span class="${valClass}" style="white-space:nowrap;">${valText}</span>

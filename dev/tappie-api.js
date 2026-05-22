@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Micro Polish v1 - dashboard timestamp + weekly report + avatar shop polish
+// Micro Polish v2 - school_id avatar purchase fix + safe weekly report
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
