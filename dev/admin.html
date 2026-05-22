@@ -963,6 +963,22 @@
             return data;
         }
 
+
+        async function adminSaveAvatarPrice(avatarId, cost) {
+            const res = await fetch(`${getSupabaseFunctionBaseUrl()}/admin-save-avatar-price`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    schoolCode: CURRENT_SCHOOL,
+                    avatarId,
+                    cost: Number(cost)
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!data.success) throw new Error(data.message || data.error || 'admin-save-avatar-price failed');
+            return data;
+        }
+
         function toAdminStudentPayload(s) {
             return {
                 studentName: s.name || s.studentName || '-',
@@ -2050,63 +2066,92 @@
                 });
         }
 
-        // 🛒 商店定價動態讀取與個別儲存
+        // 🛒 商店定價動態讀取與個別儲存（Supabase 版）
         function loadShopAdminList() {
             const listEl = document.getElementById('shop-admin-list');
             listEl.innerHTML = '<p style="text-align:center; color:#3498db; font-size:13px; margin: 10px 0;">讀取商品中...</p>';
-            
-            fetch(`${GAS_URL}?action=get_shop_items_admin&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST' })
-                .then(res => res.json())
-                .then(items => {
-                    if (!items || items.length === 0) {
-                        listEl.innerHTML = '<p style="text-align:center; color:#7f8c8d; font-size:13px; margin: 10px 0;">商店目前沒有上架商品</p>';
-                        return;
-                    }
-                    
-                    let html = '';
-                    items.forEach(item => {
-                        let rarityColor = item.rarity === 'SSR' ? '#f1c40f' : (item.rarity === 'SR' ? '#9b59b6' : (item.rarity === 'R' ? '#3498db' : '#ecf0f1'));
-                        html += `
-                        <div style="display:flex; align-items:center; background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); gap:10px;">
-                            <span style="color:${rarityColor}; font-weight:900; font-size:12px; width:30px; text-align:center;">${item.rarity}</span>
-                            <span style="flex:1; color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</span>
-                            <input type="number" id="shop-cost-${item.row}" value="${item.cost}" class="word-input" style="width:70px; padding:6px; font-size:14px; margin:0; flex:none;">
-                            <button onclick="saveShopItemPrice(${item.row}, this)" style="background:rgba(46,204,113,0.2); border:1px solid #2ecc71; color:#2ecc71; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:bold; font-size:12px; transition:0.2s;">儲存</button>
-                        </div>`;
-                    });
-                    listEl.innerHTML = html;
+
+            const renderItems = (items) => {
+                const shopItems = (items || []).filter(item => {
+                    const category = String(item.category || '一般').trim().toLowerCase();
+                    const id = String(item.id || item.avatarId || '');
+                    const isAi = category === 'ai' || category === '機器人' || category === 'ai角色' || id.startsWith('AI_');
+                    const isDefault = category === 'default' || category === 'preset' || category === '預設' || category === '默认';
+                    return !isAi && !isDefault;
+                });
+
+                if (!shopItems.length) {
+                    listEl.innerHTML = '<p style="text-align:center; color:#7f8c8d; font-size:13px; margin: 10px 0;">商店目前沒有可調整的角色商品</p>';
+                    return;
+                }
+
+                let html = '';
+                shopItems.forEach((item, index) => {
+                    const avatarId = item.id || item.avatarId;
+                    const rarity = item.rarity || 'N';
+                    const category = item.category || '一般';
+                    const cost = Number(item.cost || 0);
+                    const rarityColor = rarity === 'SSR' ? '#f1c40f' : (rarity === 'SR' ? '#9b59b6' : (rarity === 'R' ? '#3498db' : '#ecf0f1'));
+                    const categoryBadgeColor = String(category) === '活動' || String(category).toLowerCase() === 'event' ? '#9b59b6' : '#2ecc71';
+                    html += `
+                    <div style="display:flex; align-items:center; background:rgba(0,0,0,0.4); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); gap:10px;">
+                        <span style="color:${rarityColor}; font-weight:900; font-size:12px; width:34px; text-align:center;">${rarity}</span>
+                        <span style="flex:1; color:white; font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${avatarId}">${item.name || avatarId}</span>
+                        <span style="font-size:11px; color:${categoryBadgeColor}; border:1px solid ${categoryBadgeColor}; border-radius:8px; padding:3px 6px; white-space:nowrap;">${category}</span>
+                        <input type="number" id="shop-cost-${index}" value="${cost}" class="word-input" style="width:76px; padding:6px; font-size:14px; margin:0; flex:none;">
+                        <button onclick='saveShopItemPrice(${JSON.stringify(avatarId)}, ${index}, this)' style="background:rgba(46,204,113,0.2); border:1px solid #2ecc71; color:#2ecc71; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:bold; font-size:12px; transition:0.2s;">儲存</button>
+                    </div>`;
+                });
+                listEl.innerHTML = html;
+            };
+
+            // 優先使用 openGamiModal 已經讀到的 avatars；若沒有，再直接讀一次 Supabase。
+            if (currentShopAvatars && currentShopAvatars.length) {
+                renderItems(currentShopAvatars);
+                return;
+            }
+
+            adminGetGamification()
+                .then(data => {
+                    currentShopAvatars = Array.isArray(data.avatars) ? data.avatars : [];
+                    renderItems(currentShopAvatars);
+                })
+                .catch(err => {
+                    console.error('[loadShopAdminList]', err);
+                    listEl.innerHTML = `<p style="text-align:center; color:#e74c3c; font-size:13px; margin: 10px 0;">讀取失敗：${err.message || '請稍後再試'}</p>`;
                 });
         }
 
-        function saveShopItemPrice(row, btnElement) {
-            const costVal = document.getElementById(`shop-cost-${row}`).value;
+        function saveShopItemPrice(avatarId, index, btnElement) {
+            const costVal = document.getElementById(`shop-cost-${index}`).value;
             if (costVal === "") return;
 
             const originalText = btnElement.innerText;
             btnElement.innerText = "⏳";
             btnElement.style.pointerEvents = "none";
 
-            const formData = new URLSearchParams();
-            formData.append('row', row);
-            formData.append('cost', costVal);
-
-            fetch(`${GAS_URL}?action=save_shop_item_price&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
-                .then(res => res.json())
+            adminSaveAvatarPrice(avatarId, Number(costVal))
                 .then(data => {
-                    if (data.success) {
-                        btnElement.innerText = "✅";
-                        btnElement.style.background = "#2ecc71";
-                        btnElement.style.color = "white";
-                        setTimeout(() => {
-                            btnElement.innerText = originalText;
-                            btnElement.style.background = "rgba(46,204,113,0.2)";
-                            btnElement.style.color = "#2ecc71";
-                            btnElement.style.pointerEvents = "auto";
-                        }, 1500);
-                    } else {
-                        btnElement.innerText = "❌";
-                        setTimeout(() => { btnElement.innerText = originalText; btnElement.style.pointerEvents = "auto"; }, 1500);
-                    }
+                    btnElement.innerText = "✅";
+                    btnElement.style.background = "#2ecc71";
+                    btnElement.style.color = "white";
+                    // 同步更新暫存資料，避免關掉再打開看到舊價格。
+                    currentShopAvatars = (currentShopAvatars || []).map(item => {
+                        const id = item.id || item.avatarId;
+                        return String(id) === String(avatarId) ? { ...item, cost: Number(costVal) } : item;
+                    });
+                    setTimeout(() => {
+                        btnElement.innerText = originalText;
+                        btnElement.style.background = "rgba(46,204,113,0.2)";
+                        btnElement.style.color = "#2ecc71";
+                        btnElement.style.pointerEvents = "auto";
+                    }, 1500);
+                })
+                .catch(err => {
+                    console.error('[admin-save-avatar-price]', err);
+                    btnElement.innerText = "❌";
+                    alert(err.message || '儲存角色價格失敗');
+                    setTimeout(() => { btnElement.innerText = originalText; btnElement.style.pointerEvents = "auto"; }, 1500);
                 });
         }
 
