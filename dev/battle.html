@@ -2138,6 +2138,29 @@
       setTimeout(() => loader.style.display = 'none', 600);
     }
   }
+
+  async function incrementVoiceUsageOrBlock(source = 'battle') {
+    const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: STUDENT_ID,
+        source
+      })
+    });
+  
+    const data = await res.json().catch(() => ({}));
+  
+    if (!data.success) {
+      if (data.overLimit) {
+        alert(`⚠️ 今日口說練習已達上限 (${data.count}/${data.limit})\n請明天再來挑戰喔！`);
+        return false;
+      }
+      throw new Error(data.message || data.error || 'voice usage failed');
+    }
+  
+    return true;
+  }
   
   function normalizeStr(val) { if (!val) return ""; return String(val).replace(/(%20|\s)+/ig, "").toUpperCase(); }
 
@@ -2735,6 +2758,24 @@
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
 
+                    const voiceOk = await incrementVoiceUsageOrBlock(
+                      IS_AI_BATTLE ? 'battle_ai_or_boss' : 'battle_pvp'
+                    );
+                    
+                    if (!voiceOk) {
+                      recognizer.close();
+                    
+                      const bBtn = document.getElementById('battle-record-btn');
+                      if (bBtn) {
+                        bBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                        bBtn.style.pointerEvents = 'auto';
+                      }
+                    
+                      roundSubmitted = false;
+                      isChecking = false;
+                      return;
+                    }
+
                     recognizer.recognizeOnceAsync(
                         (result) => {
                             if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
@@ -3252,6 +3293,24 @@
 
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
+
+                    const voiceOk = await incrementVoiceUsageOrBlock(
+                      IS_AI_BATTLE ? 'battle_ai_or_boss' : 'battle_pvp'
+                    );
+                    
+                    if (!voiceOk) {
+                      recognizer.close();
+                    
+                      const bBtn = document.getElementById('battle-record-btn');
+                      if (bBtn) {
+                        bBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                        bBtn.style.pointerEvents = 'auto';
+                      }
+                    
+                      roundSubmitted = false;
+                      isChecking = false;
+                      return;
+                    }
 
                     recognizer.recognizeOnceAsync(
                         (result) => {
@@ -4397,6 +4456,24 @@
 
                       const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                       pronConfig.applyTo(recognizer);
+
+                      const voiceOk = await incrementVoiceUsageOrBlock(
+                        IS_AI_BATTLE ? 'battle_ai_or_boss' : 'battle_pvp'
+                      );
+                      
+                      if (!voiceOk) {
+                        recognizer.close();
+                      
+                        const bBtn = document.getElementById('battle-record-btn');
+                        if (bBtn) {
+                          bBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                          bBtn.style.pointerEvents = 'auto';
+                        }
+                      
+                        roundSubmitted = false;
+                        isChecking = false;
+                        return;
+                      }
 
                       recognizer.recognizeOnceAsync((result) => {
                           btn.style.pointerEvents = "auto"; // 判定完成，解開按鈕封印
