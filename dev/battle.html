@@ -2102,6 +2102,35 @@
   let azureTokenInterval = null; // 計時器本體
   const MAX_TOKEN_FETCHES = 4; // 最多允許拿 4 次 (約 32 分鐘極限)
 
+
+
+  // =======================================================
+  // 🎙️ Voice Usage Guard：每次真正進入 Azure 評分前，先累加 daily_usage.voice_count
+  // =======================================================
+  async function incrementVoiceUsageOrBlock(source = 'unknown') {
+    try {
+      const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: STUDENT_ID, source })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.success) {
+        if (data.overLimit) {
+          alert(`🎙️ 今日的口說額度已用完 (${data.count}/${data.limit})
+請明天再來練習喔！`);
+          return false;
+        }
+        throw new Error(data.message || data.error || 'voice usage failed');
+      }
+      return true;
+    } catch (err) {
+      console.error('voice usage check failed:', err);
+      alert('⚠️ 今日口說額度檢查失敗，請稍後再試。');
+      return false;
+    }
+  }
+
   function fetchAzureToken() {
     // 檢查是否超過允許的拿鑰匙次數
     if (azureTokenFetchCount >= MAX_TOKEN_FETCHES) {
@@ -2128,30 +2157,6 @@
 
   // 🚀 2. 每 8 分鐘自動換鑰匙，並交由函式內部判斷何時終止
   azureTokenInterval = setInterval(fetchAzureToken, 8 * 60 * 1000);
-
-  // =======================================================
-  // 🎙️ Supabase voice_count 用量計次：每次呼叫 Azure 前先檢查/加一
-  // =======================================================
-  async function incrementVoiceUsageOrBlock(source = 'unknown') {
-    const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: STUDENT_ID, source })
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!data.success) {
-      if (data.overLimit) {
-        alert(`🎙️ 今日的口說額度已用完 (${data.count}/${data.limit})\n請明天再來練習喔！`);
-        return false;
-      }
-      throw new Error(data.message || data.error || 'voice usage failed');
-    }
-
-    return true;
-  }
-
 
   // 🚀 隱藏載入畫面的共用函數
   function hideLoadingScreen() {
@@ -2742,6 +2747,14 @@
                 }
                 
                 try {
+                    const voiceOk = await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'battle_practice_challenge' : 'battle_practice_review');
+                    if (!voiceOk) {
+                        isGrading = false;
+                        rb.classList.remove('processing-locked');
+                        renderWord();
+                        return;
+                    }
+
                     const wavFile = await createWavFileFromBlob(rawBlob);
                     document.getElementById('status').innerText = "🟢 傳送至聲學引擎...";
                     document.getElementById('status').style.color = "#3498db";
@@ -2758,29 +2771,6 @@
 
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
-
-                    const voiceUsageSource = (() => {
-                        const qsMode = new URLSearchParams(window.location.search).get('mode');
-                        if (typeof ROOM_ID !== 'undefined' && ROOM_ID) return qsMode === 'ai' ? 'battle_ai_or_boss' : 'battle_pvp';
-                        if (typeof MODE !== 'undefined') return MODE === 'challenge' ? 'arena_challenge' : 'arena_review';
-                        return 'voice_practice';
-                    })();
-                    const voiceOk = await incrementVoiceUsageOrBlock(voiceUsageSource);
-                    if (!voiceOk) {
-                        recognizer.close();
-                        if (typeof rb !== 'undefined' && rb) rb.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
-                        const battleBtn = document.getElementById('battle-record-btn');
-                        if (battleBtn) {
-                          battleBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
-                          battleBtn.style.pointerEvents = 'auto';
-                        }
-                        if (typeof btn !== 'undefined' && btn) btn.style.pointerEvents = 'auto';
-                        if (typeof roundSubmitted !== 'undefined') roundSubmitted = false;
-                        if (typeof isChecking !== 'undefined') isChecking = false;
-                        if (typeof isGrading !== 'undefined') isGrading = false;
-                        if (typeof renderWord === 'function') renderWord();
-                        return;
-                    }
 
                     recognizer.recognizeOnceAsync(
                         (result) => {
@@ -3283,6 +3273,16 @@
                 }
                 
                 try {
+                    const voiceOk = await incrementVoiceUsageOrBlock('battle_round');
+                    if (!voiceOk) {
+                        roundSubmitted = false;
+                        battleBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                        battleBtn.style.pointerEvents = 'auto';
+                        document.getElementById('battle-info').innerText = "🎙️ 今日口說額度已用完";
+                        document.getElementById('battle-info').style.color = "#e74c3c";
+                        return;
+                    }
+
                     const wavFile = await createWavFileFromBlob(rawBlob);
                     document.getElementById('battle-info').innerText = "🟢 傳送至聲學引擎...";
                     document.getElementById('battle-info').style.color = "#3498db";
@@ -3299,29 +3299,6 @@
 
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
-
-                    const voiceUsageSource = (() => {
-                        const qsMode = new URLSearchParams(window.location.search).get('mode');
-                        if (typeof ROOM_ID !== 'undefined' && ROOM_ID) return qsMode === 'ai' ? 'battle_ai_or_boss' : 'battle_pvp';
-                        if (typeof MODE !== 'undefined') return MODE === 'challenge' ? 'arena_challenge' : 'arena_review';
-                        return 'voice_practice';
-                    })();
-                    const voiceOk = await incrementVoiceUsageOrBlock(voiceUsageSource);
-                    if (!voiceOk) {
-                        recognizer.close();
-                        if (typeof rb !== 'undefined' && rb) rb.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
-                        const battleBtn = document.getElementById('battle-record-btn');
-                        if (battleBtn) {
-                          battleBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
-                          battleBtn.style.pointerEvents = 'auto';
-                        }
-                        if (typeof btn !== 'undefined' && btn) btn.style.pointerEvents = 'auto';
-                        if (typeof roundSubmitted !== 'undefined') roundSubmitted = false;
-                        if (typeof isChecking !== 'undefined') isChecking = false;
-                        if (typeof isGrading !== 'undefined') isGrading = false;
-                        if (typeof renderWord === 'function') renderWord();
-                        return;
-                    }
 
                     recognizer.recognizeOnceAsync(
                         (result) => {
@@ -4445,6 +4422,14 @@
                   }
 
                   try {
+                      const voiceOk = await incrementVoiceUsageOrBlock('battle_gacha_unlock');
+                      if (!voiceOk) {
+                          status.innerText = "🎙️ 今日口說額度已用完";
+                          status.style.color = "#e74c3c";
+                          btn.style.pointerEvents = "auto";
+                          return;
+                      }
+
                       const wavFile = await createWavFileFromBlob(rawBlob);
                       status.innerText = "🔵 驗證密語中...";
                       status.style.color = "#3498db";
@@ -4467,18 +4452,6 @@
 
                       const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                       pronConfig.applyTo(recognizer);
-
-                      const voiceUsageSource = 'gacha_voice_unlock';
-                      const voiceOk = await incrementVoiceUsageOrBlock(voiceUsageSource);
-                      if (!voiceOk) {
-                          recognizer.close();
-                          if (typeof btn !== 'undefined' && btn) btn.style.pointerEvents = 'auto';
-                          if (typeof status !== 'undefined' && status) {
-                            status.innerText = '🎙️ 今日口說額度已用完';
-                            status.style.color = '#e74c3c';
-                          }
-                          return;
-                      }
 
                       recognizer.recognizeOnceAsync((result) => {
                           btn.style.pointerEvents = "auto"; // 判定完成，解開按鈕封印
