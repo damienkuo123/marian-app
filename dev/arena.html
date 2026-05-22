@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-challenge-reward-v3"></script>
+  <script src="./tappie-api.js?v=20260522-precision-v1"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -2415,6 +2415,8 @@
                 }
                 
                 try {
+                    const audioBase64 = await blobToBase64(rawBlob);
+                    const audioMimeType = rawBlob.type || "audio/webm";
                     const wavFile = await createWavFileFromBlob(rawBlob);
                     document.getElementById('status').innerText = "🟢 傳送至聲學引擎...";
                     document.getElementById('status').style.color = "#3498db";
@@ -2435,23 +2437,25 @@
                     recognizer.recognizeOnceAsync(
                         (result) => {
                             if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-                                document.getElementById('status').innerText = "呼叫導師評論中...";
+                                document.getElementById('status').innerText = "🧠 後端精密評分中...";
                                 let rawAzureData = SpeechSDK.PronunciationAssessmentResult.fromResult(result).detailResult;
                                 azureReports[currentIndex] = rawAzureData;
 
                                 // 🚀 核心升級：導入 10 秒絕對斬斷防護網 (AbortController)
                                 const abortController = new AbortController();
                                 const fetchTimeout = setTimeout(() => {
-                                    abortController.abort(); // ⏱️ 10秒一到，無情斬斷連線！
-                                }, 12000);
+                                    abortController.abort(); // ⏱️ 後端 Gemini 評分較慢，逾時才斬斷
+                                }, 30000);
 
                                 TappieAPI.submitPractice({
                                     uid: STUDENT_ID,
                                     unitName: ACTIVE_UNIT_NAME || TARGET_UNIT,
                                     word: targetWord,
                                     mode: MODE,
-                                    azureRaw: rawAzureData
-                                }).then(data => {
+                                    azureRaw: rawAzureData,
+                                    audioBase64,
+                                    audioMimeType
+                                }, { signal: abortController.signal }).then(data => {
                                     clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
                                     return data;
                                 }).then(data => {
@@ -2529,6 +2533,18 @@
     };
   }
 
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("音檔轉碼失敗"));
+      reader.onloadend = () => {
+        const result = String(reader.result || "");
+        resolve(result.includes(",") ? result.split(",")[1] : result);
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
 
   function makeLocalFeedback(score, word) {
     const s = Number(score || 0);
@@ -4613,6 +4629,30 @@
           speakWordCloudCached(targetWord, 1.8, null, null, '-10%');
       }
   }
+
+
+  // 🔊 精修：第一次觸控時解除 iOS/Chrome 音訊鎖。不主動播放，只負責 unlock/resume，避免干擾既有流程。
+  (function setupTappieAudioUnlock(){
+    if (window.__tappieAudioUnlockInstalled) return;
+    window.__tappieAudioUnlockInstalled = true;
+    const unlock = async () => {
+      try {
+        if (window.GlobalAudio) {
+          if (typeof GlobalAudio.unlock === 'function') await GlobalAudio.unlock();
+          if (typeof GlobalAudio.resume === 'function') await GlobalAudio.resume();
+          if (typeof GlobalAudio.ensureReady === 'function') await GlobalAudio.ensureReady();
+        }
+        if (window.sysAudioCtx && typeof window.sysAudioCtx.resume === 'function') {
+          await window.sysAudioCtx.resume();
+        }
+      } catch (e) {
+        console.warn('Audio unlock skipped:', e);
+      }
+    };
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('touchstart', unlock, { once: true, passive: true });
+  })();
+
 </script>
   <div id="phonic-helper-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
   <div class="helper-card" style="background: white; width: 85%; max-width: 340px; border-radius: 25px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative;">

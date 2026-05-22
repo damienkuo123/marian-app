@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Challenge Reward Fix v3 - separates review attempts from daily challenge completion
+// Precision Practice Fix v1 - Gemini backend scoring + safe avatar shop
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -37,11 +37,12 @@ const TappieAPI = {
     const res = await fetch(this.supabaseBaseUrl + path);
     return await res.json();
   },
-  async _post(path, body) {
+  async _post(path, body, options = {}) {
     const res = await fetch(this.supabaseBaseUrl + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: options.signal
     });
     return await res.json();
   },
@@ -84,7 +85,7 @@ const TappieAPI = {
     return base;
   },
   async getAzureToken() { return await this._get(this.endpoints.getAzureToken); },
-  async submitPractice(payload) { return await this._post(this.endpoints.submitPractice, payload); },
+  async submitPractice(payload, options = {}) { return await this._post(this.endpoints.submitPractice, payload, options); },
   async claimPracticeChallenge(payload = {}) { return await this._post(this.endpoints.claimPracticeChallenge, payload); },
   async getDiagnosticReport(uid, filter = "unit") { return await this._get(`${this.endpoints.getDiagnosticReport}?uid=${encodeURIComponent(uid)}&filter=${encodeURIComponent(filter)}`); },
   async adminGetData(schoolCode = "TEST01", mode = "all") { return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`); },

@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-challenge-reward-v3"></script>
+  <script src="./tappie-api.js?v=20260522-precision-v1"></script>
 
   <style>
     /* =======================================================
@@ -1104,8 +1104,20 @@
       rarities.forEach(rarity => {
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
-          
-          if (char.category === "限定") {
+
+          // 🛒 商店顯示規則（只修商店，不影響對戰展示/掉落）
+          // 預設：新生自動獲得，不進商店
+          // Ai：只在對戰時出現，不進商店
+          // 一般：可購買
+          // 活動：商店可展示，但只能顯示「活動限定」，不可購買
+          const category = String(char.category || '一般').trim();
+          const categoryKey = category.toLowerCase();
+          const isAiCategory = ['ai', 'a.i.', '機器人', 'ai角色'].includes(categoryKey) || category === 'Ai' || category === 'AI';
+          const isDefaultCategory = ['default', 'preset', 'starter'].includes(categoryKey) || category === '預設' || category === '默认';
+
+          if (isAiCategory || isDefaultCategory) return false;
+
+          if (category === "限定") {
             if (char.endTime) {
               const end = new Date(char.endTime);
               if (now > end) return false; 
@@ -1126,9 +1138,10 @@
 
         items.forEach(([id, char]) => {
           const isOwned = userUnlocked.includes(id);
-          const isLimited = (char.category === "限定");
-          const isEvent = (char.category === "活動"); 
-          const cost = char.cost || 500; 
+          const category = String(char.category || '一般').trim();
+          const isLimited = (category === "限定");
+          const isEvent = (category === "活動"); 
+          const cost = Number(char.cost || 500); 
 
           const cardEl = document.createElement('div');
           cardEl.className = 'shop-card-wrapper' + (isOwned ? ' owned' : '');
@@ -1168,47 +1181,63 @@
           console.log("角色解鎖中...");
           return;
       }
-      
+
+      const char = characterAssets[id] || {};
+      const category = String(char.category || '一般').trim();
+      const categoryKey = category.toLowerCase();
+      const isAiCategory = ['ai', 'a.i.', '機器人', 'ai角色'].includes(categoryKey) || category === 'Ai' || category === 'AI';
+      const isDefaultCategory = ['default', 'preset', 'starter'].includes(categoryKey) || category === '預設' || category === '默认';
+
+      if (isAiCategory || isDefaultCategory) {
+          alert("這個角色不開放兌換。");
+          return;
+      }
+      if (category === "活動") {
+          alert("這是活動限定角色，只能透過活動獲得。");
+          return;
+      }
+
       // 2. 瀏覽器確認視窗
       if (!confirm(`確定要花費 ${cost} 點兌換此角色嗎？`)) return;
-      
+
       // 3. 進入購買狀態：全域上鎖
       isPurchasing = true;
 
-      // 4. 尋找畫面上所有的購買按鈕，將它們全部變灰並鎖定 (避免他跑去點別隻角色)
+      // 4. 尋找畫面上所有的購買按鈕，將它們全部變灰並鎖定
       const allBuyBtns = document.querySelectorAll('.btn-buy');
       allBuyBtns.forEach(btn => {
-          if (!btn.disabled) { // 只改那些原本可以按的
-              btn.dataset.originalText = btn.innerText; // 記住原本的字
+          if (!btn.disabled) {
+              btn.dataset.originalText = btn.innerText;
               btn.innerText = "⏳ 處理中...";
               btn.style.pointerEvents = "none";
               btn.style.filter = "grayscale(1)";
           }
       });
 
-      // 5. 蓋上一層隱形的防護網，徹底阻擋任何可能的觸控操作
+      // 5. 防護網
       const purchaseBlocker = document.createElement('div');
       purchaseBlocker.id = "purchase-blocker";
       purchaseBlocker.style.cssText = "position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); color: #f1c40f; font-size: 24px; font-weight: 900; letter-spacing: 2px;";
       purchaseBlocker.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;"><div class="spinner" style="width:40px; height:40px; border-width:4px; margin-bottom:15px;"></div>角色解鎖中...</div>`;
       document.body.appendChild(purchaseBlocker);
 
-      // 6. 發送請求給 GAS
-      fetch(`${GAS_URL}?action=purchase_avatar&id=${STUDENT_ID}&avatarId=${id}`)
-        .then(res => res.json())
-        .then(data => {
-          // 解除全域鎖定
-          isPurchasing = false;
-          const blocker = document.getElementById('purchase-blocker');
-          if (blocker) blocker.remove();
+      // 6. Supabase 購買 API
+      (async () => {
+        try {
+          if (!window.TappieAPI || typeof TappieAPI.purchaseAvatar !== 'function') {
+            throw new Error('purchaseAvatar 尚未載入');
+          }
 
-          alert(data.msg);
-          
+          const data = await TappieAPI.purchaseAvatar({
+            uid: STUDENT_ID,
+            avatarId: id
+          });
+
+          alert(data.message || data.msg || (data.success ? "兌換成功！" : "兌換失敗"));
+
           if (data.success) {
-              // 成功的話直接重整畫面
               location.reload(); 
           } else {
-              // 如果失敗 (例如點數不足)，恢復所有按鈕的狀態
               allBuyBtns.forEach(btn => {
                   if (btn.dataset.originalText) {
                       btn.innerText = btn.dataset.originalText;
@@ -1217,15 +1246,9 @@
                   }
               });
           }
-        })
-        .catch(() => {
-          isPurchasing = false;
-          const blocker = document.getElementById('purchase-blocker');
-          if (blocker) blocker.remove();
-
-          alert("連線失敗，請稍後再試。");
-          
-          // 恢復按鈕狀態
+        } catch (err) {
+          console.error('purchase-avatar failed:', err);
+          alert("兌換失敗：" + String(err.message || err));
           allBuyBtns.forEach(btn => {
               if (btn.dataset.originalText) {
                   btn.innerText = btn.dataset.originalText;
@@ -1233,7 +1256,12 @@
                   btn.style.filter = "none";
               }
           });
-        });
+        } finally {
+          isPurchasing = false;
+          const blocker = document.getElementById('purchase-blocker');
+          if (blocker) blocker.remove();
+        }
+      })();
     }
 
     // =======================================================
@@ -2531,7 +2559,31 @@
       };
 
     })();
-    </script>
+    
+
+  // 🔊 精修：第一次觸控時解除 iOS/Chrome 音訊鎖。不主動播放，只負責 unlock/resume，避免干擾既有流程。
+  (function setupTappieAudioUnlock(){
+    if (window.__tappieAudioUnlockInstalled) return;
+    window.__tappieAudioUnlockInstalled = true;
+    const unlock = async () => {
+      try {
+        if (window.GlobalAudio) {
+          if (typeof GlobalAudio.unlock === 'function') await GlobalAudio.unlock();
+          if (typeof GlobalAudio.resume === 'function') await GlobalAudio.resume();
+          if (typeof GlobalAudio.ensureReady === 'function') await GlobalAudio.ensureReady();
+        }
+        if (window.sysAudioCtx && typeof window.sysAudioCtx.resume === 'function') {
+          await window.sysAudioCtx.resume();
+        }
+      } catch (e) {
+        console.warn('Audio unlock skipped:', e);
+      }
+    };
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('touchstart', unlock, { once: true, passive: true });
+  })();
+
+</script>
 
 </body>
 </html>
