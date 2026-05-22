@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-precision-v1"></script>
+  <script src="./tappie-api.js?v=20260522-micro-polish-v1"></script>
 
   <style>
     /* =======================================================
@@ -931,38 +931,89 @@
           return 'TEST01';
         })();
 
-        // 角色資產：Supabase 第一階段若沒有完整 AvatarShop，就先用安全預設角色，避免 lobby 因 data.assets 不存在而中斷。
+        // 角色資產：先載入安全預設，再合併 Supabase 角色表與學生已擁有角色。
         characterAssets = {
-          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' }
+          'DEFAULT_MARIAN': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '預設', cost: 0 }
         };
+
+        function normalizeAvatarAsset(a) {
+          if (!a) return null;
+          const id = a.avatarId || a.avatar_id || a.id;
+          if (!id) return null;
+          return {
+            id,
+            name: a.name || id,
+            img: a.fullImg || a.full_img_url || a.full_img || a.img || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
+            mask: a.mask || a.mask_url || '',
+            rarity: a.rarity || 'N',
+            category: a.category || '一般',
+            cost: Number(a.cost || 0),
+            startTime: a.startTime || a.start_time || null,
+            endTime: a.endTime || a.end_time || null,
+            isActive: a.isActive !== false && a.is_active !== false
+          };
+        }
+
+        function mergeAvatarList(list) {
+          if (!Array.isArray(list)) return;
+          list.forEach(a => {
+            const asset = normalizeAvatarAsset(a);
+            if (!asset) return;
+            characterAssets[asset.id] = asset;
+          });
+        }
 
         try {
           const settings = await TappieAPI.adminGetData(schoolCode, 'settings');
-          if (settings && settings.success && Array.isArray(settings.avatars)) {
-            settings.avatars.forEach(a => {
-              const id = a.avatarId || a.id;
-              if (!id) return;
-              characterAssets[id] = {
-                name: a.name || id,
-                img: a.fullImg || a.full_img_url || a.img || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
-                mask: a.mask || '',
-                rarity: a.rarity || 'N',
-                category: a.category || '一般'
-              };
-            });
+          if (settings && settings.success) {
+            mergeAvatarList(settings.avatars);
           }
         } catch (assetErr) {
           console.warn('Supabase 角色資產載入失敗，使用預設角色:', assetErr);
         }
 
+        let avatarShop = null;
+        try {
+          if (window.TappieAPI && typeof TappieAPI.getAvatarShop === 'function') {
+            avatarShop = await TappieAPI.getAvatarShop(STUDENT_ID);
+            if (avatarShop && avatarShop.success) {
+              mergeAvatarList(avatarShop.avatars);
+              mergeAvatarList(avatarShop.unlockedAvatars);
+              mergeAvatarList(avatarShop.shop?.available);
+              if (avatarShop.equippedAvatar) mergeAvatarList([avatarShop.equippedAvatar]);
+            }
+          }
+        } catch (shopErr) {
+          console.warn('學生角色資料載入失敗，改用基本角色:', shopErr);
+        }
+
         document.getElementById('header-name').innerText = dashboard.studentName || STUDENT_ID;
         document.getElementById('header-points').innerText = `${dashboard.currentPoints || 0} PTS`;
 
-        const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboard.raw?.student?.equippedAvatarId || 'A001';
-        userEquipped = equippedFromDashboard || 'A001';
+        const allAssetIds = Object.keys(characterAssets);
+        const firstDefaultId = allAssetIds.find(id => {
+          const c = String(characterAssets[id]?.category || '').trim().toLowerCase();
+          return c === '預設' || c === 'default' || c === 'preset' || c === 'starter';
+        }) || 'DEFAULT_MARIAN';
 
-        // Supabase MVP 尚未完整搬 student_avatars 時，至少讓已裝備角色和 A001 可以顯示。
-        userUnlocked = Array.from(new Set(['A001', userEquipped].filter(Boolean)));
+        const equippedFromShop = avatarShop?.student?.equippedAvatarId || avatarShop?.student?.equipped_avatar_id || avatarShop?.equippedAvatar?.avatarId || avatarShop?.equippedAvatar?.id;
+        const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboardRaw.student?.equipped_avatar_id || dashboard.raw?.student?.equippedAvatarId || dashboard.raw?.student?.equipped_avatar_id;
+        userEquipped = equippedFromShop || equippedFromDashboard || firstDefaultId;
+
+        const ownedIds = [];
+        if (Array.isArray(avatarShop?.unlockedAvatarIds)) ownedIds.push(...avatarShop.unlockedAvatarIds);
+        if (Array.isArray(avatarShop?.unlockedAvatars)) {
+          ownedIds.push(...avatarShop.unlockedAvatars.map(a => a.avatarId || a.avatar_id || a.id).filter(Boolean));
+        }
+
+        // 展示區只顯示真正擁有的角色；活動掉落角色也會出現在 unlockedAvatars / student_avatars。
+        userUnlocked = Array.from(new Set([firstDefaultId, userEquipped, ...ownedIds].filter(Boolean)))
+          .filter(id => characterAssets[id]);
+
+        if (!characterAssets[userEquipped]) {
+          userEquipped = firstDefaultId;
+          if (!userUnlocked.includes(firstDefaultId)) userUnlocked.unshift(firstDefaultId);
+        }
 
         const rarityWeight = { 'UR': 5, 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
         userUnlocked.sort((a, b) => {
@@ -979,10 +1030,10 @@
         console.error("Supabase Lobby 載入失敗：", e);
         document.getElementById('hero-name').innerText = "⚠️ 離線預設模式";
         characterAssets = {
-          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' },
+          'DEFAULT_MARIAN': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '預設' },
         };
-        userUnlocked = ["A001"];
-        userEquipped = "A001";
+        userUnlocked = ["DEFAULT_MARIAN"];
+        userEquipped = "DEFAULT_MARIAN";
         renderCarousel();
       }
     }
@@ -1064,24 +1115,40 @@
       }
     }
 
-    function equipCurrentCharacter() {
+    async function equipCurrentCharacter() {
       if (currentCenteredId === userEquipped) return;
-      const btn = document.getElementById('equip-btn');
-      btn.innerText = "連線中...";
-      btn.classList.add('is-equipped');
+      if (!currentCenteredId || !characterAssets[currentCenteredId]) return;
 
-      fetch(`${GAS_URL}?action=equip_avatar&id=${STUDENT_ID}&avatarId=${currentCenteredId}`)
-        .then(res => res.json()).then(data => {
-          if(data.success) {
-            userEquipped = currentCenteredId;
-            updateCenterInfo(currentCenteredId); 
-            showToast("裝備成功！");
-          }
-        }).catch(() => {
+      const btn = document.getElementById('equip-btn');
+      const originalText = btn.innerText;
+      btn.innerText = "連線中...";
+      btn.style.pointerEvents = "none";
+
+      try {
+        if (!window.TappieAPI || typeof TappieAPI.equipAvatar !== 'function') {
+          throw new Error('equipAvatar 尚未載入');
+        }
+
+        const data = await TappieAPI.equipAvatar({
+          uid: STUDENT_ID,
+          avatarId: currentCenteredId
+        });
+
+        if (data && data.success) {
           userEquipped = currentCenteredId;
           updateCenterInfo(currentCenteredId);
-          showToast("裝備成功！(離線模式)");
-        });
+          showToast("裝備成功！");
+        } else {
+          throw new Error(data?.message || data?.error || "裝備失敗");
+        }
+      } catch (err) {
+        console.error('equip-avatar failed:', err);
+        btn.innerText = originalText;
+        btn.classList.toggle('is-equipped', currentCenteredId === userEquipped);
+        showToast("裝備失敗，請稍後再試");
+      } finally {
+        btn.style.pointerEvents = "auto";
+      }
     }
 
     // =======================================================

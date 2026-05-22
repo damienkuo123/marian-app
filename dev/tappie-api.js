@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Precision Practice Fix v1 - Gemini backend scoring + safe avatar shop
+// Micro Polish v1 - dashboard timestamp + weekly report + avatar shop polish
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -31,7 +31,8 @@ const TappieAPI = {
     equipAvatar: "/equip-avatar",
     claimGacha: "/claim-gacha",
     purchaseAvatar: "/purchase-avatar",
-    getStudentActivity: "/get-student-activity"
+    getStudentActivity: "/get-student-activity",
+    updateWeeklyReport: "/update-weekly-report"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -122,6 +123,7 @@ const TappieAPI = {
   },
   async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
+  async updateWeeklyReport(payload = {}) { return await this._post(this.endpoints.updateWeeklyReport, payload); },
 
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
