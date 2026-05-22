@@ -1823,6 +1823,30 @@
   // 🚀 2. 每 8 分鐘自動換鑰匙，並交由函式內部判斷何時終止
   azureTokenInterval = setInterval(fetchAzureToken, 8 * 60 * 1000);
 
+  // =======================================================
+  // 🎙️ Supabase voice_count 用量計次：每次呼叫 Azure 前先檢查/加一
+  // =======================================================
+  async function incrementVoiceUsageOrBlock(source = 'unknown') {
+    const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: STUDENT_ID, source })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!data.success) {
+      if (data.overLimit) {
+        alert(`🎙️ 今日的口說額度已用完 (${data.count}/${data.limit})\n請明天再來練習喔！`);
+        return false;
+      }
+      throw new Error(data.message || data.error || 'voice usage failed');
+    }
+
+    return true;
+  }
+
+
   // 🚀 隱藏載入畫面的共用函數
   function hideLoadingScreen() {
     const loader = document.getElementById('loading-screen');
@@ -1831,29 +1855,6 @@
       loader.style.opacity = '0';
       setTimeout(() => loader.style.display = 'none', 600);
     }
-  }
-
-  async function incrementVoiceUsageOrBlock(source = 'arena') {
-    const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        uid: STUDENT_ID,
-        source
-      })
-    });
-  
-    const data = await res.json().catch(() => ({}));
-  
-    if (!data.success) {
-      if (data.overLimit) {
-        alert(`⚠️ 今日口說練習已達上限 (${data.count}/${data.limit})\n請明天再來練習喔！`);
-        return false;
-      }
-      throw new Error(data.message || data.error || 'voice usage failed');
-    }
-  
-    return true;
   }
   
   function normalizeStr(val) { if (!val) return ""; return String(val).replace(/(%20|\s)+/ig, "").toUpperCase(); }
@@ -2457,12 +2458,27 @@
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
 
-                    const voiceOk = await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge' : 'arena_review');
+                    const voiceUsageSource = (() => {
+                        const qsMode = new URLSearchParams(window.location.search).get('mode');
+                        if (typeof ROOM_ID !== 'undefined' && ROOM_ID) return qsMode === 'ai' ? 'battle_ai_or_boss' : 'battle_pvp';
+                        if (typeof MODE !== 'undefined') return MODE === 'challenge' ? 'arena_challenge' : 'arena_review';
+                        return 'voice_practice';
+                    })();
+                    const voiceOk = await incrementVoiceUsageOrBlock(voiceUsageSource);
                     if (!voiceOk) {
-                      recognizer.close();
-                      rb.classList.remove('processing-locked');
-                      renderWord();
-                      return;
+                        recognizer.close();
+                        if (typeof rb !== 'undefined' && rb) rb.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                        const battleBtn = document.getElementById('battle-record-btn');
+                        if (battleBtn) {
+                          battleBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                          battleBtn.style.pointerEvents = 'auto';
+                        }
+                        if (typeof btn !== 'undefined' && btn) btn.style.pointerEvents = 'auto';
+                        if (typeof roundSubmitted !== 'undefined') roundSubmitted = false;
+                        if (typeof isChecking !== 'undefined') isChecking = false;
+                        if (typeof isGrading !== 'undefined') isGrading = false;
+                        if (typeof renderWord === 'function') renderWord();
+                        return;
                     }
 
                     recognizer.recognizeOnceAsync(
@@ -3046,12 +3062,27 @@
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
 
-                    const voiceOk = await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge' : 'arena_review');
+                    const voiceUsageSource = (() => {
+                        const qsMode = new URLSearchParams(window.location.search).get('mode');
+                        if (typeof ROOM_ID !== 'undefined' && ROOM_ID) return qsMode === 'ai' ? 'battle_ai_or_boss' : 'battle_pvp';
+                        if (typeof MODE !== 'undefined') return MODE === 'challenge' ? 'arena_challenge' : 'arena_review';
+                        return 'voice_practice';
+                    })();
+                    const voiceOk = await incrementVoiceUsageOrBlock(voiceUsageSource);
                     if (!voiceOk) {
-                      recognizer.close();
-                      rb.classList.remove('processing-locked');
-                      renderWord();
-                      return;
+                        recognizer.close();
+                        if (typeof rb !== 'undefined' && rb) rb.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                        const battleBtn = document.getElementById('battle-record-btn');
+                        if (battleBtn) {
+                          battleBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                          battleBtn.style.pointerEvents = 'auto';
+                        }
+                        if (typeof btn !== 'undefined' && btn) btn.style.pointerEvents = 'auto';
+                        if (typeof roundSubmitted !== 'undefined') roundSubmitted = false;
+                        if (typeof isChecking !== 'undefined') isChecking = false;
+                        if (typeof isGrading !== 'undefined') isGrading = false;
+                        if (typeof renderWord === 'function') renderWord();
+                        return;
                     }
 
                     recognizer.recognizeOnceAsync(
@@ -4199,12 +4230,16 @@
                       const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                       pronConfig.applyTo(recognizer);
 
-                      const voiceOk = await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge' : 'arena_review');
+                      const voiceUsageSource = 'gacha_voice_unlock';
+                      const voiceOk = await incrementVoiceUsageOrBlock(voiceUsageSource);
                       if (!voiceOk) {
-                        recognizer.close();
-                        rb.classList.remove('processing-locked');
-                        renderWord();
-                        return;
+                          recognizer.close();
+                          if (typeof btn !== 'undefined' && btn) btn.style.pointerEvents = 'auto';
+                          if (typeof status !== 'undefined' && status) {
+                            status.innerText = '🎙️ 今日口說額度已用完';
+                            status.style.color = '#e74c3c';
+                          }
+                          return;
                       }
 
                       recognizer.recognizeOnceAsync((result) => {
