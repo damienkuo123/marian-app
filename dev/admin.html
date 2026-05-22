@@ -934,6 +934,35 @@
             return data;
         }
 
+
+        function getSupabaseFunctionBaseUrl() {
+            if (window.TappieAPI && TappieAPI.supabaseBaseUrl) return String(TappieAPI.supabaseBaseUrl).replace(/\/$/, '');
+            return 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+        }
+
+        async function adminGetGamification() {
+            const url = `${getSupabaseFunctionBaseUrl()}/admin-get-gamification?schoolCode=${encodeURIComponent(CURRENT_SCHOOL)}`;
+            const res = await fetch(url, { method: 'GET' });
+            const data = await res.json().catch(() => ({}));
+            if (!data.success) throw new Error(data.message || data.error || 'admin-get-gamification failed');
+            return data;
+        }
+
+        async function adminSaveGamificationConfig(config) {
+            const res = await fetch(`${getSupabaseFunctionBaseUrl()}/admin-save-gamification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    schoolCode: CURRENT_SCHOOL,
+                    key: 'Gamification_Config',
+                    config
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!data.success) throw new Error(data.message || data.error || 'admin-save-gamification failed');
+            return data;
+        }
+
         function toAdminStudentPayload(s) {
             return {
                 studentName: s.name || s.studentName || '-',
@@ -1677,41 +1706,55 @@
             document.getElementById('menu-dropdown').classList.remove('show');
             document.getElementById('gamiModal').style.display = 'flex';
             document.getElementById('gami-status').innerText = "讀取設定中...";
+            document.getElementById('gami-status').style.color = "#f1c40f";
             
-            Promise.all([
-                fetch(`${GAS_URL}?action=get_gamification_config&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST' }).then(r => r.json()),
-                fetch(`${GAS_URL}?action=get_shop_items_admin&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST' }).then(r => r.json())
-            ])
-            .then(([config, shopData]) => {
+            adminGetGamification()
+            .then((data) => {
                 document.getElementById('gami-status').innerText = "";
-                if (!config || !config.dailyChallenge) return;
+                const config = data.config || {};
+                if (!config.dailyChallenge) throw new Error('missing dailyChallenge config');
 
-                currentShopAvatars = (shopData || []).filter(item => !item.id.startsWith("AI_"));
+                // Supabase avatars：只讓「一般 / 活動」角色進入卡池管理；Ai / 預設不放入抽卡卡池。
+                const avatars = Array.isArray(data.avatars) ? data.avatars : [];
+                currentShopAvatars = avatars.filter(item => {
+                    const category = String(item.category || '').toLowerCase();
+                    const id = String(item.id || item.avatarId || '');
+                    const isAi = category === 'ai' || category === '機器人' || id.startsWith('AI_');
+                    const isDefault = category === 'default' || category === '預設';
+                    return !isAi && !isDefault;
+                });
 
-                document.getElementById('gami-pass-score').value = config.dailyChallenge.passScore;
-                document.getElementById('gami-t1-min').value = config.dailyChallenge.tiers[0].min;
-                document.getElementById('gami-t1-pts').value = config.dailyChallenge.tiers[0].pts;
-                document.getElementById('gami-t2-min').value = config.dailyChallenge.tiers[1].min;
-                document.getElementById('gami-t2-pts').value = config.dailyChallenge.tiers[1].pts;
-                document.getElementById('gami-t3-min').value = config.dailyChallenge.tiers[2].min;
-                document.getElementById('gami-t3-pts').value = config.dailyChallenge.tiers[2].pts;
+                const daily = config.dailyChallenge || {};
+                const tiers = Array.isArray(daily.tiers) ? daily.tiers : [];
+                const mission = config.mission || {};
+                const leaderboard = Array.isArray(config.leaderboard) ? config.leaderboard : [];
+                const picks = config.gachaPicks || {};
 
-                document.getElementById('gami-fail-th').value = config.mission.failThreshold;
-                document.getElementById('gami-fail-base').value = config.mission.failBasePenalty;
-                document.getElementById('gami-fail-step').value = config.mission.failPenaltyStep;
-                document.getElementById('gami-good-th').value = config.mission.goodThreshold;
-                document.getElementById('gami-good-pts').value = config.mission.goodReward;
-                document.getElementById('gami-perf-th').value = config.mission.perfectThreshold;
-                document.getElementById('gami-perf-pts').value = config.mission.perfectReward;
+                document.getElementById('gami-pass-score').value = Number(daily.passScore ?? 60);
+                document.getElementById('gami-t1-min').value = Number(tiers[0]?.min ?? 80);
+                document.getElementById('gami-t1-pts').value = Number(tiers[0]?.pts ?? tiers[0]?.points ?? 30);
+                document.getElementById('gami-t2-min').value = Number(tiers[1]?.min ?? 70);
+                document.getElementById('gami-t2-pts').value = Number(tiers[1]?.pts ?? tiers[1]?.points ?? 20);
+                document.getElementById('gami-t3-min').value = Number(tiers[2]?.min ?? 60);
+                document.getElementById('gami-t3-pts').value = Number(tiers[2]?.pts ?? tiers[2]?.points ?? 10);
 
-                document.getElementById('gami-lb-1').value = config.leaderboard[0];
-                document.getElementById('gami-lb-2').value = config.leaderboard[1];
-                document.getElementById('gami-lb-3').value = config.leaderboard[2];
+                document.getElementById('gami-fail-th').value = Number(mission.failThreshold ?? 5);
+                document.getElementById('gami-fail-base').value = Number(mission.failBasePenalty ?? -250);
+                document.getElementById('gami-fail-step').value = Number(mission.failPenaltyStep ?? 50);
+                document.getElementById('gami-good-th').value = Number(mission.goodThreshold ?? 10);
+                document.getElementById('gami-good-pts').value = Number(mission.goodReward ?? 100);
+                document.getElementById('gami-perf-th').value = Number(mission.perfectThreshold ?? 15);
+                document.getElementById('gami-perf-pts').value = Number(mission.perfectReward ?? 200);
 
-                document.getElementById('gami-pick-easy').value = config.gachaPicks["初階Ai"];
-                document.getElementById('gami-pick-med').value = config.gachaPicks["中階Ai"];
-                document.getElementById('gami-pick-hard').value = config.gachaPicks["高階Ai"];
-                document.getElementById('gami-pick-pvp').value = config.gachaPicks["玩家對戰"];
+                document.getElementById('gami-lb-1').value = Number(leaderboard[0] ?? 100);
+                document.getElementById('gami-lb-2').value = Number(leaderboard[1] ?? 50);
+                document.getElementById('gami-lb-3').value = Number(leaderboard[2] ?? 30);
+
+                document.getElementById('gami-pick-easy').value = Number(picks["初階Ai"] ?? 1);
+                document.getElementById('gami-pick-med').value = Number(picks["中階Ai"] ?? 2);
+                document.getElementById('gami-pick-hard').value = Number(picks["高階Ai"] ?? 3);
+                document.getElementById('gami-pick-pvp').value = Number(picks["玩家對戰"] ?? 3);
+                document.getElementById('gami-pick-boss').value = Number(picks["活動Boss"] ?? 1);
 
                 const passInput = document.getElementById('gami-pass-score');
                 const t3MinInput = document.getElementById('gami-t3-min');
@@ -1722,17 +1765,19 @@
                 
                 // 將商店裡的新角色，自動以 0% 補進列表
                 currentShopAvatars.forEach(av => {
-                    let existing = flatGachaItems.find(i => i.type === 'avatar' && String(i.value) === String(av.id));
+                    const avatarId = av.id || av.avatarId;
+                    let existing = flatGachaItems.find(i => i.type === 'avatar' && String(i.value) === String(avatarId));
                     if (existing) {
-                        existing.rarity = av.rarity; // 確保稀有度跟商店一致
+                        existing.rarity = av.rarity || existing.rarity;
                     } else {
-                        flatGachaItems.push({ type: 'avatar', value: av.id, rarity: av.rarity, prob: 0 });
+                        flatGachaItems.push({ type: 'avatar', value: avatarId, rarity: av.rarity || 'N', prob: 0 });
                     }
                 });
 
                 renderFlatGachaUI();
             })
             .catch(err => {
+                console.error('[admin-get-gamification]', err);
                 document.getElementById('gami-status').innerText = "⚠️ 讀取失敗，請重試";
                 document.getElementById('gami-status').style.color = "#e74c3c";
             });
@@ -1988,23 +2033,15 @@
                 gachaItems: flatGachaItems // 🚀 直接存入絕對機率清單！
             };
 
-            const formData = new URLSearchParams();
-            formData.append('config', JSON.stringify(newConfig));
-
-            fetch(`${GAS_URL}?action=save_gamification_settings&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
-                .then(res => res.json())
+            adminSaveGamificationConfig(newConfig)
                 .then(data => {
-                    if (data.success) {
-                        statusEl.innerText = "✅ 卡池機率已全域同步！";
-                        statusEl.style.color = "#2ecc71";
-                        setTimeout(() => closeModal('gamiModal'), 1500);
-                    } else {
-                        statusEl.innerText = "❌ 儲存失敗";
-                        statusEl.style.color = "#e74c3c";
-                    }
+                    statusEl.innerText = "✅ 遊戲化設定已同步至 Supabase！";
+                    statusEl.style.color = "#2ecc71";
+                    setTimeout(() => closeModal('gamiModal'), 1500);
                 })
                 .catch(err => {
-                    statusEl.innerText = "⚠️ 網路異常";
+                    console.error('[admin-save-gamification]', err);
+                    statusEl.innerText = "⚠️ 儲存失敗：" + (err.message || '請稍後再試');
                     statusEl.style.color = "#e74c3c";
                 })
                 .finally(() => {
