@@ -5113,9 +5113,13 @@
         else console.log('後端裁判判定您逾時 / 中離，對手獲勝。');
       }
 
-      if (typeof showImpactOverlay === 'function') showImpactOverlay(myScore, opScore, true, myImg, opImg);
-      if (won) showGachaEntrance(6500);
-      else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, 7000);
+      const impact = document.getElementById('impact-overlay');
+      const finalImpactAlreadyShown = impact && impact.classList.contains('is-final');
+      if (!finalImpactAlreadyShown && typeof showImpactOverlay === 'function') {
+        showImpactOverlay(myScore, opScore, true, myImg, opImg);
+      }
+      if (won) showGachaEntrance(finalImpactAlreadyShown ? 400 : 6500);
+      else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, finalImpactAlreadyShown ? 600 : 7000);
     }
 
     function renderScoreDots(statusData) {
@@ -5493,9 +5497,13 @@
     const { myImg, opImg } = getImagesFromStatus(fresh);
     const myScore = isMeHost(fresh) ? num(fresh.room?.hostWins) : num(fresh.room?.guestWins);
     const opScore = isMeHost(fresh) ? num(fresh.room?.guestWins) : num(fresh.room?.hostWins);
-    if (typeof showImpactOverlay === 'function') showImpactOverlay(myScore, opScore, true, myImg, opImg);
-    if (won) showGachaEntranceStrict(6500);
-    else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, 7000);
+    const impact = document.getElementById('impact-overlay');
+    const finalImpactAlreadyShown = impact && impact.classList.contains('is-final');
+    if (!finalImpactAlreadyShown && typeof showImpactOverlay === 'function') {
+      showImpactOverlay(myScore, opScore, true, myImg, opImg);
+    }
+    if (won) showGachaEntranceStrict(finalImpactAlreadyShown ? 400 : 6500);
+    else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, finalImpactAlreadyShown ? 600 : 7000);
   }
 
   function buildResultFromStatusRound(status, roundNo) {
