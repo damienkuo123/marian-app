@@ -1206,7 +1206,12 @@
 
         TappieAPI.getDashboard(STUDENT_ID)
             .then(dash => {
-                const status = { canPlay: dash.usage.canPracticeVoice, count: dash.usage.voiceCount, limit: dash.usage.voiceLimit };
+                const usage = dash.usage || dash.data?.usage || {};
+                const count = Number(usage.voiceCount ?? usage.voice_count ?? 0);
+                const limit = Number(usage.voiceLimit ?? usage.voice_limit ?? usage.speechLimit ?? usage.speech_limit ?? 80);
+                const canPlay = usage.canPracticeVoice ?? usage.can_practice_voice ?? (count < limit);
+                
+                const status = { canPlay, count, limit };
                 btnElement.innerText = originalText;
                 btnElement.style.pointerEvents = "auto";
                 if (!status.canPlay) { 
