@@ -2816,7 +2816,21 @@
             if (USE_SUPABASE_ADMIN) {
                 adminGetData('students')
                     .then(data => {
-                        allStudentsData = data.students || [];
+                        allStudentsData = (data.students || [])
+                            // Supabase 刪除採「停用」：前端清單不要再顯示已停用學生
+                            .filter(s => s.isActive !== false && s.is_active !== false)
+                            .map((s, idx) => ({
+                                ...s,
+                                // 確保 Supabase UUID 可以一路帶到儲存 / 刪除 API
+                                id: s.id || s.student_id || s.studentId || null,
+                                row: s.row ?? s.Row ?? (idx + 1),
+                                uid: s.uid || s.card_id || s.cardId || '',
+                                name: s.name || s.studentName || s.Name || '',
+                                type: s.type || s.student_type || s.studentType || '一般生',
+                                classId: s.classId || s.class_code || s.classCode || '無',
+                                points: Number(s.points ?? s.currentPoints ?? 0),
+                                parentEmail: s.parentEmail || s.parent_email || ''
+                            }));
                         const classSet = new Set();
                         allStudentsData.forEach(s => { if (s.classId) classSet.add(s.classId); });
                         const filterSelect = document.getElementById('sm-class-filter');
@@ -2967,12 +2981,17 @@
                 const original = allStudentsData.find(s => Number(s.row) === Number(editingStuRow)) || {};
                 adminSaveStudent('save_student', {
                     student: {
+                        // 🚀 關鍵：修改既有學生時一定要帶 Supabase UUID。
+                        // 不可以只用 uid，因為 uid/card_id 本身就是可能被修改的欄位。
+                        id: original.id || null,
+                        originalUid: original.uid || '',
                         uid,
                         cardId: uid,
                         name,
                         type,
                         classId: type === "一般生" ? "" : classId,
                         title: original.title || '',
+                        // points 不作為修改學生基本資料的判斷依據；後端若沒收到 id 才會當新增處理。
                         points: original.points || 0,
                         parentEmail: original.parentEmail || ''
                     }
@@ -3014,7 +3033,10 @@
 
             if (USE_SUPABASE_ADMIN) {
                 const target = allStudentsData.find(s => Number(s.row) === Number(editingStuRow));
-                adminSaveStudent('delete_student', { uid: target?.uid || document.getElementById('edit-stu-uid').value.trim() })
+                adminSaveStudent('delete_student', {
+                    id: target?.id || null,
+                    uid: target?.uid || document.getElementById('edit-stu-uid').value.trim()
+                })
                     .then(() => { closeModal('studentEditorModal'); fetchStudentList(); })
                     .catch(err => alert(err.message || "刪除失敗，請檢查權限！"))
                     .finally(() => { btn.innerHTML = "🗑️ 刪除"; btn.style.pointerEvents = "auto"; });
@@ -3125,6 +3147,7 @@
                     let nextUid = s.uid;
                     if (uid && selected.length === 1) nextUid = uid.includes('-') ? uid : `${CURRENT_SCHOOL}-${uid}`;
                     return {
+                        id: s.id || null,
                         uid: nextUid,
                         cardId: nextUid,
                         name: name || s.name,
