@@ -5989,7 +5989,7 @@ const payload = isUuidLike(room)
   <!-- =======================================================
        ✅ Supabase AI Battle Runtime Patch MVP
        - 保留原本戰場 CSS / 動畫 / 盲盒
-       - mode=ai / battle_type=ai 時，送分改走 submit-ai-battle-score
+       - mode=ai / battle_type=ai 時，送分統一走 submit-battle-score
        - AI 名稱保留：初階Ai / 中階Ai / 高階Ai / 活動Boss
        ======================================================= -->
   <script>
@@ -6132,7 +6132,7 @@ const payload = isUuidLike(room)
           if (action === 'submit_battle_score') {
             const status = await getStatusForAiPatch(room).catch(()=>null);
             if (status?.room?.battleType === 'ai' || status?.room?.battleType === 'boss') {
-              if (!window.TappieAPI || !TappieAPI.submitAiBattleScore) throw new Error('TappieAPI.submitAiBattleScore 尚未載入');
+              if (!window.TappieAPI || !TappieAPI.submitBattleScore) throw new Error('TappieAPI.submitBattleScore 尚未載入');
               const rawRound = Number(url.searchParams.get('round') || 0);
               const roundNo = rawRound <= 0 ? 1 : rawRound + 1;
               let rawScore = Number(url.searchParams.get('score') || 0);
@@ -6142,11 +6142,11 @@ const payload = isUuidLike(room)
               const payload = isUuidLikeAi(room)
                 ? { uid: STUDENT_ID_FOR_AI, roomId: room, roundNo, score, skillUsed, skillType: skillUsed ? 'power_strike' : '' }
                 : { uid: STUDENT_ID_FOR_AI, roomCode: room, roundNo, score, skillUsed, skillType: skillUsed ? 'power_strike' : '' };
-              const result = await TappieAPI.submitAiBattleScore(payload);
+              const result = await TappieAPI.submitBattleScore(payload);
               // 回傳舊版可接受的 OK，同時保留 raw，後續 checkBoth 會再抓 get_battle_status。
               // 若後端回傳錯誤，直接把 message 傳回，避免前端靜默顯示 0。
               if (!result?.success) {
-                return new Response(JSON.stringify({ success:false, status:'Error', message: result?.message || result?.error || 'submit-ai-battle-score failed', raw: result }), { status: 500, headers: { 'Content-Type': 'application/json' }});
+                return new Response(JSON.stringify({ success:false, status:'Error', message: result?.message || result?.error || 'submit-battle-score failed', raw: result }), { status: 500, headers: { 'Content-Type': 'application/json' }});
               }
               return new Response(JSON.stringify({ success: true, status: 'OK', raw: result, hostScore: result?.round?.hostScore, guestScore: result?.round?.guestScore, aiScore: result?.round?.guestScore }), { headers: { 'Content-Type': 'application/json' }});
             }
@@ -6165,7 +6165,7 @@ const payload = isUuidLike(room)
 
   <!-- =======================================================
        ✅ AI Battle v3 Final Adapter
-       - AI 送分不再走 PvP submit-battle-score
+       - AI / Boss 送分統一走 submit-battle-score
        - 建房時已預先生成 10 回合 AI 分數
        - Avatar 優先吃 Supabase avatars 表，fallback 才用 Google Sheet 原始路徑
        ======================================================= -->
@@ -6255,7 +6255,7 @@ const payload = isUuidLike(room)
           throw new Error('submitBattleScore 原始函式不存在');
         }
 
-        // AI 模式：直接送 submit-ai-battle-score，後端同回合產生 AI 分數並 resolved。
+        // AI 模式：統一送 submit-battle-score；後端會自動補 AI / Boss 預設分數並 resolved。
         if (currentLimitTimer) { clearInterval(currentLimitTimer); currentLimitTimer = null; }
         const controls = document.getElementById('battle-controls');
         if (controls) controls.style.visibility = 'hidden';
@@ -6274,8 +6274,8 @@ const payload = isUuidLike(room)
         if (info) info.innerText = skillRequested ? '技能重擊已送出，AI 裁判判定中...' : 'AI 裁判判定中...';
 
         try {
-          if (!window.TappieAPI || !TappieAPI.submitAiBattleScore) throw new Error('TappieAPI.submitAiBattleScore 尚未載入');
-          const result = await TappieAPI.submitAiBattleScore({
+          if (!window.TappieAPI || !TappieAPI.submitBattleScore) throw new Error('TappieAPI.submitBattleScore 尚未載入');
+          const result = await TappieAPI.submitBattleScore({
             uid: UID,
             ...roomArgLocal(roomId),
             roundNo,
@@ -6285,7 +6285,7 @@ const payload = isUuidLike(room)
             detailJson: { adapter: 'ai-v3-final', skillRequested, clientRoundIndex: currentBattleRound }
           });
 
-          if (!result?.success) throw new Error(result?.message || result?.error || 'submit-ai-battle-score failed');
+          if (!result?.success) throw new Error(result?.message || result?.error || 'submit-battle-score failed');
           if (skillRequested) hasUsedSkill = true;
 
           // 讓既有動畫流程用後端資料處理，不直接手動改 UI。
