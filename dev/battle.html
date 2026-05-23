@@ -2120,6 +2120,8 @@ const payload = isUuidLike(room)
   // 🎙️ Voice Usage Guard：每次真正進入 Azure 評分前，先累加 daily_usage.voice_count
   // =======================================================
   async function incrementVoiceUsageOrBlock(source = 'unknown') {
+    // ✅ battle.html 不阻擋已進入的對戰；但每次真正呼叫 Azure 前仍要嘗試累加 voice_count。
+    // 若今日已超額，increment-voice-usage 可能回 overLimit；這裡只記錄，不跳彈窗、不阻斷流程。
     try {
       const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
         method: 'POST',
@@ -2128,18 +2130,12 @@ const payload = isUuidLike(room)
       });
       const data = await res.json().catch(() => ({}));
       if (!data.success) {
-        if (data.overLimit) {
-          alert(`🎙️ 今日的口說額度已用完 (${data.count}/${data.limit})
-請明天再來練習喔！`);
-          return false;
-        }
-        throw new Error(data.message || data.error || 'voice usage failed');
+        console.warn('voice usage not incremented, but battle continues:', data);
       }
       return true;
     } catch (err) {
-      console.error('voice usage check failed:', err);
-      alert('⚠️ 今日口說額度檢查失敗，請稍後再試。');
-      return false;
+      console.warn('voice usage increment failed, but battle continues:', err);
+      return true;
     }
   }
 
@@ -2777,6 +2773,8 @@ const payload = isUuidLike(room)
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
 
+                    await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge_in_battle_html' : 'arena_review_in_battle_html');
+
                     recognizer.recognizeOnceAsync(
                         (result) => {
                             if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
@@ -3303,6 +3301,8 @@ const payload = isUuidLike(room)
 
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
+
+                    await incrementVoiceUsageOrBlock(isEventMode ? 'battle_event_boss' : 'battle_match');
 
                     recognizer.recognizeOnceAsync(
                         (result) => {
@@ -4484,6 +4484,8 @@ const payload = isUuidLike(room)
 
                       const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                       pronConfig.applyTo(recognizer);
+
+                      await incrementVoiceUsageOrBlock('battle_gacha_phrase');
 
                       recognizer.recognizeOnceAsync((result) => {
                           btn.style.pointerEvents = "auto"; // 判定完成，解開按鈕封印
