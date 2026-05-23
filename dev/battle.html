@@ -1582,6 +1582,62 @@
     const originalFetch = window.fetch.bind(window);
     const DEFAULT_CARD_IMG = '/assets/BOX_COVER_SSR.webp';
 
+    const TAPPPIE_SUPABASE_FUNCTIONS_BASE = 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+
+    async function loadBattleGamificationConfig(seedConfig = null, force = false) {
+      if (!force && window.gamiConfig && typeof window.gamiConfig === 'object') return window.gamiConfig;
+      if (seedConfig && typeof seedConfig === 'object') {
+        window.gamiConfig = seedConfig;
+        return window.gamiConfig;
+      }
+      try {
+        const res = await fetch(`${TAPPPIE_SUPABASE_FUNCTIONS_BASE}/get-student-gamification?uid=${encodeURIComponent(STUDENT_ID)}&t=${Date.now()}`);
+        const data = await res.json().catch(() => ({}));
+        const cfg = data?.gamification || data?.config || null;
+        if (data?.success && cfg && typeof cfg === 'object') {
+          window.gamiConfig = cfg;
+          console.log('✅ battle gamification loaded:', window.gamiConfig);
+          return window.gamiConfig;
+        }
+      } catch (e) {
+        console.warn('loadBattleGamificationConfig failed, using fallback:', e);
+      }
+      return window.gamiConfig || null;
+    }
+
+    function getBattleGachaPicksConfig() {
+      return (window.gamiConfig && window.gamiConfig.gachaPicks) || { "初階Ai": 1, "中階Ai": 2, "高階Ai": 3, "玩家對戰": 3, "活動Boss": 1 };
+    }
+
+    function readGachaPickValue(key, fallback = 1) {
+      const conf = getBattleGachaPicksConfig();
+      const val = Number(conf?.[key] ?? fallback);
+      return Number.isFinite(val) ? val : fallback;
+    }
+
+    function cssBgUrlFromElement(el) {
+      try {
+        if (!el) return null;
+        const bg = el.style?.backgroundImage || getComputedStyle(el).backgroundImage || '';
+        const m = String(bg).match(/url\(["']?(.+?)["']?\)/);
+        return m ? m[1] : null;
+      } catch (_) { return null; }
+    }
+
+    function getStableBattleImages() {
+      const myImg = window.currentMyImg
+        || cssBgUrlFromElement(document.getElementById('my-card-bg'))
+        || cssBgUrlFromElement(document.getElementById('portal-my-bg'))
+        || null;
+      const opImg = window.currentOpImg
+        || cssBgUrlFromElement(document.getElementById('op-card-bg'))
+        || cssBgUrlFromElement(document.getElementById('portal-op-bg'))
+        || null;
+      if (myImg) window.currentMyImg = myImg;
+      if (opImg) window.currentOpImg = opImg;
+      return { myImg, opImg };
+    }
+
     function jsonResponse(body, status = 200) {
       return new Response(JSON.stringify(body), {
         status,
@@ -1742,11 +1798,12 @@
 
       if (action === 'get_lobby_data') {
         // 原 battle 進場只需要 assets/profile/gamification 做卡片與抽獎防呆。
+        const gami = await loadBattleGamificationConfig(null, false);
         return jsonResponse({
           success: true,
           assets: window.characterAssets || {},
-          profile: { unlocked: '' },
-          gamification: null
+          profile: { unlocked: Array.isArray(window.myUnlockedAvatars) ? window.myUnlockedAvatars.join(',') : '' },
+          gamification: gami
         });
       }
 
@@ -2400,12 +2457,12 @@
         
         fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`)
           .then(res => res.json())
-          .then(data => {
+          .then(async data => {
             window.characterAssets = data.assets || {}; // 存入全域變數
             
             // 🚀 關鍵修復：同步給抽獎系統的變數，並啟動獎池引擎！
             characterAssets = window.characterAssets;   
-            window.gamiConfig = data.gamification || null; // 👈 🚀 新增這行：儲存全域遊戲設定
+            await loadBattleGamificationConfig(data.gamification || null, true);
             buildDynamicPrizePool();                    
 
             showPortal();
@@ -3080,6 +3137,7 @@
         // 🚀 寫入我方戰場卡片 (套用 3D 結構的背景)
         const myCardEl = document.getElementById('my-card');
         const myCardBg = document.getElementById('my-card-bg');
+        if (myImgUrl) window.currentMyImg = myImgUrl;
         if (myCardBg && myImgUrl) myCardBg.style.backgroundImage = `url('${myImgUrl}')`;
         myCardEl.setAttribute('data-rarity', finalMyRarity);
         if (finalMyMask) {
@@ -3090,6 +3148,7 @@
         // 🚀 寫入對手戰場卡片
         const opCardEl = document.getElementById('op-card');
         const opCardBg = document.getElementById('op-card-bg');
+        if (opImgUrl) window.currentOpImg = opImgUrl;
         if (opCardBg && opImgUrl) opCardBg.style.backgroundImage = `url('${opImgUrl}')`;
         opCardEl.setAttribute('data-rarity', finalOpRarity);
         if (finalOpMask) {
@@ -3262,6 +3321,13 @@
             document.getElementById('battle-info').style.color = "#f1c40f";
 
             battleRecorder.onstop = async () => {
+                if (window.__battleTimeoutDiscardRecording) {
+                    window.__battleTimeoutDiscardRecording = false;
+                    battleChunks = [];
+                    isBattleRecording = false;
+                    battleBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
+                    return;
+                }
                 const rawBlob = new Blob(battleChunks); 
                 
                 // 防呆，短按空包彈直接給 0 分
@@ -3906,6 +3972,11 @@
     document.getElementById('impact-my-score').innerText = myNum;
     document.getElementById('impact-op-score').innerText = opNum;
     sub.innerText = isFinal ? "FINAL MATCH RESULT" : "回合結果";
+
+    // ✅ 防止上一回合對手立繪殘留：若本次未帶圖，回抓戰場上穩定的我方/對手圖片。
+    const stableImpactImgs = getStableBattleImages();
+    myImgUrl = myImgUrl || stableImpactImgs.myImg;
+    opImgUrl = opImgUrl || stableImpactImgs.opImg;
     
     if (isFinal) {
         o.classList.add('is-final');
@@ -4191,19 +4262,19 @@
     const picksSpan = document.getElementById('picks-left');
     
     // 🚀 1. 讀取動態設定的抽獎次數
-    const picksConf = window.gamiConfig ? window.gamiConfig.gachaPicks : { "初階Ai": 1, "中階Ai": 2, "高階Ai": 3, "玩家對戰": 3, "活動Boss": 1 };
+    const picksConf = getBattleGachaPicksConfig();
 
     if (isEventMode) {
         // 🚀 活動 Boss：抽獎次數吃 admin 的 gachaPicks["活動Boss"]，但畫面仍固定顯示 6 張盲盒。
         // 注意：活動 Boss 的獎項內容仍保留原本 30% 掉活動角色、70% 掉點數的邏輯。
-        let bossPicks = Number(picksConf["活動Boss"] || 1);
+        let bossPicks = readGachaPickValue("活動Boss", 1);
         gachaPicksLeft = Math.max(1, Math.min(6, bossPicks)); 
     } else {
         // 一般對戰依照難度給予動態次數
-        if (opponentName.includes("初階")) gachaPicksLeft = picksConf["初階Ai"];
-        else if (opponentName.includes("中階")) gachaPicksLeft = picksConf["中階Ai"];
-        else if (opponentName.includes("高階") || opponentName.includes("Ai")) gachaPicksLeft = picksConf["高階Ai"];
-        else gachaPicksLeft = picksConf["玩家對戰"]; 
+        if (opponentName.includes("初階")) gachaPicksLeft = readGachaPickValue("初階Ai", 1);
+        else if (opponentName.includes("中階")) gachaPicksLeft = readGachaPickValue("中階Ai", 2);
+        else if (opponentName.includes("高階") || opponentName.includes("Ai") || opponentName.includes("AI")) gachaPicksLeft = readGachaPickValue("高階Ai", 3);
+        else gachaPicksLeft = readGachaPickValue("玩家對戰", 3); 
         
         // 🚀 終極防爆防呆機制：不管管理員設多少，強制鎖死在 1 ~ 6 次之間！
         gachaPicksLeft = Math.max(1, Math.min(6, gachaPicksLeft));
@@ -5112,8 +5183,11 @@
     function getMyOpImages(statusData) {
       const myA = statusData?.me?.avatar || null;
       const opA = statusData?.opponent?.avatar || null;
-      const myImg = myA?.fullImg || myA?.full_img_url || window.currentMyImg || null;
-      const opImg = opA?.fullImg || opA?.full_img_url || window.currentOpImg || null;
+      const stable = getStableBattleImages();
+      const myImg = myA?.fullImg || myA?.full_img_url || stable.myImg || window.currentMyImg || null;
+      const opImg = opA?.fullImg || opA?.full_img_url || stable.opImg || window.currentOpImg || null;
+      if (myImg) window.currentMyImg = myImg;
+      if (opImg) window.currentOpImg = opImg;
       if (myA) {
         window.currentMyRarity = myA.rarity || window.currentMyRarity || 'N';
         window.currentMyMask = myA.mask || myA.mask_url || window.currentMyMask || '';
@@ -5421,7 +5495,7 @@
   window.__tappieBattleStrictSyncV3Installed = true;
 
   const POLL_MS = 1000;
-  const GRACE_MS = 5000;
+  const GRACE_MS = 500;
   let strictSyncTimer = null;
   let pendingRoundNo = null;
   let latestBattleStatus = null;
@@ -5874,6 +5948,8 @@
         roundSubmitted = true;
         const controls = document.getElementById('battle-controls');
         if (controls) controls.style.visibility = 'hidden';
+        window.__battleTimeoutDiscardRecording = true;
+        if (battleRecorder && battleRecorder.state === 'recording') battleRecorder.stop();
         if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
         await handleTimeoutStrict(roomId);
       }
@@ -6212,6 +6288,7 @@
 
         const opCard = document.getElementById('op-card');
         const opCardBg = document.getElementById('op-card-bg');
+        if (img) window.currentOpImg = img;
         if (opCardBg && img) opCardBg.style.backgroundImage = `url('${img}')`;
         if (opCard) {
           opCard.setAttribute('data-rarity', rarity);
