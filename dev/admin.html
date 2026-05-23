@@ -2187,7 +2187,9 @@
                 adminGetData('tasks')
                     .then(data => {
                         allTasksData = data.words || [];
-                        allSchedulesData = (data.schedules || []).map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
+                        allSchedulesData = (data.schedules || [])
+                            .filter(s => s.isActive !== false)
+                            .map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
                         allEventAvatars = data.eventAvatars || [];
 
                         const classSet = new Set();
@@ -2577,7 +2579,13 @@
                 cancelBtn.style.display = 'none';
             }
             
-            calTargetTask = { row: existingSch ? existingSch.row : 0, classId: classId, unit: unit };
+            calTargetTask = {
+                id: existingSch ? existingSch.id : null,
+                scheduleId: existingSch ? existingSch.id : null,
+                row: existingSch ? existingSch.row : 0,
+                classId: classId,
+                unit: unit
+            };
             document.getElementById('cal-task-info').innerText = `班級：${classId} | 單元：${unit} ${existingSch ? '(修改排程)' : ''}`;
             
             // 🚀 核心：如果是從空日期點過來的，強制覆蓋開始日！
@@ -2639,8 +2647,14 @@
             btn.innerText = "⏳..."; btn.style.pointerEvents = "none";
 
             if (USE_SUPABASE_ADMIN) {
-                const existingSch = allSchedulesData.find(s => Number(s.row) === Number(calTargetTask.row) || (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit));
-                adminSaveTask('delete_schedule', { scheduleId: existingSch?.id || calTargetTask.id || calTargetTask.row })
+                const existingSch = allSchedulesData.find(s =>
+                    (calTargetTask.id && s.id === calTargetTask.id) ||
+                    Number(s.row) === Number(calTargetTask.row) ||
+                    (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit)
+                );
+                const scheduleId = existingSch?.id || calTargetTask.id || calTargetTask.scheduleId;
+                if (!scheduleId) { throw new Error('找不到可取消的排程 ID，請重新整理後再試一次'); }
+                adminSaveTask('delete_schedule', { scheduleId })
                     .then(() => { closeModal('calendarModal'); fetchTaskData(); })
                     .catch(err => alert(err.message || "取消失敗！"))
                     .finally(() => { btn.innerText = "取消排程"; btn.style.pointerEvents = "auto"; });
@@ -2739,7 +2753,7 @@
                     let tempD = new Date(calSelectingStart);
                     let targetD = new Date(dateStr);
                     while (tempD <= targetD) {
-                        if (blockedDates.includes(Utilities.formatDate(tempD, "GMT+8", "yyyy-MM-dd"))) {
+                        if (blockedDates.some(b => b.date === Utilities.formatDate(tempD, "GMT+8", "yyyy-MM-dd"))) {
                             isValid = false; break;
                         }
                         tempD.setDate(tempD.getDate() + 1);
@@ -2772,7 +2786,11 @@
             btn.style.pointerEvents = "none";
 
             if (USE_SUPABASE_ADMIN) {
-                const existingSch = allSchedulesData.find(s => Number(s.row) === Number(calTargetTask.row) || (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit));
+                const existingSch = allSchedulesData.find(s =>
+                    (calTargetTask.id && s.id === calTargetTask.id) ||
+                    Number(s.row) === Number(calTargetTask.row) ||
+                    (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit)
+                );
                 adminSaveTask('save_schedule', {
                     schedule: {
                         id: existingSch?.id || null,
