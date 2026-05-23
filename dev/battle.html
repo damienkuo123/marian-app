@@ -4078,6 +4078,8 @@
   let gachaCardsData = [];
   let gachaWonItems = [];
   let isGachaResolving = false;
+  let gachaAwaitingRevealAll = false; // 最後一抽收合後，等待玩家點擊揭曉剩餘盲盒
+  let gachaRevealAllDone = false;     // 防止剩餘盲盒重複翻開 / 重複結算
   let focusedCardIndex = -1; // 目前放大等待聲控的卡片
   
   // 🎙️ 抽獎專用語音參數
@@ -4117,34 +4119,59 @@
 
   // 🚀 核心：唯一的轉盤！從 0~100 轉出結果
   function drawSinglePrize() {
-      // 讀取從後台傳來的直列清單，若無則用預設
-      const pool = (window.gamiConfig && window.gamiConfig.gachaItems && window.gamiConfig.gachaItems.length > 0) 
-                   ? window.gamiConfig.gachaItems 
+      // 讀取從後台傳來的直列清單，若無則用預設。
+      // 這裡只處理「一般 AI / PvP」卡池；活動 Boss 仍保留原本 30% 掉活動角色邏輯。
+      const rawPool = (window.gamiConfig && Array.isArray(window.gamiConfig.gachaItems) && window.gamiConfig.gachaItems.length > 0)
+                   ? window.gamiConfig.gachaItems
                    : DEFAULT_GACHA_ITEMS;
 
-      let totalProb = pool.reduce((sum, item) => sum + Number(item.prob), 0);
-      let rand = Math.random() * totalProb; // 如果管理員乖乖設定，這裡的分母就是剛好 100
-      let selectedItem = pool[0]; // 防呆保底
+      const pool = rawPool
+        .map(item => {
+          const typeRaw = String(item.type || item.rewardType || '').trim().toLowerCase();
+          const type = (typeRaw === 'avatar' || typeRaw === 'role' || typeRaw === 'character') ? 'avatar' : 'points';
+          const rarity = String(item.rarity || item.boxRarity || 'N').trim().toUpperCase();
+          const prob = Number(item.prob ?? item.weight ?? item.rate ?? 0);
+          const value = type === 'avatar'
+            ? String(item.value || item.avatarId || item.avatar_id || item.id || '').trim()
+            : Number(item.value ?? item.pts ?? item.points ?? item.amount ?? 0);
 
-      for (let item of pool) {
-          if (rand < item.prob) {
+          return { ...item, type, rarity, prob, value };
+        })
+        .filter(item => Number.isFinite(item.prob) && item.prob > 0 && (item.type === 'points' || item.value));
+
+      const safePool = pool.length ? pool : DEFAULT_GACHA_ITEMS;
+      let totalProb = safePool.reduce((sum, item) => sum + Number(item.prob || 0), 0);
+      let rand = Math.random() * totalProb;
+      let selectedItem = safePool[0];
+
+      for (let item of safePool) {
+          const p = Number(item.prob || 0);
+          if (rand < p) {
               selectedItem = item;
               break;
           }
-          rand -= item.prob;
+          rand -= p;
       }
 
-      let boxRarity = selectedItem.rarity || 'N';
+      let boxRarity = String(selectedItem.rarity || 'N').toUpperCase();
+      if (!['N', 'R', 'SR', 'SSR', 'UR'].includes(boxRarity)) boxRarity = 'N';
+
       let glowClass = 'crack-white';
-      if (boxRarity === 'SR') glowClass = 'crack-purple';
+      if (boxRarity === 'SR' || boxRarity === 'UR') glowClass = 'crack-purple';
       if (boxRarity === 'SSR') glowClass = 'crack-gold';
+
+      const prizeClass = ['R', 'SR', 'SSR', 'UR'].includes(boxRarity) ? `prize-${boxRarity}` : 'prize-N';
+      const label = selectedItem.type === 'points'
+        ? `${Number(selectedItem.value || 0)} 點`
+        : (selectedItem.label || selectedItem.name || boxRarity);
 
       return {
           type: selectedItem.type,
           value: selectedItem.value,
-          boxRarity: boxRarity, // 順便把這層的外盒顏色回傳給系統
-          label: selectedItem.type === 'points' ? `${selectedItem.value} 點` : boxRarity,
-          class: `prize-${boxRarity}`,
+          rarity: boxRarity,
+          boxRarity: boxRarity,
+          label,
+          class: prizeClass,
           glow: glowClass
       };
   }
@@ -4167,9 +4194,10 @@
     const picksConf = window.gamiConfig ? window.gamiConfig.gachaPicks : { "初階Ai": 1, "中階Ai": 2, "高階Ai": 3, "玩家對戰": 3, "活動Boss": 1 };
 
     if (isEventMode) {
-        // 🚀 防呆：Boss 最多只能抽 1 次！
-        let bossPicks = picksConf["活動Boss"] || 1;
-        gachaPicksLeft = Math.max(1, Math.min(1, bossPicks)); 
+        // 🚀 活動 Boss：抽獎次數吃 admin 的 gachaPicks["活動Boss"]，但畫面仍固定顯示 6 張盲盒。
+        // 注意：活動 Boss 的獎項內容仍保留原本 30% 掉活動角色、70% 掉點數的邏輯。
+        let bossPicks = Number(picksConf["活動Boss"] || 1);
+        gachaPicksLeft = Math.max(1, Math.min(6, bossPicks)); 
     } else {
         // 一般對戰依照難度給予動態次數
         if (opponentName.includes("初階")) gachaPicksLeft = picksConf["初階Ai"];
@@ -4184,11 +4212,13 @@
     picksSpan.innerText = gachaPicksLeft;
     gachaWonItems = [];
     isGachaResolving = false;
+    gachaAwaitingRevealAll = false;
+    gachaRevealAllDone = false;
     focusedCardIndex = -1;
     board.innerHTML = ""; 
 
-    // 🚀 2. 決定要產生幾張卡片
-    const cardCount = isEventMode ? 1 : 6;
+    // 🚀 2. 盲盒畫面永遠固定顯示 6 張；gachaPicksLeft 只代表可以翻幾張。
+    const cardCount = 6;
     gachaCardsData = [];
     
     for(let i = 0; i < cardCount; i++) {
@@ -4314,12 +4344,7 @@
     // 🚀 必須在此刻重新綁定 3D 感應，因為卡片是剛生成的！
     setTimeout(() => { initInteractiveHoloCards(); }, 100);
 
-    // 🚀 4. 如果是活動模式，生成完畢後等 0.8 秒，自動將唯一的卡片彈出到「展示模式」！
-    if (isEventMode) {
-        setTimeout(() => {
-            focusCard(0);
-        }, 800);
-    }
+    // 🚀 活動模式現在也固定顯示 6 張盲盒，不再自動彈出單一卡片。
   }
 
   // 聚焦卡片
@@ -4503,6 +4528,61 @@
       };
   }
 
+  function createFullScreenClickReceiver(onClick, delay = 300) {
+      const clickReceiver = document.createElement('div');
+      clickReceiver.style.position = 'fixed';
+      clickReceiver.style.inset = '0';
+      clickReceiver.style.zIndex = '10001';
+      clickReceiver.style.background = 'rgba(0,0,0,0)';
+      clickReceiver.style.cursor = 'pointer';
+      document.body.appendChild(clickReceiver);
+
+      setTimeout(() => {
+          clickReceiver.onclick = () => {
+              if (clickReceiver.parentNode) clickReceiver.parentNode.removeChild(clickReceiver);
+              onClick && onClick();
+          };
+      }, delay);
+
+      return clickReceiver;
+  }
+
+  function revealAllRemainingGachaCards() {
+      if (gachaRevealAllDone) return;
+      gachaRevealAllDone = true;
+      gachaAwaitingRevealAll = false;
+
+      // 保險：先退出放大模式，避免結算前卡片還卡在 focused 狀態。
+      cancelFocus();
+
+      const allCards = document.querySelectorAll('.gacha-card');
+      gachaCardsData.forEach((c, i) => {
+          if (!c.flipped && allCards[i]) {
+              c.flipped = true;
+              allCards[i].classList.add('flipped', 'missed');
+          }
+      });
+
+      const subtitle = document.getElementById('gacha-subtitle');
+      if (subtitle) subtitle.innerHTML = '即將進入結算...';
+
+      setTimeout(() => {
+          showGachaSummary();
+      }, 1200);
+  }
+
+  function waitForRevealAllClick() {
+      if (gachaRevealAllDone) return;
+      gachaAwaitingRevealAll = true;
+
+      const subtitle = document.getElementById('gacha-subtitle');
+      if (subtitle) subtitle.innerHTML = "抽卡次數已用完，點擊任意處揭曉剩餘盲盒";
+
+      createFullScreenClickReceiver(() => {
+          revealAllRemainingGachaCards();
+      }, 250);
+  }
+
   // 🚀 觸發封印碎裂與翻開動畫
   function triggerReveal(index) {
       const cardEl = document.getElementById(`gacha-card-${index}`);
@@ -4566,40 +4646,17 @@
               document.getElementById('gacha-subtitle').innerHTML = "點擊畫面繼續抽獎";
           }
 
-          // 🚀 核心修復：賦予放大後的卡片「點擊收合」的超能力！
-          // 我們利用一個覆蓋全螢幕的隱形透明按鈕來接收點擊，確保不管點哪裡都能順利收合
-          const clickReceiver = document.createElement('div');
-          clickReceiver.style.position = 'fixed';
-          clickReceiver.style.inset = '0';
-          clickReceiver.style.zIndex = '10001'; // 確保蓋在所有東西上面
-          document.body.appendChild(clickReceiver);
+          // 🚀 放大展示後的收合邏輯：
+          // 1. 還有抽卡次數：點擊黑邊只收合，回到 6 張卡畫面。
+          // 2. 最後一抽：先收合最後一張卡，再讓玩家下一次點擊任意處揭曉剩餘盲盒，最後才進結算。
+          createFullScreenClickReceiver(() => {
+              cancelFocus();
 
-          // 為了防止玩家在動畫還沒跑完就狂點，我們加一個小小的 0.5 秒防呆延遲
-          setTimeout(() => {
-              clickReceiver.onclick = () => {
-                  // 移除這個隱形接收器
-                  document.body.removeChild(clickReceiver);
-
-                  if (isGachaResolving) {
-                      // 如果是最後一次抽獎，點擊後先把沒抽中的卡片翻開給玩家看
-                      const allCards = document.querySelectorAll('.gacha-card');
-                      gachaCardsData.forEach((c, i) => {
-                          if (!c.flipped) allCards[i].classList.add('flipped', 'missed');
-                      });
-                      
-                      document.getElementById('gacha-subtitle').innerHTML = "即將進入結算...";
-                      
-                      // 欣賞 1.5 秒遺憾的卡片後，自動進入結算畫面
-                      setTimeout(() => {
-                          cancelFocus();
-                          showGachaSummary();
-                      }, 1500);
-                  } else {
-                      // 如果還有次數，點擊後就只是單純把這張卡片收起來
-                      cancelFocus();
-                      document.getElementById('gacha-subtitle').innerHTML = `剩餘開啟次數：<span id="picks-left">${gachaPicksLeft}</span> 次`;
-                  }
-              };
+              if (isGachaResolving) {
+                  waitForRevealAllClick();
+              } else {
+                  document.getElementById('gacha-subtitle').innerHTML = `剩餘開啟次數：<span id="picks-left">${gachaPicksLeft}</span> 次`;
+              }
           }, 500); // 👈 翻開後 0.5 秒才允許點擊收合，保護動畫完整性
 
       }, 400); 
