@@ -727,17 +727,77 @@
         window.location.replace(`admin.html?id=${STUDENT_ID}`);
     }
 
+
+    // =======================================================
+    // 🎮 Supabase Gamification / Dashboard Overlay Helper
+    // - 不取代 get-dashboard 主流程，只覆寫與 gami 相關的顯示資料
+    // =======================================================
+    function normalizeTappieGamiConfig(raw) {
+      const cfg = raw || {};
+      const daily = cfg.dailyChallenge || {};
+      const tiers = Array.isArray(daily.tiers) ? daily.tiers : [];
+      const normalizedTiers = tiers
+        .map(t => ({
+          min: Number(t.min ?? t.score ?? 0),
+          pts: Number(t.pts ?? t.points ?? 0)
+        }))
+        .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts))
+        .sort((a, b) => b.min - a.min);
+
+      return {
+        ...cfg,
+        dailyChallenge: {
+          ...daily,
+          passScore: Number(daily.passScore ?? daily.pass_score ?? 60),
+          tiers: normalizedTiers.length ? normalizedTiers : [
+            { min: 80, pts: 30 },
+            { min: 70, pts: 20 },
+            { min: 60, pts: 10 }
+          ]
+        },
+        leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30]
+      };
+    }
+
+    async function fetchDashboardGamiOverlay(uid) {
+      try {
+        const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+          ? TappieAPI.supabaseBaseUrl
+          : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+        const res = await fetch(`${base}/get-dashboard-gami-overlay?uid=${encodeURIComponent(uid)}&t=${Date.now()}`);
+        const data = await res.json();
+        if (!data || !data.success) throw new Error(data?.message || data?.error || 'get-dashboard-gami-overlay failed');
+        return data;
+      } catch (err) {
+        console.warn('Dashboard gami overlay 載入失敗，沿用原本資料：', err);
+        return null;
+      }
+    }
+
     window.onload = () => {
       if (!STUDENT_ID) { alert("找不到學生 ID，請重新刷卡！"); logoutToPortal(); return; }
 
       TappieAPI.getDashboard(STUDENT_ID)
-        .then(rawData => {
+        .then(async rawData => {
           const data = TappieAPI.toLegacyDashboard(rawData);
           // 🚀 關鍵修復：檢查後端是否回報錯誤（例如：沒這間校區、沒這個學號）
           if (data.success === false || data.error) {
               alert("⚠️ 查無此帳號！請確認學生代號或校區代碼是否正確。");
               logoutToPortal(); // 強制踢回首頁
               return; // 終止後續的錯誤渲染
+          }
+
+          // ✅ 精修：從 Supabase 即時覆寫 gami、今日最高分、任務次數與排行榜
+          const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
+          if (overlay) {
+              if (overlay.gamification) data.gamification = normalizeTappieGamiConfig(overlay.gamification);
+              if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
+              if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
+              if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
+              if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
+              if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
+              if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
+              if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
           }
 
           renderDashboard(data);
@@ -964,7 +1024,7 @@
       // 這樣當一般生偷偷用開發者工具把 .locked 拿掉時，看到的也是正確的數據，而不是空版。
 
       // 🚀 關鍵第一步：先把 Admin 的遊戲設定抓出來！
-      const gami = data.gamification;
+      const gami = normalizeTappieGamiConfig(data.gamification || {});
 
       // ==========================================
       // 🎯 今日挑戰 Box 渲染 (動態計算得分版)
@@ -1005,7 +1065,9 @@
         
         if (gami && gami.dailyChallenge && gami.dailyChallenge.tiers) {
             // 將階梯依照分數由高到低排序，避免邏輯錯誤
-            const sortedTiers = [...gami.dailyChallenge.tiers].sort((a, b) => b.min - a.min);
+            const sortedTiers = [...gami.dailyChallenge.tiers]
+              .map(t => ({ min: Number(t.min ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
+              .sort((a, b) => b.min - a.min);
             calculatedPoints = 0; // 預設 0 點
             for (let t of sortedTiers) {
                 if (bestScore >= t.min) {

@@ -1978,8 +1978,16 @@
       })).filter(w => w.en);
       if (quizData.length === 0) { alert("題目為空"); return; }
       ACTIVE_UNIT_NAME = data.unit?.unitName || TARGET_UNIT || "";
-      systemPassScore = data.gamification?.dailyChallenge?.passScore || data.systemPassScore || 60;
-      systemRewardTiers = data.gamification?.dailyChallenge?.tiers || data.rewardTiers || [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}];
+
+      // ✅ 精修：今日挑戰門檻與給點階梯，優先讀 Supabase school_settings.Gamification_Config
+      const freshGami = await fetchStudentGamiConfig(STUDENT_ID);
+      const effectiveGami = freshGami || normalizeTappieGamiConfig(data.gamification || {});
+      window.gamiConfig = effectiveGami;
+      systemPassScore = Number(effectiveGami?.dailyChallenge?.passScore ?? data.systemPassScore ?? 60);
+      systemRewardTiers = (effectiveGami?.dailyChallenge?.tiers || data.rewardTiers || [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}])
+        .map(t => ({ min: Number(t.min ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
+        .sort((a, b) => b.min - a.min);
+
       scores = new Array(quizData.length).fill(null);
       document.getElementById('total-display').innerText = quizData.length;
       document.getElementById('setup-zone').style.display = 'none';
@@ -2022,6 +2030,61 @@
     document.getElementById('back-summary-btn').onclick = () => { isReReading = false; showSummary(); };
   }
   
+
+  // =======================================================
+  // 🎮 Supabase Gamification Config Helper
+  // - 讀 school_settings.key = Gamification_Config
+  // - 相容 pts / points、中文 battle key
+  // =======================================================
+  function normalizeTappieGamiConfig(raw) {
+    const cfg = raw || {};
+    const daily = cfg.dailyChallenge || {};
+    const tiers = Array.isArray(daily.tiers) ? daily.tiers : [];
+    const normalizedTiers = tiers
+      .map(t => ({
+        min: Number(t.min ?? t.score ?? 0),
+        pts: Number(t.pts ?? t.points ?? 0)
+      }))
+      .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts))
+      .sort((a, b) => b.min - a.min);
+
+    return {
+      ...cfg,
+      dailyChallenge: {
+        ...daily,
+        passScore: Number(daily.passScore ?? daily.pass_score ?? 60),
+        tiers: normalizedTiers.length ? normalizedTiers : [
+          { min: 80, pts: 30 },
+          { min: 70, pts: 20 },
+          { min: 60, pts: 10 }
+        ]
+      },
+      gachaPicks: {
+        "初階Ai": Number(cfg.gachaPicks?.["初階Ai"] ?? cfg.gachaPicks?.easyAi ?? 1),
+        "中階Ai": Number(cfg.gachaPicks?.["中階Ai"] ?? cfg.gachaPicks?.mediumAi ?? 2),
+        "高階Ai": Number(cfg.gachaPicks?.["高階Ai"] ?? cfg.gachaPicks?.hardAi ?? 3),
+        "玩家對戰": Number(cfg.gachaPicks?.["玩家對戰"] ?? cfg.gachaPicks?.pvp ?? 3),
+        "活動Boss": Number(cfg.gachaPicks?.["活動Boss"] ?? cfg.gachaPicks?.eventBoss ?? 1)
+      },
+      leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30]
+    };
+  }
+
+  async function fetchStudentGamiConfig(uid) {
+    try {
+      const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+        ? TappieAPI.supabaseBaseUrl
+        : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+      const res = await fetch(`${base}/get-student-gamification?uid=${encodeURIComponent(uid)}&t=${Date.now()}`);
+      const data = await res.json();
+      if (!data || !data.success) throw new Error(data?.message || data?.error || 'get-student-gamification failed');
+      return normalizeTappieGamiConfig(data.config || data.gamification || {});
+    } catch (err) {
+      console.warn('Gamification config 載入失敗，沿用頁面既有設定：', err);
+      return null;
+    }
+  }
+
   window.onload = async () => {
     // 🚀 開發者測試外掛：直接進入高階 AI 抽獎畫面
     if (MODE === 'test_gacha') {
@@ -2109,12 +2172,14 @@
         
         fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`)
           .then(res => res.json())
-          .then(data => {
+          .then(async data => {
             window.characterAssets = data.assets || {}; // 存入全域變數
             
             // 🚀 關鍵修復：同步給抽獎系統的變數，並啟動獎池引擎！
             characterAssets = window.characterAssets;   
-            window.gamiConfig = data.gamification || null; // 👈 🚀 新增這行：儲存全域遊戲設定
+            // ✅ 精修：盲盒抽數 / 卡池機率優先讀 Supabase school_settings.Gamification_Config
+            const freshGami = await fetchStudentGamiConfig(STUDENT_ID);
+            window.gamiConfig = freshGami || normalizeTappieGamiConfig(data.gamification || {});
             buildDynamicPrizePool();                    
 
             showPortal();
@@ -2630,8 +2695,11 @@
         
         // 🚀 聽命於 GAS：根據傳來的階梯陣列計算獎勵點數
         let reward = 0;
-        if (systemRewardTiers && systemRewardTiers.length > 0) {
-            for (let t of systemRewardTiers) {
+        const sortedRewardTiers = (systemRewardTiers || [])
+          .map(t => ({ min: Number(t.min ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
+          .sort((a, b) => b.min - a.min);
+        if (sortedRewardTiers.length > 0) {
+            for (let t of sortedRewardTiers) {
                 if (avg >= t.min) { reward = t.pts; break; }
             }
         }
@@ -3870,9 +3938,16 @@
   // 🚀 核心：唯一的轉盤！從 0~100 轉出結果
   function drawSinglePrize() {
       // 讀取從後台傳來的直列清單，若無則用預設
-      const pool = (window.gamiConfig && window.gamiConfig.gachaItems && window.gamiConfig.gachaItems.length > 0) 
+      const rawPool = (window.gamiConfig && window.gamiConfig.gachaItems && window.gamiConfig.gachaItems.length > 0) 
                    ? window.gamiConfig.gachaItems 
                    : DEFAULT_GACHA_ITEMS;
+      const pool = rawPool.map(item => ({
+        ...item,
+        type: item.type || (item.avatarId || item.avatar_id ? 'avatar' : 'points'),
+        value: item.value ?? item.points ?? item.pts ?? item.avatarId ?? item.avatar_id ?? item.id,
+        prob: Number(item.prob ?? item.weight ?? 0),
+        rarity: item.rarity || 'N'
+      })).filter(item => item.prob > 0);
 
       let totalProb = pool.reduce((sum, item) => sum + Number(item.prob), 0);
       let rand = Math.random() * totalProb; // 如果管理員乖乖設定，這裡的分母就是剛好 100
@@ -3919,9 +3994,9 @@
     const picksConf = window.gamiConfig ? window.gamiConfig.gachaPicks : { "初階Ai": 1, "中階Ai": 2, "高階Ai": 3, "玩家對戰": 3, "活動Boss": 1 };
 
     if (isEventMode) {
-        // 🚀 防呆：Boss 最多只能抽 1 次！
-        let bossPicks = picksConf["活動Boss"] || 1;
-        gachaPicksLeft = Math.max(1, Math.min(1, bossPicks)); 
+        // ✅ 精修：活動 Boss 抽數也完全聽 admin 的 gachaPicks["活動Boss"]，只做 1~6 的安全上限
+        let bossPicks = Number(picksConf["活動Boss"] || 1);
+        gachaPicksLeft = Math.max(1, Math.min(6, bossPicks)); 
     } else {
         // 一般對戰依照難度給予動態次數
         if (opponentName.includes("初階")) gachaPicksLeft = picksConf["初階Ai"];
