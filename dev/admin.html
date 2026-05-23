@@ -459,7 +459,7 @@
         
         <div class="tm-pagination">
             <button id="tm-prev-btn" class="btn-page" onclick="changeTaskPage(-1)">❮</button>
-            <button class="btn-new-task" onclick="openTaskEditor(0, '', '', '[]')">➕ 新增任務單元</button>
+            <button id="tm-new-task-btn" class="btn-new-task" onclick="openTaskEditorForCurrentFilter()">➕ 新增任務單元</button>
             <button id="tm-next-btn" class="btn-page" onclick="changeTaskPage(1)">❯</button>
         </div>
     </div>
@@ -2195,6 +2195,8 @@
 
         function buildTaskClassOptions(filterSelect, currentFilter) {
             const classSet = new Set();
+            // 🎪 活動 EVENT 永遠顯示，避免新手找不到活動建立入口
+            classSet.add('EVENT');
             allTasksData.forEach(t => { if (t.classId) classSet.add(normalizeEventClassCode(t.classId)); });
             allSchedulesData.forEach(s => { if (s.classId) classSet.add(normalizeEventClassCode(s.classId)); });
 
@@ -2261,8 +2263,29 @@
             filteredTasks.sort((a, b) => b.row - a.row);
             currentTaskPage = 1;
             
+            updateNewTaskButtonForFilter();
             renderTaskList();
             renderSmartCalendar(); // 🚀 渲染上方的時間軸
+        }
+
+        function updateNewTaskButtonForFilter() {
+            const btn = document.getElementById('tm-new-task-btn');
+            if (!btn) return;
+            const filterClass = normalizeEventClassCode(document.getElementById('tm-class-filter').value);
+            if (filterClass === 'EVENT') {
+                btn.innerText = '🎪 新增活動';
+                btn.style.background = 'linear-gradient(135deg, #9b59b6, #6c5ce7)';
+                btn.style.boxShadow = '0 5px 15px rgba(155,89,182,0.35)';
+            } else {
+                btn.innerText = '➕ 新增任務單元';
+                btn.style.background = 'linear-gradient(135deg, #00b894, #00cec9)';
+                btn.style.boxShadow = '0 5px 15px rgba(0,184,148,0.3)';
+            }
+        }
+
+        function openTaskEditorForCurrentFilter() {
+            const filterClass = normalizeEventClassCode(document.getElementById('tm-class-filter').value);
+            openTaskEditor(0, filterClass || '', '', '[]');
         }
 
         // 🚀 新增：頂部視圖專用的全域變數與切換函數
@@ -2413,7 +2436,11 @@
             const nextBtn = document.getElementById('tm-next-btn');
 
             if (filteredTasks.length === 0) {
-                listZone.innerHTML = '<p style="text-align:center; color:#7f8c8d; margin-top:40px; font-weight:bold;">這個班級目前沒有任務喔！</p>';
+                const filterClass = normalizeEventClassCode(document.getElementById('tm-class-filter').value);
+                const emptyMsg = filterClass === 'EVENT'
+                    ? '目前沒有活動單元，請按下方「新增活動」建立。'
+                    : '這個班級目前沒有任務喔！';
+                listZone.innerHTML = `<p style="text-align:center; color:#7f8c8d; margin-top:40px; font-weight:bold;">${emptyMsg}</p>`;
                 prevBtn.disabled = true; nextBtn.disabled = true;
                 return;
             }
@@ -2493,8 +2520,19 @@
         // --- 📝 動態任務編輯器邏輯 ---
         function openTaskEditor(row, classId, unit, wordsJsonStr) {
             editingTaskRow = row;
-            document.getElementById('task-editor-title').innerText = row === 0 ? '✨ 新增任務單元' : '✏️ 編輯任務單元';
-            document.getElementById('edit-task-class').value = normalizeEventClassCode(classId || '');
+            const normalizedClassId = normalizeEventClassCode(classId || '');
+            const isEventTask = normalizedClassId === 'EVENT';
+            document.getElementById('task-editor-title').innerText = row === 0
+                ? (isEventTask ? '🎪 新增活動' : '✨ 新增任務單元')
+                : (isEventTask ? '🎪 編輯活動' : '✏️ 編輯任務單元');
+
+            const classInput = document.getElementById('edit-task-class');
+            classInput.value = normalizedClassId;
+            classInput.readOnly = isEventTask;
+            classInput.style.opacity = isEventTask ? '0.65' : '1';
+            classInput.style.cursor = isEventTask ? 'not-allowed' : 'text';
+            classInput.style.borderColor = isEventTask ? 'rgba(155,89,182,0.7)' : 'rgba(255,255,255,0.2)';
+            classInput.title = isEventTask ? '活動單元固定使用 EVENT，避免誤設成一般班級。' : '';
             document.getElementById('edit-task-unit').value = unit || '';
             
             const container = document.getElementById('word-list-container');
