@@ -2164,6 +2164,7 @@
         const TASKS_PER_PAGE = 10;
         let editingTaskRow = 0; // 0 代表新增
         let allSchedulesData = [];
+        let allTaskClassCodes = []; // 由學生資料 + 既有任務 + 既有排程組成，讓下拉永遠顯示所有班級
 
         function openTaskManager() {
             document.getElementById('menu-dropdown').classList.remove('show');
@@ -2197,6 +2198,11 @@
             const classSet = new Set();
             // 🎪 活動 EVENT 永遠顯示，避免新手找不到活動建立入口
             classSet.add('EVENT');
+
+            // 🚀 2026 Frontend Polish：
+            // 不再只靠「已存在任務」產生班級選單。
+            // 只要學生資料裡存在的班級，也要出現在任務排定下拉中，方便直接新增該班單元。
+            (allTaskClassCodes || []).forEach(cls => { if (cls) classSet.add(normalizeEventClassCode(cls)); });
             allTasksData.forEach(t => { if (t.classId) classSet.add(normalizeEventClassCode(t.classId)); });
             allSchedulesData.forEach(s => { if (s.classId) classSet.add(normalizeEventClassCode(s.classId)); });
 
@@ -2219,13 +2225,35 @@
             listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取任務庫中...</p>';
 
             if (USE_SUPABASE_ADMIN) {
-                adminGetData('tasks')
-                    .then(data => {
+                Promise.all([
+                    adminGetData('tasks'),
+                    // 🚀 2026 Frontend Polish：
+                    // 任務排定下拉應顯示「所有目前存在的班級」，
+                    // 所以額外讀學生清單取得班級；失敗時不影響任務排定本身。
+                    adminGetData('students').catch(err => {
+                        console.warn('[task-class-options] 讀取學生班級失敗，改用任務/排程班級：', err);
+                        return null;
+                    })
+                ])
+                    .then(([data, studentData]) => {
                         allTasksData = (data.words || []).filter(t => t.isActive !== false && t.is_active !== false);
                         allSchedulesData = (data.schedules || [])
                             .filter(s => s.isActive !== false && s.is_active !== false)
                             .map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
                         allEventAvatars = data.eventAvatars || [];
+
+                        const classSet = new Set();
+                        (studentData?.classes || []).forEach(c => {
+                            const code = c.classId || c.class_code || c.name || c;
+                            if (code) classSet.add(normalizeEventClassCode(code));
+                        });
+                        (studentData?.students || []).forEach(s => {
+                            const code = s.classId || s.class_code || s.classCode;
+                            if (code) classSet.add(normalizeEventClassCode(code));
+                        });
+                        allTasksData.forEach(t => { if (t.classId) classSet.add(normalizeEventClassCode(t.classId)); });
+                        allSchedulesData.forEach(s => { if (s.classId) classSet.add(normalizeEventClassCode(s.classId)); });
+                        allTaskClassCodes = Array.from(classSet);
 
                         const filterSelect = document.getElementById('tm-class-filter');
                         const currentFilter = normalizeEventClassCode(filterSelect.value);
@@ -2276,6 +2304,10 @@
                 btn.innerText = '🎪 新增活動';
                 btn.style.background = 'linear-gradient(135deg, #9b59b6, #6c5ce7)';
                 btn.style.boxShadow = '0 5px 15px rgba(155,89,182,0.35)';
+            } else if (filterClass) {
+                btn.innerText = `➕ 新增 ${filterClass} 單元`;
+                btn.style.background = 'linear-gradient(135deg, #00b894, #00cec9)';
+                btn.style.boxShadow = '0 5px 15px rgba(0,184,148,0.3)';
             } else {
                 btn.innerText = '➕ 新增任務單元';
                 btn.style.background = 'linear-gradient(135deg, #00b894, #00cec9)';
@@ -2285,7 +2317,12 @@
 
         function openTaskEditorForCurrentFilter() {
             const filterClass = normalizeEventClassCode(document.getElementById('tm-class-filter').value);
-            openTaskEditor(0, filterClass || '', '', '[]');
+            if (!filterClass) {
+                alert('請先在下拉欄位選擇要新增單元的班級或活動。');
+                return;
+            }
+            // 從下拉班級新增時，班級代碼自動填入並鎖定，避免新手誤填。
+            openTaskEditor(0, filterClass, '', '[]', true);
         }
 
         // 🚀 新增：頂部視圖專用的全域變數與切換函數
@@ -2518,21 +2555,26 @@
         
 
         // --- 📝 動態任務編輯器邏輯 ---
-        function openTaskEditor(row, classId, unit, wordsJsonStr) {
+        function openTaskEditor(row, classId, unit, wordsJsonStr, lockClass = false) {
             editingTaskRow = row;
             const normalizedClassId = normalizeEventClassCode(classId || '');
             const isEventTask = normalizedClassId === 'EVENT';
+            const shouldLockClass = isEventTask || !!lockClass;
             document.getElementById('task-editor-title').innerText = row === 0
-                ? (isEventTask ? '🎪 新增活動' : '✨ 新增任務單元')
+                ? (isEventTask ? '🎪 新增活動' : `✨ 新增${normalizedClassId ? ' ' + normalizedClassId : ''} 任務單元`)
                 : (isEventTask ? '🎪 編輯活動' : '✏️ 編輯任務單元');
 
             const classInput = document.getElementById('edit-task-class');
             classInput.value = normalizedClassId;
-            classInput.readOnly = isEventTask;
-            classInput.style.opacity = isEventTask ? '0.65' : '1';
-            classInput.style.cursor = isEventTask ? 'not-allowed' : 'text';
-            classInput.style.borderColor = isEventTask ? 'rgba(155,89,182,0.7)' : 'rgba(255,255,255,0.2)';
-            classInput.title = isEventTask ? '活動單元固定使用 EVENT，避免誤設成一般班級。' : '';
+            classInput.readOnly = shouldLockClass;
+            classInput.style.opacity = shouldLockClass ? '0.65' : '1';
+            classInput.style.cursor = shouldLockClass ? 'not-allowed' : 'text';
+            classInput.style.borderColor = isEventTask
+                ? 'rgba(155,89,182,0.7)'
+                : (shouldLockClass ? 'rgba(0,206,201,0.7)' : 'rgba(255,255,255,0.2)');
+            classInput.title = isEventTask
+                ? '活動單元固定使用 EVENT，避免誤設成一般班級。'
+                : (shouldLockClass ? '已依照目前選取班級自動填入，避免誤填。' : '');
             document.getElementById('edit-task-unit').value = unit || '';
             
             const container = document.getElementById('word-list-container');
