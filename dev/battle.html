@@ -5118,11 +5118,25 @@ const payload = isUuidLike(room)
       return wr !== 'draw' && wr === myRoleOf(statusData);
     }
 
+    function extractCssBgUrlStrict(elId) {
+      try {
+        const bg = document.getElementById(elId)?.style?.backgroundImage || '';
+        if (!bg || bg === 'none') return null;
+        const m = String(bg).match(/^url\(["']?(.*?)["']?\)$/);
+        return m ? m[1] : null;
+      } catch(_e) { return null; }
+    }
+
     function getMyOpImages(statusData) {
       const myA = statusData?.me?.avatar || null;
       const opA = statusData?.opponent?.avatar || null;
-      const myImg = myA?.fullImg || myA?.full_img_url || window.currentMyImg || null;
-      const opImg = opA?.fullImg || opA?.full_img_url || window.currentOpImg || null;
+      const myImg = myA?.fullImg || myA?.full_img_url || myA?.img || window.currentMyImg || extractCssBgUrlStrict('my-card-bg') || '/assets/gacha-box.png';
+      const opImg = opA?.fullImg || opA?.full_img_url || opA?.img || window.currentOpImg || extractCssBgUrlStrict('op-card-bg') || '/assets/gacha-box.png';
+
+      // ✅ 每次都固定刷新我方 / 對手圖片快取，避免上一回合對手獲勝後，impact 立繪殘留對手圖。
+      window.currentMyImg = myImg;
+      window.currentOpImg = opImg;
+
       if (myA) {
         window.currentMyRarity = myA.rarity || window.currentMyRarity || 'N';
         window.currentMyMask = myA.mask || myA.mask_url || window.currentMyMask || '';
@@ -5507,11 +5521,25 @@ const payload = isUuidLike(room)
     if (opRounds && typeof renderDots === 'function') opRounds.innerHTML = renderDots(opScore, false);
   }
 
+  function extractCssBgUrlStrict(elId) {
+    try {
+      const bg = document.getElementById(elId)?.style?.backgroundImage || '';
+      if (!bg || bg === 'none') return null;
+      const m = String(bg).match(/^url\(["']?(.*?)["']?\)$/);
+      return m ? m[1] : null;
+    } catch(_e) { return null; }
+  }
+
   function getImagesFromStatus(data) {
     const myA = data?.me?.avatar || null;
     const opA = data?.opponent?.avatar || null;
-    const myImg = myA?.fullImg || myA?.full_img_url || window.currentMyImg || null;
-    const opImg = opA?.fullImg || opA?.full_img_url || window.currentOpImg || null;
+    const myImg = myA?.fullImg || myA?.full_img_url || myA?.img || window.currentMyImg || extractCssBgUrlStrict('my-card-bg') || '/assets/gacha-box.png';
+    const opImg = opA?.fullImg || opA?.full_img_url || opA?.img || window.currentOpImg || extractCssBgUrlStrict('op-card-bg') || '/assets/gacha-box.png';
+
+    // ✅ 每次都固定刷新我方 / 對手圖片快取，避免上一回合對手獲勝後，impact 立繪殘留對手圖。
+    window.currentMyImg = myImg;
+    window.currentOpImg = opImg;
+
     if (myA) {
       window.currentMyRarity = myA.rarity || window.currentMyRarity || 'N';
       window.currentMyMask = myA.mask || myA.mask_url || window.currentMyMask || '';
@@ -5878,13 +5906,37 @@ const payload = isUuidLike(room)
       const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
       const timer = document.getElementById('battle-timer');
       if (timer) timer.innerText = remaining;
-      if (remainingMs <= -GRACE_MS && !roundSubmitted) {
+      if (remainingMs <= 0 && !roundSubmitted) {
+        // ✅ 回合倒數歸零：本方未送出就立刻以 0 分送出，走正常 submit-battle-score 裁判。
+        // 不走 resolve-battle-timeout，避免 AI/Boss 預設分數沒有套入而變成 0:0 draw。
         clearInterval(currentLimitTimer); currentLimitTimer = null;
         roundSubmitted = true;
         const controls = document.getElementById('battle-controls');
         if (controls) controls.style.visibility = 'hidden';
-        if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-        await handleTimeoutStrict(roomId);
+
+        // 若剛好還在錄音，丟棄晚到音檔，避免覆蓋本回合 0 分。
+        try {
+          if (typeof battleRecorder !== 'undefined' && battleRecorder && battleRecorder.state === 'recording') {
+            battleRecorder.onstop = null;
+            battleRecorder.stop();
+          }
+        } catch(_e) {}
+        try {
+          if (typeof mediaRecorder !== 'undefined' && mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.onstop = null;
+            mediaRecorder.stop();
+          }
+        } catch(_e) {}
+
+        const bBtn = document.getElementById('battle-record-btn');
+        if (bBtn) {
+          bBtn.classList.remove('active','ult-active','recording-active','ult-recording-active','processing-locked');
+          bBtn.style.pointerEvents = 'none';
+        }
+        const info = document.getElementById('battle-info');
+        if (info) { info.innerText = '⏱️ 時間到，本回合以 0 分送出...'; info.style.color = '#f1c40f'; }
+
+        if (typeof submitBattleScore === 'function') submitBattleScore(roomId, 0);
       }
     }, 500);
   };
