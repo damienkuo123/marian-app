@@ -2179,6 +2179,39 @@
 
         let allEventAvatars = []; // 存活動角色
 
+        function isEventClassCode(value) {
+            const code = String(value || '').trim().toUpperCase();
+            return code === 'EVENT' || code.includes('EVENT') || code.includes('活動') || code.includes('突發');
+        }
+
+        function normalizeEventClassCode(value) {
+            return isEventClassCode(value) ? 'EVENT' : String(value || '').trim();
+        }
+
+        function getClassDisplayLabel(classId) {
+            const code = String(classId || '').trim();
+            return isEventClassCode(code) ? '🎪 活動 EVENT' : code;
+        }
+
+        function buildTaskClassOptions(filterSelect, currentFilter) {
+            const classSet = new Set();
+            allTasksData.forEach(t => { if (t.classId) classSet.add(normalizeEventClassCode(t.classId)); });
+            allSchedulesData.forEach(s => { if (s.classId) classSet.add(normalizeEventClassCode(s.classId)); });
+
+            filterSelect.innerHTML = '<option value="">🏫 請選擇班級 / 活動</option>';
+
+            const classes = Array.from(classSet).sort((a, b) => {
+                if (a === 'EVENT') return -1;
+                if (b === 'EVENT') return 1;
+                return String(a).localeCompare(String(b), 'zh-Hant');
+            });
+
+            classes.forEach(cls => {
+                const selected = currentFilter === cls ? 'selected' : '';
+                filterSelect.innerHTML += `<option value="${cls}" ${selected}>${getClassDisplayLabel(cls)}</option>`;
+            });
+        }
+
         function fetchTaskData() {
             const listZone = document.getElementById('tm-list-zone');
             listZone.innerHTML = '<p style="text-align:center; color:#ffd700; margin-top:40px; font-size:18px; font-weight:bold;">⏳ 讀取任務庫中...</p>';
@@ -2187,19 +2220,12 @@
                 adminGetData('tasks')
                     .then(data => {
                         allTasksData = data.words || [];
-                        allSchedulesData = (data.schedules || [])
-                            .filter(s => s.isActive !== false)
-                            .map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
+                        allSchedulesData = (data.schedules || []).map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
                         allEventAvatars = data.eventAvatars || [];
 
-                        const classSet = new Set();
-                        allTasksData.forEach(t => { if (t.classId) classSet.add(t.classId); });
                         const filterSelect = document.getElementById('tm-class-filter');
-                        const currentFilter = filterSelect.value;
-                        filterSelect.innerHTML = '<option value="">🏫 請選擇班級</option>';
-                        Array.from(classSet).sort().forEach(cls => {
-                            filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
-                        });
+                        const currentFilter = normalizeEventClassCode(filterSelect.value);
+                        buildTaskClassOptions(filterSelect, currentFilter);
                         changeTaskFilter();
                     })
                     .catch(err => {
@@ -2218,21 +2244,18 @@
                     allSchedulesData = data.schedules;
                     allEventAvatars = data.eventAvatars;
                     
-                    const classSet = new Set();
-                    allTasksData.forEach(t => { if (t.classId) classSet.add(t.classId); });
                     const filterSelect = document.getElementById('tm-class-filter');
-                    const currentFilter = filterSelect.value;
-                    filterSelect.innerHTML = '<option value="">🏫 請選擇班級</option>';
-                    Array.from(classSet).sort().forEach(cls => {
-                        filterSelect.innerHTML += `<option value="${cls}" ${currentFilter === cls ? 'selected' : ''}>${cls}</option>`;
-                    });
+                    const currentFilter = normalizeEventClassCode(filterSelect.value);
+                    buildTaskClassOptions(filterSelect, currentFilter);
                     changeTaskFilter(); 
                 });
         }
 
         function changeTaskFilter() {
-            const filterClass = document.getElementById('tm-class-filter').value;
-            filteredTasks = filterClass ? allTasksData.filter(t => t.classId === filterClass) : [];
+            const filterClass = normalizeEventClassCode(document.getElementById('tm-class-filter').value);
+            filteredTasks = filterClass
+                ? allTasksData.filter(t => normalizeEventClassCode(t.classId) === filterClass)
+                : [];
             filteredTasks.sort((a, b) => b.row - a.row);
             currentTaskPage = 1;
             
@@ -2250,19 +2273,19 @@
 
         // 🚀 華麗進化：連續彩帶式月曆 (Gantt Ribbon Calendar)
         function renderSmartCalendar() {
-            const filterClass = document.getElementById('tm-class-filter').value;
+            const filterClass = normalizeEventClassCode(document.getElementById('tm-class-filter').value);
             const grid = document.getElementById('top-cal-grid');
             const title = document.getElementById('top-cal-month-title');
             
             if (!filterClass) {
-                title.innerText = "請選擇班級";
+                title.innerText = "請選擇班級 / 活動";
                 grid.innerHTML = '<div style="grid-column: span 7; text-align:center; padding: 20px; color:#94a3b8; font-weight:bold;">👆 請於下方選擇班級以顯示排程</div>';
                 return;
             }
 
             const year = topCalDate.getFullYear();
             const month = topCalDate.getMonth();
-            title.innerText = `${year}年 ${month + 1}月`;
+            title.innerText = `${getClassDisplayLabel(filterClass)}｜${year}年 ${month + 1}月`;
 
             const firstDay = new Date(year, month, 1).getDay(); 
             const daysInMonth = new Date(year, month + 1, 0).getDate(); 
@@ -2270,7 +2293,7 @@
             grid.innerHTML = '';
             for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-day empty"></div>`; }
 
-            let classSchedules = allSchedulesData.filter(s => s.classId === filterClass && s.startDate);
+            let classSchedules = allSchedulesData.filter(s => normalizeEventClassCode(s.classId) === filterClass && s.startDate);
             let todayStr = Utilities.formatDate(new Date(), "GMT+8", "yyyy-MM-dd");
 
             const colorPalette = ['#3498db', '#e74c3c', '#9b59b6', '#00b894', '#e67e22', '#0984e3', '#fd79a8'];
@@ -2360,7 +2383,7 @@
             select.innerHTML = '<option value="">-- 請選擇要排定的任務單元 --</option>';
             filteredTasks.forEach(t => {
                 // 將所有需要的參數打包在 value 裡面
-                select.innerHTML += `<option value="${t.row}|${t.classId}|${t.unit}">${t.unit}</option>`;
+                select.innerHTML += `<option value="${t.row}|${normalizeEventClassCode(t.classId)}|${t.unit}">${getClassDisplayLabel(t.classId)}｜${t.unit}</option>`;
             });
             
             document.getElementById('quickSelectModal').style.display = 'flex';
@@ -2411,7 +2434,7 @@
                 <div class="task-card" style="position:relative;">
                     <button class="btn-del-task" title="刪除任務" onclick="deleteTaskData(${task.row}, '${safeUnit}')">✖</button>
                     <div class="task-info">
-                        <div class="task-class">${task.classId}</div>
+                        <div class="task-class">${getClassDisplayLabel(task.classId)}</div>
                         <div class="task-unit">${task.unit}</div>
                         <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${task.words.length} 個單字</div>
                     </div>
@@ -2469,7 +2492,7 @@
         function openTaskEditor(row, classId, unit, wordsJsonStr) {
             editingTaskRow = row;
             document.getElementById('task-editor-title').innerText = row === 0 ? '✨ 新增任務單元' : '✏️ 編輯任務單元';
-            document.getElementById('edit-task-class').value = classId || '';
+            document.getElementById('edit-task-class').value = normalizeEventClassCode(classId || '');
             document.getElementById('edit-task-unit').value = unit || '';
             
             const container = document.getElementById('word-list-container');
@@ -2504,7 +2527,7 @@
         }
 
         function saveTaskData() {
-            const classId = document.getElementById('edit-task-class').value.trim();
+            const classId = normalizeEventClassCode(document.getElementById('edit-task-class').value.trim());
             const unit = document.getElementById('edit-task-unit').value.trim();
             if (!classId || !unit) { alert("請填寫「班級代碼」與「單元名稱」！"); return; }
 
@@ -2528,7 +2551,7 @@
                     unit: {
                         classCode: classId,
                         unitName: unit,
-                        unitType: (classId.toUpperCase().includes('EVENT') || classId.includes('突發')) ? 'event' : 'normal',
+                        unitType: isEventClassCode(classId) ? 'event' : 'normal',
                         displayOrder: editingTaskRow || 0,
                         words: wordsArray
                     }
@@ -2568,7 +2591,8 @@
 
         // 🚀 修改：加入 forceStartDate 參數
         function openCalendarModal(row, classId, unit, forceStartDate = null) {
-            let existingSch = allSchedulesData.find(s => s.classId === classId && s.unit === unit);
+            classId = normalizeEventClassCode(classId);
+            let existingSch = allSchedulesData.find(s => normalizeEventClassCode(s.classId) === classId && s.unit === unit);
 
             // 🚀 核心：如果是「修改模式」，就顯示取消按鈕
             const cancelBtn = document.getElementById('cal-cancel-btn');
@@ -2579,14 +2603,8 @@
                 cancelBtn.style.display = 'none';
             }
             
-            calTargetTask = {
-                id: existingSch ? existingSch.id : null,
-                scheduleId: existingSch ? existingSch.id : null,
-                row: existingSch ? existingSch.row : 0,
-                classId: classId,
-                unit: unit
-            };
-            document.getElementById('cal-task-info').innerText = `班級：${classId} | 單元：${unit} ${existingSch ? '(修改排程)' : ''}`;
+            calTargetTask = { row: existingSch ? existingSch.row : 0, id: existingSch ? existingSch.id : null, classId: classId, unit: unit };
+            document.getElementById('cal-task-info').innerText = `班級：${getClassDisplayLabel(classId)} | 單元：${unit} ${existingSch ? '(修改排程)' : ''}`;
             
             // 🚀 核心：如果是從空日期點過來的，強制覆蓋開始日！
             calSelectingStart = forceStartDate || (existingSch ? existingSch.startDate : null);
@@ -2608,11 +2626,11 @@
             // 🚀 Event 角色選單邏輯
             const eventZone = document.getElementById('event-avatar-zone');
             const eventSelect = document.getElementById('event-avatar-select');
-            if (classId.toUpperCase().includes('EVENT') || classId.includes('突發')) {
+            if (isEventClassCode(classId)) {
                 eventZone.style.display = 'flex';
                 eventSelect.innerHTML = '<option value="">-- 請選擇首領角色 --</option>';
                 allEventAvatars.forEach(av => {
-                    let sel = (existingSch && existingSch.avatar === av.id) ? 'selected' : '';
+                    let sel = (existingSch && (existingSch.avatar === av.id || existingSch.eventAvatarId === av.id)) ? 'selected' : '';
                     eventSelect.innerHTML += `<option value="${av.id}" ${sel}>${av.id} - ${av.name}</option>`;
                 });
             } else {
@@ -2623,7 +2641,7 @@
             // 🚀 防撞期計算：把自己排除在外！
             blockedDates = [];
             allSchedulesData.forEach(sch => {
-                if (sch.classId === classId && sch.startDate && sch.endDate) {
+                if (normalizeEventClassCode(sch.classId) === classId && sch.startDate && sch.endDate) {
                     if (existingSch && sch.unit === unit) return; // 🌟 讓自己的舊日期可以被重新點選！
 
                     let d = new Date(sch.startDate);
@@ -2650,11 +2668,9 @@
                 const existingSch = allSchedulesData.find(s =>
                     (calTargetTask.id && s.id === calTargetTask.id) ||
                     Number(s.row) === Number(calTargetTask.row) ||
-                    (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit)
+                    (normalizeEventClassCode(s.classId) === normalizeEventClassCode(calTargetTask.classId) && s.unit === calTargetTask.unit)
                 );
-                const scheduleId = existingSch?.id || calTargetTask.id || calTargetTask.scheduleId;
-                if (!scheduleId) { throw new Error('找不到可取消的排程 ID，請重新整理後再試一次'); }
-                adminSaveTask('delete_schedule', { scheduleId })
+                adminSaveTask('delete_schedule', { scheduleId: existingSch?.id || calTargetTask.id || calTargetTask.row })
                     .then(() => { closeModal('calendarModal'); fetchTaskData(); })
                     .catch(err => alert(err.message || "取消失敗！"))
                     .finally(() => { btn.innerText = "取消排程"; btn.style.pointerEvents = "auto"; });
@@ -2789,7 +2805,7 @@
                 const existingSch = allSchedulesData.find(s =>
                     (calTargetTask.id && s.id === calTargetTask.id) ||
                     Number(s.row) === Number(calTargetTask.row) ||
-                    (s.classId === calTargetTask.classId && s.unit === calTargetTask.unit)
+                    (normalizeEventClassCode(s.classId) === normalizeEventClassCode(calTargetTask.classId) && s.unit === calTargetTask.unit)
                 );
                 adminSaveTask('save_schedule', {
                     schedule: {
@@ -2799,7 +2815,7 @@
                         startDate: calSelectingStart,
                         endDate: calSelectingEnd,
                         eventAvatarId: document.getElementById('event-avatar-select') ? document.getElementById('event-avatar-select').value : '',
-                        isEvent: calTargetTask.classId.toUpperCase().includes('EVENT') || calTargetTask.classId.includes('突發')
+                        isEvent: isEventClassCode(calTargetTask.classId)
                     }
                 })
                 .then(() => { closeModal('calendarModal'); fetchTaskData(); })
