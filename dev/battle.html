@@ -1604,6 +1604,26 @@
       return await TappieAPI.getBattleStatus(STUDENT_ID, arg);
     }
 
+    async function ensureBattleGamificationConfig() {
+      if (window.gamiConfig && typeof window.gamiConfig === 'object') return window.gamiConfig;
+
+      try {
+        const url = `https://diptahklguohjtjnwnbf.supabase.co/functions/v1/get-student-gamification?uid=${encodeURIComponent(STUDENT_ID)}`;
+        const data = await originalFetch(url).then(r => r.json()).catch(() => null);
+        const cfg = data?.gamification || data?.config || data?.value || data?.settings || data?.data?.gamification || data?.data?.config || null;
+        if (cfg && typeof cfg === 'object') {
+          window.gamiConfig = cfg;
+          console.log('🎮 Battle Gamification_Config loaded:', window.gamiConfig);
+          return window.gamiConfig;
+        }
+      } catch (err) {
+        console.warn('Battle Gamification_Config load failed, fallback to defaults:', err);
+      }
+
+      window.gamiConfig = null;
+      return null;
+    }
+
     function avatarImageUrl(avatar) {
       return avatar?.fullImg || avatar?.full_img_url || avatar?.img || avatar?.url || DEFAULT_CARD_IMG;
     }
@@ -1742,11 +1762,14 @@
 
       if (action === 'get_lobby_data') {
         // 原 battle 進場只需要 assets/profile/gamification 做卡片與抽獎防呆。
+        // 這裡要真的把 Supabase school_settings.Gamification_Config 帶進來，
+        // 否則 gachaPicks / gachaItems 會永遠吃前端預設值。
+        const gamification = await ensureBattleGamificationConfig();
         return jsonResponse({
           success: true,
           assets: window.characterAssets || {},
           profile: { unlocked: '' },
-          gamification: null
+          gamification
         });
       }
 
@@ -1771,20 +1794,9 @@
         let score = skillUsed ? Math.max(0, rawScore - 1000) : rawScore;
         score = Math.max(0, Math.min(100, Math.round(score)));
 
-        // 掛機 / 沒錄音 / 回合倒數歸零：直接由後端正式結算為對方勝，不再一路打到最後。
-        if (score <= 0 && TappieAPI.finishBattleRoom) {
-          let statusData = null;
-          try { statusData = await getSupabaseBattleStatus(room); } catch (_) {}
-          const myRole = statusData?.me?.role || 'host';
-          const winnerRole = myRole === 'host' ? 'guest' : 'host';
-          const finishPayload = isUuidLike(room)
-            ? { uid: STUDENT_ID, roomId: room, winnerRole, reason: 'timeout' }
-            : { uid: STUDENT_ID, roomCode: room, winnerRole, reason: 'timeout' };
-          const finishData = await TappieAPI.finishBattleRoom(finishPayload);
-          return jsonResponse({ success: !!finishData?.success, status: 'Finished', raw: finishData, timeoutLoss: true });
-        }
-
-        const payload = isUuidLike(room)
+        // 0 分也是正常的本回合分數：交給 submit-battle-score / 後端裁判結算該回合。
+        // 不在前端直接 finishBattleRoom，避免 timeout 後跳過原本光球、立繪、領獎流程。
+const payload = isUuidLike(room)
           ? { uid: STUDENT_ID, roomId: room, roundNo, score, skillUsed, detailJson: { skillUsed, adapter: 'battle_v6' } }
           : { uid: STUDENT_ID, roomCode: room, roundNo, score, skillUsed, detailJson: { skillUsed, adapter: 'battle_v6' } };
         const data = await TappieAPI.submitBattleScore(payload);
@@ -2747,14 +2759,7 @@
                 }
                 
                 try {
-                    const voiceOk = await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'battle_practice_challenge' : 'battle_practice_review');
-                    if (!voiceOk) {
-                        isGrading = false;
-                        rb.classList.remove('processing-locked');
-                        renderWord();
-                        return;
-                    }
-
+                    // battle.html 不做 speech_limit 阻擋；dashboard / lobby 已在入口把關。
                     const wavFile = await createWavFileFromBlob(rawBlob);
                     document.getElementById('status').innerText = "🟢 傳送至聲學引擎...";
                     document.getElementById('status').style.color = "#3498db";
@@ -3157,9 +3162,17 @@
         clearInterval(currentLimitTimer);
         if (!roundSubmitted) { 
             roundSubmitted = true; 
-            if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop(); 
-            // 如果超時沒錄音，直接隱藏控制台
+            // 如果玩家完全沒有按下錄音，直接以 0 分提交本回合，交給後端裁判判定輸贏。
+            // 若錄音器剛好仍在錄音，也不要讓晚到音檔覆蓋 0 分。
+            if (battleRecorder && battleRecorder.state === "recording") {
+                try { battleRecorder.onstop = null; battleRecorder.stop(); } catch(e) {}
+            }
+            isBattleRecording = false;
+            const battleBtn = document.getElementById('battle-record-btn');
+            if (battleBtn) battleBtn.classList.remove('recording-active', 'ult-recording-active', 'processing-locked');
             document.getElementById('battle-controls').style.visibility = 'hidden';
+            document.getElementById('battle-info').innerText = "⏱️ 時間到，本回合以 0 分送出...";
+            document.getElementById('battle-info').style.color = "#f1c40f";
             submitBattleScore(roomId, 0); 
         }
       }
@@ -3273,16 +3286,7 @@
                 }
                 
                 try {
-                    const voiceOk = await incrementVoiceUsageOrBlock('battle_round');
-                    if (!voiceOk) {
-                        roundSubmitted = false;
-                        battleBtn.classList.remove('processing-locked', 'recording-active', 'ult-recording-active');
-                        battleBtn.style.pointerEvents = 'auto';
-                        document.getElementById('battle-info').innerText = "🎙️ 今日口說額度已用完";
-                        document.getElementById('battle-info').style.color = "#e74c3c";
-                        return;
-                    }
-
+                    // battle.html 不再因 speech_limit 阻擋錄音；入口已由 lobby 控制。
                     const wavFile = await createWavFileFromBlob(rawBlob);
                     document.getElementById('battle-info').innerText = "🟢 傳送至聲學引擎...";
                     document.getElementById('battle-info').style.color = "#3498db";
@@ -4191,23 +4195,33 @@
     const picksSpan = document.getElementById('picks-left');
     
     // 🚀 1. 讀取動態設定的抽獎次數
-    const picksConf = window.gamiConfig ? window.gamiConfig.gachaPicks : { "初階Ai": 1, "中階Ai": 2, "高階Ai": 3, "玩家對戰": 3, "活動Boss": 1 };
+    const defaultPicksConf = { "初階Ai": 1, "中階Ai": 2, "高階Ai": 3, "玩家對戰": 3, "活動Boss": 1 };
+    const picksConf = (window.gamiConfig && window.gamiConfig.gachaPicks && typeof window.gamiConfig.gachaPicks === 'object')
+      ? window.gamiConfig.gachaPicks
+      : defaultPicksConf;
+
+    const pickNum = (key, fallback) => {
+      const raw = picksConf[key] ?? picksConf[String(key).toLowerCase()] ?? fallback;
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : Number(fallback || 1);
+    };
 
     if (isEventMode) {
         // 🚀 活動 Boss：抽獎次數吃 admin 的 gachaPicks["活動Boss"]，但畫面仍固定顯示 6 張盲盒。
         // 注意：活動 Boss 的獎項內容仍保留原本 30% 掉活動角色、70% 掉點數的邏輯。
-        let bossPicks = Number(picksConf["活動Boss"] || 1);
-        gachaPicksLeft = Math.max(1, Math.min(6, bossPicks)); 
+        gachaPicksLeft = Math.max(1, Math.min(6, pickNum("活動Boss", 1))); 
     } else {
         // 一般對戰依照難度給予動態次數
-        if (opponentName.includes("初階")) gachaPicksLeft = picksConf["初階Ai"];
-        else if (opponentName.includes("中階")) gachaPicksLeft = picksConf["中階Ai"];
-        else if (opponentName.includes("高階") || opponentName.includes("Ai")) gachaPicksLeft = picksConf["高階Ai"];
-        else gachaPicksLeft = picksConf["玩家對戰"]; 
-        
+        if (opponentName.includes("初階")) gachaPicksLeft = pickNum("初階Ai", 1);
+        else if (opponentName.includes("中階")) gachaPicksLeft = pickNum("中階Ai", 2);
+        else if (opponentName.includes("高階") || opponentName.includes("Ai")) gachaPicksLeft = pickNum("高階Ai", 3);
+        else gachaPicksLeft = pickNum("玩家對戰", 3); 
+
         // 🚀 終極防爆防呆機制：不管管理員設多少，強制鎖死在 1 ~ 6 次之間！
-        gachaPicksLeft = Math.max(1, Math.min(6, gachaPicksLeft));
+        gachaPicksLeft = Math.max(1, Math.min(6, Number(gachaPicksLeft || 1)));
     }
+
+    console.log("🎁 Gacha picks resolved:", { opponentName, isEventMode, picksConf, gachaPicksLeft, gamiConfig: window.gamiConfig });
 
     picksSpan.innerText = gachaPicksLeft;
     gachaWonItems = [];
@@ -4447,14 +4461,7 @@
                   }
 
                   try {
-                      const voiceOk = await incrementVoiceUsageOrBlock('battle_gacha_unlock');
-                      if (!voiceOk) {
-                          status.innerText = "🎙️ 今日口說額度已用完";
-                          status.style.color = "#e74c3c";
-                          btn.style.pointerEvents = "auto";
-                          return;
-                      }
-
+                      // battle.html 的抽卡密語也不再因 speech_limit 阻擋；入口已由 lobby 控制。
                       const wavFile = await createWavFileFromBlob(rawBlob);
                       status.innerText = "🔵 驗證密語中...";
                       status.style.color = "#3498db";
