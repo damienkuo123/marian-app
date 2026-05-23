@@ -14,7 +14,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
-  <script src="./tappie-api.js?v=20260522-boss-ui-fix1"></script>
+  <script src="./tappie-api.js?v=20260523-battle-gami-fix1"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1741,12 +1741,55 @@
       const roomIdentifier = normalizeRoomIdentifier(url.searchParams.get('roomId') || url.searchParams.get('roomCode'));
 
       if (action === 'get_lobby_data') {
-        // 原 battle 進場只需要 assets/profile/gamification 做卡片與抽獎防呆。
+        // Supabase 版：原本 GAS 的 get_lobby_data 在 battle 主要用來拿「角色圖鑑 + 遊戲化設定」。
+        // 這裡改成即時讀 Supabase，避免抽獎次數 / 卡池機率仍停留在舊前端預設值。
+        const baseUrl = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+          ? TappieAPI.supabaseBaseUrl
+          : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+
+        let assets = window.characterAssets || {};
+        let unlocked = [];
+        let gamification = null;
+
+        try {
+          const shop = await fetch(`${baseUrl}/get-avatar-shop?uid=${encodeURIComponent(STUDENT_ID)}&t=${Date.now()}`).then(r => r.json());
+          if (shop && shop.success) {
+            const list = Array.isArray(shop.avatars) ? shop.avatars : [];
+            assets = {};
+            list.forEach(a => {
+              const id = a.id || a.avatarId || a.avatar_id;
+              if (!id) return;
+              assets[id] = {
+                name: a.name || id,
+                img: a.fullImg || a.full_img_url || a.img || a.url || '/assets/gacha-box.png',
+                mask: a.mask || a.mask_url || '',
+                rarity: String(a.rarity || 'N').toUpperCase(),
+                theme: a.theme || a.category || 'default',
+                category: a.category || ''
+              };
+            });
+            unlocked = Array.isArray(shop.unlockedAvatarIds) ? shop.unlockedAvatarIds : [];
+            window.characterAssets = assets;
+            characterAssets = assets;
+          }
+        } catch (e) {
+          console.warn('get-avatar-shop failed, keep existing characterAssets:', e);
+        }
+
+        try {
+          const gami = await fetch(`${baseUrl}/get-student-gamification?uid=${encodeURIComponent(STUDENT_ID)}&t=${Date.now()}`).then(r => r.json());
+          gamification = gami?.gamification || gami?.config || gami?.value || null;
+          if (gamification) window.gamiConfig = gamification;
+        } catch (e) {
+          console.warn('get-student-gamification failed, keep existing gamiConfig:', e);
+          gamification = window.gamiConfig || null;
+        }
+
         return jsonResponse({
           success: true,
-          assets: window.characterAssets || {},
-          profile: { unlocked: '' },
-          gamification: null
+          assets,
+          profile: { unlocked: unlocked.join(',') },
+          gamification
         });
       }
 
@@ -2313,61 +2356,6 @@
     document.getElementById('back-summary-btn').onclick = () => { isReReading = false; showSummary(); };
   }
   
-
-  // =======================================================
-  // 🎮 Supabase Gamification Config Helper
-  // - 讀 school_settings.key = Gamification_Config
-  // - 相容 pts / points、中文 battle key
-  // =======================================================
-  function normalizeTappieGamiConfig(raw) {
-    const cfg = raw || {};
-    const daily = cfg.dailyChallenge || {};
-    const tiers = Array.isArray(daily.tiers) ? daily.tiers : [];
-    const normalizedTiers = tiers
-      .map(t => ({
-        min: Number(t.min ?? t.score ?? 0),
-        pts: Number(t.pts ?? t.points ?? 0)
-      }))
-      .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts))
-      .sort((a, b) => b.min - a.min);
-
-    return {
-      ...cfg,
-      dailyChallenge: {
-        ...daily,
-        passScore: Number(daily.passScore ?? daily.pass_score ?? 60),
-        tiers: normalizedTiers.length ? normalizedTiers : [
-          { min: 80, pts: 30 },
-          { min: 70, pts: 20 },
-          { min: 60, pts: 10 }
-        ]
-      },
-      gachaPicks: {
-        "初階Ai": Number(cfg.gachaPicks?.["初階Ai"] ?? cfg.gachaPicks?.easyAi ?? 1),
-        "中階Ai": Number(cfg.gachaPicks?.["中階Ai"] ?? cfg.gachaPicks?.mediumAi ?? 2),
-        "高階Ai": Number(cfg.gachaPicks?.["高階Ai"] ?? cfg.gachaPicks?.hardAi ?? 3),
-        "玩家對戰": Number(cfg.gachaPicks?.["玩家對戰"] ?? cfg.gachaPicks?.pvp ?? 3),
-        "活動Boss": Number(cfg.gachaPicks?.["活動Boss"] ?? cfg.gachaPicks?.eventBoss ?? 1)
-      },
-      leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30]
-    };
-  }
-
-  async function fetchStudentGamiConfig(uid) {
-    try {
-      const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
-        ? TappieAPI.supabaseBaseUrl
-        : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
-      const res = await fetch(`${base}/get-student-gamification?uid=${encodeURIComponent(uid)}&t=${Date.now()}`);
-      const data = await res.json();
-      if (!data || !data.success) throw new Error(data?.message || data?.error || 'get-student-gamification failed');
-      return normalizeTappieGamiConfig(data.config || data.gamification || {});
-    } catch (err) {
-      console.warn('Gamification config 載入失敗，沿用頁面既有設定：', err);
-      return null;
-    }
-  }
-
   window.onload = async () => {
     // 🚀 開發者測試外掛：直接進入高階 AI 抽獎畫面
     if (MODE === 'test_gacha') {
@@ -2455,14 +2443,12 @@
         
         fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`)
           .then(res => res.json())
-          .then(async data => {
+          .then(data => {
             window.characterAssets = data.assets || {}; // 存入全域變數
             
             // 🚀 關鍵修復：同步給抽獎系統的變數，並啟動獎池引擎！
             characterAssets = window.characterAssets;   
-            // ✅ 精修：盲盒抽數 / 卡池機率優先讀 Supabase school_settings.Gamification_Config
-            const freshGami = await fetchStudentGamiConfig(STUDENT_ID);
-            window.gamiConfig = freshGami || normalizeTappieGamiConfig(data.gamification || {});
+            window.gamiConfig = data.gamification || null; // 👈 🚀 新增這行：儲存全域遊戲設定
             buildDynamicPrizePool();                    
 
             showPortal();
@@ -3956,6 +3942,19 @@
     const impactCard = document.getElementById('impact-card');
     const impactCardBg = document.getElementById('impact-card-bg');
 
+    function useLiveBattleCard(side, fallbackUrl) {
+      const bgEl = document.getElementById(side === 'my' ? 'my-card-bg' : 'op-card-bg');
+      const cardEl = document.getElementById(side === 'my' ? 'my-card' : 'op-card');
+      const liveBg = bgEl ? bgEl.style.backgroundImage : '';
+      if (isFinal && liveBg && liveBg !== 'none') {
+        impactCardBg.style.backgroundImage = liveBg;
+      } else if (fallbackUrl) {
+        impactCardBg.style.backgroundImage = `url('${fallbackUrl}')`;
+      }
+      const liveRarity = cardEl ? cardEl.getAttribute('data-rarity') : '';
+      if (liveRarity) impactCard.setAttribute('data-rarity', liveRarity);
+    }
+
     r.className = '';
     o.classList.remove('fade-out', 'active', 'theme-win', 'theme-lose', 'is-final'); 
     void o.offsetWidth; // 強制重繪
@@ -3977,8 +3976,8 @@
       // 🚀 埋點：如果是最後一局且我方獲勝，播放勝利號角
       if (isFinal && window.GlobalAudio) GlobalAudio.play('victory'); 
       r.classList.add('result-win'); o.classList.add('theme-win'); 
-      if (myImgUrl) impactCardBg.style.backgroundImage = `url('${myImgUrl}')`; 
-      impactCard.setAttribute('data-rarity', window.currentMyRarity || 'N');
+      useLiveBattleCard('my', myImgUrl);
+      impactCard.setAttribute('data-rarity', impactCard.getAttribute('data-rarity') || window.currentMyRarity || 'N');
       if (window.currentMyMask) {
           impactCard.classList.add('masked');
           impactCard.style.setProperty('--mask', window.currentMyMask.includes('url(') ? window.currentMyMask : `url('${window.currentMyMask}')`);
@@ -3987,8 +3986,8 @@
     else if (myNum < opNum) { 
       r.innerText = isFinal ? "對戰失敗" : "LOSE"; 
       r.classList.add('result-lose'); o.classList.add('theme-lose'); 
-      if (opImgUrl) impactCardBg.style.backgroundImage = `url('${opImgUrl}')`; 
-      impactCard.setAttribute('data-rarity', window.currentOpRarity || 'N');
+      useLiveBattleCard('op', opImgUrl);
+      impactCard.setAttribute('data-rarity', impactCard.getAttribute('data-rarity') || window.currentOpRarity || 'N');
       if (window.currentOpMask) {
           impactCard.classList.add('masked');
           impactCard.style.setProperty('--mask', window.currentOpMask.includes('url(') ? window.currentOpMask : `url('${window.currentOpMask}')`);
@@ -3997,8 +3996,8 @@
     else { 
       r.innerText = "DRAW"; r.classList.add('result-draw'); o.classList.add('theme-win'); 
       // 平手預設顯示我方
-      if (myImgUrl) impactCardBg.style.backgroundImage = `url('${myImgUrl}')`; 
-      impactCard.setAttribute('data-rarity', window.currentMyRarity || 'N');
+      useLiveBattleCard('my', myImgUrl);
+      impactCard.setAttribute('data-rarity', impactCard.getAttribute('data-rarity') || window.currentMyRarity || 'N');
       impactCard.classList.remove('masked');
     }
     
@@ -4174,39 +4173,49 @@
 
   // 🚀 核心：唯一的轉盤！從 0~100 轉出結果
   function drawSinglePrize() {
-      // 讀取從後台傳來的直列清單，若無則用預設
-      const rawPool = (window.gamiConfig && window.gamiConfig.gachaItems && window.gamiConfig.gachaItems.length > 0) 
+      // 讀取從後台傳來的直列清單，若無則用預設。
+      // 相容 admin 可能存的 key：value / pts / points / avatarId。
+      const rawPool = (window.gamiConfig && Array.isArray(window.gamiConfig.gachaItems) && window.gamiConfig.gachaItems.length > 0) 
                    ? window.gamiConfig.gachaItems 
                    : DEFAULT_GACHA_ITEMS;
-      const pool = rawPool.map(item => ({
-        ...item,
-        type: item.type || (item.avatarId || item.avatar_id ? 'avatar' : 'points'),
-        value: item.value ?? item.points ?? item.pts ?? item.avatarId ?? item.avatar_id ?? item.id,
-        prob: Number(item.prob ?? item.weight ?? 0),
-        rarity: item.rarity || 'N'
-      })).filter(item => item.prob > 0);
 
-      let totalProb = pool.reduce((sum, item) => sum + Number(item.prob), 0);
-      let rand = Math.random() * totalProb; // 如果管理員乖乖設定，這裡的分母就是剛好 100
-      let selectedItem = pool[0]; // 防呆保底
+      const pool = rawPool.map(item => {
+          const inferredType = item.type || (item.avatarId || item.avatar_id ? 'avatar' : 'points');
+          const value = item.value ?? item.pts ?? item.points ?? item.amount ?? item.avatarId ?? item.avatar_id ?? item.id ?? 0;
+          return {
+              ...item,
+              type: inferredType,
+              value,
+              rarity: String(item.rarity || 'N').toUpperCase(),
+              prob: Number(item.prob ?? item.weight ?? item.rate ?? 0)
+          };
+      }).filter(item => Number.isFinite(item.prob) && item.prob > 0);
 
-      for (let item of pool) {
-          if (rand < item.prob) {
+      const safePool = pool.length ? pool : DEFAULT_GACHA_ITEMS;
+      let totalProb = safePool.reduce((sum, item) => sum + Number(item.prob || 0), 0);
+      if (!Number.isFinite(totalProb) || totalProb <= 0) totalProb = 100;
+
+      let rand = Math.random() * totalProb;
+      let selectedItem = safePool[0];
+
+      for (let item of safePool) {
+          const p = Number(item.prob || 0);
+          if (rand < p) {
               selectedItem = item;
               break;
           }
-          rand -= item.prob;
+          rand -= p;
       }
 
-      let boxRarity = selectedItem.rarity || 'N';
+      let boxRarity = String(selectedItem.rarity || 'N').toUpperCase();
       let glowClass = 'crack-white';
       if (boxRarity === 'SR') glowClass = 'crack-purple';
-      if (boxRarity === 'SSR') glowClass = 'crack-gold';
+      if (boxRarity === 'SSR' || boxRarity === 'UR') glowClass = 'crack-gold';
 
       return {
           type: selectedItem.type,
           value: selectedItem.value,
-          boxRarity: boxRarity, // 順便把這層的外盒顏色回傳給系統
+          boxRarity: boxRarity,
           label: selectedItem.type === 'points' ? `${selectedItem.value} 點` : boxRarity,
           class: `prize-${boxRarity}`,
           glow: glowClass
@@ -4231,7 +4240,7 @@
     const picksConf = window.gamiConfig ? window.gamiConfig.gachaPicks : { "初階Ai": 1, "中階Ai": 2, "高階Ai": 3, "玩家對戰": 3, "活動Boss": 1 };
 
     if (isEventMode) {
-        // ✅ 精修：活動 Boss 抽數也完全聽 admin 的 gachaPicks["活動Boss"]，只做 1~6 的安全上限
+        // 活動 Boss 也改吃 admin 設定，安全限制 1～6 次。
         let bossPicks = Number(picksConf["活動Boss"] || 1);
         gachaPicksLeft = Math.max(1, Math.min(6, bossPicks)); 
     } else {
@@ -4252,38 +4261,17 @@
     board.innerHTML = ""; 
 
     // 🚀 2. 決定要產生幾張卡片
-    const cardCount = isEventMode ? 1 : 6;
+    const cardCount = Math.max(1, Math.min(6, gachaPicksLeft));
     gachaCardsData = [];
     
     for(let i = 0; i < cardCount; i++) {
         let randomWord = battleQuizArr.length > 0 ? battleQuizArr[Math.floor(Math.random() * battleQuizArr.length)].en : "OPEN";
         let boxRarity, prize;
 
-        // 🚀 3. 獎池分流：活動用專屬獎池，一般用常規獎池
-        if (isEventMode) {
-            // (活動 Boss 邏輯不變)
-            let bossRarity = 'SSR';
-            let prizeClass = 'prize-SSR';
-            let prizeGlow = 'crack-gold';
-
-            if (EVENT_AVATAR && window.characterAssets && window.characterAssets[EVENT_AVATAR]) {
-                bossRarity = window.characterAssets[EVENT_AVATAR].rarity || 'SSR';
-                if (bossRarity === 'SR') { prizeClass = 'prize-SR'; prizeGlow = 'crack-purple'; }
-                else if (bossRarity === 'R') { prizeClass = 'prize-R'; prizeGlow = 'crack-white'; }
-                else if (bossRarity === 'N') { prizeClass = 'prize-N'; prizeGlow = 'crack-white'; }
-            }
-
-            boxRarity = bossRarity; 
-            if (Math.random() < 0.3) {
-                prize = { type: 'avatar', value: EVENT_AVATAR, label: '活動限定', class: prizeClass, glow: prizeGlow };
-            } else {
-                prize = { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white' };
-            }
-        } else {
-            // 🚀 一般模式：一鍵抽出卡片與對應外盒！
-            prize = drawSinglePrize();
-            boxRarity = prize.boxRarity; // 盲盒的外觀直接跟隨抽中的獎品
-        }
+        // 🚀 一般 / AI / 活動 Boss 全部統一吃 admin gachaItems 機率。
+        // 活動限定角色若要掉落，請在 admin 卡池中放入 type=avatar、value=活動角色ID。
+        prize = drawSinglePrize();
+        boxRarity = prize.boxRarity; // 盲盒的外觀直接跟隨抽中的獎品
         
         gachaCardsData.push({ id: i, word: randomWord, boxRarity: boxRarity, prize: prize, flipped: false });
     }
