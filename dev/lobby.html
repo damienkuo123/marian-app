@@ -721,7 +721,7 @@
           <div class="ai-banner-overlay"></div>
           <div class="ai-banner-text">
             <h4>初階 Ai</h4>
-            <p>挑戰獎勵：1次抽獎</p>
+            <p id="ai-reward-easy">挑戰獎勵：1次抽獎</p>
           </div>
         </div>
 
@@ -729,7 +729,7 @@
           <div class="ai-banner-overlay"></div>
           <div class="ai-banner-text">
             <h4>中階 Ai</h4>
-            <p>挑戰獎勵：2次抽獎</p>
+            <p id="ai-reward-med">挑戰獎勵：2次抽獎</p>
           </div>
         </div>
 
@@ -737,7 +737,7 @@
           <div class="ai-banner-overlay"></div>
           <div class="ai-banner-text">
             <h4>高階 Ai</h4>
-            <p>挑戰獎勵：3次抽獎</p>
+            <p id="ai-reward-hard">挑戰獎勵：3次抽獎</p>
           </div>
         </div>
       </div>
@@ -903,6 +903,7 @@
     let userUnlocked = [];
     let userEquipped = "";
     let currentCenteredId = ""; 
+    let lobbyGamiConfig = null;
 
     let lobbyRefreshTimer = null;
     let battleStatusTimer = null;
@@ -911,12 +912,39 @@
     let roomExpireTimer = null;
     const GITHUB_APP_URL = "/";
 
+    function getLobbyGachaPick(key, fallback = 1) {
+      const picks = lobbyGamiConfig?.gachaPicks || {};
+      const raw = picks[key] ?? fallback;
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(1, Math.min(6, n));
+    }
+    
+    function updateLobbyGachaRewardLabels() {
+      const easy = document.getElementById('ai-reward-easy');
+      const med = document.getElementById('ai-reward-med');
+      const hard = document.getElementById('ai-reward-hard');
+    
+      if (easy) easy.innerText = `挑戰獎勵：${getLobbyGachaPick('初階Ai', 1)}次抽獎`;
+      if (med) med.innerText = `挑戰獎勵：${getLobbyGachaPick('中階Ai', 2)}次抽獎`;
+      if (hard) hard.innerText = `挑戰獎勵：${getLobbyGachaPick('高階Ai', 3)}次抽獎`;
+    }
+
     async function initLobby() {
       try {
         if (!window.TappieAPI) throw new Error("TappieAPI 尚未載入");
 
         const dashboardRaw = await TappieAPI.getDashboard(STUDENT_ID);
         const dashboard = TappieAPI.toLegacyDashboard(dashboardRaw);
+        
+        lobbyGamiConfig =
+          dashboard.gamification ||
+          dashboardRaw?.gamification ||
+          dashboardRaw?.practice?.gamification ||
+          {};
+        
+        window.gamiConfig = lobbyGamiConfig;
+        updateLobbyGachaRewardLabels();
 
         if (!dashboardRaw || dashboardRaw.success === false || dashboard.success === false || dashboard.error) {
             alert("⚠️ 查無此帳號或權限不足！");
