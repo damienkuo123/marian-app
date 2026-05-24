@@ -2684,10 +2684,24 @@
                     })
                 ])
                     .then(([data, studentData]) => {
-                        allTasksData = (data.words || []).filter(t => t.isActive !== false && t.is_active !== false);
+                        allTasksData = (data.words || [])
+                            .filter(t => t.isActive !== false && t.is_active !== false)
+                            .map(t => ({
+                                ...t,
+                                id: t.id || t.unitId || t.unit_id || '',
+                                unitId: t.unitId || t.id || t.unit_id || '',
+                                classId: normalizeEventClassCode(t.classId || t.classCode || t.class_code || ''),
+                                unit: t.unit || t.unitName || t.unit_name || t.name || '',
+                                words: Array.isArray(t.words) ? t.words : []
+                            }));
                         allSchedulesData = (data.schedules || [])
                             .filter(s => s.isActive !== false && s.is_active !== false)
-                            .map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
+                            .map(s => ({
+                                ...s,
+                                classId: normalizeEventClassCode(s.classId || s.classCode || s.class_code || ''),
+                                unit: s.unit || s.unitName || s.unit_name || '',
+                                avatar: s.avatar || s.eventAvatarId || s.event_avatar_id || ''
+                            }));
                         allEventAvatars = data.eventAvatars || [];
 
                         const classSet = new Set();
@@ -2950,7 +2964,7 @@
                     <div class="task-info">
                         <div class="task-class">${getClassDisplayLabel(task.classId)}</div>
                         <div class="task-unit">${task.unit}</div>
-                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${task.words.length} 個單字</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${(task.words || []).length} 個單字</div>
                     </div>
                     <div class="task-actions">
                         <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${safeClassId}', '${safeUnit}', '${wordsJsonStr}', false, '${safeTaskId}')">✏️</button>
