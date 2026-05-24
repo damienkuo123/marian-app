@@ -705,14 +705,16 @@
     
     <div class="battle-content">
       
-      <div class="section-divider">突發事件</div>
-      <div>
-        <div class="event-banner">
-          <div class="event-overlay">
-            <div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 目前不開放</div>
+      <div id="event-section" style="display:none;">
+        <div class="section-divider">突發事件</div>
+        <div>
+          <div class="event-banner">
+            <div class="event-overlay">
+              <div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 目前不開放</div>
+            </div>
           </div>
+          <button id="event-vocab-btn" class="event-info-btn" onclick="openEventVocab()">📖 查看事件題庫</button>
         </div>
-        <button id="event-vocab-btn" class="event-info-btn" onclick="openEventVocab()">📖 查看事件題庫</button>
       </div>
 
       <div class="section-divider">Ai 對戰</div>
@@ -1850,10 +1852,15 @@
     let currentEventWords = []; 
 
     function checkEventStatus() {
+      const eventSection = document.getElementById('event-section');
       const eventBanner = document.querySelector('.event-banner');
       const vocabBtn = document.getElementById('event-vocab-btn');
-      if (!eventBanner) return; 
+      if (!eventBanner) {
+        if (eventSection) eventSection.style.display = 'none';
+        return;
+      }
 
+      if (eventSection) eventSection.style.display = 'none';
       const overlay = eventBanner.querySelector('.event-overlay');
       if (overlay) overlay.innerHTML = '<div class="locked-tag" style="background: rgba(0,0,0,0.8); color: #fff; border-color: #fff;">⏳ 檢查活動中...</div>';
       eventBanner.style.pointerEvents = 'none';
@@ -1875,6 +1882,7 @@
                 overlay.innerHTML = `<div class="locked-tag" style="background: rgba(142,68,173,0.9); color: white; border-color: white; box-shadow: 0 0 20px rgba(142,68,173,0.8);">✨ ${data.eventName} ✨</div>` + dateHtml;
             }
             
+            if (eventSection) eventSection.style.display = 'block';
             eventBanner.style.pointerEvents = 'auto';
             eventBanner.style.opacity = '1';
             eventBanner.onclick = () => startEvent(data.eventCode, data.eventAvatar);
@@ -1883,13 +1891,19 @@
             if (vocabBtn) vocabBtn.style.display = 'block';
 
           } else {
+            if (eventSection) eventSection.style.display = 'none';
             eventBanner.style.backgroundImage = `url('/assets/event-bg.webp')`;
             if (overlay) overlay.innerHTML = `<div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 現在不開放</div>`;
             eventBanner.style.opacity = '0.5';
             eventBanner.style.pointerEvents = 'none';
+            eventBanner.onclick = null;
+            currentEventWords = [];
             if (vocabBtn) vocabBtn.style.display = 'none';
           }
         }).catch(err => {
+          if (eventSection) eventSection.style.display = 'none';
+          currentEventWords = [];
+          if (vocabBtn) vocabBtn.style.display = 'none';
           if (overlay) overlay.innerHTML = `<div class="locked-tag">⚠️ 連線失敗</div>`;
         });
     }
@@ -2583,9 +2597,14 @@
       // 讀 Supabase unit_schedules.is_event + event_avatar_id，不再依賴 GAS get_current_event。
       // =======================================================
       checkEventStatus = async function checkEventStatusSupabase(){
+        const eventSection = document.getElementById('event-section');
         const eventBanner = document.querySelector('.event-banner');
         const vocabBtn = document.getElementById('event-vocab-btn');
-        if (!eventBanner) return;
+        if (!eventBanner) {
+          if (eventSection) eventSection.style.display = 'none';
+          return;
+        }
+        if (eventSection) eventSection.style.display = 'none';
         const overlay = eventBanner.querySelector('.event-overlay');
         if (overlay) overlay.innerHTML = '<div class="locked-tag" style="background: rgba(0,0,0,0.8); color: #fff; border-color: #fff;">⏳ 檢查活動中...</div>';
         eventBanner.style.pointerEvents = 'none';
@@ -2601,6 +2620,7 @@
             eventBanner.style.backgroundImage = `url('${bossImg}')`;
             const dateHtml = data.endDate ? `<div style="position:absolute; bottom:10px; right:15px; background:rgba(0,0,0,0.8); color:#f1c40f; font-size:11px; padding:6px 12px; border-radius:12px; border:1px solid rgba(241,196,15,0.5); font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.4);">⏳ 截止: ${data.endDate}</div>` : '';
             if (overlay) overlay.innerHTML = `<div class="locked-tag" style="background: rgba(142,68,173,0.9); color: white; border-color: white; box-shadow: 0 0 20px rgba(142,68,173,0.8);">✨ ${data.eventName || '活動Boss'} ✨</div>` + dateHtml;
+            if (eventSection) eventSection.style.display = 'block';
             eventBanner.style.pointerEvents = 'auto';
             eventBanner.style.opacity = '1';
             eventBanner.onclick = () => startEvent(data.eventCode, data.eventAvatar, data.eventUnitId);
@@ -2608,14 +2628,19 @@
             if (Array.isArray(data.words)) currentEventWords = data.words;
             if (vocabBtn) vocabBtn.style.display = 'block';
           } else {
+            if (eventSection) eventSection.style.display = 'none';
             eventBanner.style.backgroundImage = `url('/assets/event-bg.webp')`;
             if (overlay) overlay.innerHTML = `<div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 現在不開放</div>`;
             eventBanner.style.opacity = '0.5';
             eventBanner.style.pointerEvents = 'none';
+            eventBanner.onclick = null;
+            currentEventWords = [];
             if (vocabBtn) vocabBtn.style.display = 'none';
           }
         } catch (err) {
           console.warn('Supabase 活動狀態載入失敗:', err);
+          if (eventSection) eventSection.style.display = 'none';
+          currentEventWords = [];
           if (overlay) overlay.innerHTML = `<div class="locked-tag">⚠️ 連線失敗</div>`;
           eventBanner.style.opacity = '0.5';
           eventBanner.style.pointerEvents = 'none';
