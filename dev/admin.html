@@ -846,71 +846,121 @@
         let ADMIN_SECRET = localStorage.getItem('tappie_admin_key');
         const authTime = localStorage.getItem('tappie_admin_key_time');
 
-        // 🧪 Supabase Dev 測試模式：?secret=dev 強制開放超級管理員選單。
+        // 🔐 Supabase Admin Auth：透過 school_settings 驗證 Admin_Password / Super_Admin_Password
         const USE_SUPABASE_ADMIN = !!(window.TappieAPI && TappieAPI.mode && TappieAPI.mode.indexOf('supabase') !== -1);
-        const IS_DEV_SUPER_ADMIN = USE_SUPABASE_ADMIN && ADMIN_SECRET === "dev";
+        let ADMIN_ROLE = null;
+        let ADMIN_AUTH_READY = false;
+
+        function getAdminAuthBaseUrl() {
+            if (window.TappieAPI && TappieAPI.supabaseBaseUrl) return String(TappieAPI.supabaseBaseUrl).replace(/\/$/, '');
+            return 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+        }
+
+        function clearAdminAuth() {
+            localStorage.removeItem('tappie_admin_key');
+            localStorage.removeItem('tappie_admin_key_time');
+            localStorage.removeItem('tappie_admin_role');
+            ADMIN_SECRET = null;
+            ADMIN_ROLE = null;
+        }
+
+        function showAdminUnauth(message = "請使用教師專用 NFC 卡感應進入") {
+            const mask = document.getElementById('unauth-mask');
+            if (mask) {
+                const p = mask.querySelector('p');
+                if (p) p.innerText = message;
+                mask.style.display = 'flex';
+            }
+            document.querySelectorAll('.super-only').forEach(el => el.style.display = 'none');
+        }
+
+        function applyAdminRole(role) {
+            ADMIN_ROLE = role;
+            ADMIN_AUTH_READY = true;
+            localStorage.setItem('tappie_admin_role', role);
+
+            const mask = document.getElementById('unauth-mask');
+            if (mask) mask.style.display = 'none';
+
+            if (role === "super") {
+                document.getElementById('role-text').innerText = "⭐ 超級管理員權限";
+                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
+            } else {
+                document.getElementById('role-text').innerText = "專屬管理員權限";
+                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'none');
+            }
+        }
+
+        async function verifySupabaseAdminAuth(secret) {
+            const res = await fetch(`${getAdminAuthBaseUrl()}/admin-auth`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    schoolCode: CURRENT_SCHOOL,
+                    secret
+                })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok || !data.success || !data.valid) {
+                throw new Error(data.message || data.error || "管理員密碼錯誤");
+            }
+
+            applyAdminRole(data.role === "super" ? "super" : "admin");
+            console.log("✅ Admin Auth 驗證成功", { school: CURRENT_SCHOOL, role: data.role });
+        }
 
         // ⏳ 檢查是否超過 1 小時 (3600000毫秒)
         if (ADMIN_SECRET && authTime) {
             const now = new Date().getTime();
             if (now - parseInt(authTime) > 3600000) {
-                localStorage.removeItem('tappie_admin_key');
-                localStorage.removeItem('tappie_admin_key_time');
-                ADMIN_SECRET = null;
+                clearAdminAuth();
                 alert("⚠️ 授權已過期（超過 1 小時），為保護系統安全，請重新感應管理員卡片！");
             }
         }
 
-        // 🚀 新增：主動防禦背景監控 (每 10 秒鐘偷偷查驗一次時間)
+        // 🚀 主動防禦背景監控：登入後每 10 秒檢查一次時間
         if (ADMIN_SECRET && authTime) {
             setInterval(() => {
                 const currentTime = new Date().getTime();
-                // 如果目前時間減去登入時間 > 1小時 (3600000毫秒)
                 if (currentTime - parseInt(authTime) > 3600000) {
-                    localStorage.removeItem('tappie_admin_key');
-                    localStorage.removeItem('tappie_admin_key_time');
+                    clearAdminAuth();
                     alert("⏱️ 閒置時間過長！為保護系統安全，已自動強制登出。請重新感應卡片！");
-                    window.location.reload(); // 瞬間重整網頁，立刻彈出黑色封鎖畫面！
+                    window.location.reload();
                 }
-            }, 10000); // 10000 毫秒 = 10 秒
+            }, 10000);
         }
 
-        // 🛡️ 將鑰匙傳給後端查驗，前端絕不進行明碼比對
+        // 🛡️ 權限驗證：不再接受 secret=dev，全部改走 school_settings
         if (!ADMIN_SECRET) {
-            document.getElementById('unauth-mask').style.display = 'flex';
+            showAdminUnauth("請使用教師專用 NFC 卡感應進入");
+        } else if (USE_SUPABASE_ADMIN) {
+            showAdminUnauth("權限驗證中，請稍候...");
+            verifySupabaseAdminAuth(ADMIN_SECRET).catch(err => {
+                console.warn("❌ Admin Auth 驗證失敗", err);
+                clearAdminAuth();
+                showAdminUnauth("管理員密碼錯誤或權限已失效，請重新登入");
+                alert("⛔ 管理員驗證失敗：" + (err.message || err));
+            });
         } else {
-            // 🚀 修正：這裡換成了「反引號 ( ` )」，這樣變數才會被正確讀取！
-            if (IS_DEV_SUPER_ADMIN) {
-                // Supabase dev 階段：?secret=dev 直接開放超級管理員測試權限。
-                // 正式版之後再接 admin-auth / RLS。
-                console.log("🧪 Supabase Dev 超級管理員模式啟用", { school: CURRENT_SCHOOL });
-                document.getElementById('role-text').innerText = "⭐ Supabase Dev 超級管理員";
-                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
-                document.getElementById('unauth-mask').style.display = 'none';
-            } else if (USE_SUPABASE_ADMIN) {
-                // Supabase dev 但不是 dev 密鑰：保留專屬管理員，不開超級選單。
-                document.getElementById('role-text').innerText = "專屬管理員權限";
-                document.getElementById('unauth-mask').style.display = 'none';
-            } else {
-                fetch(`${GAS_URL}?action=verify_auth&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (!data.valid) {
-                            document.getElementById('unauth-mask').style.display = 'flex';
-                            localStorage.removeItem('tappie_admin_key');
-                        } else if (data.role === "super") {
-                            document.getElementById('role-text').innerText = "⭐ 超級管理員權限";
-                            document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
-                        }
-                    })
-                    .catch(err => {
-                        alert("連線後端驗證失敗，請檢查網路連線。");
-                        document.getElementById('unauth-mask').style.display = 'flex';
-                    });
-            }
-        }
-
-        
+            fetch(`${GAS_URL}?action=verify_auth&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.valid) {
+                        showAdminUnauth("管理員密碼錯誤或權限已失效，請重新登入");
+                        clearAdminAuth();
+                    } else if (data.role === "super") {
+                        applyAdminRole("super");
+                    } else {
+                        applyAdminRole("admin");
+                    }
+                })
+                .catch(err => {
+                    alert("連線後端驗證失敗，請檢查網路連線。");
+                    showAdminUnauth("後端驗證失敗，請檢查網路連線");
+                });
+        }        
 
         // 🟢 全域變數宣告
         let currentStudentId = null;
@@ -1558,7 +1608,9 @@
 
         function adminLogout() { 
             if (confirm("確定要登出嗎？")) { 
-                localStorage.removeItem('tappie_admin_key'); 
+                localStorage.removeItem('tappie_admin_key');
+                localStorage.removeItem('tappie_admin_key_time');
+                localStorage.removeItem('tappie_admin_role');
                 window.location.reload(); 
             } 
         }
