@@ -1736,21 +1736,24 @@
             loadBrandingConfig();
         }
 
-        function loadBrandingConfig() {
-            document.getElementById('upload-status').innerText = "⏳ 讀取目前設定中...";
-            document.getElementById('upload-status').style.color = "#94a3b8";
-            
-            fetch(`${GAS_URL}?action=get_branding_config&id=${CURRENT_SCHOOL}-ADMIN&secret=${ADMIN_SECRET}`)
-                .then(res => res.json())
-                .then(config => {
-                    document.getElementById('upload-status').innerText = "";
-                    if (config.logoUrl) document.getElementById('preview-logo').src = config.logoUrl;
-                    if (config.iconUrl) document.getElementById('preview-icon').src = config.iconUrl;
-                })
-                .catch(err => {
-                    document.getElementById('upload-status').innerText = "⚠️ 讀取設定失敗";
-                    document.getElementById('upload-status').style.color = "#e74c3c";
-                });
+        async function loadBrandingConfig() {
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "⏳ 讀取目前設定中...";
+            statusEl.style.color = "#94a3b8";
+
+            try {
+                const config = await TappieAPI.adminGetBranding(CURRENT_SCHOOL);
+                if (!config || !config.success) {
+                    throw new Error(config?.message || config?.error || "讀取設定失敗");
+                }
+
+                document.getElementById('preview-logo').src = config.logoUrl || "/assets/logo.webp";
+                document.getElementById('preview-icon').src = config.iconUrl || "/assets/app-icon.png";
+                statusEl.innerText = "";
+            } catch (err) {
+                statusEl.innerText = "⚠️ 讀取設定失敗：" + (err?.message || err);
+                statusEl.style.color = "#e74c3c";
+            }
         }
 
         function handleFileSelect(input, type) {
@@ -1760,7 +1763,13 @@
             // 容量防護 (1MB = 1048576 bytes)
             if (file.size > 1048576) {
                 alert("⛔ 檔案太大了！為了維持學生載入速度，請上傳小於 1MB 的圖片喔！");
-                input.value = ""; 
+                input.value = "";
+                return;
+            }
+
+            if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+                alert("⛔ 檔案格式不支援，請上傳 PNG、JPG 或 WEBP 圖片。");
+                input.value = "";
                 return;
             }
 
@@ -1768,9 +1777,10 @@
                 const img = new Image();
                 img.src = URL.createObjectURL(file);
                 img.onload = () => {
-                    if (Math.abs(img.width - img.height) > 5) { 
+                    if (Math.abs(img.width - img.height) > 5) {
                         alert("💡 溫馨提醒：App 圖示強烈建議使用「正方形圖片」，安裝到手機桌面才不會變形喔！");
                     }
+                    URL.revokeObjectURL(img.src);
                 };
             }
 
@@ -1780,47 +1790,43 @@
             statusEl.style.color = "#ffd700";
 
             reader.onload = function(e) {
-                const base64 = e.target.result;
-                uploadBranding(base64, file.name, type);
+                const dataUrl = String(e.target.result || "");
+                uploadBranding(dataUrl, file.name, file.type, type);
+                input.value = "";
             };
             reader.readAsDataURL(file);
         }
 
-        function uploadBranding(base64, filename, type) {
+        async function uploadBranding(dataUrl, filename, mimeType, type) {
             const statusEl = document.getElementById('upload-status');
-            statusEl.innerText = "🚀 正在將圖片同步至雲端金庫，請稍候...";
+            statusEl.innerText = "🚀 正在將圖片同步至 Supabase Storage，請稍候...";
             statusEl.style.color = "#3498db";
-            
-            const formData = new URLSearchParams();
-            formData.append('image', base64);
-            formData.append('filename', filename);
-            formData.append('brandingType', type);
-            // 🚀 關鍵：把 secret 跟 id 也包進去
-            formData.append('secret', ADMIN_SECRET);
-            formData.append('id', `${CURRENT_SCHOOL}-ADMIN`);
 
-            // 因為有送 image，必須使用 POST
-            fetch(`${GAS_URL}?action=upload_custom_branding`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    statusEl.innerText = "✅ 圖片更新成功！(新學員載入即生效)";
+            try {
+                const base64 = String(dataUrl).includes(',') ? String(dataUrl).split(',')[1] : String(dataUrl);
+                const data = await TappieAPI.adminUploadBrandingAsset({
+                    schoolCode: CURRENT_SCHOOL,
+                    assetType: type,
+                    fileName: filename,
+                    mimeType,
+                    base64
+                });
+
+                if (data && data.success) {
+                    statusEl.innerText = "✅ 圖片更新成功！學生重新開啟頁面後即生效";
                     statusEl.style.color = "#2ecc71";
-                    document.getElementById(`preview-${type}`).src = data.url;
+                    document.getElementById(`preview-${type}`).src = `${data.url}?v=${Date.now()}`;
                 } else {
-                    statusEl.innerText = "❌ 上傳失敗：" + data.error;
+                    statusEl.innerText = "❌ 上傳失敗：" + (data?.message || data?.error || "未知錯誤");
                     statusEl.style.color = "#e74c3c";
                 }
-            })
-            .catch(err => {
+            } catch (err) {
                 statusEl.innerText = "⚠️ 網路連線中斷，請重試。";
                 statusEl.style.color = "#e74c3c";
-            });
+            }
         }
-        function deleteBranding(type) {
+
+        async function deleteBranding(type) {
             const label = type === 'logo' ? '系統 Logo' : 'App 圖示';
             if (!confirm(`確定要刪除已上傳的【${label}】並還原為官方預設嗎？`)) return;
 
@@ -1828,35 +1834,26 @@
             statusEl.innerText = "⏳ 正在重置設定...";
             statusEl.style.color = "#ffd700";
 
-            const formData = new URLSearchParams();
-            formData.append('brandingType', type);
-            formData.append('secret', ADMIN_SECRET);
-            formData.append('id', `${CURRENT_SCHOOL}-ADMIN`);
+            try {
+                const data = await TappieAPI.adminDeleteBrandingAsset({
+                    schoolCode: CURRENT_SCHOOL,
+                    assetType: type
+                });
 
-            fetch(`${GAS_URL}?action=delete_custom_branding`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
+                if (data && data.success) {
                     statusEl.innerText = `✅ ${label} 已成功重置。`;
                     statusEl.style.color = "#2ecc71";
-                    
-                    // 回復預設圖片預覽
+
                     if (type === 'logo') document.getElementById('preview-logo').src = "/assets/logo.webp";
                     if (type === 'icon') document.getElementById('preview-icon').src = "/assets/app-icon.png";
-                    
-                    alert("設定已重置！學生重新開啟網頁後將看到官方圖示。");
                 } else {
-                    statusEl.innerText = "❌ 刪除失敗：" + data.error;
+                    statusEl.innerText = "❌ 刪除失敗：" + (data?.message || data?.error || "未知錯誤");
                     statusEl.style.color = "#e74c3c";
                 }
-            })
-            .catch(err => {
+            } catch (err) {
                 statusEl.innerText = "⚠️ 網路異常，請重試。";
                 statusEl.style.color = "#e74c3c";
-            });
+            }
         }
 
         // 🚀 預設的原始點數獎池

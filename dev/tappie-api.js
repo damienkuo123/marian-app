@@ -33,7 +33,10 @@ const TappieAPI = {
     claimGacha: "/claim-gacha",
     purchaseAvatar: "/purchase-avatar",
     getStudentActivity: "/get-student-activity",
-    updateWeeklyReport: "/update-weekly-report"
+    updateWeeklyReport: "/update-weekly-report",
+    adminGetBranding: "/admin-get-branding",
+    adminUploadBrandingAsset: "/admin-upload-branding-asset",
+    adminDeleteBrandingAsset: "/admin-delete-branding-asset"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -126,6 +129,9 @@ const TappieAPI = {
   async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
   async updateWeeklyReport(payload = {}) { return await this._post(this.endpoints.updateWeeklyReport, payload); },
+  async adminGetBranding(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetBranding}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminUploadBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminUploadBrandingAsset, payload); },
+  async adminDeleteBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminDeleteBrandingAsset, payload); },
 
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
