@@ -94,6 +94,31 @@
         
         .html-editor { width: 100%; height: 250px; background: #fff; color: #333; border-radius: 10px; padding: 10px; font-family: monospace; font-size: 14px; box-sizing: border-box; border: 2px solid #3498db; margin-bottom: 10px;}
 
+
+
+        /* =======================================================
+           📊 Supabase 學習進度：學生下拉追蹤面板
+           ======================================================= */
+        .progress-class-summary { font-size:12px; color:#94a3b8; font-weight:700; margin-top:6px; line-height:1.5; }
+        .progress-thresholds { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px 0; justify-content:center; }
+        .progress-chip { padding:6px 10px; border-radius:999px; font-size:12px; font-weight:900; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.06); color:#cbd5e1; }
+        .progress-student-card { margin-bottom:10px; border:1px solid rgba(255,255,255,0.1); border-radius:16px; background:rgba(255,255,255,0.045); overflow:hidden; }
+        .progress-student-head { width:100%; border:0; background:transparent; color:white; padding:13px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; text-align:left; font-family:inherit; }
+        .progress-student-head:active { background:rgba(255,255,255,0.08); }
+        .progress-student-name { font-size:15px; font-weight:900; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .progress-student-meta { display:flex; align-items:center; gap:7px; flex-shrink:0; }
+        .progress-count-badge { padding:5px 9px; border-radius:999px; font-size:12px; font-weight:900; border:1px solid rgba(255,255,255,0.12); }
+        .progress-rank-badge { font-size:16px; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.35)); }
+        .progress-student-detail { display:none; padding:12px 14px 14px; border-top:1px dashed rgba(255,255,255,0.1); background:rgba(0,0,0,0.16); }
+        .progress-student-card.active .progress-student-detail { display:block; animation:fadeIn 0.22s; }
+        .progress-detail-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+        .progress-detail-box { border-radius:12px; padding:10px; background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.08); }
+        .progress-detail-label { font-size:11px; color:#94a3b8; font-weight:800; margin-bottom:4px; }
+        .progress-detail-value { font-size:14px; color:#f8fafc; font-weight:900; word-break:break-word; }
+        .progress-record-title { color:#ffd700; font-size:12px; font-weight:900; margin:6px 0 8px; }
+        .progress-record-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px dashed rgba(255,255,255,0.08); font-size:12px; color:#cbd5e1; }
+        .progress-empty-detail { color:#94a3b8; text-align:center; font-size:13px; padding:10px; }
+
         @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 70% { transform: scale(1.3); opacity: 0; } 100% { transform: scale(1); opacity: 0; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -405,7 +430,7 @@
     </div>
 
     <div id="progressModal" class="modal-overlay" onclick="closeModal('progressModal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-content wide-modal" onclick="event.stopPropagation()">
             <h3 class="modal-title">📊 各班口說進度</h3>
             <div id="progress-container" class="modal-scroll-area"></div>
             <button class="btn-action btn-gray" style="margin-top: 15px; padding: 15px;" onclick="closeModal('progressModal')">關閉</button>
@@ -1114,62 +1139,149 @@
         // --- 📊 學習進度邏輯 (雙管齊下抓取截止日版) ---
         function openProgressModal() {
             document.getElementById('progressModal').style.display = 'flex';
-            document.getElementById('progress-container').innerHTML = '<p style="text-align:center; color:#ffd700;">⏳ 正在彙整全校資料...</p>';
-            
-            // 🚀 同時跟後端要「進度」與「排程」這兩包資料
-            Promise.all([
-                fetch(`${GAS_URL}?action=get_all_progress&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`).then(res => res.json()),
-                fetch(`${GAS_URL}?action=get_task_data&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`).then(res => res.json())
-            ])
-            .then(([progressData, taskData]) => {
-                if(progressData.error) return document.getElementById('progress-container').innerHTML = `<p style="color:#e74c3c;">${progressData.error}</p>`;
-                
-                const schedules = taskData.schedules || [];
-                let html = '';
-                
-                for (const classId in progressData) {
-                    const info = progressData[classId]; 
-                    info.students.sort((a, b) => a.count - b.count);
-                    
-                    let stuHtml = info.students.map(s => {
-                        let badgeClass = "c-safe"; let icon = "✅";
-                        if (s.count < 5) { badgeClass = "c-danger"; icon = "⚠️"; }
-                        else if (s.count >= 10) { badgeClass = "c-good"; icon = "🔥"; }
+            const box = document.getElementById('progress-container');
+            box.innerHTML = '<p style="text-align:center; color:#ffd700;">⏳ 正在彙整 Supabase 學習進度...</p>';
 
-                        return `
-                        <div class="stu-row" style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed rgba(255,255,255,0.1);">
-                            <span class="s-name" style="color:#e2e8f0; font-weight:bold;">${s.name}</span>
-                            <span class="s-count" style="color:${s.count>=10?'#f1c40f':(s.count>=5?'#2ecc71':'#e74c3c')}; font-weight:900;">${icon} ${s.count} 次</span>
-                        </div>`;
-                    }).join('');
+            const failThreshold = (g) => Number(g?.mission?.failThreshold ?? 5);
+            const goodThreshold = (g) => Number(g?.mission?.goodThreshold ?? 10);
+            const perfectThreshold = (g) => Number(g?.mission?.perfectThreshold ?? 15);
 
-                    // 🚀 尋找該班級正在進行單元的「截止日期」
-                    let deadlineHtml = "";
-                    if (info.unit !== "未排定") {
-                        let activeSch = schedules.find(s => s.classId.toUpperCase() === classId.toUpperCase() && s.unit === info.unit);
-                        if (activeSch && activeSch.endDate) {
-                            // 格式化日期：把 2026-04-15 變成 04/15 讓排版更精緻
-                            let dText = activeSch.endDate.substring(5).replace('-', '/');
-                            deadlineHtml = `<div style="font-size:12px; color:#ff7675; font-weight:bold; margin-top:5px; letter-spacing:0.5px;">⏰ 截止日: ${dText}</div>`;
-                        }
+            const fmtDateTime = (value) => {
+                if (!value) return '尚無紀錄';
+                const d = new Date(value);
+                if (Number.isNaN(d.getTime())) return String(value);
+                return d.toLocaleString('zh-TW', {
+                    timeZone: 'Asia/Taipei',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            };
+
+            const esc = (v) => String(v ?? '').replace(/[&<>"']/g, ch => ({
+                '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+            }[ch]));
+
+            const getCountVisual = (count, gami) => {
+                const c = Number(count || 0);
+                const fail = failThreshold(gami);
+                const good = goodThreshold(gami);
+                const perfect = perfectThreshold(gami);
+                if (c >= perfect) return { icon:'🌟', color:'#f1c40f', bg:'rgba(241,196,15,0.12)', text:`${c}次` };
+                if (c >= good) return { icon:'🔥', color:'#2ecc71', bg:'rgba(46,204,113,0.12)', text:`${c}次` };
+                if (c < fail) return { icon:'⚠️', color:'#e74c3c', bg:'rgba(231,76,60,0.12)', text:`${c}次` };
+                return { icon:'✅', color:'#3498db', bg:'rgba(52,152,219,0.12)', text:`${c}次` };
+            };
+
+            const rankIcon = (rank) => rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+
+            const renderRecordRows = (records) => {
+                if (!records || !records.length) return '<div class="progress-empty-detail">目前沒有今日挑戰完成紀錄</div>';
+                return records.slice(0, 8).map(r => `
+                    <div class="progress-record-row">
+                        <span>${esc(fmtDateTime(r.completedAt || r.completed_at || r.createdAt || r.created_at))}</span>
+                        <strong style="color:#ffd700;">${Number(r.averageScore ?? r.average_score ?? 0)} 分</strong>
+                    </div>
+                `).join('');
+            };
+
+            const toggleStudentProgress = (btn) => {
+                const card = btn.closest('.progress-student-card');
+                if (card) card.classList.toggle('active');
+            };
+            window.toggleStudentProgress = toggleStudentProgress;
+
+            const url = `${TappieAPI.supabaseBaseUrl}/admin-get-progress?schoolCode=${encodeURIComponent(CURRENT_SCHOOL)}`;
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取失敗');
+
+                    const gami = data.gamification || {};
+                    const classes = data.classes || [];
+                    const mission = gami.mission || {};
+                    let html = `
+                        <div class="progress-thresholds">
+                            <span class="progress-chip">⚠️ 危險：少於 ${failThreshold(gami)} 次</span>
+                            <span class="progress-chip">🔥 良好：${goodThreshold(gami)} 次以上</span>
+                            <span class="progress-chip">🌟 卓越：${perfectThreshold(gami)} 次以上</span>
+                        </div>
+                    `;
+
+                    if (!classes.length) {
+                        box.innerHTML = html + '<p style="text-align:center; color:#7f8c8d;">目前尚無班級資料</p>';
+                        return;
                     }
 
-                    html += `
-                    <div class="accordion-group" onclick="this.classList.toggle('active')">
-                        <div class="accordion-header">
-                            <span>🏷️ ${classId}</span>
-                            <div style="text-align:right;">
-                                <span style="font-size:14px;">${info.unit} ▾</span>
-                                ${deadlineHtml} </div>
-                        </div>
-                        <div class="accordion-body">${stuHtml}</div>
-                    </div>`;
-                }
-                document.getElementById('progress-container').innerHTML = html || '<p style="text-align:center; color:#7f8c8d;">目前尚無班級資料</p>';
-            })
-            .catch(err => {
-                document.getElementById('progress-container').innerHTML = '<p style="text-align:center; color:#e74c3c;">⚠️ 連線失敗</p>';
-            });
+                    html += classes.map(cls => {
+                        const schedule = cls.schedule || null;
+                        const unitName = schedule?.unitName || cls.unitName || '未排定';
+                        const rangeText = schedule?.startDate && schedule?.endDate ? `${schedule.startDate} ～ ${schedule.endDate}` : '尚未排程';
+                        const students = Array.isArray(cls.students) ? cls.students : [];
+
+                        const stuHtml = students.map(s => {
+                            const visual = getCountVisual(s.count, gami);
+                            const medal = rankIcon(Number(s.rank || 0));
+                            return `
+                                <div class="progress-student-card">
+                                    <button class="progress-student-head" onclick="toggleStudentProgress(this)">
+                                        <span class="progress-student-name">${esc(s.name || '未命名學生')}</span>
+                                        <span class="progress-student-meta">
+                                            ${medal ? `<span class="progress-rank-badge" title="目前班級排行榜第 ${s.rank} 名">${medal}</span>` : ''}
+                                            <span class="progress-count-badge" style="color:${visual.color}; background:${visual.bg}; border-color:${visual.color}55;">${visual.icon} ${visual.text}</span>
+                                            <span style="color:#94a3b8;">▾</span>
+                                        </span>
+                                    </button>
+                                    <div class="progress-student-detail">
+                                        <div class="progress-detail-grid">
+                                            <div class="progress-detail-box">
+                                                <div class="progress-detail-label">本單元完成次數</div>
+                                                <div class="progress-detail-value">${Number(s.count || 0)} 次</div>
+                                            </div>
+                                            <div class="progress-detail-box">
+                                                <div class="progress-detail-label">最高分</div>
+                                                <div class="progress-detail-value">${s.bestScore ? `${Number(s.bestScore)} 分 ${medal}` : '尚無'}</div>
+                                            </div>
+                                            <div class="progress-detail-box">
+                                                <div class="progress-detail-label">最近完成時間</div>
+                                                <div class="progress-detail-value">${esc(fmtDateTime(s.latestCompletedAt))}</div>
+                                            </div>
+                                            <div class="progress-detail-box">
+                                                <div class="progress-detail-label">Gami 任務門檻</div>
+                                                <div class="progress-detail-value">⚠️${mission.failThreshold ?? 5} / 🔥${mission.goodThreshold ?? 10} / 🌟${mission.perfectThreshold ?? 15}</div>
+                                            </div>
+                                        </div>
+                                        <div class="progress-record-title">今日挑戰完成紀錄</div>
+                                        ${renderRecordRows(s.records)}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        return `
+                            <div class="accordion-group active">
+                                <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                                    <span>🏷️ ${esc(cls.classCode || '未分班')}</span>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:14px;">${esc(unitName)} ▾</div>
+                                        <div class="progress-class-summary">⏰ ${esc(rangeText)}｜學生 ${students.length} 人</div>
+                                    </div>
+                                </div>
+                                <div class="accordion-body">
+                                    ${stuHtml || '<p style="text-align:center;color:#94a3b8;">此班目前沒有學生資料</p>'}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    box.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error(err);
+                    box.innerHTML = '<p style="text-align:center; color:#e74c3c;">⚠️ Supabase 學習進度讀取失敗：' + (err.message || err) + '</p>';
+                });
         }
 
         // --- 📝 專欄管理邏輯 (超級管理員專屬) ---
