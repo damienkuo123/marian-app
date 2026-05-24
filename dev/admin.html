@@ -347,6 +347,7 @@
                 <div class="dropdown-item super-only" onclick="openNewsletterModal()">📝 專欄編輯</div>
                 <div class="dropdown-item super-only" onclick="openTaskManager()">📅 學習任務排定</div>
                 <div class="dropdown-item super-only" onclick="openStudentManager()">🧑‍🎓 編輯學生資料</div>
+                <div class="dropdown-item super-only" onclick="openAvatarPricingModal()">🃏 角色定價與類型</div>
                 <div class="dropdown-item super-only" onclick="openBrandingModal()">🎨 校區視覺設定</div>
                 <div class="dropdown-item super-only" onclick="openGamiModal()">🕹️ 進階點數設定</div>
             </div>
@@ -627,7 +628,22 @@
         </div>
     </div>
 
-    <div id="gamiModal" class="modal-overlay" onclick="closeModal('gamiModal')">
+    
+    <div id="avatarPricingModal" class="modal-overlay" onclick="closeModal('avatarPricingModal')">
+        <div class="modal-content wide-modal" onclick="event.stopPropagation()" style="max-height: 90vh; width: 95%; padding: 25px 20px;">
+            <h3 class="modal-title" style="color:#9b59b6; margin-bottom: 5px;">🃏 角色定價與類型</h3>
+            <p style="text-align:center; color:#94a3b8; font-size:12px; margin-top:0; margin-bottom: 15px;">
+                調整「一般 / 活動」角色的商店兌換價格與類型。預設角色與 Ai 角色不開放修改。
+            </p>
+            <div id="avatar-pricing-status" style="text-align:center; color:#ffd700; font-size:13px; font-weight:bold; min-height:18px; margin-bottom:10px;"></div>
+            <div id="avatar-pricing-list" class="modal-scroll-area" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap:14px; padding:4px 4px 12px 4px;">
+                <p style="grid-column:1/-1; text-align:center; color:#94a3b8;">點擊後自動讀取...</p>
+            </div>
+            <button class="btn-action btn-gray" style="font-size:16px; padding:15px; margin-top: 15px;" onclick="closeModal('avatarPricingModal')">關閉</button>
+        </div>
+    </div>
+
+<div id="gamiModal" class="modal-overlay" onclick="closeModal('gamiModal')">
         <div class="modal-content wide-modal" onclick="event.stopPropagation()" style="max-height: 90vh; width: 95%; padding: 25px 20px;">
             <h3 class="modal-title" style="color:#f39c12; margin-bottom: 5px;">🕹️ 遊戲化數值中控台</h3>
             <p style="text-align:center; color:#94a3b8; font-size:12px; margin-top:0; margin-bottom: 15px;">調整後將套用至全校區 (僅限超級管理員)</p>
@@ -705,14 +721,7 @@
                         </div>
                     </div>
 
-                    <div class="accordion-group">
-                        <div class="accordion-header" onclick="this.parentElement.classList.toggle('active'); if(this.parentElement.classList.contains('active')) loadShopAdminList();">🛒 角色商品定價快調 ▾</div>
-                        <div class="accordion-body" style="padding: 10px;">
-                            <div id="shop-admin-list" style="display:flex; flex-direction:column; gap:8px;">
-                                <p style="text-align:center; color:#94a3b8; font-size:13px; margin: 10px 0;">點擊展開後自動讀取...</p>
-                            </div>
-                        </div>
-                    </div>
+                    
                 </div> <div id="gami-status" style="text-align:center; font-size:14px; font-weight:bold; height:20px; color:#2ecc71; margin-top:10px;"></div>
             </div>
             
@@ -976,6 +985,23 @@
             });
             const data = await res.json().catch(() => ({}));
             if (!data.success) throw new Error(data.message || data.error || 'admin-save-avatar-price failed');
+            return data;
+        }
+
+
+        async function adminSaveAvatarSettings(avatarId, cost, category) {
+            const res = await fetch(`${getSupabaseFunctionBaseUrl()}/admin-save-avatar-settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    schoolCode: CURRENT_SCHOOL,
+                    avatarId,
+                    cost: Number(cost),
+                    category
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!data.success) throw new Error(data.message || data.error || 'admin-save-avatar-settings failed');
             return data;
         }
 
@@ -2066,6 +2092,165 @@
                 });
         }
 
+
+        // =======================================================
+        // 🃏 角色定價與類型管理（超級管理員）
+        // =======================================================
+        function openAvatarPricingModal() {
+            document.getElementById('menu-dropdown').classList.remove('show');
+            document.getElementById('avatarPricingModal').style.display = 'flex';
+            loadAvatarPricingList();
+        }
+
+        function isAvatarPricingEditable(item) {
+            const category = String(item.category || '').trim();
+            const key = category.toLowerCase();
+            const id = String(item.id || item.avatarId || '');
+            const isAi = ['ai', 'a.i.', '機器人', 'ai角色'].includes(key) || category === 'Ai' || category === 'AI' || id.startsWith('AI_');
+            const isDefault = ['default', 'preset', 'starter'].includes(key) || category === '預設' || category === '默认';
+            return !isAi && !isDefault;
+        }
+
+        function normalizeAdminAvatarCategory(category) {
+            const raw = String(category || '').trim();
+            const key = raw.toLowerCase();
+            if (raw === '活動' || key === 'event') return '活動';
+            return '一般';
+        }
+
+        function escapeHtmlText(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch]));
+        }
+
+        function getAvatarImgUrl(item) {
+            return item.fullImg || item.full_img_url || item.image || item.img || '/assets/gacha-box.png';
+        }
+
+        function renderAvatarPricingList(items) {
+            const listEl = document.getElementById('avatar-pricing-list');
+            const editableItems = (items || []).filter(isAvatarPricingEditable);
+
+            if (!editableItems.length) {
+                listEl.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#7f8c8d; font-size:13px; margin:20px 0;">目前沒有可調整的一般 / 活動角色</p>';
+                return;
+            }
+
+            listEl.innerHTML = editableItems.map((item, index) => {
+                const avatarId = item.id || item.avatarId;
+                const rarity = item.rarity || 'N';
+                const category = normalizeAdminAvatarCategory(item.category || '一般');
+                const cost = Number(item.cost || 0);
+                const name = item.name || avatarId;
+                const imgUrl = getAvatarImgUrl(item);
+                const rarityColor = rarity === 'UR' ? '#ff9ff3' : (rarity === 'SSR' ? '#f1c40f' : (rarity === 'SR' ? '#9b59b6' : (rarity === 'R' ? '#3498db' : '#bdc3c7')));
+                const categoryColor = category === '活動' ? '#9b59b6' : '#2ecc71';
+                return `
+                    <div class="avatar-admin-card" style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:14px; box-shadow:0 8px 18px rgba(0,0,0,0.25);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span style="color:${rarityColor}; border:1px solid ${rarityColor}; background:rgba(255,255,255,0.04); border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900;">${escapeHtmlText(rarity)}</span>
+                            <span id="avatar-admin-cat-badge-${index}" style="color:${categoryColor}; border:1px solid ${categoryColor}; background:rgba(255,255,255,0.04); border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900;">${escapeHtmlText(category)}</span>
+                        </div>
+                        <div style="height:150px; border-radius:14px; background:radial-gradient(circle at center, rgba(255,255,255,0.12), rgba(0,0,0,0.25)); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:10px; border:1px solid rgba(255,255,255,0.08);">
+                            <img src="${escapeHtmlText(imgUrl)}" onerror="this.src='/assets/gacha-box.png'" style="max-width:96%; max-height:96%; object-fit:contain; filter:drop-shadow(0 8px 14px rgba(0,0,0,0.45));">
+                        </div>
+                        <div style="font-size:15px; font-weight:900; color:white; text-align:center; min-height:38px; line-height:1.35; margin-bottom:10px;">${escapeHtmlText(name)}</div>
+                        <div style="font-size:10px; color:#64748b; text-align:center; margin-bottom:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtmlText(avatarId)}">${escapeHtmlText(avatarId)}</div>
+
+                        <label style="font-size:11px; color:#94a3b8; font-weight:bold;">兌換點數（必填）</label>
+                        <input type="number" min="0" id="avatar-admin-cost-${index}" value="${cost}" class="word-input" style="width:100%; box-sizing:border-box; padding:9px; margin:4px 0 10px 0; text-align:center;">
+
+                        <label style="font-size:11px; color:#94a3b8; font-weight:bold;">角色類型</label>
+                        <select id="avatar-admin-category-${index}" class="word-input" style="width:100%; box-sizing:border-box; padding:9px; margin:4px 0 12px 0; text-align:center;" onchange="updateAvatarAdminCategoryBadge(${index})">
+                            <option value="一般" ${category === '一般' ? 'selected' : ''}>一般</option>
+                            <option value="活動" ${category === '活動' ? 'selected' : ''}>活動</option>
+                        </select>
+
+                        <button id="avatar-admin-save-${index}" class="btn-action" style="background:linear-gradient(135deg,#8e44ad,#9b59b6); font-size:14px; padding:11px; width:100%;" onclick='saveAvatarAdminItem(${JSON.stringify(avatarId)}, ${index}, this)'>💾 儲存設定</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateAvatarAdminCategoryBadge(index) {
+            const select = document.getElementById(`avatar-admin-category-${index}`);
+            const badge = document.getElementById(`avatar-admin-cat-badge-${index}`);
+            if (!select || !badge) return;
+            const category = normalizeAdminAvatarCategory(select.value);
+            const color = category === '活動' ? '#9b59b6' : '#2ecc71';
+            badge.innerText = category;
+            badge.style.color = color;
+            badge.style.borderColor = color;
+        }
+
+        function loadAvatarPricingList() {
+            const listEl = document.getElementById('avatar-pricing-list');
+            const statusEl = document.getElementById('avatar-pricing-status');
+            statusEl.innerText = '讀取角色資料中...';
+            statusEl.style.color = '#f1c40f';
+            listEl.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#3498db; font-size:13px; margin:20px 0;">讀取角色中...</p>';
+
+            adminGetGamification()
+                .then(data => {
+                    const avatars = Array.isArray(data.avatars) ? data.avatars : [];
+                    currentShopAvatars = avatars.filter(isAvatarPricingEditable);
+                    renderAvatarPricingList(currentShopAvatars);
+                    statusEl.innerText = '';
+                })
+                .catch(err => {
+                    console.error('[loadAvatarPricingList]', err);
+                    statusEl.innerText = '讀取失敗';
+                    statusEl.style.color = '#e74c3c';
+                    listEl.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#e74c3c; font-size:13px; margin:20px 0;">讀取失敗：${escapeHtmlText(err.message || '請稍後再試')}</p>`;
+                });
+        }
+
+        function saveAvatarAdminItem(avatarId, index, btnElement) {
+            const costEl = document.getElementById(`avatar-admin-cost-${index}`);
+            const categoryEl = document.getElementById(`avatar-admin-category-${index}`);
+            const cost = Number(costEl?.value);
+            const category = normalizeAdminAvatarCategory(categoryEl?.value);
+
+            if (!Number.isFinite(cost) || cost < 0 || costEl.value === '') {
+                alert('請輸入有效的兌換點數，且不可為負數。');
+                return;
+            }
+
+            const originalText = btnElement.innerText;
+            btnElement.innerText = '⏳ 儲存中...';
+            btnElement.style.pointerEvents = 'none';
+
+            adminSaveAvatarSettings(avatarId, cost, category)
+                .then(() => {
+                    currentShopAvatars = (currentShopAvatars || []).map(item => {
+                        const id = item.id || item.avatarId;
+                        return String(id) === String(avatarId) ? { ...item, cost, category } : item;
+                    });
+                    btnElement.innerText = '✅ 已儲存';
+                    btnElement.style.background = '#2ecc71';
+                    updateAvatarAdminCategoryBadge(index);
+                    setTimeout(() => {
+                        btnElement.innerText = originalText;
+                        btnElement.style.background = 'linear-gradient(135deg,#8e44ad,#9b59b6)';
+                        btnElement.style.pointerEvents = 'auto';
+                    }, 1200);
+                })
+                .catch(err => {
+                    console.error('[admin-save-avatar-settings]', err);
+                    btnElement.innerText = '❌ 失敗';
+                    alert(err.message || '儲存角色設定失敗');
+                    setTimeout(() => {
+                        btnElement.innerText = originalText;
+                        btnElement.style.pointerEvents = 'auto';
+                    }, 1500);
+                });
+        }
+
         // 🛒 商店定價動態讀取與個別儲存（Supabase 版）
         function loadShopAdminList() {
             const listEl = document.getElementById('shop-admin-list');
@@ -2876,6 +3061,16 @@
             if (!calSelectingStart || !calSelectingEnd) {
                 alert("請完整選擇「開始日期」與「結束日期」！");
                 return;
+            }
+
+            if (isEventClassCode(calTargetTask.classId)) {
+                const eventAvatarSelect = document.getElementById('event-avatar-select');
+                const eventAvatarId = eventAvatarSelect ? String(eventAvatarSelect.value || '').trim() : '';
+                if (!eventAvatarId) {
+                    alert("活動排程必須選擇「活動首領」。");
+                    if (eventAvatarSelect) eventAvatarSelect.focus();
+                    return;
+                }
             }
 
             const btn = document.getElementById('save-cal-btn');
