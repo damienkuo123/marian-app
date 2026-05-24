@@ -12,7 +12,7 @@
   
     <link rel="apple-touch-icon" href="/assets/app-icon.png">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="./tappie-api.js?v=newsletter-v1"></script>
+    <script src="./tappie-api.js?v=branding-v3"></script>
 
     <script>
     (function patchBrandingApiMethods() {
@@ -1126,7 +1126,7 @@
                 studentName: s.name || s.studentName || '-',
                 currentPoints: Number(s.points || s.currentPoints || 0),
                 uid: s.uid,
-                recentLogs: s.recentLogs || []
+                recentLogs: s.recentLogs || s.pointLogs || s.logs || []
             };
         }
 
@@ -1368,197 +1368,170 @@
             return { bg: "rgba(149, 165, 166, 0.15)", text: "#94a3b8", border: "rgba(149, 165, 166, 0.3)" };
         }
 
-        function normalizeNewsletterTags(tags) {
-            if (!tags) return '';
-            if (Array.isArray(tags)) return tags.join(',');
-            return String(tags || '');
-        }
-
-        function escapeHtmlAttr(value) {
-            return String(value || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        async function loadNewsletters() {
+        function loadNewsletters() {
             const container = document.getElementById('newsletter-container');
             container.innerHTML = '<p style="text-align:center; color:#6c5ce7;">⏳ 正在讀取庫存文章...</p>';
+            
+            fetch(`${GAS_URL}?action=get_newsletters&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.error) return container.innerHTML = `<p style="color:#e74c3c;">${data.error}</p>`;
+                    
+                    let html = '';
+                    data.forEach((item, index) => {
+                        let titleMatch = item.content.match(/<h3[^>]*>(.*?)<\/h3>/i);
+                        let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : `文章 #${index+1}`;
+                        
+                        let queueBadge = index === 0 
+                            ? `<span class="queue-badge" style="background:#e74c3c; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">即將寄出</span>` 
+                            : `<span class="queue-badge" style="background:#64748b; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">順位 ${index+1}</span>`;
+                        
+                        // 🚀 升級：去除 emoji，以逗號切割並並排渲染一致顏色的標籤
+                        let tagHtml = "";
+                        if (item.tags) {
+                            let tagsArray = item.tags.replace(/標籤：|🔖|🏷️|⚠️/g, '').split(',').map(t => t.trim()).filter(t => t !== "");
+                            tagHtml = tagsArray.map(tag => {
+                                let color = getTagColor(tag);
+                                return `<span style="background:${color.bg}; color:${color.text}; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:900; border:1px solid ${color.border}; display:inline-block; margin-right:6px;">${tag}</span>`;
+                            }).join('');
+                        }
 
-            try {
-                const data = await TappieAPI.adminGetNewsletters(CURRENT_SCHOOL);
-                if (!data || !data.success) {
-                    container.innerHTML = `<p style="color:#e74c3c; text-align:center;">${data?.message || data?.error || '讀取專欄失敗'}</p>`;
-                    return;
-                }
-
-                const items = Array.isArray(data.items) ? data.items : [];
-                let html = '';
-
-                items.forEach((item, index) => {
-                    const content = item.content || item.contentHtml || item.content_html || '';
-                    let titleMatch = String(content).match(/<h3[^>]*>(.*?)<\/h3>/i);
-                    let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : (item.topic || `文章 #${index + 1}`);
-
-                    let queueBadge = index === 0
-                        ? `<span class="queue-badge" style="background:#e74c3c; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">即將寄出</span>`
-                        : `<span class="queue-badge" style="background:#64748b; color:white; padding:3px 8px; border-radius:8px; font-size:12px; margin-right:10px; font-weight:bold; flex-shrink:0;">順位 ${index + 1}</span>`;
-
-                    let tagsText = normalizeNewsletterTags(item.tags);
-                    let tagHtml = '';
-                    if (tagsText) {
-                        let tagsArray = tagsText.replace(/標籤：|🔖|🏷️|⚠️/g, '').split(',').map(t => t.trim()).filter(t => t !== '');
-                        tagHtml = tagsArray.map(tag => {
-                            let color = getTagColor(tag);
-                            return `<span style="background:${color.bg}; color:${color.text}; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:900; border:1px solid ${color.border}; display:inline-block; margin-right:6px; margin-bottom:5px;">${escapeHtmlAttr(tag)}</span>`;
-                        }).join('');
-                    }
-
-                    const status = item.engineStatus || item.engine_status || '';
-                    const metaHtml = status ? `<div style="font-size:11px; color:#94a3b8; margin-top:6px; padding-left:45px;">${escapeHtmlAttr(status)}</div>` : '';
-                    const id = String(item.id || item.row || '').replace(/"/g, '&quot;');
-
-                    html += `
-                        <div class="accordion-group" data-id="${id}">
+                        html += `
+                        <div class="accordion-group" data-row="${item.row}">
                             <div class="accordion-header" style="cursor:default; display:flex; flex-direction:column; align-items:stretch; padding:12px 15px;">
+                                
                                 <div style="display:flex; align-items:center; width:100%; justify-content:space-between;">
                                     <div style="display:flex; align-items:center; overflow:hidden; flex:1;">
                                         <span class="drag-handle" style="margin-right:10px;">☰</span>
                                         ${queueBadge}
-                                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; cursor:pointer;" onclick="this.closest('.accordion-group').classList.toggle('active')">📄 ${escapeHtmlAttr(title)}</span>
+                                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; cursor:pointer;" onclick="this.closest('.accordion-group').classList.toggle('active')">📄 ${title}</span>
                                     </div>
                                     <span onclick="this.closest('.accordion-group').classList.toggle('active')" style="cursor:pointer; padding:5px 0 5px 15px;">▾</span>
                                 </div>
-                                ${tagHtml ? `<div style="padding-left:45px; margin-top:8px; text-align:left;">${tagHtml}</div>` : ''}
-                                ${metaHtml}
+                                
+                                ${tagHtml ? `<div style="padding-left: 45px; margin-top: 8px; text-align:left;">${tagHtml}</div>` : ''}
+                                
                             </div>
-                            <div class="accordion-body" id="nl-body-${id}">
-                                <div class="nl-content-preview" style="background:white; color:#333; padding:15px; border-radius:10px; font-size:14px; margin-bottom:15px;">${content}</div>
+                            <div class="accordion-body" id="nl-body-${item.row}">
+                                <div style="background:white; color:#333; padding:15px; border-radius:10px; font-size:14px; margin-bottom:15px;">${item.content}</div>
                                 <div style="display:flex; gap:10px;">
-                                    <button class="btn-action" style="background:#3498db; font-size:14px; padding:10px;" onclick="startEdit('${id}')">✏️ 編輯</button>
-                                    <button class="btn-action" style="background:#e74c3c; font-size:14px; padding:10px;" onclick="deleteNewsletter('${id}')">🗑️ 刪除</button>
+                                    <button class="btn-action" style="background:#3498db; font-size:14px; padding:10px;" onclick="startEdit(${item.row})">✏️ 編輯</button>
+                                    <button class="btn-action" style="background:#e74c3c; font-size:14px; padding:10px;" onclick="deleteNewsletter(${item.row})">🗑️ 刪除</button>
                                 </div>
                             </div>
                         </div>`;
-                });
-
-                container.innerHTML = html || '<p style="text-align:center; color:#94a3b8;">目前沒有庫存文章</p>';
-
-                if (items.length > 0) {
-                    if (newsletterSortable) newsletterSortable.destroy();
-                    newsletterSortable = new Sortable(container, {
-                        animation: 250,
-                        handle: '.drag-handle',
-                        ghostClass: 'sortable-ghost',
-                        dragClass: 'sortable-drag',
-                        forceFallback: true,
-                        fallbackOnBody: true,
-                        onEnd: function () {
-                            const cards = document.querySelectorAll('#newsletter-container .accordion-group');
-                            cards.forEach((item, idx) => {
-                                const badge = item.querySelector('.queue-badge');
-                                if (!badge) return;
-                                if (idx === 0) {
-                                    badge.style.background = '#e74c3c';
-                                    badge.innerText = '即將寄出';
-                                } else {
-                                    badge.style.background = '#64748b';
-                                    badge.innerText = `順位 ${idx + 1}`;
-                                }
-                            });
-                            saveNewOrder();
-                        }
                     });
-                }
-            } catch (err) {
-                container.innerHTML = `<p style="color:#e74c3c; text-align:center;">讀取失敗：${err.message || err}</p>`;
-            }
+                    
+                    container.innerHTML = html || '<p style="text-align:center;">目前沒有庫存文章</p>';
+
+                    if (data.length > 0) {
+                        if (newsletterSortable) {
+                            newsletterSortable.destroy(); 
+                        }
+                        newsletterSortable = new Sortable(container, {
+                            animation: 250,               
+                            handle: '.drag-handle',       
+                            ghostClass: 'sortable-ghost', 
+                            dragClass: 'sortable-drag',   
+                            forceFallback: true,          
+                            fallbackOnBody: true,         
+                            onEnd: function () {
+                                const items = document.querySelectorAll('#newsletter-container .accordion-group');
+                                items.forEach((item, idx) => {
+                                    const badge = item.querySelector('.queue-badge');
+                                    if (idx === 0) {
+                                        badge.style.background = '#e74c3c';
+                                        badge.innerText = '即將寄出';
+                                    } else {
+                                        badge.style.background = '#64748b';
+                                        badge.innerText = `順位 ${idx + 1}`;
+                                    }
+                                });
+                                saveNewOrder();
+                            }
+                        });
+                    }
+                });
         }
-
-        async function saveNewOrder() {
+        function saveNewOrder() {
             const items = document.querySelectorAll('#newsletter-container .accordion-group');
-            let ids = [];
+            let newOrder = [];
             items.forEach(item => {
-                const id = item.getAttribute('data-id');
-                if (id) ids.push(id);
+                newOrder.push(parseInt(item.getAttribute('data-row')));
             });
-
-            if (ids.length === 0) {
-                console.warn('⚠️ 攔截到異常的空排序，已終止存檔以保護資料！');
+            
+            // 🛑 致命裝甲 1 號：如果畫面上找不到文章 (長度為 0)，絕對不允許送出！
+            // 這能防止你在載入畫面時手滑觸發拖曳存檔。
+            if (newOrder.length === 0) {
+                console.warn("⚠️ 攔截到異常的空排序，已終止存檔以保護資料！");
                 return;
             }
-
+            
             const headerTitle = document.querySelector('#newsletterModal .modal-title');
-            const oldTitle = headerTitle.innerHTML;
             headerTitle.innerHTML = '⏳ 儲存新排序中...';
+            
+            const formData = new URLSearchParams();
+            formData.append('order', JSON.stringify(newOrder));
 
-            try {
-                const res = await TappieAPI.adminReorderNewsletters({ schoolCode: CURRENT_SCHOOL, ids });
-                if (!res.success) alert(res.message || res.error || '排序儲存失敗');
-            } catch (err) {
-                alert('排序儲存失敗：' + (err.message || err));
-            } finally {
-                headerTitle.innerHTML = oldTitle || '📝 專欄編輯系統';
-                loadNewsletters();
-            }
+            fetch(`${GAS_URL}?action=reorder_newsletters&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    headerTitle.innerHTML = '📝 專欄編輯系統';
+                    loadNewsletters(); 
+                });
         }
 
-        async function addNewsletter() {
-            document.getElementById('newsletter-container').innerHTML = '<p style="text-align:center; color:#00b894;">✨ AI 正在努力撰寫中，請稍候...</p>';
-
-            try {
-                const data = await TappieAPI.adminAddNewsletter({ schoolCode: CURRENT_SCHOOL, content: 'AI_GENERATE' });
-                if (data.success) {
-                    loadNewsletters();
-                } else {
-                    alert(data.message || data.error || '生成失敗，請檢查 Edge Function 或 GEMINI_API_KEY。');
-                    loadNewsletters();
-                }
-            } catch (err) {
-                alert('網路連線或生成失敗：' + (err.message || err));
-                loadNewsletters();
-            }
+        function addNewsletter() {
+            document.getElementById('newsletter-container').innerHTML = '<p style="text-align:center; color:#00b894;">✨ AI 正在努力撰寫中，大約需要 10~15 秒鐘...</p>';
+            
+            // 🚀 改用 POST 發送，確保長時間的 AI 運算不會被瀏覽器中斷
+            const formData = new URLSearchParams();
+            formData.append('content', 'AI_GENERATE');
+            
+            fetch(`${GAS_URL}?action=add_newsletter&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`, { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        loadNewsletters();
+                    } else {
+                        alert(data.error || "生成失敗，請檢查權限或庫存上限。");
+                        loadNewsletters(); // 失敗也要重新載入，避免卡在轉圈圈
+                    }
+                })
+                .catch(err => {
+                    alert("網路連線超時，但 AI 可能還在後台寫作。請稍後再重整查看！");
+                    loadNewsletters(); 
+                });
         }
 
-        async function deleteNewsletter(id) {
-            if (!confirm('確定要刪除這篇文章嗎？排在後面的文章會自動遞補上來喔！')) return;
+        function deleteNewsletter(row) {
+            if(!confirm("確定要刪除這篇文章嗎？排在後面的文章會自動遞補上來喔！")) return;
             document.getElementById('newsletter-container').innerHTML = '<p style="text-align:center; color:#e74c3c;">🗑️ 正在刪除...</p>';
-            try {
-                const res = await TappieAPI.adminDeleteNewsletter({ schoolCode: CURRENT_SCHOOL, id });
-                if (!res.success) alert(res.message || res.error || '刪除失敗');
-            } catch (err) {
-                alert('刪除失敗：' + (err.message || err));
-            }
-            loadNewsletters();
+            fetch(`${GAS_URL}?action=delete_newsletter&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN&row=${row}`).then(()=>loadNewsletters());
         }
 
-        function startEdit(id) {
-            const bodyDiv = document.getElementById(`nl-body-${id}`);
-            const preview = bodyDiv.querySelector('.nl-content-preview');
-            const contentHtml = preview ? preview.innerHTML : '';
+        function startEdit(row) {
+            const bodyDiv = document.getElementById(`nl-body-${row}`);
+            const contentHtml = bodyDiv.querySelector('div').innerHTML; 
             bodyDiv.innerHTML = `
-                <textarea id="edit-area-${id}" class="html-editor">${escapeHtmlAttr(contentHtml)}</textarea>
+                <textarea id="edit-area-${row}" class="html-editor">${contentHtml}</textarea>
                 <div style="display:flex; gap:10px;">
-                    <button class="btn-action" style="background:#2ecc71; font-size:14px; padding:10px;" onclick="saveEdit('${id}')">💾 儲存</button>
+                    <button class="btn-action" style="background:#2ecc71; font-size:14px; padding:10px;" onclick="saveEdit(${row})">💾 儲存</button>
                     <button class="btn-action btn-gray" style="font-size:14px; padding:10px;" onclick="loadNewsletters()">取消</button>
                 </div>
             `;
         }
 
-        async function saveEdit(id) {
-            const newContent = document.getElementById(`edit-area-${id}`).value;
+        function saveEdit(row) {
+            const newContent = document.getElementById(`edit-area-${row}`).value;
             document.getElementById('newsletter-container').innerHTML = '<p style="text-align:center; color:#3498db;">💾 正在儲存...</p>';
-            try {
-                const res = await TappieAPI.adminUpdateNewsletter({ schoolCode: CURRENT_SCHOOL, id, content: newContent });
-                if (!res.success) alert(res.message || res.error || '儲存失敗');
-            } catch (err) {
-                alert('儲存失敗：' + (err.message || err));
-            }
-            loadNewsletters();
-        }
+            
+            const formData = new URLSearchParams();
+            formData.append('content', newContent);
 
+            fetch(`${GAS_URL}?action=edit_newsletter&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN&row=${row}`, { method: 'POST', body: formData })
+                .then(() => loadNewsletters());
+        }
 
         // ==========================================
         // 🔄 物理掃描與加扣分引擎 (完整還原版)
@@ -1667,10 +1640,16 @@
             }
 
             if (USE_SUPABASE_ADMIN) {
-                TappieAPI.resolveStudentByUid(finalUid)
-                    .then(data => {
-                        if (data.success) renderAdminUI(toAdminStudentPayload(data.student));
-                        else showError("❌ 無法讀取資料");
+                Promise.all([
+                    TappieAPI.resolveStudentByUid(finalUid),
+                    (TappieAPI.getStudentActivity ? TappieAPI.getStudentActivity(finalUid).catch(() => null) : Promise.resolve(null))
+                ])
+                    .then(([data, activity]) => {
+                        if (data.success) {
+                            const payload = toAdminStudentPayload(data.student);
+                            payload.recentLogs = activity?.items || activity?.recentLogs || activity?.logs || payload.recentLogs || [];
+                            renderAdminUI(payload);
+                        } else showError("❌ 無法讀取資料");
                     })
                     .catch(err => { console.error(err); showError("⚠️ 網路連線異常"); });
                 return;
@@ -1699,28 +1678,80 @@
             currentPointsValue = Number(data.currentPoints);
             document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
 
+            renderPointLogs(data.recentLogs || []);
+        }
+
+        function normalizePointLog(log) {
+            const points = Number(log?.val ?? log?.points ?? log?.pointsDelta ?? log?.points_delta ?? log?.amount ?? 0);
+            const rawTime = log?.time || log?.createdAt || log?.created_at || log?.date || '';
+            let timeText = rawTime || '';
+            if (rawTime && String(rawTime).includes('T')) {
+                const d = new Date(rawTime);
+                if (!Number.isNaN(d.getTime())) {
+                    timeText = d.toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Taipei',
+                        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+                    });
+                }
+            }
+            return {
+                points,
+                time: timeText,
+                title: log?.title || log?.reason || log?.sourceLabel || '系統變更',
+                note: log?.note || log?.description || log?.subtitle || ''
+            };
+        }
+
+        function renderPointLogs(logs) {
             const logContainer = document.getElementById('log-container');
-            if (!data.recentLogs || data.recentLogs.length === 0) {
+            const list = Array.isArray(logs) ? logs.map(normalizePointLog) : [];
+            if (list.length === 0) {
                 logContainer.innerHTML = `<p style="text-align:center; color:#7f8c8d;">尚無紀錄</p>`;
-            } else {
-                logContainer.innerHTML = data.recentLogs.map(log => {
-                    let valClass = log.val >= 0 ? "log-plus" : "log-minus";
-                    let valText = log.val >= 0 ? `+${log.val}` : log.val;
-                    return `
-                    <div class="log-row">
-                        <span><span class="log-time">${log.time}</span> ${log.reason || '系統變更'}</span>
-                        <span class="${valClass}">${valText} 點</span>
-                    </div>`;
-                }).join('');
+                return;
+            }
+            logContainer.innerHTML = list.map(log => {
+                const valClass = log.points >= 0 ? "log-plus" : "log-minus";
+                const valText = log.points >= 0 ? `+${log.points}` : log.points;
+                return `
+                <div class="log-row" style="gap:12px; align-items:flex-start;">
+                    <span style="flex:1; min-width:0;">
+                        <span class="log-time">${log.time || ''}</span>
+                        <strong>${log.title || '系統變更'}</strong>
+                        ${log.note ? `<div style="font-size:12px; color:#94a3b8; margin-top:4px; line-height:1.4;">${log.note}</div>` : ''}
+                    </span>
+                    <span class="${valClass}" style="white-space:nowrap;">${valText} 點</span>
+                </div>`;
+            }).join('');
+        }
+
+        async function refreshPointLogs() {
+            if (!currentStudentId || !window.TappieAPI || !TappieAPI.getStudentActivity) return;
+            const logContainer = document.getElementById('log-container');
+            logContainer.innerHTML = '<p style="text-align:center; color:#ffd700;">⏳ 讀取點數明細中...</p>';
+            try {
+                const data = await TappieAPI.getStudentActivity(currentStudentId);
+                const logs = data?.items || data?.recentLogs || data?.logs || [];
+                renderPointLogs(logs);
+            } catch (err) {
+                console.warn('[point logs] load failed', err);
+                logContainer.innerHTML = '<p style="text-align:center; color:#e74c3c;">讀取點數明細失敗，請稍後再試。</p>';
             }
         }
 
         function toggleLogs(show) { 
-            document.getElementById('logModal').style.display = show ? 'flex' : 'none'; 
+            document.getElementById('logModal').style.display = show ? 'flex' : 'none';
+            if (show) refreshPointLogs();
         }
 
         function send(val, btnElement) {
             if (!currentStudentId) return;
+            const amount = Number(val || 0);
+            if (Math.abs(amount) >= 101) {
+                const actionText = amount > 0 ? '加' : '扣';
+                if (!confirm(`⚠️ 大額點數調整確認
+
+確定要${actionText} ${Math.abs(amount)} 點嗎？`)) return;
+            }
             const originalText = btnElement ? btnElement.innerText : '';
             if (btnElement) { btnElement.innerText = "⏳"; btnElement.style.pointerEvents = "none"; }
 
@@ -2577,6 +2608,9 @@
         let currentTaskPage = 1;
         const TASKS_PER_PAGE = 10;
         let editingTaskRow = 0; // 0 代表新增
+        let editingTaskId = null; // Supabase word_units.id，編輯時必須帶回，避免另存新單元
+        let editingTaskOriginalUnit = "";
+        let editingTaskOriginalClass = "";
         let allSchedulesData = [];
         let allTaskClassCodes = []; // 由學生資料 + 既有任務 + 既有排程組成，讓下拉永遠顯示所有班級
 
@@ -2650,10 +2684,24 @@
                     })
                 ])
                     .then(([data, studentData]) => {
-                        allTasksData = (data.words || []).filter(t => t.isActive !== false && t.is_active !== false);
+                        allTasksData = (data.words || [])
+                            .filter(t => t.isActive !== false && t.is_active !== false)
+                            .map(t => ({
+                                ...t,
+                                id: t.id || t.unitId || t.unit_id || '',
+                                unitId: t.unitId || t.id || t.unit_id || '',
+                                classId: normalizeEventClassCode(t.classId || t.classCode || t.class_code || ''),
+                                unit: t.unit || t.unitName || t.unit_name || t.name || '',
+                                words: Array.isArray(t.words) ? t.words : []
+                            }));
                         allSchedulesData = (data.schedules || [])
                             .filter(s => s.isActive !== false && s.is_active !== false)
-                            .map(s => ({ ...s, avatar: s.avatar || s.eventAvatarId || '' }));
+                            .map(s => ({
+                                ...s,
+                                classId: normalizeEventClassCode(s.classId || s.classCode || s.class_code || ''),
+                                unit: s.unit || s.unitName || s.unit_name || '',
+                                avatar: s.avatar || s.eventAvatarId || s.event_avatar_id || ''
+                            }));
                         allEventAvatars = data.eventAvatars || [];
 
                         const classSet = new Set();
@@ -2905,9 +2953,10 @@
 
             let html = '';
             pageTasks.forEach(task => {
-                const wordsJsonStr = encodeURIComponent(JSON.stringify(task.words)).replace(/'/g, "%27");
-                const safeClassId = task.classId.replace(/'/g, "\\'");
-                const safeUnit = task.unit.replace(/'/g, "\\'");
+                const wordsJsonStr = encodeURIComponent(JSON.stringify(task.words || [])).replace(/'/g, "%27");
+                const safeClassId = String(task.classId || task.classCode || task.class_code || '').replace(/'/g, "\\'");
+                const safeUnit = String(task.unit || task.unitName || task.unit_name || task.name || '').replace(/'/g, "\\'");
+                const safeTaskId = encodeURIComponent(String(task.id || task.unitId || task.unit_id || '')).replace(/'/g, "%27");
                 
                 // 🚀 加入相對定位與右上角的刪除按鈕 ✖
                 html += `
@@ -2916,10 +2965,10 @@
                     <div class="task-info">
                         <div class="task-class">${getClassDisplayLabel(task.classId)}</div>
                         <div class="task-unit">${task.unit}</div>
-                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${task.words.length} 個單字</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${(task.words || []).length} 個單字</div>
                     </div>
                     <div class="task-actions">
-                        <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${safeClassId}', '${safeUnit}', '${wordsJsonStr}')">✏️</button>
+                        <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${safeClassId}', '${safeUnit}', '${wordsJsonStr}', false, '${safeTaskId}')">✏️</button>
                         <button class="btn-icon btn-schedule" title="排定日期" onclick="openCalendarModal(${task.row}, '${safeClassId}', '${safeUnit}')">📅</button>
                     </div>
                 </div>`;
@@ -2969,9 +3018,17 @@
         
 
         // --- 📝 動態任務編輯器邏輯 ---
-        function openTaskEditor(row, classId, unit, wordsJsonStr, lockClass = false) {
+        function openTaskEditor(row, classId, unit, wordsJsonStr, lockClass = false, unitId = '') {
             editingTaskRow = row;
             const normalizedClassId = normalizeEventClassCode(classId || '');
+            const decodedUnitId = decodeURIComponent(String(unitId || ''));
+            const matchedTask = allTasksData.find(t =>
+                (decodedUnitId && String(t.id || t.unitId || '') === decodedUnitId) ||
+                (Number(t.row) === Number(row) && normalizeEventClassCode(t.classId) === normalizedClassId && String(t.unit || '') === String(unit || ''))
+            );
+            editingTaskId = decodedUnitId || matchedTask?.id || matchedTask?.unitId || null;
+            editingTaskOriginalUnit = unit || matchedTask?.unit || '';
+            editingTaskOriginalClass = normalizedClassId;
             const isEventTask = normalizedClassId === 'EVENT';
             const shouldLockClass = isEventTask || !!lockClass;
             document.getElementById('task-editor-title').innerText = row === 0
@@ -3045,8 +3102,12 @@
             if (USE_SUPABASE_ADMIN) {
                 adminSaveTask('save_unit', {
                     unit: {
+                        id: editingTaskId || null,
+                        unitId: editingTaskId || null,
                         classCode: classId,
                         unitName: unit,
+                        oldUnitName: editingTaskOriginalUnit || '',
+                        oldClassCode: editingTaskOriginalClass || '',
                         unitType: isEventClassCode(classId) ? 'event' : 'normal',
                         displayOrder: editingTaskRow || 0,
                         words: wordsArray
