@@ -1126,7 +1126,7 @@
                 studentName: s.name || s.studentName || '-',
                 currentPoints: Number(s.points || s.currentPoints || 0),
                 uid: s.uid,
-                recentLogs: s.recentLogs || []
+                recentLogs: s.recentLogs || s.pointLogs || s.logs || []
             };
         }
 
@@ -1640,10 +1640,16 @@
             }
 
             if (USE_SUPABASE_ADMIN) {
-                TappieAPI.resolveStudentByUid(finalUid)
-                    .then(data => {
-                        if (data.success) renderAdminUI(toAdminStudentPayload(data.student));
-                        else showError("❌ 無法讀取資料");
+                Promise.all([
+                    TappieAPI.resolveStudentByUid(finalUid),
+                    (TappieAPI.getStudentActivity ? TappieAPI.getStudentActivity(finalUid).catch(() => null) : Promise.resolve(null))
+                ])
+                    .then(([data, activity]) => {
+                        if (data.success) {
+                            const payload = toAdminStudentPayload(data.student);
+                            payload.recentLogs = activity?.items || activity?.recentLogs || activity?.logs || payload.recentLogs || [];
+                            renderAdminUI(payload);
+                        } else showError("❌ 無法讀取資料");
                     })
                     .catch(err => { console.error(err); showError("⚠️ 網路連線異常"); });
                 return;
@@ -1672,28 +1678,80 @@
             currentPointsValue = Number(data.currentPoints);
             document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
 
+            renderPointLogs(data.recentLogs || []);
+        }
+
+        function normalizePointLog(log) {
+            const points = Number(log?.val ?? log?.points ?? log?.pointsDelta ?? log?.points_delta ?? log?.amount ?? 0);
+            const rawTime = log?.time || log?.createdAt || log?.created_at || log?.date || '';
+            let timeText = rawTime || '';
+            if (rawTime && String(rawTime).includes('T')) {
+                const d = new Date(rawTime);
+                if (!Number.isNaN(d.getTime())) {
+                    timeText = d.toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Taipei',
+                        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+                    });
+                }
+            }
+            return {
+                points,
+                time: timeText,
+                title: log?.title || log?.reason || log?.sourceLabel || '系統變更',
+                note: log?.note || log?.description || log?.subtitle || ''
+            };
+        }
+
+        function renderPointLogs(logs) {
             const logContainer = document.getElementById('log-container');
-            if (!data.recentLogs || data.recentLogs.length === 0) {
+            const list = Array.isArray(logs) ? logs.map(normalizePointLog) : [];
+            if (list.length === 0) {
                 logContainer.innerHTML = `<p style="text-align:center; color:#7f8c8d;">尚無紀錄</p>`;
-            } else {
-                logContainer.innerHTML = data.recentLogs.map(log => {
-                    let valClass = log.val >= 0 ? "log-plus" : "log-minus";
-                    let valText = log.val >= 0 ? `+${log.val}` : log.val;
-                    return `
-                    <div class="log-row">
-                        <span><span class="log-time">${log.time}</span> ${log.reason || '系統變更'}</span>
-                        <span class="${valClass}">${valText} 點</span>
-                    </div>`;
-                }).join('');
+                return;
+            }
+            logContainer.innerHTML = list.map(log => {
+                const valClass = log.points >= 0 ? "log-plus" : "log-minus";
+                const valText = log.points >= 0 ? `+${log.points}` : log.points;
+                return `
+                <div class="log-row" style="gap:12px; align-items:flex-start;">
+                    <span style="flex:1; min-width:0;">
+                        <span class="log-time">${log.time || ''}</span>
+                        <strong>${log.title || '系統變更'}</strong>
+                        ${log.note ? `<div style="font-size:12px; color:#94a3b8; margin-top:4px; line-height:1.4;">${log.note}</div>` : ''}
+                    </span>
+                    <span class="${valClass}" style="white-space:nowrap;">${valText} 點</span>
+                </div>`;
+            }).join('');
+        }
+
+        async function refreshPointLogs() {
+            if (!currentStudentId || !window.TappieAPI || !TappieAPI.getStudentActivity) return;
+            const logContainer = document.getElementById('log-container');
+            logContainer.innerHTML = '<p style="text-align:center; color:#ffd700;">⏳ 讀取點數明細中...</p>';
+            try {
+                const data = await TappieAPI.getStudentActivity(currentStudentId);
+                const logs = data?.items || data?.recentLogs || data?.logs || [];
+                renderPointLogs(logs);
+            } catch (err) {
+                console.warn('[point logs] load failed', err);
+                logContainer.innerHTML = '<p style="text-align:center; color:#e74c3c;">讀取點數明細失敗，請稍後再試。</p>';
             }
         }
 
         function toggleLogs(show) { 
-            document.getElementById('logModal').style.display = show ? 'flex' : 'none'; 
+            document.getElementById('logModal').style.display = show ? 'flex' : 'none';
+            if (show) refreshPointLogs();
         }
 
         function send(val, btnElement) {
             if (!currentStudentId) return;
+            const amount = Number(val || 0);
+            if (Math.abs(amount) >= 101) {
+                const actionText = amount > 0 ? '加' : '扣';
+                if (!confirm(`⚠️ 大額點數調整確認
+
+確定要${actionText} ${Math.abs(amount)} 點嗎？`)) return;
+            }
             const originalText = btnElement ? btnElement.innerText : '';
             if (btnElement) { btnElement.innerText = "⏳"; btnElement.style.pointerEvents = "none"; }
 
@@ -2550,6 +2608,9 @@
         let currentTaskPage = 1;
         const TASKS_PER_PAGE = 10;
         let editingTaskRow = 0; // 0 代表新增
+        let editingTaskId = null; // Supabase word_units.id，編輯時必須帶回，避免另存新單元
+        let editingTaskOriginalUnit = "";
+        let editingTaskOriginalClass = "";
         let allSchedulesData = [];
         let allTaskClassCodes = []; // 由學生資料 + 既有任務 + 既有排程組成，讓下拉永遠顯示所有班級
 
@@ -2892,7 +2953,7 @@
                         <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:bold;">共 ${task.words.length} 個單字</div>
                     </div>
                     <div class="task-actions">
-                        <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${safeClassId}', '${safeUnit}', '${wordsJsonStr}')">✏️</button>
+                        <button class="btn-icon" title="編輯任務" onclick="openTaskEditor(${task.row}, '${safeClassId}', '${safeUnit}', '${wordsJsonStr}', false, '${safeTaskId}')">✏️</button>
                         <button class="btn-icon btn-schedule" title="排定日期" onclick="openCalendarModal(${task.row}, '${safeClassId}', '${safeUnit}')">📅</button>
                     </div>
                 </div>`;
@@ -2942,9 +3003,17 @@
         
 
         // --- 📝 動態任務編輯器邏輯 ---
-        function openTaskEditor(row, classId, unit, wordsJsonStr, lockClass = false) {
+        function openTaskEditor(row, classId, unit, wordsJsonStr, lockClass = false, unitId = '') {
             editingTaskRow = row;
             const normalizedClassId = normalizeEventClassCode(classId || '');
+            const decodedUnitId = decodeURIComponent(String(unitId || ''));
+            const matchedTask = allTasksData.find(t =>
+                (decodedUnitId && String(t.id || t.unitId || '') === decodedUnitId) ||
+                (Number(t.row) === Number(row) && normalizeEventClassCode(t.classId) === normalizedClassId && String(t.unit || '') === String(unit || ''))
+            );
+            editingTaskId = decodedUnitId || matchedTask?.id || matchedTask?.unitId || null;
+            editingTaskOriginalUnit = unit || matchedTask?.unit || '';
+            editingTaskOriginalClass = normalizedClassId;
             const isEventTask = normalizedClassId === 'EVENT';
             const shouldLockClass = isEventTask || !!lockClass;
             document.getElementById('task-editor-title').innerText = row === 0
@@ -3018,8 +3087,12 @@
             if (USE_SUPABASE_ADMIN) {
                 adminSaveTask('save_unit', {
                     unit: {
+                        id: editingTaskId || null,
+                        unitId: editingTaskId || null,
                         classCode: classId,
                         unitName: unit,
+                        oldUnitName: editingTaskOriginalUnit || '',
+                        oldClassCode: editingTaskOriginalClass || '',
                         unitType: isEventClassCode(classId) ? 'event' : 'normal',
                         displayOrder: editingTaskRow || 0,
                         words: wordsArray
