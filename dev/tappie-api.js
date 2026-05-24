@@ -36,7 +36,8 @@ const TappieAPI = {
     updateWeeklyReport: "/update-weekly-report",
     adminGetBranding: "/admin-get-branding",
     adminUploadBrandingAsset: "/admin-upload-branding-asset",
-    adminDeleteBrandingAsset: "/admin-delete-branding-asset"
+    adminDeleteBrandingAsset: "/admin-delete-branding-asset",
+    adminNewsletters: "/admin-newsletters"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -132,6 +133,11 @@ const TappieAPI = {
   async adminGetBranding(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetBranding}?schoolCode=${encodeURIComponent(schoolCode)}`); },
   async adminUploadBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminUploadBrandingAsset, payload); },
   async adminDeleteBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminDeleteBrandingAsset, payload); },
+  async adminGetNewsletters(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminNewsletters}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminAddNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "add" }); },
+  async adminUpdateNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "update" }); },
+  async adminDeleteNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "delete" }); },
+  async adminReorderNewsletters(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "reorder" }); },
 
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
