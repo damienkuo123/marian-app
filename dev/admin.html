@@ -12,7 +12,48 @@
   
     <link rel="apple-touch-icon" href="/assets/app-icon.png">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="./tappie-api.js"></script>
+    <script src="./tappie-api.js?v=branding-v3"></script>
+
+    <script>
+    (function patchBrandingApiMethods() {
+      function applyPatch() {
+        if (!window.TappieAPI) {
+          console.warn("TappieAPI 尚未載入，稍後重試 Branding API patch");
+          setTimeout(applyPatch, 100);
+          return;
+        }
+    
+        const api = window.TappieAPI;
+    
+        api.endpoints = api.endpoints || {};
+        api.endpoints.adminGetBranding = api.endpoints.adminGetBranding || "/admin-get-branding";
+        api.endpoints.adminUploadBrandingAsset = api.endpoints.adminUploadBrandingAsset || "/admin-upload-branding-asset";
+        api.endpoints.adminDeleteBrandingAsset = api.endpoints.adminDeleteBrandingAsset || "/admin-delete-branding-asset";
+    
+        if (typeof api.adminGetBranding !== "function") {
+          api.adminGetBranding = async function(schoolCode = "TEST01") {
+            return await this._get(`${this.endpoints.adminGetBranding}?schoolCode=${encodeURIComponent(schoolCode)}`);
+          };
+        }
+    
+        if (typeof api.adminUploadBrandingAsset !== "function") {
+          api.adminUploadBrandingAsset = async function(payload = {}) {
+            return await this._post(this.endpoints.adminUploadBrandingAsset, payload);
+          };
+        }
+    
+        if (typeof api.adminDeleteBrandingAsset !== "function") {
+          api.adminDeleteBrandingAsset = async function(payload = {}) {
+            return await this._post(this.endpoints.adminDeleteBrandingAsset, payload);
+          };
+        }
+    
+        console.log("✅ Branding API patch ready");
+      }
+    
+      applyPatch();
+    })();
+    </script>
     <style>
         :root {
             --primary-color: #ffd700;
