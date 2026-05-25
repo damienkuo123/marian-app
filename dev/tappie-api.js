@@ -37,7 +37,8 @@ const TappieAPI = {
     adminGetBranding: "/admin-get-branding",
     adminUploadBrandingAsset: "/admin-upload-branding-asset",
     adminDeleteBrandingAsset: "/admin-delete-branding-asset",
-    adminNewsletters: "/admin-newsletters"
+    adminNewsletters: "/admin-newsletters",
+    adminWeeklyReports: "/admin-weekly-reports"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -175,6 +176,29 @@ const TappieAPI = {
   async adminUpdateNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "update" }); },
   async adminDeleteNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "delete" }); },
   async adminReorderNewsletters(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "reorder" }); },
+
+
+  async adminGetWeeklyReports(schoolCode = "TEST01") {
+    return await this._get(`${this.endpoints.adminWeeklyReports}?schoolCode=${encodeURIComponent(schoolCode)}`);
+  },
+  async adminWeeklyReportAction(payload = {}) {
+    return await this._post(this.endpoints.adminWeeklyReports, payload);
+  },
+  async adminSaveWeeklyReportConfig(schoolCode = "TEST01", config = {}) {
+    return await this.adminWeeklyReportAction({ action: "save_config", schoolCode, config });
+  },
+  async adminPreviewWeeklyReport(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "preview" });
+  },
+  async adminSendWeeklyReportTest(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "send_test" });
+  },
+  async adminSendWeeklyReportNow(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "send_now" });
+  },
+  async adminForceResendWeeklyReport(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "force_resend" });
+  },
 
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
