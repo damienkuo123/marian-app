@@ -160,6 +160,36 @@
         .progress-record-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px dashed rgba(255,255,255,0.08); font-size:12px; color:#cbd5e1; }
         .progress-empty-detail { color:#94a3b8; text-align:center; font-size:13px; padding:10px; }
 
+
+
+        /* =======================================================
+           📬 自動通知與週報設定
+           ======================================================= */
+        .weekly-card { background: rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:16px; margin-bottom:14px; }
+        .weekly-card-title { font-size:16px; font-weight:900; color:#ffd700; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+        .weekly-desc { color:#94a3b8; font-size:12px; line-height:1.6; margin:6px 0 12px; }
+        .weekly-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .weekly-field { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+        .weekly-label { color:#cbd5e1; font-size:12px; font-weight:900; letter-spacing:1px; }
+        .weekly-input, .weekly-select { width:100%; box-sizing:border-box; padding:11px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.16); background:rgba(0,0,0,0.42); color:#fff; font-size:14px; outline:none; }
+        .weekly-toggle-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; }
+        .weekly-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:900; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.08); color:#cbd5e1; }
+        .weekly-pill.ok { color:#55efc4; border-color:rgba(46,204,113,0.35); background:rgba(46,204,113,0.12); }
+        .weekly-pill.warn { color:#ffeaa7; border-color:rgba(241,196,15,0.35); background:rgba(241,196,15,0.12); }
+        .weekly-pill.lock { color:#ff7675; border-color:rgba(231,76,60,0.35); background:rgba(231,76,60,0.12); }
+        .weekly-recipient-row { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; padding:9px 0; border-top:1px dashed rgba(255,255,255,0.08); font-size:12px; }
+        .weekly-recipient-name { color:#f8fafc; font-weight:900; }
+        .weekly-recipient-email { color:#94a3b8; word-break:break-all; text-align:right; }
+        .weekly-actions { display:grid; grid-template-columns:1fr; gap:10px; margin-top:12px; }
+        .weekly-status-box { border-radius:16px; padding:14px; background:rgba(0,0,0,0.26); border:1px solid rgba(255,255,255,0.08); }
+        .weekly-status-title { color:#fff; font-weight:900; margin-bottom:7px; }
+        .weekly-status-sub { color:#94a3b8; font-size:12px; line-height:1.5; }
+        .btn-weekly-primary { background:linear-gradient(135deg,#0984e3,#74b9ff); }
+        .btn-weekly-purple { background:linear-gradient(135deg,#6c5ce7,#a29bfe); }
+        .btn-weekly-orange { background:linear-gradient(135deg,#e17055,#fdcb6e); }
+        .btn-weekly-disabled { background:#475569 !important; color:#94a3b8 !important; cursor:not-allowed !important; opacity:.72; box-shadow:none !important; }
+        @media (min-width: 768px) { .weekly-actions { grid-template-columns:1fr 1fr 1fr; } }
+
         @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 70% { transform: scale(1.3); opacity: 0; } 100% { transform: scale(1); opacity: 0; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -411,6 +441,7 @@
             <div class="dropdown-menu" id="menu-dropdown">
                 <div class="dropdown-item" onclick="openProgressModal()">📊 學習進度</div>
                 <div class="dropdown-item super-only" onclick="openNewsletterModal()">📝 專欄編輯</div>
+                <div class="dropdown-item super-only" onclick="openWeeklyAutomationModal()">📬 自動通知與週報</div>
                 <div class="dropdown-item super-only" onclick="openTaskManager()">📅 學習任務排定</div>
                 <div class="dropdown-item super-only" onclick="openStudentManager()">🧑‍🎓 編輯學生資料</div>
                 <div class="dropdown-item super-only" onclick="openAvatarPricingModal()">🃏 角色定價與類型</div>
@@ -484,6 +515,98 @@
             <button class="btn-action" style="background:#00b894; font-size:16px; padding:12px; margin-bottom:15px;" onclick="addNewsletter()">✨ 讓 AI 自動寫一篇新專欄</button>
             <div id="newsletter-container" class="modal-scroll-area"></div>
             <button class="btn-action btn-gray" style="margin-top: 15px; padding: 15px;" onclick="closeModal('newsletterModal')">關閉</button>
+        </div>
+    </div>
+
+
+    <div id="weeklyAutomationModal" class="modal-overlay" onclick="closeModal('weeklyAutomationModal')">
+        <div class="modal-content wide-modal" onclick="event.stopPropagation()">
+            <h3 class="modal-title" style="color:#74b9ff;">📬 自動通知與週報</h3>
+            <div id="weekly-admin-status" class="weekly-desc" style="text-align:center; color:#ffd700;">⏳ 正在讀取設定...</div>
+            <div class="modal-scroll-area">
+                <div class="desktop-grid-2">
+                    <div class="weekly-card">
+                        <p class="weekly-card-title">📩 任務結算通知</p>
+                        <p class="weekly-desc">單元任務結算後，系統會將未達標名單與排行榜結算摘要寄給校區管理信箱。</p>
+                        <div class="weekly-toggle-row">
+                            <span class="weekly-label">啟用任務結算通知</span>
+                            <input type="checkbox" id="weekly-notify-enabled" style="transform:scale(1.3);">
+                        </div>
+                        <div class="weekly-field">
+                            <label class="weekly-label">校區通知信箱</label>
+                            <input id="weekly-mission-email" class="weekly-input" placeholder="例如：admin@school.com">
+                        </div>
+                        <button class="btn-action btn-weekly-primary" style="font-size:15px; padding:12px;" onclick="saveWeeklyNotificationConfig(this)">儲存任務通知設定</button>
+                    </div>
+
+                    <div class="weekly-card">
+                        <p class="weekly-card-title">📬 家長週報設定</p>
+                        <p class="weekly-desc">預設不啟用。啟用後，正式排程會在指定時間寄出「發送當下往前 7 天」的學習週報。</p>
+                        <div class="weekly-toggle-row">
+                            <span class="weekly-label">啟用家長週報</span>
+                            <input type="checkbox" id="weekly-enabled" style="transform:scale(1.3);">
+                        </div>
+                        <div class="weekly-grid">
+                            <div class="weekly-field">
+                                <label class="weekly-label">寄送星期</label>
+                                <select id="weekly-send-day" class="weekly-select">
+                                    <option value="MON">週一</option><option value="TUE">週二</option><option value="WED">週三</option><option value="THU">週四</option><option value="FRI">週五</option><option value="SAT">週六</option><option value="SUN">週日</option>
+                                </select>
+                            </div>
+                            <div class="weekly-field">
+                                <label class="weekly-label">統計區間</label>
+                                <select id="weekly-rolling-days" class="weekly-select"><option value="7">往前 7 天</option></select>
+                            </div>
+                            <div class="weekly-field">
+                                <label class="weekly-label">寄送小時</label>
+                                <input id="weekly-send-hour" type="number" min="0" max="23" class="weekly-input" value="21">
+                            </div>
+                            <div class="weekly-field">
+                                <label class="weekly-label">寄送分鐘</label>
+                                <input id="weekly-send-minute" type="number" min="0" max="59" class="weekly-input" value="30">
+                            </div>
+                        </div>
+                        <button class="btn-action btn-weekly-primary" style="font-size:15px; padding:12px;" onclick="saveWeeklyReportConfig(this)">儲存週報設定</button>
+                    </div>
+                </div>
+
+                <div class="weekly-card">
+                    <p class="weekly-card-title">🛡️ 今日寄送狀態</p>
+                    <div id="weekly-today-status" class="weekly-status-box"></div>
+                </div>
+
+                <div class="weekly-card">
+                    <p class="weekly-card-title">👪 收件人健康檢查</p>
+                    <div id="weekly-recipient-summary" class="weekly-desc"></div>
+                    <div id="weekly-recipient-list"></div>
+                </div>
+
+                <div class="weekly-card">
+                    <p class="weekly-card-title">📝 本週週報專欄</p>
+                    <div id="weekly-newsletter-status" class="weekly-status-box"></div>
+                </div>
+
+                <div class="weekly-card">
+                    <p class="weekly-card-title">🧪 測試與寄送操作</p>
+                    <p class="weekly-desc">測試寄給自己不會寄給家長，也不會移動專欄順位。正式寄送成功後，今天內不得再次正式寄送。</p>
+                    <div class="weekly-field">
+                        <label class="weekly-label">測試收件信箱</label>
+                        <input id="weekly-test-email" class="weekly-input" placeholder="輸入你的測試信箱">
+                    </div>
+                    <div class="weekly-actions">
+                        <button class="btn-action btn-weekly-purple" style="font-size:15px; padding:13px;" onclick="previewWeeklyReport(this)">預覽週報</button>
+                        <button class="btn-action btn-weekly-primary" style="font-size:15px; padding:13px;" onclick="sendWeeklyTest(this)">測試寄給自己</button>
+                        <button id="weekly-send-now-btn" class="btn-action btn-weekly-orange" style="font-size:15px; padding:13px;" onclick="sendWeeklyNow(this)">正式寄送</button>
+                    </div>
+                    <div id="weekly-action-result" class="weekly-desc" style="margin-top:12px;"></div>
+                </div>
+
+                <div class="weekly-card">
+                    <p class="weekly-card-title">🧾 最近寄送紀錄</p>
+                    <div id="weekly-job-list" class="weekly-desc"></div>
+                </div>
+            </div>
+            <button class="btn-action btn-gray" style="margin-top: 15px; padding: 15px;" onclick="closeModal('weeklyAutomationModal')">關閉</button>
         </div>
     </div>
 
@@ -3889,6 +4012,227 @@
                 .finally(() => { btn.innerText = "🚀 確認批量修改"; btn.style.pointerEvents = "auto"; });
         }
         
+
+
+        // =======================================================
+        // 📬 自動通知與週報：Super Admin Only
+        // =======================================================
+        let WEEKLY_ADMIN_STATE = null;
+
+        function ensureSuperAdminForWeekly() {
+            if (ADMIN_ROLE !== 'super') {
+                alert('⛔ 此功能僅限超級管理員使用。');
+                return false;
+            }
+            return true;
+        }
+
+        function weeklyApiReady() {
+            return window.TappieAPI && typeof TappieAPI.adminGetWeeklyReports === 'function' && typeof TappieAPI.adminWeeklyReportAction === 'function';
+        }
+
+        function formatWeeklyDateTime(value) {
+            if (!value) return '—';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return String(value);
+            return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        }
+
+        function weeklyStatusText(status) {
+            const map = { completed:'已完成', running:'寄送中', failed:'失敗', completed_with_errors:'部分失敗', pending:'等待中' };
+            return map[status] || status || '—';
+        }
+
+        function setWeeklyStatus(text, color = '#ffd700') {
+            const el = document.getElementById('weekly-admin-status');
+            if (el) { el.innerText = text; el.style.color = color; }
+        }
+
+        function openWeeklyAutomationModal() {
+            if (!ensureSuperAdminForWeekly()) return;
+            document.getElementById('menu-dropdown').classList.remove('show');
+            document.getElementById('weeklyAutomationModal').style.display = 'flex';
+            loadWeeklyAutomationStatus();
+        }
+
+        async function loadWeeklyAutomationStatus() {
+            if (!weeklyApiReady()) {
+                setWeeklyStatus('⚠️ TappieAPI 週報管理方法尚未載入，請更新 tappie-api.js', '#e74c3c');
+                return;
+            }
+            setWeeklyStatus('⏳ 正在讀取自動通知設定...', '#ffd700');
+            try {
+                const data = await TappieAPI.adminGetWeeklyReports(CURRENT_SCHOOL);
+                if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取失敗');
+                WEEKLY_ADMIN_STATE = data;
+                renderWeeklyAutomationStatus(data);
+                setWeeklyStatus('✅ 設定已讀取', '#55efc4');
+            } catch (err) {
+                console.error(err);
+                setWeeklyStatus('⚠️ 讀取失敗：' + (err.message || err), '#e74c3c');
+            }
+        }
+
+        function renderWeeklyAutomationStatus(data) {
+            const cfg = data.config || {};
+            const notify = data.notificationConfig || {};
+            document.getElementById('weekly-enabled').checked = !!cfg.enabled;
+            document.getElementById('weekly-send-day').value = cfg.sendDay || 'MON';
+            document.getElementById('weekly-send-hour').value = Number(cfg.sendHour ?? 21);
+            document.getElementById('weekly-send-minute').value = Number(cfg.sendMinute ?? 30);
+            document.getElementById('weekly-rolling-days').value = String(cfg.rollingDays || 7);
+            document.getElementById('weekly-notify-enabled').checked = !!notify.settlementNotificationEnabled;
+            document.getElementById('weekly-mission-email').value = notify.missionReportEmail || '';
+            if (!document.getElementById('weekly-test-email').value) {
+                const first = data.stats?.eligibleRecipients?.[0]?.parentEmail || '';
+                document.getElementById('weekly-test-email').value = first;
+            }
+
+            const today = data.todayJob;
+            const locked = !!data.todayLocked;
+            const todayBox = document.getElementById('weekly-today-status');
+            todayBox.innerHTML = locked ? `
+                <div class="weekly-status-title"><span class="weekly-pill lock">今日已正式寄送</span></div>
+                <div class="weekly-status-sub">為避免家長重複收到信件，今日不開放再次正式寄送。</div>
+                <div class="weekly-status-sub" style="margin-top:8px;">寄送時間：${formatWeeklyDateTime(today?.updated_at || today?.created_at)}｜成功 ${today?.sent_count ?? 0}｜失敗 ${today?.failed_count ?? 0}｜略過 ${today?.skipped_count ?? 0}</div>
+                <div class="weekly-status-sub">Report Key：${data.todayReportKey || '—'}</div>
+            ` : `
+                <div class="weekly-status-title"><span class="weekly-pill ok">今日尚未正式寄送</span></div>
+                <div class="weekly-status-sub">可以先預覽或測試寄給自己，確認內容後再正式寄送。</div>
+                <div class="weekly-status-sub">Report Key：${data.todayReportKey || '—'}</div>
+            `;
+            const sendBtn = document.getElementById('weekly-send-now-btn');
+            if (sendBtn) {
+                sendBtn.disabled = locked;
+                sendBtn.classList.toggle('btn-weekly-disabled', locked);
+                sendBtn.innerText = locked ? '今日已寄送' : '正式寄送';
+            }
+
+            const stats = data.stats || {};
+            document.getElementById('weekly-recipient-summary').innerHTML = `
+                <span class="weekly-pill">啟用週報 ${stats.enabledStudents || 0}</span>
+                <span class="weekly-pill ok">可寄送 ${stats.eligibleStudents || 0}</span>
+                <span class="weekly-pill ${Number(stats.missingEmail || 0) ? 'warn' : 'ok'}">缺信箱 ${stats.missingEmail || 0}</span>
+            `;
+            const recipients = Array.isArray(stats.eligibleRecipients) ? stats.eligibleRecipients : [];
+            const missing = Array.isArray(stats.missingEmailStudents) ? stats.missingEmailStudents : [];
+            let rHtml = recipients.map(s => `
+                <div class="weekly-recipient-row">
+                    <div><div class="weekly-recipient-name">${escapeHtml(s.name || '')}</div><div class="weekly-desc" style="margin:2px 0 0;">${escapeHtml(s.uid || '')}</div></div>
+                    <div class="weekly-recipient-email">${escapeHtml(s.parentEmail || '')}</div>
+                </div>
+            `).join('');
+            if (missing.length) {
+                rHtml += `<div class="weekly-desc" style="color:#ff7675; margin-top:12px;">以下學生缺少家長信箱，將不會寄送：</div>`;
+                rHtml += missing.map(s => `
+                    <div class="weekly-recipient-row">
+                        <div><div class="weekly-recipient-name">${escapeHtml(s.name || '')}</div><div class="weekly-desc" style="margin:2px 0 0;">${escapeHtml(s.uid || '')}</div></div>
+                        <div class="weekly-recipient-email">未填寫</div>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('weekly-recipient-list').innerHTML = rHtml || '<div class="weekly-desc">目前沒有符合寄送條件的學生。</div>';
+
+            const nl = data.currentNewsletter;
+            document.getElementById('weekly-newsletter-status').innerHTML = nl?.id ? `
+                <div class="weekly-status-title"><span class="weekly-pill ok">第 1 順位專欄待寄出</span></div>
+                <div class="weekly-status-sub">${escapeHtml(nl.topic || '未命名專欄')}</div>
+                <div class="weekly-status-sub">正式全校寄送成功後，系統會寫入 sent_at / archived_at，並將後續 display_order 往前遞補。</div>
+            ` : `
+                <div class="weekly-status-title"><span class="weekly-pill warn">目前沒有第 1 順位專欄</span></div>
+                <div class="weekly-status-sub">本次週報仍可寄送，但不會包含專欄區塊。</div>
+            `;
+
+            const jobs = Array.isArray(data.latestJobs) ? data.latestJobs.slice(0, 5) : [];
+            document.getElementById('weekly-job-list').innerHTML = jobs.map(j => `
+                <div class="weekly-recipient-row">
+                    <div><div class="weekly-recipient-name">${escapeHtml(weeklyStatusText(j.status))}｜${escapeHtml(j.week_start || '')}～${escapeHtml(j.week_end || '')}</div><div class="weekly-desc" style="margin:2px 0 0;">${escapeHtml(j.report_key || '無 report_key')}｜${formatWeeklyDateTime(j.updated_at || j.created_at)}</div></div>
+                    <div class="weekly-recipient-email">成功 ${j.sent_count || 0}<br>失敗 ${j.failed_count || 0}</div>
+                </div>
+            `).join('') || '<div class="weekly-desc">尚無寄送紀錄。</div>';
+        }
+
+        async function saveWeeklyReportConfig(btn) {
+            if (!ensureSuperAdminForWeekly()) return;
+            const old = btn.innerText; btn.innerText = '儲存中...'; btn.style.pointerEvents = 'none';
+            try {
+                const config = {
+                    enabled: document.getElementById('weekly-enabled').checked,
+                    sendDay: document.getElementById('weekly-send-day').value,
+                    sendHour: Number(document.getElementById('weekly-send-hour').value || 21),
+                    sendMinute: Number(document.getElementById('weekly-send-minute').value || 30),
+                    rollingDays: Number(document.getElementById('weekly-rolling-days').value || 7),
+                    sendTimezone: 'Asia/Taipei'
+                };
+                const data = await TappieAPI.adminSaveWeeklyReportConfig(CURRENT_SCHOOL, config);
+                if (!data.success) throw new Error(data.message || data.error || '儲存失敗');
+                alert('✅ 週報設定已儲存');
+                await loadWeeklyAutomationStatus();
+            } catch (err) { alert('⚠️ ' + (err.message || err)); }
+            finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
+        }
+
+        async function saveWeeklyNotificationConfig(btn) {
+            if (!ensureSuperAdminForWeekly()) return;
+            const old = btn.innerText; btn.innerText = '儲存中...'; btn.style.pointerEvents = 'none';
+            try {
+                const data = await TappieAPI.adminWeeklyReportAction({
+                    action: 'save_notifications',
+                    schoolCode: CURRENT_SCHOOL,
+                    config: {
+                        settlementNotificationEnabled: document.getElementById('weekly-notify-enabled').checked,
+                        missionReportEmail: document.getElementById('weekly-mission-email').value.trim()
+                    }
+                });
+                if (!data.success) throw new Error(data.message || data.error || '儲存失敗');
+                alert('✅ 任務結算通知設定已儲存');
+                await loadWeeklyAutomationStatus();
+            } catch (err) { alert('⚠️ ' + (err.message || err)); }
+            finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
+        }
+
+        async function previewWeeklyReport(btn) {
+            if (!ensureSuperAdminForWeekly()) return;
+            const old = btn.innerText; btn.innerText = '預覽中...'; btn.style.pointerEvents = 'none';
+            try {
+                const data = await TappieAPI.adminPreviewWeeklyReport({ schoolCode: CURRENT_SCHOOL });
+                if (!data.success) throw new Error(data.message || data.error || '預覽失敗');
+                document.getElementById('weekly-action-result').innerText = '✅ 預覽完成：' + JSON.stringify(data.cron?.results?.[0]?.results?.[0]?.summary || data.cron?.results?.[0] || data.cron).slice(0, 500);
+            } catch (err) { alert('⚠️ ' + (err.message || err)); }
+            finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
+        }
+
+        async function sendWeeklyTest(btn) {
+            if (!ensureSuperAdminForWeekly()) return;
+            const testEmail = document.getElementById('weekly-test-email').value.trim();
+            if (!testEmail) return alert('請先輸入測試收件信箱');
+            if (!confirm('確定要寄一封測試週報到 ' + testEmail + ' 嗎？\n測試寄送不會寄給家長，也不會移動專欄順位。')) return;
+            const old = btn.innerText; btn.innerText = '寄送中...'; btn.style.pointerEvents = 'none';
+            try {
+                const data = await TappieAPI.adminSendWeeklyReportTest({ schoolCode: CURRENT_SCHOOL, testEmail });
+                if (!data.success) throw new Error(data.message || data.error || '測試寄送失敗');
+                alert('✅ 測試信已送出，請檢查信箱');
+                await loadWeeklyAutomationStatus();
+            } catch (err) { alert('⚠️ ' + (err.message || err)); }
+            finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
+        }
+
+        async function sendWeeklyNow(btn) {
+            if (!ensureSuperAdminForWeekly()) return;
+            if (WEEKLY_ADMIN_STATE?.todayLocked) return alert('今日週報已完成正式寄送，為避免重複寄信，今日不開放再次正式寄送。');
+            const count = WEEKLY_ADMIN_STATE?.stats?.eligibleStudents || 0;
+            if (!count) return alert('目前沒有可寄送的家長信箱。');
+            if (!confirm('確定要正式寄出今日週報嗎？\n將寄給 ' + count + ' 位家長。\n正式寄送成功後，今日不得再次寄送，且第 1 順位專欄會自動封存並遞補。')) return;
+            const old = btn.innerText; btn.innerText = '正式寄送中...'; btn.style.pointerEvents = 'none';
+            try {
+                const data = await TappieAPI.adminSendWeeklyReportNow({ schoolCode: CURRENT_SCHOOL });
+                if (!data.success) throw new Error(data.message || data.error || '正式寄送失敗');
+                alert('✅ 正式寄送流程完成');
+                await loadWeeklyAutomationStatus();
+            } catch (err) { alert('⚠️ ' + (err.message || err)); }
+            finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
+        }
+
     </script>
 </body>
 </html>
