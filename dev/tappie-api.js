@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Micro Polish v2 - school_id avatar purchase fix + safe weekly report
+// Micro Polish v3 - unit_id first learning progress + safe weekly report
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -92,8 +92,45 @@ const TappieAPI = {
   },
   async getAzureToken() { return await this._get(this.endpoints.getAzureToken); },
   async submitPractice(payload, options = {}) { return await this._post(this.endpoints.submitPractice, payload, options); },
-  async claimPracticeChallenge(payload = {}) { return await this._post(this.endpoints.claimPracticeChallenge, payload); },
-  async getDiagnosticReport(uid, filter = "unit") { return await this._get(`${this.endpoints.getDiagnosticReport}?uid=${encodeURIComponent(uid)}&filter=${encodeURIComponent(filter)}`); },
+  async claimPracticeChallenge(payload = {}) {
+    // Normalize unit identifiers so the backend can resolve by stable unit_id first.
+    // Keep legacy names for older pages that still send unitName/currentUnit.
+    const normalized = {
+      ...payload,
+      uid: payload.uid || payload.studentUid || payload.student_id || payload.id || "",
+      unitId: payload.unitId || payload.unit_id || payload.currentUnitId || payload.current_unit_id || "",
+      unitName: payload.unitName || payload.unit_name || payload.currentUnit || payload.current_unit || payload.unit || "",
+      averageScore: payload.averageScore ?? payload.average_score ?? payload.avg ?? payload.score ?? 0,
+      details: payload.details ?? payload.detail_json ?? payload.detailJson ?? [],
+    };
+
+    // Also provide snake_case aliases for Edge Functions that read either format.
+    if (normalized.unitId && !normalized.unit_id) normalized.unit_id = normalized.unitId;
+    if (normalized.unitName && !normalized.unit_name) normalized.unit_name = normalized.unitName;
+    if (normalized.averageScore !== undefined && normalized.average_score === undefined) {
+      normalized.average_score = normalized.averageScore;
+    }
+
+    return await this._post(this.endpoints.claimPracticeChallenge, normalized);
+  },
+  async getDiagnosticReport(uid, filter = "unit", options = {}) {
+    const qs = new URLSearchParams({
+      uid: String(uid || ""),
+      filter: String(filter || "unit")
+    });
+
+    const unitId = options.unitId || options.unit_id || "";
+    const unitName = options.unitName || options.unit_name || "";
+    const startDate = options.startDate || options.start_date || "";
+    const endDate = options.endDate || options.end_date || "";
+
+    if (unitId) qs.set("unitId", unitId);
+    if (unitName) qs.set("unitName", unitName);
+    if (startDate) qs.set("startDate", startDate);
+    if (endDate) qs.set("endDate", endDate);
+
+    return await this._get(`${this.endpoints.getDiagnosticReport}?${qs.toString()}`);
+  },
   async adminGetData(schoolCode = "TEST01", mode = "all") { return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`); },
   async adminGetProgress(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetProgress}?schoolCode=${encodeURIComponent(schoolCode)}`); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
