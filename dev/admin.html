@@ -184,6 +184,8 @@
         .weekly-status-box { border-radius:16px; padding:14px; background:rgba(0,0,0,0.26); border:1px solid rgba(255,255,255,0.08); }
         .weekly-status-title { color:#fff; font-weight:900; margin-bottom:7px; }
         .weekly-status-sub { color:#94a3b8; font-size:12px; line-height:1.5; }
+        .weekly-count-btn { display:inline-flex; align-items:center; justify-content:center; padding:6px 9px; margin:2px 3px 2px 0; border-radius:999px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.08); color:#f8fafc; font-size:12px; font-weight:900; cursor:pointer; }
+        .weekly-count-btn:active { transform:scale(.96); }
         .btn-weekly-primary { background:linear-gradient(135deg,#0984e3,#74b9ff); }
         .btn-weekly-purple { background:linear-gradient(135deg,#6c5ce7,#a29bfe); }
         .btn-weekly-orange { background:linear-gradient(135deg,#e17055,#fdcb6e); }
@@ -559,11 +561,11 @@
                             </div>
                             <div class="weekly-field">
                                 <label class="weekly-label">寄送小時</label>
-                                <input id="weekly-send-hour" type="number" min="0" max="23" class="weekly-input" value="21">
+                                <select id="weekly-send-hour" class="weekly-select"></select>
                             </div>
                             <div class="weekly-field">
                                 <label class="weekly-label">寄送分鐘</label>
-                                <input id="weekly-send-minute" type="number" min="0" max="59" class="weekly-input" value="30">
+                                <select id="weekly-send-minute" class="weekly-select"></select>
                             </div>
                         </div>
                         <button class="btn-action btn-weekly-primary" style="font-size:15px; padding:12px;" onclick="saveWeeklyReportConfig(this)">儲存週報設定</button>
@@ -588,13 +590,12 @@
 
                 <div class="weekly-card">
                     <p class="weekly-card-title">🧪 測試與寄送操作</p>
-                    <p class="weekly-desc">測試寄給自己不會寄給家長，也不會移動專欄順位。正式寄送成功後，今天內不得再次正式寄送。</p>
+                    <p class="weekly-desc">測試寄給自己會自動選擇本校近 7 天學習資料最完整的學生作為範例，不會寄給家長，也不會移動專欄順位。正式寄送成功後，今天內不得再次正式寄送。</p>
                     <div class="weekly-field">
                         <label class="weekly-label">測試收件信箱</label>
                         <input id="weekly-test-email" class="weekly-input" placeholder="輸入你的測試信箱">
                     </div>
                     <div class="weekly-actions">
-                        <button class="btn-action btn-weekly-purple" style="font-size:15px; padding:13px;" onclick="previewWeeklyReport(this)">預覽週報</button>
                         <button class="btn-action btn-weekly-primary" style="font-size:15px; padding:13px;" onclick="sendWeeklyTest(this)">測試寄給自己</button>
                         <button id="weekly-send-now-btn" class="btn-action btn-weekly-orange" style="font-size:15px; padding:13px;" onclick="sendWeeklyNow(this)">正式寄送</button>
                     </div>
@@ -4048,9 +4049,24 @@
             if (el) { el.innerText = text; el.style.color = color; }
         }
 
+
+        function initWeeklyTimeSelects() {
+            const h = document.getElementById('weekly-send-hour');
+            const m = document.getElementById('weekly-send-minute');
+            if (h && !h.dataset.ready) {
+                h.innerHTML = Array.from({length:24}, (_,i) => `<option value="${i}">${String(i).padStart(2,'0')} 時</option>`).join('');
+                h.dataset.ready = '1';
+            }
+            if (m && !m.dataset.ready) {
+                m.innerHTML = Array.from({length:60}, (_,i) => `<option value="${i}">${String(i).padStart(2,'0')} 分</option>`).join('');
+                m.dataset.ready = '1';
+            }
+        }
+
         function openWeeklyAutomationModal() {
             if (!ensureSuperAdminForWeekly()) return;
             document.getElementById('menu-dropdown').classList.remove('show');
+            initWeeklyTimeSelects();
             document.getElementById('weeklyAutomationModal').style.display = 'flex';
             loadWeeklyAutomationStatus();
         }
@@ -4094,7 +4110,7 @@
             todayBox.innerHTML = locked ? `
                 <div class="weekly-status-title"><span class="weekly-pill lock">今日已正式寄送</span></div>
                 <div class="weekly-status-sub">為避免家長重複收到信件，今日不開放再次正式寄送。</div>
-                <div class="weekly-status-sub" style="margin-top:8px;">寄送時間：${formatWeeklyDateTime(today?.updated_at || today?.created_at)}｜成功 ${today?.sent_count ?? 0}｜失敗 ${today?.failed_count ?? 0}｜略過 ${today?.skipped_count ?? 0}</div>
+                <div class="weekly-status-sub" style="margin-top:8px;">寄送時間：${formatWeeklyDateTime(today?.updated_at || today?.created_at)}<br><button class="weekly-count-btn" onclick="showWeeklyJobDetails('today','sent')">成功 ${today?.sent_count ?? 0}</button><button class="weekly-count-btn" onclick="showWeeklyJobDetails('today','failed')">失敗 ${today?.failed_count ?? 0}</button><button class="weekly-count-btn" onclick="showWeeklyJobDetails('today','skipped')">略過 ${today?.skipped_count ?? 0}</button></div>
                 <div class="weekly-status-sub">Report Key：${data.todayReportKey || '—'}</div>
             ` : `
                 <div class="weekly-status-title"><span class="weekly-pill ok">今日尚未正式寄送</span></div>
@@ -4144,10 +4160,10 @@
             `;
 
             const jobs = Array.isArray(data.latestJobs) ? data.latestJobs.slice(0, 5) : [];
-            document.getElementById('weekly-job-list').innerHTML = jobs.map(j => `
+            document.getElementById('weekly-job-list').innerHTML = jobs.map((j, idx) => `
                 <div class="weekly-recipient-row">
                     <div><div class="weekly-recipient-name">${escapeHtml(weeklyStatusText(j.status))}｜${escapeHtml(j.week_start || '')}～${escapeHtml(j.week_end || '')}</div><div class="weekly-desc" style="margin:2px 0 0;">${escapeHtml(j.report_key || '無 report_key')}｜${formatWeeklyDateTime(j.updated_at || j.created_at)}</div></div>
-                    <div class="weekly-recipient-email">成功 ${j.sent_count || 0}<br>失敗 ${j.failed_count || 0}</div>
+                    <div class="weekly-recipient-email"><button class="weekly-count-btn" onclick="showWeeklyJobDetails(${idx},'sent')">成功 ${j.sent_count || 0}</button><br><button class="weekly-count-btn" onclick="showWeeklyJobDetails(${idx},'failed')">失敗 ${j.failed_count || 0}</button></div>
                 </div>
             `).join('') || '<div class="weekly-desc">尚無寄送紀錄。</div>';
         }
@@ -4191,15 +4207,32 @@
             finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
         }
 
-        async function previewWeeklyReport(btn) {
-            if (!ensureSuperAdminForWeekly()) return;
-            const old = btn.innerText; btn.innerText = '預覽中...'; btn.style.pointerEvents = 'none';
-            try {
-                const data = await TappieAPI.adminPreviewWeeklyReport({ schoolCode: CURRENT_SCHOOL });
-                if (!data.success) throw new Error(data.message || data.error || '預覽失敗');
-                document.getElementById('weekly-action-result').innerText = '✅ 預覽完成：' + JSON.stringify(data.cron?.results?.[0]?.results?.[0]?.summary || data.cron?.results?.[0] || data.cron).slice(0, 500);
-            } catch (err) { alert('⚠️ ' + (err.message || err)); }
-            finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
+        function showWeeklyJobDetails(jobRef, filter = 'failed') {
+            const state = WEEKLY_ADMIN_STATE || {};
+            const job = jobRef === 'today' ? state.todayJob : (state.latestJobs || [])[Number(jobRef)];
+            const rows = Array.isArray(job?.summary?.results) ? job.summary.results : [];
+            const wanted = String(filter || '').toLowerCase();
+            const filtered = rows.filter(r => {
+                const st = String(r.status || '').toLowerCase();
+                const email = r.email || {};
+                if (wanted === 'sent') return st.includes('sent') || email.sent === true;
+                if (wanted === 'failed') return st.includes('fail') || r.error || email.error;
+                if (wanted === 'skipped') return st.includes('skip') || email.skipped === true;
+                return true;
+            });
+            const titleMap = { sent:'成功名單', failed:'失敗名單', skipped:'略過名單' };
+            const title = titleMap[wanted] || '寄送明細';
+            const lines = filtered.map((r, i) => {
+                const email = r.deliveryTo || r.parentEmail || r.email?.to || '';
+                const reason = r.error || r.errorMessage || r.email?.reason || r.email?.error || '';
+                return `${i+1}. ${r.name || '未命名'}（${r.uid || '無 UID'}）\n   ${email}${reason ? '\n   原因：' + reason : ''}`;
+            });
+            const box = document.getElementById('weekly-action-result');
+            if (!filtered.length) {
+                box.innerText = `📋 ${title}：目前沒有資料。`;
+                return;
+            }
+            box.innerText = `📋 ${title}\n` + lines.join('\n');
         }
 
         async function sendWeeklyTest(btn) {
@@ -4211,7 +4244,9 @@
             try {
                 const data = await TappieAPI.adminSendWeeklyReportTest({ schoolCode: CURRENT_SCHOOL, testEmail });
                 if (!data.success) throw new Error(data.message || data.error || '測試寄送失敗');
-                alert('✅ 測試信已送出，請檢查信箱');
+                const chosen = data.chosenStudent || data.cron?.results?.[0]?.chosenStudent || data.cron?.results?.[0]?.results?.[0] || {};
+                const chosenName = chosen.name || chosen.uid || '';
+                alert('✅ 測試信已送出，請檢查信箱' + (chosenName ? ('\n範例學生：' + chosenName) : ''));
                 await loadWeeklyAutomationStatus();
             } catch (err) { alert('⚠️ ' + (err.message || err)); }
             finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
