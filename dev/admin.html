@@ -543,7 +543,7 @@
 
                     <div class="weekly-card">
                         <p class="weekly-card-title">📬 家長週報設定</p>
-                        <p class="weekly-desc">預設不啟用。啟用後，正式排程會在指定時間寄出「發送當下往前 7 天」的學習週報。</p>
+                        <p class="weekly-desc">預設不啟用。啟用後，正式排程會在指定整點寄出「發送當下往前 7 天」的學習週報。</p>
                         <div class="weekly-toggle-row">
                             <span class="weekly-label">啟用家長週報</span>
                             <input type="checkbox" id="weekly-enabled" style="transform:scale(1.3);">
@@ -559,13 +559,9 @@
                                 <label class="weekly-label">統計區間</label>
                                 <select id="weekly-rolling-days" class="weekly-select"><option value="7">往前 7 天</option></select>
                             </div>
-                            <div class="weekly-field">
-                                <label class="weekly-label">寄送小時</label>
-                                <select id="weekly-send-hour" class="weekly-select"></select>
-                            </div>
-                            <div class="weekly-field">
-                                <label class="weekly-label">寄送分鐘</label>
-                                <select id="weekly-send-minute" class="weekly-select"></select>
+                            <div class="weekly-field" style="grid-column: span 2;">
+                                <label class="weekly-label">寄送時間（整點）</label>
+                                <select id="weekly-send-time" class="weekly-select"></select>
                             </div>
                         </div>
                         <button class="btn-action btn-weekly-primary" style="font-size:15px; padding:12px;" onclick="saveWeeklyReportConfig(this)">儲存週報設定</button>
@@ -4051,15 +4047,13 @@
 
 
         function initWeeklyTimeSelects() {
-            const h = document.getElementById('weekly-send-hour');
-            const m = document.getElementById('weekly-send-minute');
-            if (h && !h.dataset.ready) {
-                h.innerHTML = Array.from({length:24}, (_,i) => `<option value="${i}">${String(i).padStart(2,'0')} 時</option>`).join('');
-                h.dataset.ready = '1';
-            }
-            if (m && !m.dataset.ready) {
-                m.innerHTML = Array.from({length:60}, (_,i) => `<option value="${i}">${String(i).padStart(2,'0')} 分</option>`).join('');
-                m.dataset.ready = '1';
+            const t = document.getElementById('weekly-send-time');
+            if (t && !t.dataset.ready) {
+                t.innerHTML = Array.from({length:24}, (_,i) => {
+                    const hh = String(i).padStart(2,'0');
+                    return `<option value="${i}">${hh}:00</option>`;
+                }).join('');
+                t.dataset.ready = '1';
             }
         }
 
@@ -4094,8 +4088,7 @@
             const notify = data.notificationConfig || {};
             document.getElementById('weekly-enabled').checked = !!cfg.enabled;
             document.getElementById('weekly-send-day').value = cfg.sendDay || 'MON';
-            document.getElementById('weekly-send-hour').value = Number(cfg.sendHour ?? 21);
-            document.getElementById('weekly-send-minute').value = Number(cfg.sendMinute ?? 30);
+            document.getElementById('weekly-send-time').value = Number(cfg.sendHour ?? 21);
             document.getElementById('weekly-rolling-days').value = String(cfg.rollingDays || 7);
             document.getElementById('weekly-notify-enabled').checked = !!notify.settlementNotificationEnabled;
             document.getElementById('weekly-mission-email').value = notify.missionReportEmail || '';
@@ -4175,8 +4168,8 @@
                 const config = {
                     enabled: document.getElementById('weekly-enabled').checked,
                     sendDay: document.getElementById('weekly-send-day').value,
-                    sendHour: Number(document.getElementById('weekly-send-hour').value || 21),
-                    sendMinute: Number(document.getElementById('weekly-send-minute').value || 30),
+                    sendHour: Number(document.getElementById('weekly-send-time').value || 21),
+                    sendMinute: 0,
                     rollingDays: Number(document.getElementById('weekly-rolling-days').value || 7),
                     sendTimezone: 'Asia/Taipei'
                 };
