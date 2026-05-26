@@ -3606,6 +3606,8 @@
         let allStudentsData = [];
         let filteredStudents = [];
         let currentStuPage = 1;
+        let SCHOOL_STUDENT_LIMIT = 0; // 0 或空值代表不限人數
+        let SCHOOL_ACTIVE_STUDENT_COUNT = 0;
         const STU_PER_PAGE = 10;
         let editingStuRow = 0; 
         
@@ -3642,6 +3644,9 @@
             if (USE_SUPABASE_ADMIN) {
                 adminGetData('students')
                     .then(data => {
+                        const schoolInfo = data.school || {};
+                        SCHOOL_STUDENT_LIMIT = Number(schoolInfo.studentLimit ?? schoolInfo.student_limit ?? 0) || 0;
+
                         allStudentsData = (data.students || [])
                             // Supabase 刪除採「停用」：前端清單不要再顯示已停用學生
                             .filter(s => s.isActive !== false && s.is_active !== false)
@@ -3657,6 +3662,8 @@
                                 points: Number(s.points ?? s.currentPoints ?? 0),
                                 parentEmail: s.parentEmail || s.parent_email || ''
                             }));
+                        SCHOOL_ACTIVE_STUDENT_COUNT = allStudentsData.length;
+
                         const classSet = new Set();
                         allStudentsData.forEach(s => { if (s.classId) classSet.add(s.classId); });
                         const filterSelect = document.getElementById('sm-class-filter');
@@ -3776,6 +3783,16 @@
 
         function openStudentEditor(row, uid, name, type, classId) {
             if (isBatchMode) return; // 批量模式下不允許點開單一編輯
+
+            if (Number(row) === 0 && SCHOOL_STUDENT_LIMIT > 0 && SCHOOL_ACTIVE_STUDENT_COUNT >= SCHOOL_STUDENT_LIMIT) {
+                alert(`⛔ 已達學生方案上限
+
+目前啟用學生：${SCHOOL_ACTIVE_STUDENT_COUNT} 位
+方案上限：${SCHOOL_STUDENT_LIMIT} 位
+
+請先停用不使用的學生，或升級方案後再新增。`);
+                return;
+            }
             
             editingStuRow = row;
             document.getElementById('stu-editor-title').innerText = row === 0 ? '✨ 新增學生' : '✏️ 編輯學生資料';
@@ -3799,6 +3816,11 @@
             const classId = document.getElementById('edit-stu-class').value.trim();
             if (!uid || !name) { alert("UID 與姓名為必填欄位！"); return; }
             if (type === "美語資優生" && !classId) { alert("美語資優生必須填寫班級代碼！"); return; }
+
+            if (Number(editingStuRow) === 0 && SCHOOL_STUDENT_LIMIT > 0 && SCHOOL_ACTIVE_STUDENT_COUNT >= SCHOOL_STUDENT_LIMIT) {
+                alert(`⛔ 已達學生方案上限\n\n目前啟用學生：${SCHOOL_ACTIVE_STUDENT_COUNT} 位\n方案上限：${SCHOOL_STUDENT_LIMIT} 位\n\n請先停用不使用的學生，或升級方案後再新增。`);
+                return;
+            }
 
             const btn = document.getElementById('save-stu-btn');
             btn.innerText = "⏳ 儲存中..."; btn.style.pointerEvents = "none";
