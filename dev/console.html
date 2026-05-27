@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-students-v1-1"></script>
+  <script src="./tappie-api.js?v=console-students-v1-2"></script>
   <style>
     :root {
       --bg: #f7f9fc;
@@ -386,6 +386,26 @@
     .overview-status-list .status-row { padding: 15px 0; }
     .subtle-card-title { font-weight: 760; letter-spacing: -0.02em; }
 
+
+
+    /* Step 9D-4.1｜Students Management Cards */
+    .insight-grid { display:grid; grid-template-columns: 1.2fr .9fr .9fr .9fr; gap:18px; }
+    .insight-card { background: var(--surface); border:1px solid var(--border); border-radius:24px; padding:22px 24px; box-shadow:0 12px 28px rgba(16,24,40,.045); }
+    .insight-card.primary { background: linear-gradient(135deg, rgba(37,99,235,.10), rgba(245,158,11,.05)), var(--surface); }
+    .insight-title { color: var(--muted); font-size:14px; font-weight:700; margin-bottom:8px; }
+    .insight-main { font-family: var(--font-number); font-size:38px; line-height:1.03; font-weight:830; letter-spacing:-.055em; }
+    .insight-sub { color: var(--muted); font-size:13.5px; font-weight:600; margin-top:7px; line-height:1.5; }
+    .progress-track { width:100%; height:10px; background: rgba(148,163,184,.18); border-radius:999px; overflow:hidden; margin-top:16px; }
+    .progress-fill { height:100%; width:0%; background: linear-gradient(90deg, var(--primary), #22c55e); border-radius:999px; transition:width .6s ease; }
+    .progress-fill.warn { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+    .class-bars { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    .class-bar-row { display:grid; grid-template-columns: 62px 1fr 38px; gap:10px; align-items:center; font-size:13px; font-weight:700; color:var(--muted); }
+    .class-bar-bg { height:8px; border-radius:999px; background: rgba(148,163,184,.18); overflow:hidden; }
+    .class-bar-fill { height:100%; border-radius:999px; background: var(--primary); }
+    .table-hint-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:16px; margin-bottom:14px; color:var(--muted); font-size:13.5px; font-weight:600; }
+    @media (max-width: 1100px) { .insight-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 560px) { .insight-grid { grid-template-columns: 1fr; } .class-bar-row { grid-template-columns: 54px 1fr 34px; } }
+
     @media (max-width: 960px) {
       .login-shell { grid-template-columns: 1fr; }
       .login-hero { padding-bottom: 10px; }
@@ -722,17 +742,38 @@
 
     function renderStudents() {
       return `
-        <div class="grid cards">
-          <div class="card"><div class="metric-label">學生數</div><div id="stuTotal" class="metric-value">—</div><div id="stuLimitNote" class="metric-note">學生方案上限</div></div>
-          <div class="card"><div class="metric-label">啟用學生</div><div id="stuActive" class="metric-value">—</div><div class="metric-note">is_active = true</div></div>
-          <div class="card"><div class="metric-label">週報對象</div><div id="stuWeekly" class="metric-value">—</div><div class="metric-note">weekly_report_enabled</div></div>
-          <div class="card"><div class="metric-label">Email 健康</div><div id="stuEmailHealth" class="metric-value">—</div><div class="metric-note">有效 Parent Email</div></div>
+        <div class="insight-grid">
+          <div class="insight-card primary">
+            <div class="insight-title">學生席位</div>
+            <div class="insight-main"><span id="stuSeatActive">—</span><span style="font-size:22px;color:var(--muted);letter-spacing:0;"> / <span id="stuSeatLimit">—</span></span></div>
+            <div id="stuSeatNote" class="insight-sub">以啟用學生計算，不包含停用學生</div>
+            <div class="progress-track"><div id="stuSeatFill" class="progress-fill"></div></div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-title">剩餘名額</div>
+            <div id="stuRemaining" class="insight-main">—</div>
+            <div id="stuInactiveNote" class="insight-sub">停用學生：—</div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-title">週報收件健康</div>
+            <div id="stuEmailHealth" class="insight-main">—</div>
+            <div id="stuWeeklyNote" class="insight-sub">有效 Email / 週報啟用</div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-title">班級分布</div>
+            <div id="stuClassSummary" class="insight-main" style="font-size:28px;">—</div>
+            <div id="stuClassBars" class="class-bars"><div class="insight-sub">正在統計...</div></div>
+          </div>
         </div>
 
         <div class="card" style="margin-top:18px;">
           <div class="panel-title">
             <h2>學生資料總覽</h2>
             <button class="badge ok" onclick="loadStudentsData(true)">重新整理</button>
+          </div>
+          <div class="table-hint-row">
+            <span>這裡是查找與確認資料用。席位與收件健康請以上方管理卡片為主。</span>
+            <span id="studentTableNote">正在讀取學生資料...</span>
           </div>
           <div class="toolbar">
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -750,7 +791,6 @@
                 <option value="invalid_email">Email 異常</option>
               </select>
             </div>
-            <div class="muted-text" id="studentTableNote">正在讀取學生資料...</div>
           </div>
           <div id="studentsTableWrap" class="table-wrap">
             <table>
@@ -1051,16 +1091,62 @@
     }
 
     function updateStudentsUI() {
-      if (!studentsCache || !document.getElementById("stuTotal")) return;
+      if (!studentsCache || !document.getElementById("stuSeatActive")) return;
       const summary = studentsCache.summary || {};
-      document.getElementById("stuTotal").textContent = String(summary.totalStudents ?? 0);
-      document.getElementById("stuActive").textContent = String(summary.activeStudents ?? 0);
-      document.getElementById("stuWeekly").textContent = String(summary.weeklyReportEnabled ?? 0);
-      document.getElementById("stuEmailHealth").textContent = `${Number(summary.validParentEmails || 0)} / ${Number(summary.parentEmailCount || 0)}`;
-      const limit = summary.studentLimit && Number(summary.studentLimit) > 0 ? summary.studentLimit : "不限";
-      document.getElementById("stuLimitNote").textContent = `上限：${limit}`;
+      const students = studentsCache.students || [];
+      const activeRows = students.filter(s => Boolean(s.is_active));
+      const activeStudents = Number(summary.activeStudents ?? activeRows.length ?? 0);
+      const inactiveStudents = Number(summary.inactiveStudents ?? Math.max(0, students.length - activeStudents));
+      const rawLimit = Number(summary.studentLimit || 0);
+      const hasLimit = rawLimit > 0;
+      const remaining = hasLimit ? Math.max(0, rawLimit - activeStudents) : "不限";
+      const usagePct = hasLimit ? Math.min(100, Math.round(activeStudents / rawLimit * 100)) : 0;
+      const weeklyEnabled = Number(summary.weeklyReportEnabled || 0);
+      const validEmails = Number(summary.validParentEmails || 0);
+      const invalidEmails = Number(summary.invalidParentEmails || 0);
+
+      document.getElementById("stuSeatActive").textContent = String(activeStudents);
+      document.getElementById("stuSeatLimit").textContent = hasLimit ? String(rawLimit) : "不限";
+      document.getElementById("stuSeatNote").textContent = hasLimit
+        ? `席位使用率 ${usagePct}%・以啟用學生計算`
+        : `目前沒有設定 student_limit・啟用學生 ${activeStudents} 位`;
+      const fill = document.getElementById("stuSeatFill");
+      if (fill) {
+        fill.style.width = hasLimit ? `${usagePct}%` : "100%";
+        fill.classList.toggle("warn", hasLimit && usagePct >= 85);
+      }
+      document.getElementById("stuRemaining").textContent = String(remaining);
+      document.getElementById("stuInactiveNote").textContent = `停用學生：${inactiveStudents}・總資料：${students.length}`;
+      document.getElementById("stuEmailHealth").textContent = `${validEmails} / ${weeklyEnabled}`;
+      document.getElementById("stuWeeklyNote").textContent = invalidEmails > 0
+        ? `Email 異常 ${invalidEmails} 位，建議修正`
+        : `週報啟用學生的收件狀態正常`;
+
+      renderStudentClassBars(activeRows);
       setupStudentClassFilter();
       renderStudentsTable();
+    }
+
+    function renderStudentClassBars(activeRows) {
+      const target = document.getElementById("stuClassBars");
+      const summaryTarget = document.getElementById("stuClassSummary");
+      if (!target || !summaryTarget) return;
+      const counts = {};
+      for (const s of activeRows || []) {
+        const c = String(s.class_code || "未分班");
+        counts[c] = (counts[c] || 0) + 1;
+      }
+      const entries = Object.entries(counts).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-Hant"));
+      summaryTarget.textContent = entries.length ? `${entries.length} 個班級` : "無資料";
+      if (!entries.length) {
+        target.innerHTML = `<div class="insight-sub">目前沒有啟用學生。</div>`;
+        return;
+      }
+      const max = Math.max(...entries.map(x => x[1]), 1);
+      target.innerHTML = entries.slice(0, 4).map(([name, count]) => {
+        const pct = Math.max(6, Math.round(count / max * 100));
+        return `<div class="class-bar-row"><span>${escapeHtml(name)}</span><div class="class-bar-bg"><div class="class-bar-fill" style="width:${pct}%"></div></div><span>${count}</span></div>`;
+      }).join("") + (entries.length > 4 ? `<div class="insight-sub">另有 ${entries.length - 4} 個班級</div>` : "");
     }
 
     function setupStudentClassFilter() {
@@ -1092,7 +1178,10 @@
       if (weeklyFilter === "invalid_email") rows = rows.filter(s => s.parent_email && !isValidEmail(s.parent_email));
 
       const note = document.getElementById("studentTableNote");
-      if (note) note.textContent = `顯示 ${rows.length} / ${(studentsCache.students || []).length} 位學生`;
+      if (note) {
+        const activeTotal = (studentsCache.students || []).filter(s => Boolean(s.is_active)).length;
+        note.textContent = `顯示 ${rows.length} 筆｜啟用 ${activeTotal}｜總資料 ${(studentsCache.students || []).length}`;
+      }
 
       const body = rows.length ? rows.map(s => {
         const email = String(s.parent_email || "").trim();
@@ -1136,7 +1225,7 @@
       return `
         <div class="card">
           <div class="panel-title"><h2>${page}</h2><span class="badge warn">MVP 待接資料</span></div>
-          <p style="color:var(--muted);font-weight:700;line-height:1.8;">這是 console.html Skeleton v1 的功能入口。下一階段會依據 Product Spec 逐一接上 Supabase Views 與 Edge Functions。</p>
+          <p style="color:var(--muted);font-weight:700;line-height:1.8;">這是 console.html Students v1.2 的功能入口。下一階段會依據 Product Spec 逐一接上 Supabase Views 與 Edge Functions。</p>
         </div>
       `;
     }
