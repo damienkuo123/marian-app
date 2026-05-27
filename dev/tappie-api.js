@@ -40,7 +40,8 @@ const TappieAPI = {
     adminNewsletters: "/admin-newsletters",
     adminWeeklyReports: "/admin-weekly-reports",
     consoleAuth: "/console-auth",
-    consoleGetHealth: "/console-get-health"
+    consoleGetHealth: "/console-get-health",
+    consoleGetOverview: "/console-get-overview"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -208,6 +209,18 @@ const TappieAPI = {
 
   async consoleGetHealth({ token } = {}) {
     const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetHealth, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({})
+    });
+    return await res.json();
+  },
+
+  async consoleGetOverview({ token } = {}) {
+    const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetOverview, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

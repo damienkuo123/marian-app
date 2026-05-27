@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-health-v1"></script>
+  <script src="./tappie-api.js?v=console-overview-v1"></script>
   <style>
     :root {
       --bg: #f6f8fb;
@@ -324,7 +324,7 @@
       <div class="brand"><span class="brand-dot"></span> Tappie Console</div>
       <div>
         <h1 class="hero-title">專業後台，<br><span>集中管理</span>每一個校區。</h1>
-        <p class="hero-copy">Owner 與 Super Admin 專用的 SaaS 後台框架。第一版已接上 Data Health 真實資料，Owner 可看全部校區，Super Admin 僅看自己校區。</p>
+        <p class="hero-copy">Owner 與 Super Admin 專用的 SaaS 後台框架。第一版已接上 Overview 與 Data Health 真實資料，Owner 可看全部校區，Super Admin 僅看自己校區。</p>
         <div class="hero-pills">
           <span class="pill">Owner Console</span>
           <span class="pill">Super Admin Console</span>
@@ -383,7 +383,7 @@
       <header class="topbar">
         <div class="top-title">
           <h1 id="pageTitle">Overview</h1>
-          <p id="pageSubtitle">Tappie Console Data Health v1</p>
+          <p id="pageSubtitle">Tappie Console Overview v1</p>
         </div>
         <div class="top-actions">
           <span id="sessionChip" class="chip">-</span>
@@ -401,6 +401,8 @@
     let session = null;
     let healthCache = null;
     let healthLoading = false;
+    let overviewCache = null;
+    let overviewLoading = false;
 
     const navByRole = {
       owner: [
@@ -542,7 +544,10 @@
       document.getElementById("pageTitle").textContent = title;
       document.getElementById("pageSubtitle").textContent = subtitle;
       document.getElementById("pageContent").innerHTML = renderPage(page);
-      if (page === "overview" || page === "health") {
+      if (page === "overview") {
+        loadOverviewData(false);
+      }
+      if (page === "health") {
         loadHealthData(false);
       }
     }
@@ -558,23 +563,26 @@
       const isOwner = session.role === "owner";
       return `
         <div class="grid cards">
-          <div class="card"><div class="metric-label">${isOwner ? "校區總數" : "目前校區"}</div><div id="ovSchoolCount" class="metric-value">—</div><div id="ovSchoolNote" class="metric-note">讀取中...</div></div>
-          <div class="card"><div class="metric-label">資料健康</div><div id="ovHealthScore" class="metric-value">—</div><div id="ovHealthNote" class="metric-note">接 v_health_school_score</div></div>
-          <div class="card"><div class="metric-label">High Issues</div><div id="ovHighCount" class="metric-value">—</div><div class="metric-note">正式上線前優先處理</div></div>
-          <div class="card"><div class="metric-label">Total Issues</div><div id="ovIssueCount" class="metric-value">—</div><div class="metric-note">全部健康檢查問題</div></div>
+          <div class="card"><div class="metric-label">${isOwner ? "校區總數" : "學生數 / 上限"}</div><div id="ovSchoolCount" class="metric-value">—</div><div id="ovSchoolNote" class="metric-note">讀取中...</div></div>
+          <div class="card"><div class="metric-label">週報對象</div><div id="ovWeeklyEnabled" class="metric-value">—</div><div id="ovWeeklyNote" class="metric-note">weekly_report_enabled</div></div>
+          <div class="card"><div class="metric-label">Active Schedules</div><div id="ovActiveSchedules" class="metric-value">—</div><div class="metric-note">目前啟用排程</div></div>
+          <div class="card"><div class="metric-label">資料健康</div><div id="ovHealthScore" class="metric-value">—</div><div id="ovHealthNote" class="metric-note">Health Score</div></div>
+        </div>
+        <div class="grid cards" style="margin-top:18px;">
+          <div class="card"><div class="metric-label">Health Issues</div><div id="ovIssueCount" class="metric-value">—</div><div id="ovIssueNote" class="metric-note">Critical / High 優先</div></div>
+          <div class="card"><div class="metric-label">待發專欄</div><div id="ovNextNewsletter" class="metric-value">—</div><div class="metric-note">display_order = 1</div></div>
+          <div class="card"><div class="metric-label">最近週報</div><div id="ovWeeklyStatus" class="metric-value">—</div><div id="ovWeeklyStatusNote" class="metric-note">weekly_report_jobs</div></div>
+          <div class="card"><div class="metric-label">資料時間</div><div id="ovGeneratedAt" class="metric-value" style="font-size:20px;line-height:1.35;">—</div><div class="metric-note">Console API</div></div>
         </div>
         <div class="grid section-grid">
           <div class="card">
-            <div class="panel-title"><h2>${isOwner ? "校區健康排行" : "本校健康摘要"}</h2><button class="badge ok" onclick="loadHealthData(true)">重新檢查</button></div>
-            <div id="overviewHealthList" class="empty-state">正在讀取健康資料...</div>
+            <div class="panel-title"><h2>${isOwner ? "校區營運總覽" : "本校營運摘要"}</h2><button class="badge ok" onclick="loadOverviewData(true)">重新整理</button></div>
+            <div id="overviewSchoolList" class="empty-state">正在讀取 Overview...</div>
           </div>
           <div class="card">
-            <div class="panel-title"><h2>狀態摘要</h2><span class="badge ok">Live</span></div>
-            <div class="status-list">
-              <div class="status-row"><span>Console 登入框架</span><span class="badge ok">完成</span></div>
-              <div class="status-row"><span>Owner / Super Admin 分流</span><span class="badge ok">完成</span></div>
-              <div class="status-row"><span>Data Health Views</span><span class="badge ok">已建立</span></div>
-              <div class="status-row"><span>Health API</span><span class="badge ok">已接真資料</span></div>
+            <div class="panel-title"><h2>優先處理事項</h2><span class="badge ok">Live</span></div>
+            <div id="overviewActionList" class="status-list">
+              <div class="empty-state">正在分析...</div>
             </div>
           </div>
         </div>
@@ -630,6 +638,99 @@
       if (s === "critical" || s === "high") return "danger";
       if (s === "medium") return "warn";
       return "ok";
+    }
+
+    async function loadOverviewData(force = false) {
+      if (!session || !session.token) return;
+      if (overviewLoading) return;
+      if (overviewCache && !force) {
+        updateOverviewUI();
+        return;
+      }
+      overviewLoading = true;
+      try {
+        const data = await TappieAPI.consoleGetOverview({ token: session.token });
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_overview_failed");
+        overviewCache = data;
+        updateOverviewUI();
+      } catch (err) {
+        console.error("loadOverviewData failed", err);
+        const wrap = document.getElementById("overviewSchoolList") || document.getElementById("pageContent");
+        if (wrap) wrap.innerHTML = `<div class="empty-state">Overview 讀取失敗：${escapeHtml(err.message || err)}</div>`;
+      } finally {
+        overviewLoading = false;
+      }
+    }
+
+    function formatDateTime(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    }
+
+    function updateOverviewUI() {
+      if (!overviewCache || !document.getElementById("ovSchoolCount")) return;
+      const summary = overviewCache.summary || {};
+      const schools = overviewCache.schools || [];
+      const isOwner = session.role === "owner";
+      const first = schools[0] || {};
+      const highPriority = Number(summary.criticalIssues || 0) + Number(summary.highIssues || 0);
+
+      document.getElementById("ovSchoolCount").textContent = isOwner
+        ? String(summary.schoolCount ?? schools.length ?? 0)
+        : `${Number(first.active_students || 0)} / ${first.student_limit == null ? "∞" : Number(first.student_limit || 0)}`;
+      document.getElementById("ovSchoolNote").textContent = isOwner
+        ? `Active students：${Number(summary.activeStudents || 0)}`
+        : (first.school_name || session.school?.name || "目前校區");
+
+      document.getElementById("ovWeeklyEnabled").textContent = String(summary.weeklyReportEnabledStudents || 0);
+      document.getElementById("ovWeeklyNote").textContent = `有效 Email：${Number(summary.studentsWithParentEmail || 0)}`;
+      document.getElementById("ovActiveSchedules").textContent = String(summary.activeSchedules || 0);
+      document.getElementById("ovHealthScore").textContent = String(summary.avgHealthScore ?? 100);
+      document.getElementById("ovHealthNote").textContent = highPriority > 0 ? `優先問題 ${highPriority}` : "目前無 High/Critical";
+      document.getElementById("ovIssueCount").textContent = String(summary.totalIssues || 0);
+      document.getElementById("ovIssueNote").textContent = `Critical ${Number(summary.criticalIssues||0)} / High ${Number(summary.highIssues||0)}`;
+      document.getElementById("ovNextNewsletter").textContent = String(summary.nextNewsletterCount || 0);
+      document.getElementById("ovWeeklyStatus").textContent = summary.latestWeeklyJobStatus || "—";
+      document.getElementById("ovWeeklyStatusNote").textContent = summary.latestWeeklyJobAt ? formatDateTime(summary.latestWeeklyJobAt) : "尚無正式週報紀錄";
+      document.getElementById("ovGeneratedAt").textContent = formatDateTime(overviewCache.generatedAt);
+
+      const list = document.getElementById("overviewSchoolList");
+      if (list) {
+        if (!schools.length) {
+          list.innerHTML = `<div class="empty-state">目前沒有校區資料。</div>`;
+        } else {
+          list.innerHTML = schools.map(s => {
+            const limit = s.student_limit == null || Number(s.student_limit || 0) <= 0 ? "∞" : String(s.student_limit);
+            const score = Number(s.health_score ?? 100);
+            const statusClass = score >= 90 ? "ok" : score >= 75 ? "warn" : "danger";
+            return `
+              <div class="school-score-row">
+                <div class="score-ring" style="--score:${score}"><div class="score-ring-inner">${escapeHtml(score)}</div></div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div>
+                  <div class="small-note">學生 ${Number(s.active_students||0)} / ${escapeHtml(limit)} ・ 週報 ${Number(s.weekly_report_enabled_students||0)} ・ 排程 ${Number(s.active_schedules||0)} ・ 專欄 ${Number(s.next_newsletter_count||0)}</div>
+                </div>
+                <span class="badge ${statusClass}">${escapeHtml(s.health_status || "healthy")}</span>
+              </div>`;
+          }).join("");
+        }
+      }
+
+      const actions = [];
+      if (Number(summary.criticalIssues || 0) > 0) actions.push(["danger", "Critical 資料問題", `${summary.criticalIssues} 項需要立即檢查`]);
+      if (Number(summary.highIssues || 0) > 0) actions.push(["danger", "High 資料問題", `${summary.highIssues} 項建議正式上線前修復`]);
+      if (Number(summary.mediumIssues || 0) > 0) actions.push(["warn", "Medium 提醒", `${summary.mediumIssues} 項建議排程處理`]);
+      if (Number(summary.weeklyEnabledSchoolsWithoutNewsletter || 0) > 0) actions.push(["warn", "週報專欄提醒", `${summary.weeklyEnabledSchoolsWithoutNewsletter} 校週報啟用但沒有 display_order=1 專欄`]);
+      if (Number(summary.schoolsWithoutActiveSchedules || 0) > 0) actions.push(["warn", "排程提醒", `${summary.schoolsWithoutActiveSchedules} 校目前沒有 active schedule`]);
+      if (!actions.length) actions.push(["ok", "目前狀態良好", "沒有 High/Critical 問題，資料信心值正常"]);
+      const actionList = document.getElementById("overviewActionList");
+      if (actionList) {
+        actionList.innerHTML = actions.map(([cls, label, note]) => `
+          <div class="status-row"><span><strong>${escapeHtml(label)}</strong><br><span class="small-note">${escapeHtml(note)}</span></span><span class="badge ${cls}">${cls === "ok" ? "OK" : "Check"}</span></div>
+        `).join("");
+      }
     }
 
     async function loadHealthData(force = false) {
