@@ -2798,7 +2798,7 @@
     function renderAvatarsConsole() {
       return `
         <div class="grid cards">
-          <div class="card"><div class="metric-label">角色總數</div><div id="avatarTotalCount" class="metric-value">—</div><div class="metric-note">本校 + 全域可見角色</div></div>
+          <div class="card"><div class="metric-label">角色總數</div><div id="avatarTotalCount" class="metric-value">—</div><div class="metric-note">本校角色 + 全域角色</div></div>
           <div class="card"><div class="metric-label">可編輯角色</div><div id="avatarEditableCount" class="metric-value">—</div><div class="metric-note">一般 / 活動角色</div></div>
           <div class="card"><div class="metric-label">活動角色</div><div id="avatarEventCount" class="metric-value">—</div><div class="metric-note">category = 活動</div></div>
           <div class="card"><div class="metric-label">平均價格</div><div id="avatarAvgCost" class="metric-value">—</div><div class="metric-note">可編輯角色 cost</div></div>
@@ -2846,7 +2846,16 @@
       const isDefault = ["default","preset","starter"].includes(key) || category === "預設" || category === "默认" || id === "DEFAULT_MARIAN";
       return isAi || isDefault;
     }
-    function avatarScopeOf(a){ return (a.school_id || a.schoolId || a.avatar_scope === "school_specific" || a.owner_school_code) ? "school" : "global"; }
+    function avatarScopeOf(a){
+      const explicit = String(a.avatarScope || a.avatar_scope || a.avatar_source || "").toLowerCase();
+      if (["global", "global_role", "global_avatar"].includes(explicit)) return "global";
+      if (["school", "school_specific", "school_role", "school_avatar"].includes(explicit)) return "school";
+      if (a.school_id === null || a.schoolId === null) return "global";
+      if (a.school_id || a.schoolId) return "school";
+      if (String(a.owner_school_code || "").toUpperCase() === "GLOBAL") return "global";
+      if (a.owner_school_code) return "school";
+      return "unknown";
+    }
     function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsConsoleList(); }
     async function loadAvatarsConsole(force=false){
       const statusEl = document.getElementById("avatarsConsoleStatus");
@@ -2855,9 +2864,14 @@
       if (listEl) listEl.innerHTML = '<div class="empty-state">正在讀取角色...</div>';
       try {
         const schoolCode = getSchoolCodeForAdmin();
-        const data = await TappieAPI.adminGetData(schoolCode, "all");
+        const base = TappieAPI?.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1";
+        const data = await fetch(`${base}/console-get-avatars`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.token || ""}` },
+          body: JSON.stringify({ schoolCode })
+        }).then(r => r.json());
         if (!data || data.success === false) throw new Error(data?.message || data?.error || "角色資料讀取失敗");
-        const avatars = Array.isArray(data.avatars) ? data.avatars : (Array.isArray(data.shopAvatars) ? data.shopAvatars : []);
+        const avatars = Array.isArray(data.avatars) ? data.avatars : [];
         avatarsConsoleCache = { schoolCode, avatars };
         renderAvatarsConsoleList();
       } catch (err) {
@@ -2894,7 +2908,7 @@
       setText("avatarEventCount", eventCount);
       setText("avatarAvgCost", editable.length ? avg : "—");
       const statusEl = document.getElementById("avatarsConsoleStatus");
-      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。AI / 預設角色會鎖定，不開放改價或改類型。`;
+      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。來源依 avatars.school_id 判斷；只有 school_id 為 null 才是全域角色。AI / 預設角色會鎖定，不開放改價或改類型。`;
       document.getElementById("avatarViewCardsBtn")?.classList.toggle("btn-success", avatarsConsoleView === "cards");
       document.getElementById("avatarViewTableBtn")?.classList.toggle("btn-success", avatarsConsoleView === "table");
       const listEl = document.getElementById("avatarsConsoleList");
