@@ -39,7 +39,8 @@ const TappieAPI = {
     adminDeleteBrandingAsset: "/admin-delete-branding-asset",
     adminNewsletters: "/admin-newsletters",
     adminWeeklyReports: "/admin-weekly-reports",
-    consoleAuth: "/console-auth"
+    consoleAuth: "/console-auth",
+    consoleGetHealth: "/console-get-health"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -203,6 +204,18 @@ const TappieAPI = {
 
   async consoleAuth(payload = {}) {
     return await this._post(this.endpoints.consoleAuth, payload);
+  },
+
+  async consoleGetHealth({ token } = {}) {
+    const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetHealth, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({})
+    });
+    return await res.json();
   },
 
   toLegacyDashboard(data) {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-v1"></script>
+  <script src="./tappie-api.js?v=console-health-v1"></script>
   <style>
     :root {
       --bg: #f6f8fb;
@@ -272,6 +272,30 @@
     th { color: var(--muted); background: var(--surface-2); font-size: 12px; text-transform: uppercase; letter-spacing: .7px; }
     tr:last-child td { border-bottom: 0; }
 
+
+    .toolbar { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px; }
+    .select, .search-input {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 850;
+      outline: none;
+    }
+    .muted-text { color: var(--muted); font-weight: 700; line-height: 1.7; }
+    .small-note { font-size: 12px; color: var(--muted); font-weight: 750; }
+    .score-ring {
+      width: 72px; height: 72px; border-radius: 50%; display:grid; place-items:center;
+      background: conic-gradient(var(--green) calc(var(--score,0) * 1%), rgba(148,163,184,.18) 0);
+      margin-right: 14px;
+    }
+    .score-ring-inner { width: 54px; height: 54px; border-radius:50%; background: var(--surface); display:grid; place-items:center; font-weight:950; }
+    .school-score-row { display:flex; align-items:center; padding:14px 0; border-bottom:1px solid var(--border); }
+    .school-score-row:last-child { border-bottom:0; }
+    .issue-message { max-width: 520px; white-space: normal; line-height: 1.55; }
+    .empty-state { padding: 30px; text-align:center; color: var(--muted); font-weight:850; }
+
     @media (max-width: 960px) {
       .login-shell { grid-template-columns: 1fr; }
       .login-hero { padding-bottom: 10px; }
@@ -300,7 +324,7 @@
       <div class="brand"><span class="brand-dot"></span> Tappie Console</div>
       <div>
         <h1 class="hero-title">專業後台，<br><span>集中管理</span>每一個校區。</h1>
-        <p class="hero-copy">Owner 與 Super Admin 專用的 SaaS 後台框架。第一版先建立登入、角色分流、Sidebar、Topbar、Light/Dark 與資料健康入口。</p>
+        <p class="hero-copy">Owner 與 Super Admin 專用的 SaaS 後台框架。第一版已接上 Data Health 真實資料，Owner 可看全部校區，Super Admin 僅看自己校區。</p>
         <div class="hero-pills">
           <span class="pill">Owner Console</span>
           <span class="pill">Super Admin Console</span>
@@ -359,7 +383,7 @@
       <header class="topbar">
         <div class="top-title">
           <h1 id="pageTitle">Overview</h1>
-          <p id="pageSubtitle">Tappie Console Skeleton v1</p>
+          <p id="pageSubtitle">Tappie Console Data Health v1</p>
         </div>
         <div class="top-actions">
           <span id="sessionChip" class="chip">-</span>
@@ -375,6 +399,8 @@
   <script>
     let loginMode = "super_admin";
     let session = null;
+    let healthCache = null;
+    let healthLoading = false;
 
     const navByRole = {
       owner: [
@@ -516,6 +542,9 @@
       document.getElementById("pageTitle").textContent = title;
       document.getElementById("pageSubtitle").textContent = subtitle;
       document.getElementById("pageContent").innerHTML = renderPage(page);
+      if (page === "overview" || page === "health") {
+        loadHealthData(false);
+      }
     }
 
     function renderPage(page) {
@@ -529,23 +558,23 @@
       const isOwner = session.role === "owner";
       return `
         <div class="grid cards">
-          <div class="card"><div class="metric-label">${isOwner ? "校區總數" : "本校學生"}</div><div class="metric-value">—</div><div class="metric-note">下一版接 v_school_overview</div></div>
-          <div class="card"><div class="metric-label">資料健康</div><div class="metric-value">—</div><div class="metric-note">接 v_health_school_score</div></div>
-          <div class="card"><div class="metric-label">本週週報</div><div class="metric-value">—</div><div class="metric-note">接 weekly_report_jobs</div></div>
-          <div class="card"><div class="metric-label">目前排程</div><div class="metric-value">—</div><div class="metric-note">接 v_schedules_admin_view</div></div>
+          <div class="card"><div class="metric-label">${isOwner ? "校區總數" : "目前校區"}</div><div id="ovSchoolCount" class="metric-value">—</div><div id="ovSchoolNote" class="metric-note">讀取中...</div></div>
+          <div class="card"><div class="metric-label">資料健康</div><div id="ovHealthScore" class="metric-value">—</div><div id="ovHealthNote" class="metric-note">接 v_health_school_score</div></div>
+          <div class="card"><div class="metric-label">High Issues</div><div id="ovHighCount" class="metric-value">—</div><div class="metric-note">正式上線前優先處理</div></div>
+          <div class="card"><div class="metric-label">Total Issues</div><div id="ovIssueCount" class="metric-value">—</div><div class="metric-note">全部健康檢查問題</div></div>
         </div>
         <div class="grid section-grid">
           <div class="card">
-            <div class="panel-title"><h2>營運趨勢</h2><span class="badge warn">Skeleton</span></div>
-            <div class="placeholder-chart">未來接練習次數 / 挑戰完成 / 週報寄送圖表</div>
+            <div class="panel-title"><h2>${isOwner ? "校區健康排行" : "本校健康摘要"}</h2><button class="badge ok" onclick="loadHealthData(true)">重新檢查</button></div>
+            <div id="overviewHealthList" class="empty-state">正在讀取健康資料...</div>
           </div>
           <div class="card">
-            <div class="panel-title"><h2>狀態摘要</h2><span class="badge ok">Ready</span></div>
+            <div class="panel-title"><h2>狀態摘要</h2><span class="badge ok">Live</span></div>
             <div class="status-list">
               <div class="status-row"><span>Console 登入框架</span><span class="badge ok">完成</span></div>
               <div class="status-row"><span>Owner / Super Admin 分流</span><span class="badge ok">完成</span></div>
               <div class="status-row"><span>Data Health Views</span><span class="badge ok">已建立</span></div>
-              <div class="status-row"><span>真實圖表資料</span><span class="badge warn">下一階段</span></div>
+              <div class="status-row"><span>Health API</span><span class="badge ok">已接真資料</span></div>
             </div>
           </div>
         </div>
@@ -555,21 +584,172 @@
     function renderHealth() {
       return `
         <div class="grid cards">
-          <div class="card"><div class="metric-label">Critical</div><div class="metric-value">—</div><div class="metric-note">v_health_issues_all</div></div>
-          <div class="card"><div class="metric-label">High</div><div class="metric-value">—</div><div class="metric-note">v_health_issues_all</div></div>
-          <div class="card"><div class="metric-label">Medium</div><div class="metric-value">—</div><div class="metric-note">v_health_issues_all</div></div>
-          <div class="card"><div class="metric-label">Score</div><div class="metric-value">—</div><div class="metric-note">v_health_school_score</div></div>
+          <div class="card"><div class="metric-label">Critical</div><div id="healthCritical" class="metric-value">—</div><div class="metric-note">最高優先級</div></div>
+          <div class="card"><div class="metric-label">High</div><div id="healthHigh" class="metric-value">—</div><div class="metric-note">上線前建議修復</div></div>
+          <div class="card"><div class="metric-label">Medium</div><div id="healthMedium" class="metric-value">—</div><div class="metric-note">建議檢查</div></div>
+          <div class="card"><div class="metric-label">Score</div><div id="healthScore" class="metric-value">—</div><div class="metric-note">資料健康分數</div></div>
         </div>
         <div class="card" style="margin-top:18px;">
-          <div class="panel-title"><h2>資料健康問題清單</h2><span class="badge warn">待接 API</span></div>
-          <div class="table-wrap">
+          <div class="panel-title"><h2>資料健康問題清單</h2><button class="badge ok" onclick="loadHealthData(true)">重新檢查</button></div>
+          <div class="toolbar">
+            <div class="muted-text">Owner 可查看全部校區；Super Admin 只會看到登入校區。</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <select id="healthSeverityFilter" class="select" onchange="renderHealthTable()">
+                <option value="all">全部等級</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <select id="healthCategoryFilter" class="select" onchange="renderHealthTable()">
+                <option value="all">全部類別</option>
+              </select>
+            </div>
+          </div>
+          <div id="healthTableWrap" class="table-wrap">
             <table>
-              <thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>數量</th></tr></thead>
-              <tbody><tr><td colspan="5">下一版接 v_health_issues_all，這裡會顯示問題與修復建議。</td></tr></tbody>
+              <thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead>
+              <tbody><tr><td colspan="6">正在讀取 health views...</td></tr></tbody>
             </table>
           </div>
         </div>
       `;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function severityClass(severity) {
+      const s = String(severity || "").toLowerCase();
+      if (s === "critical" || s === "high") return "danger";
+      if (s === "medium") return "warn";
+      return "ok";
+    }
+
+    async function loadHealthData(force = false) {
+      if (!session || !session.token) return;
+      if (healthLoading) return;
+      if (healthCache && !force) {
+        updateHealthUI();
+        return;
+      }
+      healthLoading = true;
+      try {
+        const data = await TappieAPI.consoleGetHealth({ token: session.token });
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_health_failed");
+        healthCache = data;
+        updateHealthUI();
+      } catch (err) {
+        console.error("loadHealthData failed", err);
+        const wrap = document.getElementById("healthTableWrap") || document.getElementById("overviewHealthList");
+        if (wrap) wrap.innerHTML = `<div class="empty-state">讀取失敗：${escapeHtml(err.message || err)}</div>`;
+      } finally {
+        healthLoading = false;
+      }
+    }
+
+    function countIssues(issues) {
+      const counts = { critical: 0, high: 0, medium: 0, low: 0, total: 0 };
+      (issues || []).forEach(i => {
+        const s = String(i.severity || "low").toLowerCase();
+        if (counts[s] === undefined) counts[s] = 0;
+        counts[s] += 1;
+        counts.total += 1;
+      });
+      return counts;
+    }
+
+    function updateHealthUI() {
+      if (!healthCache) return;
+      updateOverviewHealth();
+      updateHealthCards();
+      setupHealthCategoryFilter();
+      renderHealthTable();
+    }
+
+    function updateOverviewHealth() {
+      if (!healthCache || !document.getElementById("ovHealthScore")) return;
+      const scores = healthCache.scores || [];
+      const issues = healthCache.issues || [];
+      const counts = countIssues(issues);
+      const avgScore = scores.length
+        ? Math.round(scores.reduce((sum, s) => sum + Number(s.health_score || 0), 0) / scores.length)
+        : 100;
+      document.getElementById("ovSchoolCount").textContent = session.role === "owner" ? String(scores.length) : (session.school?.schoolCode || "1");
+      document.getElementById("ovSchoolNote").textContent = session.role === "owner" ? "可管理校區" : (session.school?.name || "目前登入校區");
+      document.getElementById("ovHealthScore").textContent = String(avgScore);
+      document.getElementById("ovHealthNote").textContent = scores.length === 1 ? (scores[0].health_status || "-") : "平均健康分數";
+      document.getElementById("ovHighCount").textContent = String((counts.critical || 0) + (counts.high || 0));
+      document.getElementById("ovIssueCount").textContent = String(counts.total || 0);
+
+      const list = document.getElementById("overviewHealthList");
+      if (!list) return;
+      if (!scores.length) {
+        list.innerHTML = `<div class="empty-state">目前沒有可顯示的校區健康資料。</div>`;
+        return;
+      }
+      list.innerHTML = scores.map(s => `
+        <div class="school-score-row">
+          <div class="score-ring" style="--score:${Number(s.health_score || 0)}"><div class="score-ring-inner">${escapeHtml(s.health_score)}</div></div>
+          <div style="flex:1;">
+            <div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div>
+            <div class="small-note">High: ${Number(s.high_count || 0)} ・ Medium: ${Number(s.medium_count || 0)} ・ Total: ${Number(s.total_issue_count || 0)}</div>
+          </div>
+          <span class="badge ${s.health_status === 'healthy' ? 'ok' : 'warn'}">${escapeHtml(s.health_status || '-')}</span>
+        </div>
+      `).join("");
+    }
+
+    function updateHealthCards() {
+      if (!healthCache || !document.getElementById("healthScore")) return;
+      const scores = healthCache.scores || [];
+      const issues = healthCache.issues || [];
+      const counts = countIssues(issues);
+      const avgScore = scores.length
+        ? Math.round(scores.reduce((sum, s) => sum + Number(s.health_score || 0), 0) / scores.length)
+        : 100;
+      document.getElementById("healthCritical").textContent = String(counts.critical || 0);
+      document.getElementById("healthHigh").textContent = String(counts.high || 0);
+      document.getElementById("healthMedium").textContent = String(counts.medium || 0);
+      document.getElementById("healthScore").textContent = String(avgScore);
+    }
+
+    function setupHealthCategoryFilter() {
+      const select = document.getElementById("healthCategoryFilter");
+      if (!select || select.dataset.ready === "1" || !healthCache) return;
+      const cats = [...new Set((healthCache.issues || []).map(i => i.category).filter(Boolean))].sort();
+      select.innerHTML = `<option value="all">全部類別</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      select.dataset.ready = "1";
+    }
+
+    function renderHealthTable() {
+      if (!healthCache || !document.getElementById("healthTableWrap")) return;
+      const severity = document.getElementById("healthSeverityFilter")?.value || "all";
+      const category = document.getElementById("healthCategoryFilter")?.value || "all";
+      let issues = healthCache.issues || [];
+      if (severity !== "all") issues = issues.filter(i => String(i.severity || "").toLowerCase() === severity);
+      if (category !== "all") issues = issues.filter(i => String(i.category || "") === category);
+      const body = issues.length ? issues.map(i => `
+        <tr>
+          <td><strong>${escapeHtml(i.school_code)}</strong><br><span class="small-note">${escapeHtml(i.school_name)}</span></td>
+          <td><span class="badge ${severityClass(i.severity)}">${escapeHtml(i.severity)}</span></td>
+          <td>${escapeHtml(i.category)}</td>
+          <td><code>${escapeHtml(i.issue_code)}</code></td>
+          <td>${escapeHtml(i.student_name || i.uid || i.class_code || i.unit_name || i.detail_value || "-")}</td>
+          <td class="issue-message">${escapeHtml(i.suggestion || "-")}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="6"><div class="empty-state">沒有符合條件的資料健康問題。✅</div></td></tr>`;
+      document.getElementById("healthTableWrap").innerHTML = `
+        <table>
+          <thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>`;
     }
 
     function renderWeekly() {
