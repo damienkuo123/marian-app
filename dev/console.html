@@ -603,6 +603,51 @@
     /* =======================================================
        ✉️ Weekly Reports Console Full Action
        ======================================================= */
+
+    /* =======================================================
+       📈 Learning Progress Console
+       ======================================================= */
+    .learning-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:18px;}
+    .learning-filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+    .learning-summary-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:18px;}
+    @media (min-width:860px){.learning-summary-grid{grid-template-columns:repeat(4,1fr);}}
+    .learning-summary-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .learning-summary-card .label{color:var(--muted);font-size:12px;font-weight:850;}
+    .learning-summary-card .value{font-size:30px;font-weight:950;letter-spacing:-.04em;color:var(--text);margin-top:8px;}
+    .learning-summary-card .note{font-size:12px;color:var(--muted);font-weight:700;margin-top:6px;line-height:1.5;}
+    .learning-thresholds{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+    .learning-chip{border:1px solid var(--border);background:var(--bg-soft);color:var(--muted);border-radius:999px;padding:7px 10px;font-size:12px;font-weight:850;}
+    .learning-class-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:18px;}
+    @media (min-width:980px){.learning-class-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    .learning-class-card{background:var(--card);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;}
+    .learning-class-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 18px 14px;border-bottom:1px solid var(--border);}
+    .learning-class-head h3{margin:0;font-size:18px;color:var(--text);letter-spacing:-.02em;}
+    .learning-class-head p{margin:6px 0 0;color:var(--muted);font-size:12px;font-weight:700;line-height:1.5;}
+    .learning-class-metrics{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;}
+    .learning-mini-badge{border:1px solid var(--border);background:var(--bg-soft);border-radius:999px;padding:6px 9px;font-size:12px;font-weight:850;color:var(--muted);}
+    .learning-student-list{display:flex;flex-direction:column;}
+    .learning-student-row{border-bottom:1px solid var(--border);}
+    .learning-student-row:last-child{border-bottom:0;}
+    .learning-student-button{width:100%;border:0;background:transparent;color:var(--text);display:grid;grid-template-columns:minmax(160px,1.4fr) 86px 86px 118px 38px;gap:10px;align-items:center;padding:14px 18px;text-align:left;cursor:pointer;font-family:inherit;}
+    .learning-student-button:hover{background:var(--bg-soft);}
+    .learning-student-name{font-weight:900;color:var(--text);font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .learning-student-sub{font-size:12px;color:var(--muted);font-weight:650;margin-top:3px;}
+    .learning-count-pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:900;border:1px solid var(--border);white-space:nowrap;}
+    .learning-score{font-weight:950;color:var(--text);}
+    .learning-time{font-size:12px;color:var(--muted);font-weight:700;}
+    .learning-detail{display:none;background:var(--bg-soft);border-top:1px dashed var(--border);padding:14px 18px 16px;}
+    .learning-student-row.open .learning-detail{display:block;}
+    .learning-detail-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px;}
+    @media (min-width:700px){.learning-detail-grid{grid-template-columns:repeat(4,1fr);}}
+    .learning-detail-box{border:1px solid var(--border);background:var(--card);border-radius:14px;padding:12px;}
+    .learning-detail-label{font-size:11px;color:var(--muted);font-weight:850;margin-bottom:5px;}
+    .learning-detail-value{font-size:14px;color:var(--text);font-weight:900;word-break:break-word;}
+    .learning-records{border:1px solid var(--border);background:var(--card);border-radius:14px;overflow:hidden;}
+    .learning-record-title{padding:10px 12px;color:var(--muted);font-size:12px;font-weight:900;border-bottom:1px solid var(--border);}
+    .learning-record-row{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-bottom:1px dashed var(--border);font-size:12px;color:var(--muted);font-weight:750;}
+    .learning-record-row:last-child{border-bottom:0;}
+    @media (max-width:760px){.learning-student-button{grid-template-columns:1fr 70px 70px 34px;}.learning-student-button .learning-time{display:none;}}
+
     .weekly-console-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px;}
     @media (min-width:1100px){.weekly-console-grid{grid-template-columns:1fr 1fr;}.weekly-console-grid .wide{grid-column:1/-1;}}
     .weekly-panel{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:22px;box-shadow:var(--shadow);}
@@ -793,6 +838,8 @@
     let studentsLoading = false;
     let weeklyCache = null;
     let weeklyLoading = false;
+    let learningCache = null;
+    let learningLoading = false;
     let studentBatchMode = false;
     let selectedStudentIds = new Set();
 
@@ -945,6 +992,9 @@
       if (page === "students") {
         loadStudentsData(false);
       }
+      if (page === "learning") {
+        loadLearningData(false);
+      }
       if (page === "weekly") {
         loadWeeklyData(false);
       }
@@ -954,6 +1004,7 @@
       if (page === "overview") return renderOverview();
       if (page === "health") return renderHealth();
       if (page === "students") return renderStudents();
+      if (page === "learning") return renderLearning();
       if (page === "weekly") return renderWeekly();
       return renderPlaceholder(page);
     }
@@ -1722,6 +1773,176 @@
         await loadStudentsData(true);
       } catch (err) { alert("批量修改失敗：" + (err.message || err)); }
       finally { btn.disabled = false; btn.textContent = "確認批量修改"; }
+    }
+
+
+    function renderLearning() {
+      return `
+        <div class="grid cards">
+          <div class="card"><div class="metric-label">班級數</div><div id="lpClassCount" class="metric-value">—</div><div class="metric-note">目前有學習進度的班級</div></div>
+          <div class="card"><div class="metric-label">學生數</div><div id="lpStudentCount" class="metric-value">—</div><div class="metric-note">啟用學生 / 進度追蹤</div></div>
+          <div class="card"><div class="metric-label">危險提醒</div><div id="lpRiskCount" class="metric-value">—</div><div class="metric-note">少於任務基礎次數</div></div>
+          <div class="card"><div class="metric-label">排行榜上榜</div><div id="lpRankedCount" class="metric-value">—</div><div class="metric-note">目前單元 Top 3</div></div>
+        </div>
+        <div class="card" style="margin-top:18px;">
+          <div class="panel-title">
+            <div><h2>學習進度總覽</h2><p class="small-note">依照目前單元排程彙整各班今日挑戰完成紀錄；排序與自動結算一致。</p></div>
+            <button class="btn-compact" onclick="loadLearningData(true)">重新整理</button>
+          </div>
+          <div class="learning-thresholds" id="learningThresholds"></div>
+          <div class="learning-toolbar">
+            <div class="learning-filter-row">
+              <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級" oninput="renderLearningClasses()" style="min-width:260px;" />
+              <select id="learningClassFilter" class="select" onchange="renderLearningClasses()"><option value="all">全部班級</option></select>
+              <select id="learningStatusFilter" class="select" onchange="renderLearningClasses()">
+                <option value="all">全部狀態</option>
+                <option value="risk">危險</option>
+                <option value="good">良好以上</option>
+                <option value="perfect">卓越</option>
+                <option value="ranked">排行榜前三</option>
+              </select>
+            </div>
+            <span id="learningTableNote" class="small-note">正在讀取學習進度...</span>
+          </div>
+          <div id="learningClassGrid" class="learning-class-grid">
+            <div class="empty-state">正在讀取 Learning Progress...</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function learningFailThreshold(gami) { return Number(gami?.mission?.failThreshold ?? 5); }
+    function learningGoodThreshold(gami) { return Number(gami?.mission?.goodThreshold ?? 10); }
+    function learningPerfectThreshold(gami) { return Number(gami?.mission?.perfectThreshold ?? 15); }
+    function learningRankIcon(rank) { rank = Number(rank || 0); return rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : ""; }
+    function learningCountVisual(count, gami) {
+      const c = Number(count || 0);
+      const fail = learningFailThreshold(gami), good = learningGoodThreshold(gami), perfect = learningPerfectThreshold(gami);
+      if (c >= perfect) return { icon:"🌟", color:"#d97706", bg:"rgba(245,158,11,.13)", label:"卓越" };
+      if (c >= good) return { icon:"🔥", color:"#16a34a", bg:"rgba(34,197,94,.13)", label:"良好" };
+      if (c < fail) return { icon:"⚠️", color:"#dc2626", bg:"rgba(239,68,68,.12)", label:"危險" };
+      return { icon:"✅", color:"#2563eb", bg:"rgba(59,130,246,.12)", label:"達標" };
+    }
+
+    async function loadLearningData(force = false) {
+      if (learningLoading) return;
+      if (learningCache && !force) { updateLearningUI(); return; }
+      learningLoading = true;
+      try {
+        const schoolCode = currentConsoleSchoolCode();
+        const data = (TappieAPI && typeof TappieAPI.adminGetProgress === "function")
+          ? await TappieAPI.adminGetProgress(schoolCode)
+          : await fetch(`${TappieAPI.supabaseBaseUrl}/admin-get-progress?schoolCode=${encodeURIComponent(schoolCode)}`).then(r => r.json());
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "admin_get_progress_failed");
+        learningCache = data;
+        updateLearningUI();
+      } catch (err) {
+        console.error("loadLearningData failed", err);
+        const wrap = document.getElementById("learningClassGrid") || document.getElementById("pageContent");
+        if (wrap) wrap.innerHTML = `<div class="empty-state">學習進度讀取失敗：${escapeHtml(err.message || err)}</div>`;
+      } finally { learningLoading = false; }
+    }
+
+    function flattenLearningStudents() {
+      const classes = learningCache?.classes || [];
+      return classes.flatMap(cls => (cls.students || []).map(s => ({ ...s, _class: cls })));
+    }
+
+    function updateLearningUI() {
+      if (!learningCache || !document.getElementById("lpClassCount")) return;
+      const gami = learningCache.gamification || {};
+      const classes = learningCache.classes || [];
+      const allStudents = flattenLearningStudents();
+      const fail = learningFailThreshold(gami), good = learningGoodThreshold(gami), perfect = learningPerfectThreshold(gami);
+      const risk = allStudents.filter(s => Number(s.count || 0) < fail).length;
+      const ranked = allStudents.filter(s => Number(s.rank || 0) > 0 && Number(s.rank || 0) <= 3).length;
+      document.getElementById("lpClassCount").textContent = String(classes.length || 0);
+      document.getElementById("lpStudentCount").textContent = String(allStudents.length || 0);
+      document.getElementById("lpRiskCount").textContent = String(risk);
+      document.getElementById("lpRankedCount").textContent = String(ranked);
+      document.getElementById("learningThresholds").innerHTML = `
+        <span class="learning-chip">⚠️ 危險：少於 ${fail} 次</span>
+        <span class="learning-chip">🔥 良好：${good} 次以上</span>
+        <span class="learning-chip">🌟 卓越：${perfect} 次以上</span>
+        <span class="learning-chip">🏆 排行榜：最高分優先，同分較早完成優先</span>
+      `;
+      const sel = document.getElementById("learningClassFilter");
+      if (sel) {
+        const current = sel.value || "all";
+        const codes = Array.from(new Set(classes.map(c => String(c.classCode || c.class_code || "未分班")).filter(Boolean))).sort();
+        sel.innerHTML = `<option value="all">全部班級</option>` + codes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+        sel.value = codes.includes(current) ? current : "all";
+      }
+      renderLearningClasses();
+    }
+
+    function renderLearningRecords(records) {
+      if (!records || !records.length) return `<div class="learning-record-row"><span>目前沒有今日挑戰完成紀錄</span><strong>—</strong></div>`;
+      return records.slice(0,8).map(r => `
+        <div class="learning-record-row"><span>${escapeHtml(formatDateTime(r.completedAt || r.completed_at || r.createdAt || r.created_at))}</span><strong>${Number(r.averageScore ?? r.average_score ?? 0)} 分</strong></div>
+      `).join("");
+    }
+
+    function renderLearningClasses() {
+      if (!learningCache || !document.getElementById("learningClassGrid")) return;
+      const gami = learningCache.gamification || {};
+      const fail = learningFailThreshold(gami), good = learningGoodThreshold(gami), perfect = learningPerfectThreshold(gami);
+      const q = String(document.getElementById("learningSearchInput")?.value || "").trim().toLowerCase();
+      const classFilter = document.getElementById("learningClassFilter")?.value || "all";
+      const statusFilter = document.getElementById("learningStatusFilter")?.value || "all";
+      let classes = learningCache.classes || [];
+      if (classFilter !== "all") classes = classes.filter(c => String(c.classCode || c.class_code || "") === classFilter);
+      let totalVisible = 0;
+      const html = classes.map(cls => {
+        const classCode = String(cls.classCode || cls.class_code || "未分班");
+        const unitName = cls.unitName || cls.unit_name || cls.currentUnit || "未排定單元";
+        const rangeText = cls.rangeText || [cls.startDate || cls.start_date, cls.endDate || cls.end_date].filter(Boolean).join("～") || "尚無排程區間";
+        let students = (cls.students || []).slice();
+        if (q) students = students.filter(s => [s.name, s.uid, s.cardId, classCode].some(v => String(v || "").toLowerCase().includes(q)));
+        if (statusFilter === "risk") students = students.filter(s => Number(s.count || 0) < fail);
+        if (statusFilter === "good") students = students.filter(s => Number(s.count || 0) >= good);
+        if (statusFilter === "perfect") students = students.filter(s => Number(s.count || 0) >= perfect);
+        if (statusFilter === "ranked") students = students.filter(s => Number(s.rank || 0) > 0 && Number(s.rank || 0) <= 3);
+        totalVisible += students.length;
+        const risk = students.filter(s => Number(s.count || 0) < fail).length;
+        const goodCnt = students.filter(s => Number(s.count || 0) >= good).length;
+        const ranked = students.filter(s => Number(s.rank || 0) > 0 && Number(s.rank || 0) <= 3).length;
+        const rows = students.length ? students.map(s => {
+          const visual = learningCountVisual(s.count, gami);
+          const medal = learningRankIcon(s.rank);
+          const rowId = `lp-${String(s.id || s.uid || Math.random()).replace(/[^a-zA-Z0-9_-]/g,'')}`;
+          return `
+            <div class="learning-student-row" id="${rowId}">
+              <button class="learning-student-button" onclick="this.closest('.learning-student-row').classList.toggle('open')">
+                <div><div class="learning-student-name">${medal ? medal + ' ' : ''}${escapeHtml(s.name || '未命名學生')}</div><div class="learning-student-sub">${escapeHtml(s.uid || '')}</div></div>
+                <div><span class="learning-count-pill" style="color:${visual.color};background:${visual.bg};border-color:${visual.color}33;">${visual.icon} ${Number(s.count||0)}次</span></div>
+                <div class="learning-score">${s.bestScore ? Number(s.bestScore) + ' 分' : '尚無'}</div>
+                <div class="learning-time">${escapeHtml(formatDateTime(s.latestCompletedAt))}</div>
+                <div style="color:var(--muted);font-weight:900;">▾</div>
+              </button>
+              <div class="learning-detail">
+                <div class="learning-detail-grid">
+                  <div class="learning-detail-box"><div class="learning-detail-label">本單元完成次數</div><div class="learning-detail-value">${Number(s.count || 0)} 次</div></div>
+                  <div class="learning-detail-box"><div class="learning-detail-label">最高分</div><div class="learning-detail-value">${s.bestScore ? Number(s.bestScore) + ' 分 ' + medal : '尚無'}</div></div>
+                  <div class="learning-detail-box"><div class="learning-detail-label">最佳完成時間</div><div class="learning-detail-value">${escapeHtml(formatDateTime(s.bestCompletedAt))}</div></div>
+                  <div class="learning-detail-box"><div class="learning-detail-label">任務門檻</div><div class="learning-detail-value">⚠️${fail} / 🔥${good} / 🌟${perfect}</div></div>
+                </div>
+                <div class="learning-records"><div class="learning-record-title">今日挑戰完成紀錄</div>${renderLearningRecords(s.records || [])}</div>
+              </div>
+            </div>`;
+        }).join("") : `<div class="empty-state">此班級沒有符合條件的學生。</div>`;
+        return `
+          <div class="learning-class-card">
+            <div class="learning-class-head">
+              <div><h3>🏷️ ${escapeHtml(classCode)}</h3><p>${escapeHtml(unitName)}<br>${escapeHtml(rangeText)}</p></div>
+              <div class="learning-class-metrics"><span class="learning-mini-badge">學生 ${students.length}</span><span class="learning-mini-badge">⚠️ ${risk}</span><span class="learning-mini-badge">🔥 ${goodCnt}</span><span class="learning-mini-badge">🏆 ${ranked}</span></div>
+            </div>
+            <div class="learning-student-list">${rows}</div>
+          </div>`;
+      }).join("") || `<div class="empty-state">目前沒有班級學習進度資料。</div>`;
+      document.getElementById("learningClassGrid").innerHTML = html;
+      const note = document.getElementById("learningTableNote");
+      if (note) note.textContent = `目前顯示 ${totalVisible} 位學生`;
     }
 
     function renderWeekly() {
