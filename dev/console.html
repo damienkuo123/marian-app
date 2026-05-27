@@ -875,11 +875,13 @@
         <div class="form-field"><label>班級代碼</label><input id="curClassCode" placeholder="例如 A1，活動請填 EVENT" oninput="syncCurriculumEventHint()" /></div>
         <div class="form-field"><label>單元名稱</label><input id="curUnitName" placeholder="例如 Animals" /></div>
       </div>
-      <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
-        <div><strong>單字列表</strong><div class="metric-note">英文必填，中文可空白。</div></div>
-        <button class="btn-compact" onclick="addCurriculumWordRow('', '')">新增單字</button>
+      <div class="unit-modal-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <div><strong>單字列表</strong><div class="metric-note">英文必填，中文可空白。</div></div>
+          <button class="btn-compact" onclick="addCurriculumWordRow('', '')">新增單字</button>
+        </div>
+        <div id="curWordsList" class="word-editor-list"></div>
       </div>
-      <div id="curWordsList" class="word-editor-list"></div>
       <div class="modal-actions">
         <button class="btn-compact btn-danger" id="curDeleteUnitBtn" onclick="deleteCurriculumUnit()">刪除單元</button>
         <button class="btn-compact" onclick="hideCurriculumUnitModal()">取消</button>
@@ -902,12 +904,13 @@
       <div class="form-grid">
         <div class="form-field"><label>班級代碼</label><input id="curScheduleClass" disabled /></div>
         <div class="form-field"><label>單元名稱</label><input id="curScheduleUnit" disabled /></div>
-        <div class="form-field"><label>開始日期</label><input id="curScheduleStart" type="date" /></div>
-        <div class="form-field"><label>結束日期</label><input id="curScheduleEnd" type="date" /></div>
+        <div class="form-field"><label>開始日期</label><input id="curScheduleStart" type="date" onchange="updateScheduleConflictPreview()" /></div>
+        <div class="form-field"><label>結束日期</label><input id="curScheduleEnd" type="date" onchange="updateScheduleConflictPreview()" /></div>
       </div>
       <div id="curEventAvatarZone" class="event-avatar-zone">
         <div class="form-field"><label>活動首領角色</label><select id="curEventAvatarSelect"></select></div>
       </div>
+      <div id="curScheduleConflictBox" class="schedule-conflict-box"></div>
       <div class="modal-actions">
         <button class="btn-compact btn-danger" id="curCancelScheduleBtn" onclick="deleteCurriculumSchedule()">取消排程</button>
         <button class="btn-compact" onclick="hideCurriculumScheduleModal()">關閉</button>
@@ -2395,13 +2398,17 @@
     function setTextSafe(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
     function setCurriculumTab(tab) {
       curriculumTab = tab;
+      if (tab === "units") curriculumScheduleView = "list";
       document.getElementById("curTabUnits")?.classList.toggle("active", tab === "units");
       document.getElementById("curTabSchedules")?.classList.toggle("active", tab === "schedules");
+      const newBtn = document.getElementById("curNewUnitBtn");
+      if (newBtn) newBtn.style.display = tab === "units" ? "inline-flex" : "none";
       renderCurriculumList();
     }
     function updateCurriculumFilters() {
       curriculumSearch = (document.getElementById("curSearch")?.value || "").trim().toLowerCase();
       curriculumFilter = document.getElementById("curClassFilter")?.value || "";
+      if (!curriculumFilter && curriculumScheduleView !== "list") curriculumScheduleView = "list";
       renderCurriculumList();
     }
     function matchCurriculumText(text) { return !curriculumSearch || String(text||"").toLowerCase().includes(curriculumSearch); }
@@ -2430,22 +2437,143 @@
           <div class="word-preview">${preview || '<span class="word-chip">尚無單字</span>'}</div>
           <div class="unit-actions">
             <button class="btn-compact" onclick="openCurriculumUnitModal('${escapeJs(unit.id || unit.unitId)}')">編輯單元</button>
-            <button class="btn-compact btn-success" onclick="openCurriculumScheduleModal('${escapeJs(unit.id || unit.unitId)}')">${schedule ? "調整排程" : "排定日期"}</button>
             <button class="btn-compact btn-danger" onclick="deleteCurriculumUnit('${escapeJs(unit.id || unit.unitId)}')">刪除</button>
           </div>
         </div>`;
     }
     function renderScheduleList(box) {
-      const items = curriculumCache.schedules.filter(s => {
+      const schedules = curriculumCache.schedules.filter(s => {
         if (curriculumFilter && s.classCode !== curriculumFilter) return false;
         return matchCurriculumText(`${s.classCode} ${s.unitName} ${s.startDate} ${s.endDate}`);
       }).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)) || String(a.classCode).localeCompare(String(b.classCode)));
-      if (!items.length) { box.innerHTML = '<div class="curriculum-empty">目前沒有符合條件的排程。</div>'; return; }
-      box.innerHTML = `<div class="curriculum-grid">${items.map(s => `
-        <div class="schedule-card">
-          <div class="schedule-head"><div><div class="schedule-title">${escapeHtml(s.unitName || "未命名排程")}</div><div class="schedule-meta">${escapeHtml(classLabel(s.classCode))}｜${escapeHtml(s.startDate || "—")} ～ ${escapeHtml(s.endDate || "—")}${s.eventAvatarId ? `｜活動角色 ${escapeHtml(s.eventAvatarId)}` : ""}</div></div><span class="badge ${s.isEvent ? "warn" : "ok"}">${s.isEvent ? "EVENT" : "SCHEDULE"}</span></div>
-          <div class="schedule-actions"><button class="btn-compact" onclick="openCurriculumScheduleModal(null, '${escapeJs(s.id)}')">編輯排程</button><button class="btn-compact btn-danger" onclick="deleteCurriculumSchedule('${escapeJs(s.id)}')">取消排程</button></div>
-        </div>`).join("")}</div>`;
+      const unscheduled = curriculumCache.units.filter(u => {
+        if (curriculumFilter && u.classCode !== curriculumFilter) return false;
+        if (findScheduleForUnit(u)) return false;
+        const wordsText = (u.words||[]).map(w => `${w.en} ${w.zh}`).join(" ");
+        return matchCurriculumText(`${u.classCode} ${u.unitName} ${wordsText}`);
+      }).sort((a,b)=>String(a.classCode).localeCompare(String(b.classCode),'zh-Hant') || String(a.unitName).localeCompare(String(b.unitName),'zh-Hant'));
+      const viewTools = renderScheduleViewTools();
+      if (curriculumScheduleView === "month" && curriculumFilter) { box.innerHTML = viewTools + renderScheduleMonthCalendar(schedules); return; }
+      if (curriculumScheduleView === "year" && curriculumFilter) { box.innerHTML = viewTools + renderScheduleYearCalendar(schedules); return; }
+      const parts = [];
+      parts.push(viewTools);
+      if (!schedules.length && !unscheduled.length) {
+        parts.push('<div class="curriculum-empty">目前沒有符合條件的排程或未排程單元。</div>');
+      } else {
+        const cards = [];
+        schedules.forEach(s => cards.push(renderScheduleCard(s)));
+        unscheduled.forEach(u => cards.push(renderUnscheduledUnitCard(u)));
+        parts.push(`<div class="curriculum-grid">${cards.join("")}</div>`);
+      }
+      box.innerHTML = parts.join("");
+    }
+    function renderScheduleViewTools() {
+      const filterNote = curriculumFilter
+        ? `目前檢視：${escapeHtml(classLabel(curriculumFilter))}`
+        : "目前為全部班級 / 活動視角。為避免月曆過於混亂，月曆與年曆只在選擇單一班級或 EVENT 時開放。";
+      const canCalendar = Boolean(curriculumFilter);
+      return `
+        <div class="curriculum-subtoolbar">
+          <div class="curriculum-context-note">${filterNote}<br>排程規則：同一班級在同一天只能有一個進行中的單元；若日期重疊，系統會阻擋儲存。</div>
+          <div class="schedule-view-toggle">
+            <button class="schedule-view-btn ${curriculumScheduleView === "list" ? "active" : ""}" onclick="setScheduleView('list')">列表</button>
+            <button class="schedule-view-btn ${curriculumScheduleView === "month" ? "active" : ""}" ${canCalendar ? "" : "disabled"} onclick="setScheduleView('month')">月曆</button>
+            <button class="schedule-view-btn ${curriculumScheduleView === "year" ? "active" : ""}" ${canCalendar ? "" : "disabled"} onclick="setScheduleView('year')">年曆</button>
+          </div>
+        </div>`;
+    }
+    function setScheduleView(view) {
+      if ((view === "month" || view === "year") && !curriculumFilter) {
+        alert("請先選擇單一班級或 EVENT，再切換月曆 / 年曆視角。");
+        return;
+      }
+      curriculumScheduleView = view;
+      renderCurriculumList();
+    }
+    function changeCurriculumCalendarMonth(delta) {
+      curriculumCalendarCursor = new Date(curriculumCalendarCursor.getFullYear(), curriculumCalendarCursor.getMonth() + Number(delta || 0), 1);
+      renderCurriculumList();
+    }
+    function changeCurriculumCalendarYear(delta) {
+      curriculumCalendarCursor = new Date(curriculumCalendarCursor.getFullYear() + Number(delta || 0), curriculumCalendarCursor.getMonth(), 1);
+      renderCurriculumList();
+    }
+    function renderScheduleCard(s) {
+      return `<div class="schedule-card">
+        <div class="schedule-head"><div><div class="schedule-title">${escapeHtml(s.unitName || "未命名排程")}</div><div class="schedule-meta">${escapeHtml(classLabel(s.classCode))}｜${escapeHtml(s.startDate || "—")} ～ ${escapeHtml(s.endDate || "—")}${s.eventAvatarId ? `｜活動角色 ${escapeHtml(s.eventAvatarId)}` : ""}</div></div><span class="badge ${s.isEvent ? "warn" : "ok"}">${s.isEvent ? "EVENT" : "SCHEDULE"}</span></div>
+        <div class="schedule-actions"><button class="btn-compact" onclick="openCurriculumScheduleModal(null, '${escapeJs(s.id)}')">編輯排程</button><button class="btn-compact btn-danger" onclick="deleteCurriculumSchedule('${escapeJs(s.id)}')">取消排程</button></div>
+      </div>`;
+    }
+    function renderUnscheduledUnitCard(u) {
+      return `<div class="schedule-card">
+        <div class="schedule-head"><div><div class="schedule-title">${escapeHtml(u.unitName || "未命名單元")}</div><div class="schedule-meta">${escapeHtml(classLabel(u.classCode))}｜尚未排程｜${(u.words||[]).length} 個單字</div></div><span class="badge">未排程</span></div>
+        <div class="schedule-actions"><button class="btn-compact btn-success" onclick="openCurriculumScheduleModal('${escapeJs(u.id || u.unitId)}')">排定日期</button></div>
+      </div>`;
+    }
+    function renderScheduleMonthCalendar(schedules) {
+      const y = curriculumCalendarCursor.getFullYear();
+      const m = curriculumCalendarCursor.getMonth();
+      const first = new Date(y, m, 1);
+      const days = new Date(y, m + 1, 0).getDate();
+      const start = first.getDay();
+      const todayKey = toDateKey(new Date());
+      const cells = [];
+      for (let i=0;i<start;i++) cells.push('<div class="calendar-day empty"></div>');
+      for (let d=1; d<=days; d++) {
+        const key = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        const daySchedules = schedules.filter(s => dateRangesOverlap(key, key, s.startDate, s.endDate));
+        cells.push(`<div class="calendar-day ${key===todayKey ? "today" : ""}"><div class="calendar-date">${d}</div>${daySchedules.map(s=>`<div class="calendar-event ${s.isEvent ? "event" : ""}" title="${escapeHtml(s.unitName)}">${escapeHtml(s.unitName)}</div>`).join("")}</div>`);
+      }
+      return `<div class="schedule-calendar-panel">
+        <div class="calendar-nav"><button class="btn-compact" onclick="changeCurriculumCalendarMonth(-1)">‹</button><div class="calendar-nav-title">${y} / ${String(m+1).padStart(2,"0")}</div><button class="btn-compact" onclick="changeCurriculumCalendarMonth(1)">›</button></div>
+        <div class="schedule-calendar-grid">${["日","一","二","三","四","五","六"].map(w=>`<div class="calendar-weekday">${w}</div>`).join("")}${cells.join("")}</div>
+      </div>`;
+    }
+    function renderScheduleYearCalendar(schedules) {
+      const y = curriculumCalendarCursor.getFullYear();
+      const months = Array.from({length:12}, (_,i)=>i);
+      return `<div class="schedule-calendar-panel">
+        <div class="calendar-nav"><button class="btn-compact" onclick="changeCurriculumCalendarYear(-1)">‹</button><div class="calendar-nav-title">${y} 年</div><button class="btn-compact" onclick="changeCurriculumCalendarYear(1)">›</button></div>
+        <div class="schedule-year-grid">${months.map(m=>{
+          const list = schedules.filter(s => {
+            const a = new Date(s.startDate); const b = new Date(s.endDate);
+            if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return false;
+            return a.getFullYear() <= y && b.getFullYear() >= y && a <= new Date(y,m+1,0) && b >= new Date(y,m,1);
+          });
+          return `<div class="year-month-card"><div class="year-month-title">${m+1} 月・${list.length} 筆</div>${list.slice(0,4).map(s=>`<div class="year-month-item">${escapeHtml(s.startDate)} ${escapeHtml(s.unitName)}</div>`).join("")}${list.length>4?`<div class="year-month-item">+${list.length-4} 更多</div>`:""}</div>`;
+        }).join("")}</div>
+      </div>`;
+    }
+    function toDateKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+    function dateRangesOverlap(aStart, aEnd, bStart, bEnd) {
+      if (!aStart || !aEnd || !bStart || !bEnd) return false;
+      return String(aStart) <= String(bEnd) && String(aEnd) >= String(bStart);
+    }
+    function findScheduleConflict({ classCode, startDate, endDate, scheduleId }) {
+      const cls = normalizeEventClassCode(classCode);
+      if (!cls || !startDate || !endDate) return null;
+      return (curriculumCache?.schedules || []).find(s => {
+        if (scheduleId && String(s.id) === String(scheduleId)) return false;
+        if (normalizeEventClassCode(s.classCode) !== cls) return false;
+        return dateRangesOverlap(startDate, endDate, s.startDate, s.endDate);
+      }) || null;
+    }
+    function updateScheduleConflictPreview() {
+      const box = document.getElementById("curScheduleConflictBox");
+      if (!box) return;
+      const conflict = findScheduleConflict({
+        classCode: document.getElementById("curScheduleClass")?.value || "",
+        startDate: document.getElementById("curScheduleStart")?.value || "",
+        endDate: document.getElementById("curScheduleEnd")?.value || "",
+        scheduleId: document.getElementById("curScheduleId")?.value || ""
+      });
+      if (conflict) {
+        box.style.display = "block";
+        box.innerHTML = `日期衝突：${escapeHtml(classLabel(conflict.classCode))} 在 ${escapeHtml(conflict.startDate)}～${escapeHtml(conflict.endDate)} 已有「${escapeHtml(conflict.unitName)}」。同一日期同一班級只能有一個進行中的單元。`;
+      } else {
+        box.style.display = "none";
+        box.innerHTML = "";
+      }
     }
     function escapeJs(value) { return String(value ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " ").replace(/\r/g, " "); }
     function findUnitById(unitId) { return (curriculumCache?.units || []).find(u => String(u.id || u.unitId) === String(unitId)); }
@@ -2515,7 +2643,10 @@
       const sel = document.getElementById("curEventAvatarSelect");
       sel.innerHTML = '<option value="">-- 請選擇活動首領 --</option>' + (curriculumCache?.eventAvatars || []).map(a => `<option value="${escapeHtml(a.id || a.avatarId)}">${escapeHtml(a.name || a.id || a.avatarId)} (${escapeHtml(a.id || a.avatarId)})</option>`).join("");
       sel.value = schedule?.eventAvatarId || "";
+      const conflictBox = document.getElementById("curScheduleConflictBox");
+      if (conflictBox) { conflictBox.style.display = "none"; conflictBox.innerHTML = ""; }
       showModal("curriculumScheduleModal");
+      updateScheduleConflictPreview();
     }
     async function saveCurriculumSchedule() {
       const classCode = normalizeEventClassCode(document.getElementById("curScheduleClass").value);
@@ -2526,7 +2657,13 @@
       if (startDate > endDate) return alert("結束日期不可早於開始日期。");
       const eventAvatarId = document.getElementById("curEventAvatarSelect").value || "";
       if (isEventClassCode(classCode) && !eventAvatarId) return alert("活動排程必須選擇活動首領角色。");
-      await saveCurriculumAction("save_schedule", { schedule: { id: document.getElementById("curScheduleId").value || null, unitId: document.getElementById("curScheduleUnitId").value || null, classCode, unitName, startDate, endDate, eventAvatarId, isEvent: isEventClassCode(classCode) } }, "排程已儲存");
+      const scheduleId = document.getElementById("curScheduleId").value || "";
+      const conflict = findScheduleConflict({ classCode, startDate, endDate, scheduleId });
+      if (conflict) {
+        updateScheduleConflictPreview();
+        return alert(`日期衝突：${classLabel(conflict.classCode)} 在 ${conflict.startDate}～${conflict.endDate} 已有「${conflict.unitName}」。同一日期同一班級只能有一個進行中的單元。`);
+      }
+      await saveCurriculumAction("save_schedule", { schedule: { id: scheduleId || null, unitId: document.getElementById("curScheduleUnitId").value || null, classCode, unitName, startDate, endDate, eventAvatarId, isEvent: isEventClassCode(classCode) } }, "排程已儲存");
       hideCurriculumScheduleModal();
     }
     async function deleteCurriculumSchedule(scheduleId = "") {
