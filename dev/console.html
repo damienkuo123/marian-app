@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-ui-polish-v1"></script>
+  <script src="./tappie-api.js?v=console-students-v1-1"></script>
   <style>
     :root {
       --bg: #f7f9fc;
@@ -1026,7 +1026,13 @@
       }
       studentsLoading = true;
       try {
-        const data = await TappieAPI.consoleGetStudents({ token: session.token });
+        const data = (TappieAPI && typeof TappieAPI.consoleGetStudents === "function")
+          ? await TappieAPI.consoleGetStudents({ token: session.token })
+          : await fetch(`${TappieAPI.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1"}/console-get-students`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.token}` },
+              body: JSON.stringify({ token: session.token })
+            }).then(r => r.json());
         if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_students_failed");
         studentsCache = data;
         updateStudentsUI();
