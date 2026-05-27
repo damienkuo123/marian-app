@@ -760,6 +760,36 @@
     .word-editor-row{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px;}
     @media (max-width:900px){.schedule-year-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-day{min-height:96px;padding:8px}.calendar-event{font-size:11px;padding:6px}.curriculum-subtoolbar{flex-direction:column;align-items:stretch}.schedule-view-toggle{align-self:flex-start}}
     @media (max-width:560px){.schedule-calendar-grid{gap:5px}.calendar-day{min-height:78px;border-radius:12px}.calendar-event{display:none}.schedule-year-grid{grid-template-columns:1fr}.calendar-nav-title{font-size:18px}}
+
+
+    /* =======================================================
+       🎭 Console 角色管理 v1
+       ======================================================= */
+    .avatar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+    .avatar-filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .avatar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+    .avatar-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;min-height:100%;}
+    .avatar-card.locked{opacity:.82;background:var(--surface-2);}
+    .avatar-card-head{display:flex;gap:14px;align-items:center;}
+    .avatar-thumb{width:72px;height:72px;border-radius:18px;object-fit:cover;background:var(--surface-2);border:1px solid var(--border);box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);}
+    .avatar-name{font-size:16px;font-weight:950;color:var(--text);line-height:1.25;}
+    .avatar-id{font-size:12px;color:var(--muted);font-weight:800;margin-top:4px;word-break:break-all;}
+    .avatar-badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;}
+    .avatar-badge{font-size:11px;font-weight:950;padding:5px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);}
+    .avatar-badge.ssr{color:#92400e;background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.28);}
+    .avatar-badge.sr{color:#6d28d9;background:rgba(139,92,246,.13);border-color:rgba(139,92,246,.25);}
+    .avatar-badge.r{color:#0369a1;background:rgba(56,189,248,.13);border-color:rgba(56,189,248,.24);}
+    .avatar-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .avatar-lock-note{border-radius:14px;background:var(--surface-2);border:1px dashed var(--border);padding:12px;color:var(--muted);font-weight:800;font-size:12px;line-height:1.55;}
+    .avatar-save-row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:auto;}
+    .avatar-status{font-size:12px;font-weight:900;color:var(--muted);}
+    .avatar-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:22px;background:var(--surface);}
+    .avatar-table-wrap table{min-width:900px;width:100%;border-collapse:collapse;}
+    .avatar-table-wrap th,.avatar-table-wrap td{padding:13px 14px;border-bottom:1px solid var(--border);text-align:left;font-size:13px;vertical-align:middle;}
+    .avatar-table-wrap th{color:var(--muted);font-size:12px;font-weight:950;background:var(--surface-2);}
+    .avatar-table-wrap tr:last-child td{border-bottom:0;}
+    @media (max-width:640px){.avatar-edit-grid{grid-template-columns:1fr}.avatar-toolbar{align-items:stretch}.avatar-filter-row{width:100%}.avatar-filter-row .console-input,.avatar-filter-row .console-select{flex:1;min-width:140px}.avatar-card{border-radius:20px}.avatar-thumb{width:64px;height:64px}}
+
 </style>
 </head>
 <body>
@@ -920,7 +950,9 @@
           <div><strong>單字列表</strong><div class="metric-note">英文必填，中文可空白。</div></div>
           <button class="btn-compact" onclick="addCurriculumWordRow('', '')">新增單字</button>
         </div>
-        <div id="curWordsList" class="word-editor-list"></div>
+        <div class="word-list-shell">
+          <div id="curWordsList" class="word-editor-list"></div>
+        </div>
       </div>
       <div class="modal-actions">
         <button class="btn-compact btn-danger" id="curDeleteUnitBtn" onclick="deleteCurriculumUnit()">刪除單元</button>
@@ -1142,6 +1174,9 @@
       if (page === "curriculum") {
         loadCurriculumData(false);
       }
+      if (page === "avatars") {
+        loadAvatarsConsole(false);
+      }
     }
 
     function renderPage(page) {
@@ -1151,6 +1186,7 @@
       if (page === "learning") return renderLearning();
       if (page === "weekly") return renderWeekly();
       if (page === "curriculum") return renderCurriculum();
+      if (page === "avatars") return renderAvatarsConsole();
       return renderPlaceholder(page);
     }
 
@@ -2751,6 +2787,174 @@
       el.textContent = message;
       el.style.cssText = "position:fixed;right:24px;bottom:24px;z-index:99999;background:var(--text);color:var(--bg);padding:12px 16px;border-radius:14px;font-weight:900;box-shadow:var(--shadow);";
       document.body.appendChild(el); setTimeout(()=>el.remove(), 2200);
+    }
+
+
+    // =======================================================
+    // 🎭 角色管理 Console v1：承接 admin.html 的角色定價與類型
+    // =======================================================
+    let avatarsConsoleCache = null;
+    let avatarsConsoleView = "cards";
+    function renderAvatarsConsole() {
+      return `
+        <div class="grid cards">
+          <div class="card"><div class="metric-label">角色總數</div><div id="avatarTotalCount" class="metric-value">—</div><div class="metric-note">本校 + 全域可見角色</div></div>
+          <div class="card"><div class="metric-label">可編輯角色</div><div id="avatarEditableCount" class="metric-value">—</div><div class="metric-note">一般 / 活動角色</div></div>
+          <div class="card"><div class="metric-label">活動角色</div><div id="avatarEventCount" class="metric-value">—</div><div class="metric-note">category = 活動</div></div>
+          <div class="card"><div class="metric-label">平均價格</div><div id="avatarAvgCost" class="metric-value">—</div><div class="metric-note">可編輯角色 cost</div></div>
+        </div>
+        <div class="card" style="margin-top:18px;">
+          <div class="panel-title"><div><h2>角色定價與類型</h2><p>調整一般 / 活動角色的兌換點數與分類。AI / 預設角色維持鎖定。</p></div><button class="badge ok" onclick="loadAvatarsConsole(true)">重新整理</button></div>
+          <div class="avatar-toolbar">
+            <div class="avatar-filter-row">
+              <input id="avatarSearch" class="console-input" placeholder="搜尋角色名稱 / ID" oninput="renderAvatarsConsoleList()" />
+              <select id="avatarCategoryFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+                <option value="">全部類型</option>
+                <option value="一般">一般</option>
+                <option value="活動">活動</option>
+                <option value="locked">AI / 預設鎖定</option>
+              </select>
+              <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+                <option value="">全部稀有度</option>
+                <option value="N">N</option><option value="R">R</option><option value="SR">SR</option><option value="SSR">SSR</option><option value="UR">UR</option>
+              </select>
+              <select id="avatarScopeFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+                <option value="">全部來源</option>
+                <option value="school">本校角色</option>
+                <option value="global">全域角色</option>
+              </select>
+            </div>
+            <div class="avatar-filter-row">
+              <button id="avatarViewCardsBtn" class="btn-compact" onclick="setAvatarConsoleView('cards')">卡片</button>
+              <button id="avatarViewTableBtn" class="btn-compact" onclick="setAvatarConsoleView('table')">表格</button>
+            </div>
+          </div>
+          <div id="avatarsConsoleStatus" class="metric-note" style="margin-bottom:12px;">正在讀取角色...</div>
+          <div id="avatarsConsoleList" class="empty-state">正在讀取...</div>
+        </div>
+      `;
+    }
+    function avatarIdOf(a){ return String(a.id || a.avatarId || a.avatar_id || ""); }
+    function avatarNameOf(a){ return String(a.name || a.avatarName || avatarIdOf(a) || "未命名角色"); }
+    function avatarImgOf(a){ return a.fullImg || a.full_img_url || a.image || a.img || a.image_url || "/assets/gacha-box.png"; }
+    function normalizeAvatarCategoryForConsole(category){ const raw=String(category||"").trim(); return (raw === "活動" || raw.toLowerCase() === "event") ? "活動" : "一般"; }
+    function isAvatarLockedForConsole(a){
+      const category = String(a.category || "").trim();
+      const key = category.toLowerCase();
+      const id = avatarIdOf(a);
+      const isAi = ["ai","a.i.","機器人","ai角色"].includes(key) || category === "Ai" || category === "AI" || id.startsWith("AI_");
+      const isDefault = ["default","preset","starter"].includes(key) || category === "預設" || category === "默认" || id === "DEFAULT_MARIAN";
+      return isAi || isDefault;
+    }
+    function avatarScopeOf(a){ return (a.school_id || a.schoolId || a.avatar_scope === "school_specific" || a.owner_school_code) ? "school" : "global"; }
+    function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsConsoleList(); }
+    async function loadAvatarsConsole(force=false){
+      const statusEl = document.getElementById("avatarsConsoleStatus");
+      const listEl = document.getElementById("avatarsConsoleList");
+      if (statusEl) statusEl.textContent = "讀取角色資料中...";
+      if (listEl) listEl.innerHTML = '<div class="empty-state">正在讀取角色...</div>';
+      try {
+        const schoolCode = getSchoolCodeForAdmin();
+        const data = await TappieAPI.adminGetData(schoolCode, "all");
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || "角色資料讀取失敗");
+        const avatars = Array.isArray(data.avatars) ? data.avatars : (Array.isArray(data.shopAvatars) ? data.shopAvatars : []);
+        avatarsConsoleCache = { schoolCode, avatars };
+        renderAvatarsConsoleList();
+      } catch (err) {
+        console.error("[loadAvatarsConsole]", err);
+        if (statusEl) statusEl.textContent = "讀取失敗：" + (err.message || err);
+        if (listEl) listEl.innerHTML = `<div class="empty-state danger">讀取失敗：${escapeHtml(err.message || err)}</div>`;
+      }
+    }
+    function filteredAvatarsConsole(){
+      const avatars = avatarsConsoleCache?.avatars || [];
+      const q = String(document.getElementById("avatarSearch")?.value || "").trim().toLowerCase();
+      const cat = document.getElementById("avatarCategoryFilter")?.value || "";
+      const rarity = document.getElementById("avatarRarityFilter")?.value || "";
+      const scope = document.getElementById("avatarScopeFilter")?.value || "";
+      return avatars.filter(a => {
+        const id = avatarIdOf(a); const name = avatarNameOf(a); const locked = isAvatarLockedForConsole(a); const normalizedCat = normalizeAvatarCategoryForConsole(a.category);
+        if (q && !`${id} ${name}`.toLowerCase().includes(q)) return false;
+        if (cat === "locked" && !locked) return false;
+        if (cat && cat !== "locked" && (locked || normalizedCat !== cat)) return false;
+        if (rarity && String(a.rarity || "N") !== rarity) return false;
+        if (scope && avatarScopeOf(a) !== scope) return false;
+        return true;
+      });
+    }
+    function renderAvatarsConsoleList(){
+      const avatars = filteredAvatarsConsole();
+      const all = avatarsConsoleCache?.avatars || [];
+      const editable = all.filter(a=>!isAvatarLockedForConsole(a));
+      const eventCount = all.filter(a=>!isAvatarLockedForConsole(a) && normalizeAvatarCategoryForConsole(a.category)==="活動").length;
+      const avg = editable.length ? Math.round(editable.reduce((sum,a)=>sum + Number(a.cost || 0),0) / editable.length) : 0;
+      const setText=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+      setText("avatarTotalCount", all.length);
+      setText("avatarEditableCount", editable.length);
+      setText("avatarEventCount", eventCount);
+      setText("avatarAvgCost", editable.length ? avg : "—");
+      const statusEl = document.getElementById("avatarsConsoleStatus");
+      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。AI / 預設角色會鎖定，不開放改價或改類型。`;
+      document.getElementById("avatarViewCardsBtn")?.classList.toggle("btn-success", avatarsConsoleView === "cards");
+      document.getElementById("avatarViewTableBtn")?.classList.toggle("btn-success", avatarsConsoleView === "table");
+      const listEl = document.getElementById("avatarsConsoleList");
+      if (!listEl) return;
+      if (!avatars.length) { listEl.innerHTML = '<div class="empty-state">找不到符合條件的角色。</div>'; return; }
+      listEl.innerHTML = avatarsConsoleView === "table" ? renderAvatarConsoleTable(avatars) : `<div class="avatar-grid">${avatars.map(renderAvatarConsoleCard).join("")}</div>`;
+    }
+    function rarityBadgeClass(rarity){ const r=String(rarity||"N").toLowerCase(); return ["ssr","sr","r"].includes(r) ? r : ""; }
+    function renderAvatarConsoleCard(a){
+      const id = avatarIdOf(a); const locked = isAvatarLockedForConsole(a); const category = normalizeAvatarCategoryForConsole(a.category); const rarity = String(a.rarity || "N"); const scope = avatarScopeOf(a) === "global" ? "全域" : "本校";
+      return `<div class="avatar-card ${locked ? "locked" : ""}" data-avatar-id="${escapeHtml(id)}">
+        <div class="avatar-card-head">
+          <img class="avatar-thumb" src="${escapeHtml(avatarImgOf(a))}" onerror="this.src='/assets/gacha-box.png'" />
+          <div style="min-width:0;flex:1;"><div class="avatar-name">${escapeHtml(avatarNameOf(a))}</div><div class="avatar-id">${escapeHtml(id)}</div>
+            <div class="avatar-badges"><span class="avatar-badge ${rarityBadgeClass(rarity)}">${escapeHtml(rarity)}</span><span class="avatar-badge">${escapeHtml(scope)}</span><span class="avatar-badge">${locked ? "鎖定" : escapeHtml(category)}</span></div>
+          </div>
+        </div>
+        ${locked ? `<div class="avatar-lock-note">AI / 預設角色不開放在 Console 中改價或改類型，避免影響系統基礎角色與對戰 AI。</div>` : `
+        <div class="avatar-edit-grid">
+          <div class="form-field"><label>兌換點數</label><input class="avatar-cost-input" type="number" min="0" value="${Number(a.cost || 0)}" /></div>
+          <div class="form-field"><label>角色類型</label><select class="avatar-category-select"><option value="一般" ${category==="一般"?"selected":""}>一般</option><option value="活動" ${category==="活動"?"selected":""}>活動</option></select></div>
+        </div>
+        <div class="avatar-save-row"><span class="avatar-status" id="avatarStatus-${cssSafeId(id)}">可編輯</span><button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存設定</button></div>`}
+      </div>`;
+    }
+    function renderAvatarConsoleTable(avatars){
+      const rows = avatars.map(a => { const id=avatarIdOf(a); const locked=isAvatarLockedForConsole(a); const cat=normalizeAvatarCategoryForConsole(a.category); const rarity=String(a.rarity||"N"); const scope=avatarScopeOf(a)==="global"?"全域":"本校";
+        return `<tr data-avatar-id="${escapeHtml(id)}"><td><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)}</span></td><td>${escapeHtml(rarity)}</td><td>${escapeHtml(scope)}</td><td>${locked?'<span class="badge warn">鎖定</span>':`<select class="console-select avatar-category-select"><option value="一般" ${cat==="一般"?"selected":""}>一般</option><option value="活動" ${cat==="活動"?"selected":""}>活動</option></select>`}</td><td>${locked?escapeHtml(Number(a.cost||0)):`<input class="console-input avatar-cost-input" type="number" min="0" value="${Number(a.cost||0)}" style="max-width:120px;" />`}</td><td>${locked?'<span class="small-note">AI / 預設不可編輯</span>':`<button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>`}</td></tr>`;
+      }).join("");
+      return `<div class="avatar-table-wrap"><table><thead><tr><th>角色</th><th>稀有度</th><th>來源</th><th>類型</th><th>點數</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+    function cssSafeId(value){ return String(value||"").replace(/[^a-zA-Z0-9_-]/g,"_"); }
+    function escapeJs(value){ return String(value ?? "").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\n/g,"\\n"); }
+    async function saveAvatarConsoleItem(avatarId, btn){
+      const card = document.querySelector(`[data-avatar-id="${CSS.escape(avatarId)}"]`);
+      if (!card) return alert("找不到角色卡片。 ");
+      const cost = Number(card.querySelector(".avatar-cost-input")?.value);
+      const category = card.querySelector(".avatar-category-select")?.value || "一般";
+      if (!Number.isFinite(cost) || cost < 0) return alert("請輸入有效點數，且不可為負數。 ");
+      const statusEl = document.getElementById(`avatarStatus-${cssSafeId(avatarId)}`);
+      const old = btn?.textContent || "儲存";
+      if (btn) { btn.textContent = "儲存中..."; btn.disabled = true; }
+      if (statusEl) statusEl.textContent = "儲存中...";
+      try {
+        const schoolCode = getSchoolCodeForAdmin();
+        const base = TappieAPI?.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1";
+        const res = await fetch(`${base}/admin-save-avatar-settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ schoolCode, avatarId, cost, category }) });
+        const data = await res.json().catch(()=>({}));
+        if (!data.success) throw new Error(data.message || data.error || "角色設定儲存失敗");
+        if (avatarsConsoleCache?.avatars) avatarsConsoleCache.avatars = avatarsConsoleCache.avatars.map(a => avatarIdOf(a) === avatarId ? { ...a, cost, category } : a);
+        if (statusEl) statusEl.textContent = "已儲存";
+        toast("角色設定已儲存");
+        renderAvatarsConsoleList();
+      } catch (err) {
+        console.error("[saveAvatarConsoleItem]", err);
+        if (statusEl) statusEl.textContent = "儲存失敗";
+        alert(err.message || err);
+      } finally {
+        if (btn) { btn.textContent = old; btn.disabled = false; }
+      }
     }
 
     function renderPlaceholder(page) {
