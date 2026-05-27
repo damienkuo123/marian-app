@@ -38,7 +38,8 @@ const TappieAPI = {
     adminUploadBrandingAsset: "/admin-upload-branding-asset",
     adminDeleteBrandingAsset: "/admin-delete-branding-asset",
     adminNewsletters: "/admin-newsletters",
-    adminWeeklyReports: "/admin-weekly-reports"
+    adminWeeklyReports: "/admin-weekly-reports",
+    consoleAuth: "/console-auth"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -198,6 +199,10 @@ const TappieAPI = {
   },
   async adminForceResendWeeklyReport(payload = {}) {
     return await this.adminWeeklyReportAction({ ...payload, action: "force_resend" });
+  },
+
+  async consoleAuth(payload = {}) {
+    return await this._post(this.endpoints.consoleAuth, payload);
   },
 
   toLegacyDashboard(data) {
