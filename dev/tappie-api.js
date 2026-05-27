@@ -42,7 +42,8 @@ const TappieAPI = {
     consoleAuth: "/console-auth",
     consoleGetHealth: "/console-get-health",
     consoleGetOverview: "/console-get-overview",
-    consoleGetStudents: "/console-get-students"
+    consoleGetStudents: "/console-get-students",
+    consoleSaveStudents: "/console-save-students"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -240,6 +241,19 @@ const TappieAPI = {
         ...(token ? { "Authorization": `Bearer ${token}` } : {})
       },
       body: JSON.stringify({})
+    });
+    return await res.json();
+  },
+
+  async consoleSaveStudents(payload = {}) {
+    const token = payload.token || undefined;
+    const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleSaveStudents, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload || {})
     });
     return await res.json();
   },

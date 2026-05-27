@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-students-v1-2"></script>
+  <script src="./tappie-api.js?v=console-students-full-action-v1"></script>
   <style>
     :root {
       --bg: #f7f9fc;
@@ -506,6 +506,64 @@
     </main>
   </section>
 
+
+
+  <div id="studentEditModal" class="modal-backdrop" onclick="closeStudentModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="studentModalTitle">編輯學生</h2>
+          <p id="studentModalSubtitle">修改學生基本資料、週報與啟用狀態。</p>
+        </div>
+        <button class="btn-compact" onclick="hideStudentModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <input type="hidden" id="editStudentId" />
+        <div class="form-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" /></div>
+        <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" /></div>
+        <div class="form-field"><label>學生類別</label><select id="editStudentType" onchange="toggleConsoleClassHint()"><option value="一般生">一般生</option><option value="美語資優生">美語資優生</option></select></div>
+        <div class="form-field"><label>班級代碼</label><input id="editStudentClass" placeholder="美語資優生需填班級，例如 A1" /></div>
+        <div class="form-field"><label>Parent Email</label><input id="editStudentEmail" placeholder="parent@example.com" /></div>
+        <div class="form-field"><label>週報狀態</label><select id="editStudentWeekly"><option value="true">啟用週報</option><option value="false">不啟用週報</option></select></div>
+        <div class="form-field"><label>帳號狀態</label><select id="editStudentActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
+        <div class="form-field"><label>目前點數</label><input id="editStudentPoints" type="number" inputmode="numeric" placeholder="0" /></div>
+        <div class="form-field full"><label>Title / 榮譽標籤</label><input id="editStudentTitle" placeholder="可留空，Dashboard 榮譽榜通常即時計算" /></div>
+        <div class="form-field full"><div id="studentFormNote" class="form-note">新增學生會自動配發預設角色，並寫入 student_avatars。席位上限以啟用學生計算。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button id="studentDisableBtn" class="btn-compact danger" onclick="disableCurrentStudent()">停用學生</button>
+        <div class="right">
+          <button class="btn-compact" onclick="hideStudentModal()">取消</button>
+          <button id="studentSaveBtn" class="btn-compact primary" onclick="saveConsoleStudent()">儲存學生</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="studentBatchModal" class="modal-backdrop" onclick="closeBatchModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2>批量修改學生</h2>
+          <p id="batchModalSubtitle">只會修改有選擇的欄位；留空或選擇不修改會保留原資料。</p>
+        </div>
+        <button class="btn-compact" onclick="hideBatchModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field"><label>學生類別</label><select id="batchStudentType" onchange="toggleBatchClassHint()"><option value="__nochange">不修改</option><option value="一般生">一般生</option><option value="美語資優生">美語資優生</option></select></div>
+        <div class="form-field"><label>班級代碼</label><input id="batchStudentClass" placeholder="不修改請留空" /></div>
+        <div class="form-field"><label>帳號狀態</label><select id="batchStudentActive"><option value="__nochange">不修改</option><option value="true">啟用</option><option value="false">停用</option></select></div>
+        <div class="form-field"><label>週報狀態</label><select id="batchStudentWeekly"><option value="__nochange">不修改</option><option value="true">啟用週報</option><option value="false">關閉週報</option></select></div>
+        <div class="form-field full"><div class="form-note">批量修改不提供 UID / 姓名批量覆蓋，避免誤傷正式資料。若要修改 UID 或姓名，請用單一學生編輯。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideBatchModal()">取消</button>
+        <div class="right"><button id="batchSaveBtn" class="btn-compact primary" onclick="saveBatchStudents()">確認批量修改</button></div>
+      </div>
+    </div>
+  </div>
+
+
   <script>
     let loginMode = "super_admin";
     let session = null;
@@ -515,6 +573,8 @@
     let overviewLoading = false;
     let studentsCache = null;
     let studentsLoading = false;
+    let studentBatchMode = false;
+    let selectedStudentIds = new Set();
 
     const navByRole = {
       owner: [
@@ -768,8 +828,12 @@
 
         <div class="card" style="margin-top:18px;">
           <div class="panel-title">
-            <h2>學生資料總覽</h2>
-            <button class="badge ok" onclick="loadStudentsData(true)">重新整理</button>
+            <h2>學生資料管理</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+              <button class="btn-compact" onclick="loadStudentsData(true)">重新整理</button>
+              <button class="btn-compact" onclick="toggleStudentBatchMode()" id="studentBatchToggleBtn">批量模式</button>
+              <button class="btn-compact primary" onclick="openStudentEditor(null)">新增學生</button>
+            </div>
           </div>
           <div class="table-hint-row">
             <span>這裡是查找與確認資料用。席位與收件健康請以上方管理卡片為主。</span>
@@ -792,10 +856,18 @@
               </select>
             </div>
           </div>
+          <div id="studentBatchActions" class="batch-actions">
+            <div><strong id="studentSelectedCount">已選 0 位</strong><div class="small-note">批量修改只會處理目前勾選學生</div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn-compact" onclick="selectVisibleStudents(true)">勾選目前列表</button>
+              <button class="btn-compact" onclick="clearStudentSelection()">清除</button>
+              <button class="btn-compact primary" onclick="openBatchStudentEditor()">設定修改</button>
+            </div>
+          </div>
           <div id="studentsTableWrap" class="table-wrap">
             <table>
-              <thead><tr><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th></tr></thead>
-              <tbody><tr><td colspan="6">正在讀取 students...</td></tr></tbody>
+              <thead><tr><th style="width:42px;">選取</th><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
+              <tbody><tr><td colspan="8">正在讀取 students...</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -1188,22 +1260,245 @@
         const emailOk = email ? isValidEmail(email) : false;
         const weekly = Boolean(s.weekly_report_enabled);
         const avatarName = s.equipped_avatar_name || s.equipped_avatar_id || "未設定";
+        const checked = selectedStudentIds.has(String(s.id)) ? "checked" : "";
         return `
           <tr>
+            <td>${studentBatchMode ? `<input class="student-check" type="checkbox" ${checked} onchange="updateStudentSelection('${escapeHtml(s.id)}', this.checked)">` : "—"}</td>
             <td><strong>${escapeHtml(s.name || "-")}</strong><br><span class="small-note">${escapeHtml(s.uid || "-")} ・ ${escapeHtml(s.card_id || "-")}</span></td>
             <td><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><br><span class="small-note">${escapeHtml(s.student_type || "normal")}</span></td>
             <td><strong>${Number(s.points || 0).toLocaleString()}</strong><br><span class="small-note">${escapeHtml(s.title || "無 title")}</span></td>
             <td><span class="badge ${weekly ? "ok" : "warn"}">${weekly ? "已啟用" : "未啟用"}</span><br><span class="small-note" style="color:${email && !emailOk ? "var(--red)" : "var(--muted)"}">${escapeHtml(email || "無 Email")}</span></td>
             <td><strong>${escapeHtml(avatarName)}</strong><br><span class="small-note">解鎖 ${Number(s.unlocked_avatar_count || 0)} 個</span></td>
             <td><span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span><br><span class="small-note">${escapeHtml(s.school_code || "")}</span></td>
+            <td><div class="student-action-row"><button class="btn-compact" onclick="openStudentEditor('${escapeHtml(s.id)}')">編輯</button>${s.is_active ? `<button class="btn-compact danger" onclick="openStudentEditor('${escapeHtml(s.id)}')">停用</button>` : `<button class="btn-compact ok" onclick="openStudentEditor('${escapeHtml(s.id)}')">啟用</button>`}</div></td>
           </tr>`;
-      }).join("") : `<tr><td colspan="6"><div class="empty-state">沒有符合條件的學生。</div></td></tr>`;
+      }).join("") : `<tr><td colspan="8"><div class="empty-state">沒有符合條件的學生。</div></td></tr>`;
 
       document.getElementById("studentsTableWrap").innerHTML = `
-        <table>
-          <thead><tr><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th></tr></thead>
+        <table style="min-width:1040px;">
+          <thead><tr><th style="width:42px;">選取</th><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
           <tbody>${body}</tbody>
         </table>`;
+      updateSelectedStudentCount();
+    }
+
+
+
+    function currentConsoleSchoolCode() {
+      return session?.school?.schoolCode || session?.schoolCode || studentsCache?.schoolCode || "";
+    }
+
+    async function consoleSaveStudentsAction(payload) {
+      if (TappieAPI && typeof TappieAPI.consoleSaveStudents === "function") {
+        return await TappieAPI.consoleSaveStudents({ token: session.token, ...payload });
+      }
+      return await fetch(`${TappieAPI.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1"}/console-save-students`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.token}` },
+        body: JSON.stringify({ token: session.token, ...payload })
+      }).then(r => r.json());
+    }
+
+    function getStudentById(id) {
+      return (studentsCache?.students || []).find(s => String(s.id) === String(id)) || null;
+    }
+
+    function canAddActiveStudent() {
+      const summary = studentsCache?.summary || {};
+      const limit = Number(summary.studentLimit || 0);
+      if (!limit) return { ok: true };
+      const active = Number(summary.activeStudents || 0);
+      if (active >= limit) return { ok: false, active, limit };
+      return { ok: true, active, limit };
+    }
+
+    function openStudentEditor(studentId) {
+      if (session.role !== "super_admin") { alert("只有校區 Super Admin 可以編輯學生。"); return; }
+      const isNew = !studentId;
+      if (isNew) {
+        const seat = canAddActiveStudent();
+        if (!seat.ok) {
+          alert(`⛔ 已達學生方案上限\n\n目前啟用學生：${seat.active} 位\n方案上限：${seat.limit} 位\n\n請先停用不使用的學生，或升級方案後再新增。`);
+          return;
+        }
+      }
+      const s = isNew ? null : getStudentById(studentId);
+      if (!isNew && !s) { alert("找不到學生資料，請重新整理後再試。"); return; }
+      document.getElementById("studentModalTitle").textContent = isNew ? "新增學生" : "編輯學生資料";
+      document.getElementById("studentModalSubtitle").textContent = isNew ? "新增後會自動配發預設角色，並受 student_limit 約束。" : `${s.name || s.uid}｜${s.school_code || currentConsoleSchoolCode()}`;
+      document.getElementById("editStudentId").value = s?.id || "";
+      document.getElementById("editStudentName").value = s?.name || "";
+      document.getElementById("editStudentUid").value = s?.uid || (currentConsoleSchoolCode() ? `${currentConsoleSchoolCode()}-` : "");
+      document.getElementById("editStudentType").value = s?.student_type || "一般生";
+      document.getElementById("editStudentClass").value = s?.class_code || "";
+      document.getElementById("editStudentEmail").value = s?.parent_email || "";
+      document.getElementById("editStudentWeekly").value = String(Boolean(s?.weekly_report_enabled));
+      document.getElementById("editStudentActive").value = String(isNew ? true : Boolean(s?.is_active));
+      document.getElementById("editStudentPoints").value = Number(s?.points || 0);
+      document.getElementById("editStudentTitle").value = s?.title || "";
+      const delBtn = document.getElementById("studentDisableBtn");
+      delBtn.style.display = isNew ? "none" : "inline-flex";
+      delBtn.textContent = s?.is_active ? "停用學生" : "重新啟用學生";
+      delBtn.className = s?.is_active ? "btn-compact danger" : "btn-compact ok";
+      document.getElementById("studentEditModal").classList.add("show");
+      toggleConsoleClassHint();
+    }
+
+    function closeStudentModal(event) {
+      if (event && event.target && event.target.id !== "studentEditModal") return;
+      hideStudentModal();
+    }
+    function hideStudentModal() { document.getElementById("studentEditModal")?.classList.remove("show"); }
+    function toggleConsoleClassHint() {
+      const type = document.getElementById("editStudentType")?.value || "";
+      const note = document.getElementById("studentFormNote");
+      if (!note) return;
+      note.textContent = type === "美語資優生"
+        ? "美語資優生必須填寫班級代碼，才會出現在對應單元、挑戰與排行榜。"
+        : "一般生可以不填班級代碼；若啟用週報，請確認 Parent Email 正確。";
+    }
+
+    async function saveConsoleStudent() {
+      const id = document.getElementById("editStudentId").value.trim();
+      let uid = document.getElementById("editStudentUid").value.trim();
+      const schoolCode = currentConsoleSchoolCode();
+      if (schoolCode && uid && !uid.includes("-")) uid = `${schoolCode}-${uid}`;
+      const name = document.getElementById("editStudentName").value.trim();
+      const type = document.getElementById("editStudentType").value;
+      const classId = document.getElementById("editStudentClass").value.trim();
+      const parentEmail = document.getElementById("editStudentEmail").value.trim();
+      const weeklyReportEnabled = document.getElementById("editStudentWeekly").value === "true";
+      const isActive = document.getElementById("editStudentActive").value === "true";
+      const pointsRaw = document.getElementById("editStudentPoints").value;
+      const title = document.getElementById("editStudentTitle").value.trim();
+      if (!uid || !name) { alert("UID 與學生姓名為必填。"); return; }
+      if (type === "美語資優生" && !classId) { alert("美語資優生必須填寫班級代碼。"); return; }
+      if (parentEmail && !isValidEmail(parentEmail)) { alert("Parent Email 格式不正確，請修正或清空。"); return; }
+      if (!id && isActive) {
+        const seat = canAddActiveStudent();
+        if (!seat.ok) { alert(`⛔ 已達學生方案上限\n\n目前啟用學生：${seat.active} 位\n方案上限：${seat.limit} 位`); return; }
+      }
+      const btn = document.getElementById("studentSaveBtn");
+      btn.disabled = true; btn.textContent = "儲存中...";
+      try {
+        const result = await consoleSaveStudentsAction({
+          action: "save_student",
+          student: {
+            id: id || null,
+            uid,
+            cardId: uid,
+            name,
+            type,
+            classId: type === "一般生" ? "" : classId,
+            parentEmail,
+            weeklyReportEnabled,
+            isActive,
+            points: pointsRaw === "" ? undefined : Number(pointsRaw),
+            title
+          }
+        });
+        if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "save_student_failed");
+        hideStudentModal();
+        studentsCache = null;
+        await loadStudentsData(true);
+      } catch (err) {
+        alert("學生儲存失敗：" + (err.message || err));
+      } finally {
+        btn.disabled = false; btn.textContent = "儲存學生";
+      }
+    }
+
+    async function disableCurrentStudent() {
+      const id = document.getElementById("editStudentId").value.trim();
+      if (!id) return;
+      const s = getStudentById(id);
+      if (!s) { alert("找不到學生資料。"); return; }
+      if (s.is_active) {
+        const input = prompt(`請輸入「停用」確認停用學生：${s.name || s.uid}`);
+        if (input !== "停用") return;
+      } else {
+        if (!confirm(`確定要重新啟用學生：${s.name || s.uid}？`)) return;
+      }
+      try {
+        const result = s.is_active
+          ? await consoleSaveStudentsAction({ action: "delete_student", id })
+          : await consoleSaveStudentsAction({ action: "save_student", student: { ...s, id, uid: s.uid, cardId: s.card_id || s.uid, name: s.name, type: s.student_type, classId: s.class_code, parentEmail: s.parent_email, weeklyReportEnabled: Boolean(s.weekly_report_enabled), isActive: true, points: s.points, title: s.title || "" } });
+        if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "student_status_failed");
+        hideStudentModal();
+        studentsCache = null;
+        await loadStudentsData(true);
+      } catch (err) { alert("狀態修改失敗：" + (err.message || err)); }
+    }
+
+    function toggleStudentBatchMode() {
+      studentBatchMode = !studentBatchMode;
+      if (!studentBatchMode) selectedStudentIds.clear();
+      const btn = document.getElementById("studentBatchToggleBtn");
+      if (btn) btn.textContent = studentBatchMode ? "結束批量" : "批量模式";
+      const bar = document.getElementById("studentBatchActions");
+      if (bar) bar.classList.toggle("show", studentBatchMode);
+      renderStudentsTable();
+      updateSelectedStudentCount();
+    }
+    function updateStudentSelection(id, checked) {
+      if (checked) selectedStudentIds.add(String(id)); else selectedStudentIds.delete(String(id));
+      updateSelectedStudentCount();
+    }
+    function clearStudentSelection() { selectedStudentIds.clear(); renderStudentsTable(); updateSelectedStudentCount(); }
+    function updateSelectedStudentCount() { const el = document.getElementById("studentSelectedCount"); if (el) el.textContent = `已選 ${selectedStudentIds.size} 位`; }
+    function getVisibleStudentRows() {
+      const q = String(document.getElementById("studentSearchInput")?.value || "").trim().toLowerCase();
+      const classFilter = document.getElementById("studentClassFilter")?.value || "all";
+      const statusFilter = document.getElementById("studentStatusFilter")?.value || "active";
+      const weeklyFilter = document.getElementById("studentWeeklyFilter")?.value || "all";
+      let rows = studentsCache?.students || [];
+      if (q) rows = rows.filter(s => [s.name, s.uid, s.card_id, s.parent_email, s.school_code].some(v => String(v || "").toLowerCase().includes(q)));
+      if (classFilter !== "all") rows = rows.filter(s => String(s.class_code || "") === classFilter);
+      if (statusFilter === "active") rows = rows.filter(s => Boolean(s.is_active));
+      if (statusFilter === "inactive") rows = rows.filter(s => !Boolean(s.is_active));
+      if (weeklyFilter === "enabled") rows = rows.filter(s => Boolean(s.weekly_report_enabled));
+      if (weeklyFilter === "disabled") rows = rows.filter(s => !Boolean(s.weekly_report_enabled));
+      if (weeklyFilter === "invalid_email") rows = rows.filter(s => s.parent_email && !isValidEmail(s.parent_email));
+      return rows;
+    }
+    function selectVisibleStudents(checked) { for (const s of getVisibleStudentRows()) { if (checked) selectedStudentIds.add(String(s.id)); else selectedStudentIds.delete(String(s.id)); } renderStudentsTable(); updateSelectedStudentCount(); }
+    function openBatchStudentEditor() {
+      if (!selectedStudentIds.size) { alert("請先勾選學生。"); return; }
+      document.getElementById("batchModalSubtitle").textContent = `即將修改 ${selectedStudentIds.size} 位學生。只會修改有設定的欄位。`;
+      document.getElementById("batchStudentType").value = "__nochange";
+      document.getElementById("batchStudentClass").value = "";
+      document.getElementById("batchStudentActive").value = "__nochange";
+      document.getElementById("batchStudentWeekly").value = "__nochange";
+      document.getElementById("studentBatchModal").classList.add("show");
+    }
+    function closeBatchModal(event) { if (event && event.target && event.target.id !== "studentBatchModal") return; hideBatchModal(); }
+    function hideBatchModal() { document.getElementById("studentBatchModal")?.classList.remove("show"); }
+    function toggleBatchClassHint() {}
+    async function saveBatchStudents() {
+      if (!selectedStudentIds.size) { alert("沒有選取學生。"); return; }
+      const patch = {};
+      const type = document.getElementById("batchStudentType").value;
+      const classCode = document.getElementById("batchStudentClass").value.trim();
+      const active = document.getElementById("batchStudentActive").value;
+      const weekly = document.getElementById("batchStudentWeekly").value;
+      if (type !== "__nochange") patch.student_type = type;
+      if (classCode) patch.class_code = classCode;
+      if (type === "一般生") patch.class_code = "";
+      if (active !== "__nochange") patch.is_active = active === "true";
+      if (weekly !== "__nochange") patch.weekly_report_enabled = weekly === "true";
+      if (!Object.keys(patch).length) { alert("你沒有設定任何修改內容。"); return; }
+      if (patch.student_type === "美語資優生" && !patch.class_code) { alert("批量設為美語資優生時，請填寫班級代碼。"); return; }
+      if (!confirm(`確定要批量修改 ${selectedStudentIds.size} 位學生嗎？`)) return;
+      const btn = document.getElementById("batchSaveBtn");
+      btn.disabled = true; btn.textContent = "執行中...";
+      try {
+        const result = await consoleSaveStudentsAction({ action: "batch_update_students", studentIds: Array.from(selectedStudentIds), patch });
+        if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "batch_update_failed");
+        hideBatchModal();
+        studentBatchMode = false; selectedStudentIds.clear(); studentsCache = null;
+        await loadStudentsData(true);
+      } catch (err) { alert("批量修改失敗：" + (err.message || err)); }
+      finally { btn.disabled = false; btn.textContent = "確認批量修改"; }
     }
 
     function renderWeekly() {
