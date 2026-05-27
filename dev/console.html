@@ -493,6 +493,8 @@
     let healthLoading = false;
     let overviewCache = null;
     let overviewLoading = false;
+    let studentsCache = null;
+    let studentsLoading = false;
 
     const navByRole = {
       owner: [
@@ -640,11 +642,15 @@
       if (page === "health") {
         loadHealthData(false);
       }
+      if (page === "students") {
+        loadStudentsData(false);
+      }
     }
 
     function renderPage(page) {
       if (page === "overview") return renderOverview();
       if (page === "health") return renderHealth();
+      if (page === "students") return renderStudents();
       if (page === "weekly") return renderWeekly();
       return renderPlaceholder(page);
     }
@@ -708,6 +714,48 @@
             <table>
               <thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead>
               <tbody><tr><td colspan="6">正在讀取 health views...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStudents() {
+      return `
+        <div class="grid cards">
+          <div class="card"><div class="metric-label">學生數</div><div id="stuTotal" class="metric-value">—</div><div id="stuLimitNote" class="metric-note">學生方案上限</div></div>
+          <div class="card"><div class="metric-label">啟用學生</div><div id="stuActive" class="metric-value">—</div><div class="metric-note">is_active = true</div></div>
+          <div class="card"><div class="metric-label">週報對象</div><div id="stuWeekly" class="metric-value">—</div><div class="metric-note">weekly_report_enabled</div></div>
+          <div class="card"><div class="metric-label">Email 健康</div><div id="stuEmailHealth" class="metric-value">—</div><div class="metric-note">有效 Parent Email</div></div>
+        </div>
+
+        <div class="card" style="margin-top:18px;">
+          <div class="panel-title">
+            <h2>學生資料總覽</h2>
+            <button class="badge ok" onclick="loadStudentsData(true)">重新整理</button>
+          </div>
+          <div class="toolbar">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <input id="studentSearchInput" class="search-input" placeholder="搜尋姓名 / UID / 卡號 / Email" oninput="renderStudentsTable()" style="min-width:260px;" />
+              <select id="studentClassFilter" class="select" onchange="renderStudentsTable()"><option value="all">全部班級</option></select>
+              <select id="studentStatusFilter" class="select" onchange="renderStudentsTable()">
+                <option value="active">啟用學生</option>
+                <option value="all">全部學生</option>
+                <option value="inactive">停用學生</option>
+              </select>
+              <select id="studentWeeklyFilter" class="select" onchange="renderStudentsTable()">
+                <option value="all">週報狀態</option>
+                <option value="enabled">週報啟用</option>
+                <option value="disabled">週報未啟用</option>
+                <option value="invalid_email">Email 異常</option>
+              </select>
+            </div>
+            <div class="muted-text" id="studentTableNote">正在讀取學生資料...</div>
+          </div>
+          <div id="studentsTableWrap" class="table-wrap">
+            <table>
+              <thead><tr><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th></tr></thead>
+              <tbody><tr><td colspan="6">正在讀取 students...</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -965,6 +1013,100 @@
       document.getElementById("healthTableWrap").innerHTML = `
         <table>
           <thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>`;
+    }
+
+    async function loadStudentsData(force = false) {
+      if (!session || !session.token) return;
+      if (studentsLoading) return;
+      if (studentsCache && !force) {
+        updateStudentsUI();
+        return;
+      }
+      studentsLoading = true;
+      try {
+        const data = await TappieAPI.consoleGetStudents({ token: session.token });
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_students_failed");
+        studentsCache = data;
+        updateStudentsUI();
+      } catch (err) {
+        console.error("loadStudentsData failed", err);
+        const wrap = document.getElementById("studentsTableWrap") || document.getElementById("pageContent");
+        if (wrap) wrap.innerHTML = `<div class="empty-state">學生資料讀取失敗：${escapeHtml(err.message || err)}</div>`;
+      } finally {
+        studentsLoading = false;
+      }
+    }
+
+    function isValidEmail(email) {
+      const e = String(email || "").trim();
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+    }
+
+    function updateStudentsUI() {
+      if (!studentsCache || !document.getElementById("stuTotal")) return;
+      const summary = studentsCache.summary || {};
+      document.getElementById("stuTotal").textContent = String(summary.totalStudents ?? 0);
+      document.getElementById("stuActive").textContent = String(summary.activeStudents ?? 0);
+      document.getElementById("stuWeekly").textContent = String(summary.weeklyReportEnabled ?? 0);
+      document.getElementById("stuEmailHealth").textContent = `${Number(summary.validParentEmails || 0)} / ${Number(summary.parentEmailCount || 0)}`;
+      const limit = summary.studentLimit && Number(summary.studentLimit) > 0 ? summary.studentLimit : "不限";
+      document.getElementById("stuLimitNote").textContent = `上限：${limit}`;
+      setupStudentClassFilter();
+      renderStudentsTable();
+    }
+
+    function setupStudentClassFilter() {
+      const select = document.getElementById("studentClassFilter");
+      if (!select || !studentsCache) return;
+      const current = select.value || "all";
+      const classes = [...new Set((studentsCache.students || []).map(s => s.class_code || s.classCode).filter(Boolean))].sort();
+      select.innerHTML = `<option value="all">全部班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      if (["all", ...classes].includes(current)) select.value = current;
+    }
+
+    function renderStudentsTable() {
+      if (!studentsCache || !document.getElementById("studentsTableWrap")) return;
+      const q = String(document.getElementById("studentSearchInput")?.value || "").trim().toLowerCase();
+      const classFilter = document.getElementById("studentClassFilter")?.value || "all";
+      const statusFilter = document.getElementById("studentStatusFilter")?.value || "active";
+      const weeklyFilter = document.getElementById("studentWeeklyFilter")?.value || "all";
+
+      let rows = studentsCache.students || [];
+      if (q) {
+        rows = rows.filter(s => [s.name, s.uid, s.card_id, s.parent_email, s.school_code]
+          .some(v => String(v || "").toLowerCase().includes(q)));
+      }
+      if (classFilter !== "all") rows = rows.filter(s => String(s.class_code || "") === classFilter);
+      if (statusFilter === "active") rows = rows.filter(s => Boolean(s.is_active));
+      if (statusFilter === "inactive") rows = rows.filter(s => !Boolean(s.is_active));
+      if (weeklyFilter === "enabled") rows = rows.filter(s => Boolean(s.weekly_report_enabled));
+      if (weeklyFilter === "disabled") rows = rows.filter(s => !Boolean(s.weekly_report_enabled));
+      if (weeklyFilter === "invalid_email") rows = rows.filter(s => s.parent_email && !isValidEmail(s.parent_email));
+
+      const note = document.getElementById("studentTableNote");
+      if (note) note.textContent = `顯示 ${rows.length} / ${(studentsCache.students || []).length} 位學生`;
+
+      const body = rows.length ? rows.map(s => {
+        const email = String(s.parent_email || "").trim();
+        const emailOk = email ? isValidEmail(email) : false;
+        const weekly = Boolean(s.weekly_report_enabled);
+        const avatarName = s.equipped_avatar_name || s.equipped_avatar_id || "未設定";
+        return `
+          <tr>
+            <td><strong>${escapeHtml(s.name || "-")}</strong><br><span class="small-note">${escapeHtml(s.uid || "-")} ・ ${escapeHtml(s.card_id || "-")}</span></td>
+            <td><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><br><span class="small-note">${escapeHtml(s.student_type || "normal")}</span></td>
+            <td><strong>${Number(s.points || 0).toLocaleString()}</strong><br><span class="small-note">${escapeHtml(s.title || "無 title")}</span></td>
+            <td><span class="badge ${weekly ? "ok" : "warn"}">${weekly ? "已啟用" : "未啟用"}</span><br><span class="small-note" style="color:${email && !emailOk ? "var(--red)" : "var(--muted)"}">${escapeHtml(email || "無 Email")}</span></td>
+            <td><strong>${escapeHtml(avatarName)}</strong><br><span class="small-note">解鎖 ${Number(s.unlocked_avatar_count || 0)} 個</span></td>
+            <td><span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span><br><span class="small-note">${escapeHtml(s.school_code || "")}</span></td>
+          </tr>`;
+      }).join("") : `<tr><td colspan="6"><div class="empty-state">沒有符合條件的學生。</div></td></tr>`;
+
+      document.getElementById("studentsTableWrap").innerHTML = `
+        <table>
+          <thead><tr><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th></tr></thead>
           <tbody>${body}</tbody>
         </table>`;
     }
