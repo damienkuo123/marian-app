@@ -598,6 +598,52 @@
       .main { padding: 18px 16px 105px; }
       .topbar { align-items:flex-start; height:auto; flex-direction:column; }
     }
+
+
+    /* =======================================================
+       ✉️ Weekly Reports Console Full Action
+       ======================================================= */
+    .weekly-console-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px;}
+    @media (min-width:1100px){.weekly-console-grid{grid-template-columns:1fr 1fr;}.weekly-console-grid .wide{grid-column:1/-1;}}
+    .weekly-panel{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:22px;box-shadow:var(--shadow);}
+    .weekly-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;}
+    .weekly-panel-head h3{margin:0;font-size:18px;letter-spacing:-.02em;color:var(--text);}
+    .weekly-panel-head p{margin:6px 0 0;color:var(--muted);font-weight:650;line-height:1.55;font-size:13px;}
+    .weekly-form-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+    @media (min-width:760px){.weekly-form-grid.two{grid-template-columns:1fr 1fr;}.weekly-form-grid.three{grid-template-columns:1fr 1fr 1fr;}}
+    .weekly-field{display:flex;flex-direction:column;gap:8px;}
+    .weekly-field label{font-size:12px;color:var(--muted);font-weight:800;}
+    .weekly-field input,.weekly-field select{width:100%;box-sizing:border-box;border:1px solid var(--border);background:var(--bg-soft);color:var(--text);border-radius:14px;padding:12px 13px;font-weight:750;outline:none;}
+    .weekly-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);background:var(--bg-soft);border-radius:16px;padding:14px 15px;}
+    .weekly-toggle strong{display:block;color:var(--text);font-size:14px;}
+    .weekly-toggle span{display:block;color:var(--muted);font-size:12px;font-weight:650;margin-top:3px;}
+    .weekly-toggle input{transform:scale(1.2);accent-color:var(--green);}
+    .weekly-button-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;justify-content:flex-end;}
+    .weekly-btn{border:1px solid var(--border);background:var(--bg-soft);color:var(--text);border-radius:14px;padding:11px 14px;font-weight:850;cursor:pointer;transition:.16s ease;}
+    .weekly-btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(15,23,42,.08);}
+    .weekly-btn.primary{background:linear-gradient(135deg,#2563eb,#38bdf8);border-color:transparent;color:white;}
+    .weekly-btn.orange{background:linear-gradient(135deg,#f97316,#facc15);border-color:transparent;color:#111827;}
+    .weekly-btn.purple{background:linear-gradient(135deg,#7c3aed,#a78bfa);border-color:transparent;color:white;}
+    .weekly-btn:disabled{opacity:.48;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+    .weekly-status-card{border:1px solid var(--border);background:var(--bg-soft);border-radius:18px;padding:16px;}
+    .weekly-status-title{display:flex;align-items:center;gap:8px;font-weight:900;color:var(--text);margin-bottom:6px;}
+    .weekly-status-sub{color:var(--muted);font-weight:650;font-size:13px;line-height:1.65;}
+    .weekly-mini-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto;padding-right:4px;}
+    .weekly-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+    .weekly-row:last-child{border-bottom:0;}
+    .weekly-row-title{font-weight:900;color:var(--text);font-size:14px;}
+    .weekly-row-sub{color:var(--muted);font-weight:650;font-size:12px;margin-top:4px;word-break:break-all;}
+    .weekly-count-btn{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:850;cursor:pointer;margin:2px;}
+    .weekly-result-box{white-space:pre-wrap;background:var(--bg-soft);border:1px solid var(--border);border-radius:16px;padding:14px;color:var(--muted);font-size:13px;line-height:1.65;max-height:260px;overflow:auto;margin-top:12px;}
+    .weekly-insight-strip{display:grid;grid-template-columns:1fr;gap:12px;margin-top:18px;}
+    @media (min-width:920px){.weekly-insight-strip{grid-template-columns:repeat(4,1fr);}}
+    .weekly-insight{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .weekly-insight .label{color:var(--muted);font-weight:800;font-size:12px;}
+    .weekly-insight .value{font-size:30px;font-weight:950;color:var(--text);margin-top:8px;letter-spacing:-.04em;}
+    .weekly-insight .note{color:var(--muted);font-weight:700;font-size:12px;margin-top:6px;}
+    .weekly-progress{height:8px;background:var(--bg-soft);border-radius:999px;overflow:hidden;margin-top:12px;border:1px solid var(--border);}
+    .weekly-progress>div{height:100%;background:linear-gradient(90deg,#22c55e,#38bdf8);border-radius:999px;width:0%;transition:.4s ease;}
+
   </style>
 </head>
 <body>
@@ -745,6 +791,8 @@
     let overviewLoading = false;
     let studentsCache = null;
     let studentsLoading = false;
+    let weeklyCache = null;
+    let weeklyLoading = false;
     let studentBatchMode = false;
     let selectedStudentIds = new Set();
 
@@ -896,6 +944,9 @@
       }
       if (page === "students") {
         loadStudentsData(false);
+      }
+      if (page === "weekly") {
+        loadWeeklyData(false);
       }
     }
 
@@ -1674,18 +1725,236 @@
     }
 
     function renderWeekly() {
+      if (session.role === "owner") {
+        return `
+          <div class="card">
+            <div class="panel-title"><h2>週報中心</h2><span class="badge warn">Owner 總覽待開發</span></div>
+            <p style="color:var(--muted);font-weight:700;line-height:1.8;">目前週報操作先開放給單一校區 Super Admin。Owner 版會做成多校區寄送狀態總覽，不提供跨校一鍵寄送。</p>
+          </div>`;
+      }
       return `
-        <div class="grid cards">
-          <div class="card"><div class="metric-label">週報啟用</div><div class="metric-value">—</div><div class="metric-note">Weekly_Report_Config</div></div>
-          <div class="card"><div class="metric-label">本週已寄</div><div class="metric-value">—</div><div class="metric-note">weekly_report_jobs</div></div>
-          <div class="card"><div class="metric-label">收件人健康</div><div class="metric-value">—</div><div class="metric-note">students.parent_email</div></div>
-          <div class="card"><div class="metric-label">待發專欄</div><div class="metric-value">—</div><div class="metric-note">待發專欄順位</div></div>
+        <div class="weekly-insight-strip">
+          <div class="weekly-insight"><div class="label">週報對象</div><div id="wkEnabledStudents" class="value">—</div><div id="wkEnabledNote" class="note">已啟用週報學生</div><div class="weekly-progress"><div id="wkRecipientBar"></div></div></div>
+          <div class="weekly-insight"><div class="label">可寄送</div><div id="wkEligibleStudents" class="value">—</div><div class="note">有效 Parent Email</div></div>
+          <div class="weekly-insight"><div class="label">今日狀態</div><div id="wkTodayStatus" class="value" style="font-size:24px;">—</div><div id="wkTodayNote" class="note">report_key</div></div>
+          <div class="weekly-insight"><div class="label">待發專欄</div><div id="wkNewsletter" class="value">—</div><div id="wkNewsletterNote" class="note">display_order = 1</div></div>
         </div>
-        <div class="card" style="margin-top:18px;">
-          <div class="panel-title"><h2>週報中心</h2><span class="badge warn">UI Placeholder</span></div>
-          <p style="color:var(--muted);font-weight:700;line-height:1.8;">下一版會把 admin.html 的週報設定、測試寄給自己、正式寄送、最近寄送紀錄、收件人健康檢查移入這裡。</p>
+
+        <div class="weekly-console-grid">
+          <div class="weekly-panel">
+            <div class="weekly-panel-head">
+              <div><h3>家長週報設定</h3><p>控制每校自動週報排程。正式寄送採當下往前 7 天，並有今日不得重寄保護。</p></div>
+              <span id="wkConfigBadge" class="badge warn">讀取中</span>
+            </div>
+            <div class="weekly-toggle">
+              <div><strong>啟用家長週報</strong><span>關閉時自動 Gate 不會正式寄送。</span></div>
+              <input type="checkbox" id="wkEnabled" />
+            </div>
+            <div class="weekly-form-grid two" style="margin-top:14px;">
+              <div class="weekly-field"><label>寄送星期</label><select id="wkSendDay"><option value="MON">週一</option><option value="TUE">週二</option><option value="WED">週三</option><option value="THU">週四</option><option value="FRI">週五</option><option value="SAT">週六</option><option value="SUN">週日</option></select></div>
+              <div class="weekly-field"><label>寄送時間（整點）</label><select id="wkSendHour"></select></div>
+              <div class="weekly-field"><label>統計區間</label><select id="wkRollingDays"><option value="7">往前 7 天</option></select></div>
+              <div class="weekly-field"><label>時區</label><input value="Asia/Taipei" disabled /></div>
+            </div>
+            <div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyConfig(this)">儲存週報設定</button></div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head">
+              <div><h3>任務結算通知</h3><p>單元任務結算後，寄送未達標名單與排行榜摘要給校區管理信箱。</p></div>
+              <span id="wkNotifyBadge" class="badge warn">讀取中</span>
+            </div>
+            <div class="weekly-toggle">
+              <div><strong>啟用任務結算通知</strong><span>Auto Settlement 完成後通知校區管理者。</span></div>
+              <input type="checkbox" id="wkNotifyEnabled" />
+            </div>
+            <div class="weekly-field" style="margin-top:14px;"><label>校區通知信箱</label><input id="wkMissionEmail" placeholder="例如：admin@school.com" /></div>
+            <div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyNotification(this)">儲存通知設定</button></div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head"><div><h3>今日寄送狀態</h3><p>正式寄送成功後，今天內不提供重寄，避免重複寄信與成本浪費。</p></div></div>
+            <div id="wkTodayBox" class="weekly-status-card">正在讀取...</div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head"><div><h3>本週週報專欄</h3><p>只取 display_order = 1 且未封存的校區專欄。測試寄送不會封存。</p></div></div>
+            <div id="wkNewsletterBox" class="weekly-status-card">正在讀取...</div>
+          </div>
+
+          <div class="weekly-panel wide">
+            <div class="weekly-panel-head"><div><h3>收件人健康檢查</h3><p>顯示會收到週報的學生，以及缺少信箱或格式異常的學生。</p></div><span id="wkRecipientBadge" class="badge warn">—</span></div>
+            <div id="wkRecipientSummary" class="weekly-status-sub"></div>
+            <div id="wkRecipientList" class="weekly-mini-list" style="margin-top:10px;"></div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head"><div><h3>測試與正式寄送</h3><p>測試寄給自己會選擇近 7 天資料較完整的學生作為範例，不寄給家長、不封存專欄。</p></div></div>
+            <div class="weekly-field"><label>測試收件信箱</label><input id="wkTestEmail" placeholder="輸入你的測試信箱" /></div>
+            <div class="weekly-button-row"><button class="weekly-btn purple" onclick="sendConsoleWeeklyTest(this)">測試寄給自己</button><button id="wkSendNowBtn" class="weekly-btn orange" onclick="sendConsoleWeeklyNow(this)">正式寄送</button></div>
+            <div id="wkActionResult" class="weekly-result-box hidden"></div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head"><div><h3>最近寄送紀錄</h3><p>可點擊成功 / 失敗 / 略過查看明細。</p></div><button class="weekly-btn" onclick="loadWeeklyData(true)">重新整理</button></div>
+            <div id="wkJobList" class="weekly-mini-list">正在讀取...</div>
+          </div>
         </div>
       `;
+    }
+
+    function getConsoleSchoolCode() { return session?.school?.schoolCode || session?.school?.school_code || ""; }
+    function initWeeklyHourOptions() {
+      const sel = document.getElementById("wkSendHour");
+      if (!sel || sel.dataset.ready) return;
+      sel.innerHTML = Array.from({length:24}, (_,h)=>`<option value="${h}">${String(h).padStart(2,"0")}:00</option>`).join("");
+      sel.dataset.ready = "1";
+    }
+    async function loadWeeklyData(force=false) {
+      if (session.role === "owner") return;
+      if (weeklyLoading) return;
+      if (weeklyCache && !force) { renderWeeklyData(weeklyCache); return; }
+      weeklyLoading = true;
+      try {
+        initWeeklyHourOptions();
+        const schoolCode = getConsoleSchoolCode();
+        const data = await TappieAPI.adminGetWeeklyReports(schoolCode);
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "讀取週報資料失敗");
+        weeklyCache = data;
+        renderWeeklyData(data);
+      } catch (err) {
+        console.error(err);
+        const box = document.getElementById("wkActionResult");
+        if (box) { box.classList.remove("hidden"); box.textContent = "週報資料讀取失敗：" + (err.message || err); }
+      } finally { weeklyLoading = false; }
+    }
+    function renderWeeklyData(data) {
+      initWeeklyHourOptions();
+      const cfg = data.config || {};
+      const notify = data.notificationConfig || {};
+      const stats = data.stats || {};
+      const enabled = !!cfg.enabled;
+      const eligible = Number(stats.eligibleStudents || 0);
+      const enabledStudents = Number(stats.enabledStudents || 0);
+      const pct = enabledStudents ? Math.round((eligible / enabledStudents) * 100) : 0;
+      document.getElementById("wkEnabledStudents").textContent = String(enabledStudents);
+      document.getElementById("wkEligibleStudents").textContent = String(eligible);
+      document.getElementById("wkEnabledNote").textContent = `有效收件率 ${pct}%`;
+      document.getElementById("wkRecipientBar").style.width = Math.max(0, Math.min(100,pct)) + "%";
+      document.getElementById("wkTodayStatus").textContent = data.todayLocked ? "已寄送" : "未寄送";
+      document.getElementById("wkTodayNote").textContent = data.todayReportKey || "今日 report_key";
+      const nl = data.currentNewsletter || {};
+      document.getElementById("wkNewsletter").textContent = nl.id ? "1" : "0";
+      document.getElementById("wkNewsletterNote").textContent = nl.id ? (nl.topic || "第 1 順位專欄") : "目前無第 1 順位";
+
+      document.getElementById("wkEnabled").checked = enabled;
+      document.getElementById("wkSendDay").value = cfg.sendDay || "MON";
+      document.getElementById("wkSendHour").value = String(Number(cfg.sendHour ?? 21));
+      document.getElementById("wkRollingDays").value = String(cfg.rollingDays || 7);
+      document.getElementById("wkConfigBadge").textContent = enabled ? "已啟用" : "未啟用";
+      document.getElementById("wkConfigBadge").className = "badge " + (enabled ? "ok" : "warn");
+
+      document.getElementById("wkNotifyEnabled").checked = !!notify.settlementNotificationEnabled;
+      document.getElementById("wkMissionEmail").value = notify.missionReportEmail || "";
+      document.getElementById("wkNotifyBadge").textContent = notify.settlementNotificationEnabled ? "已啟用" : "未啟用";
+      document.getElementById("wkNotifyBadge").className = "badge " + (notify.settlementNotificationEnabled ? "ok" : "warn");
+
+      const today = data.todayJob || {};
+      document.getElementById("wkTodayBox").innerHTML = data.todayLocked ? `
+        <div class="weekly-status-title"><span class="badge ok">今日已正式寄送</span></div>
+        <div class="weekly-status-sub">為避免家長重複收到信件，今日不開放再次正式寄送。<br>寄送時間：${formatDateTime(today.updated_at || today.created_at)}<br>成功 ${today.sent_count || 0}｜失敗 ${today.failed_count || 0}｜略過 ${today.skipped_count || 0}</div>
+      ` : `
+        <div class="weekly-status-title"><span class="badge warn">今日尚未正式寄送</span></div>
+        <div class="weekly-status-sub">可以先測試寄給自己，確認內容後再正式寄送。<br>Report Key：${escapeHtml(data.todayReportKey || "—")}</div>`;
+      const sendBtn = document.getElementById("wkSendNowBtn");
+      if (sendBtn) { sendBtn.disabled = !!data.todayLocked; sendBtn.textContent = data.todayLocked ? "今日已寄送" : "正式寄送"; }
+
+      document.getElementById("wkNewsletterBox").innerHTML = nl.id ? `
+        <div class="weekly-status-title"><span class="badge ok">第 1 順位專欄待寄出</span></div>
+        <div class="weekly-status-sub">${escapeHtml(nl.topic || "未命名專欄")}<br>正式全校寄送成功後，系統會寫入 sent_at / archived_at，並將後續 display_order 往前遞補。</div>
+      ` : `
+        <div class="weekly-status-title"><span class="badge warn">目前沒有第 1 順位專欄</span></div>
+        <div class="weekly-status-sub">週報仍可寄送，但不會包含專欄區塊。</div>`;
+
+      const recipients = Array.isArray(stats.eligibleRecipients) ? stats.eligibleRecipients : [];
+      const missing = Array.isArray(stats.missingEmailStudents) ? stats.missingEmailStudents : [];
+      document.getElementById("wkRecipientBadge").textContent = `${eligible} 可寄送 / ${stats.missingEmail || 0} 缺信箱`;
+      document.getElementById("wkRecipientBadge").className = "badge " + (Number(stats.missingEmail||0) ? "warn" : "ok");
+      document.getElementById("wkRecipientSummary").innerHTML = `啟用週報 ${enabledStudents} 位，可寄送 ${eligible} 位，缺少信箱 ${Number(stats.missingEmail||0)} 位。`;
+      let recHtml = recipients.map(s => `<div class="weekly-row"><div><div class="weekly-row-title">${escapeHtml(s.name||"")}</div><div class="weekly-row-sub">${escapeHtml(s.uid||"")}</div></div><div class="weekly-row-sub" style="text-align:right;">${escapeHtml(s.parentEmail||"")}</div></div>`).join("");
+      if (missing.length) recHtml += `<div class="weekly-row"><div><div class="weekly-row-title" style="color:var(--red);">缺少家長信箱</div><div class="weekly-row-sub">${missing.map(s=>escapeHtml(s.name||s.uid||"")).join("、")}</div></div></div>`;
+      document.getElementById("wkRecipientList").innerHTML = recHtml || `<div class="empty-state">目前沒有符合寄送條件的學生。</div>`;
+
+      const firstEmail = recipients[0]?.parentEmail || "";
+      if (!document.getElementById("wkTestEmail").value) document.getElementById("wkTestEmail").value = firstEmail;
+      const jobs = Array.isArray(data.latestJobs) ? data.latestJobs.slice(0,6) : [];
+      document.getElementById("wkJobList").innerHTML = jobs.map((j,idx)=>`
+        <div class="weekly-row">
+          <div><div class="weekly-row-title">${escapeHtml(statusText(j.status))}｜${escapeHtml(j.week_start||"")}～${escapeHtml(j.week_end||"")}</div><div class="weekly-row-sub">${escapeHtml(j.report_key||"無 report_key")}｜${formatDateTime(j.updated_at||j.created_at)}</div></div>
+          <div style="text-align:right;"><button class="weekly-count-btn" onclick="showConsoleWeeklyJobDetails(${idx},'sent')">成功 ${j.sent_count||0}</button><br><button class="weekly-count-btn" onclick="showConsoleWeeklyJobDetails(${idx},'failed')">失敗 ${j.failed_count||0}</button><button class="weekly-count-btn" onclick="showConsoleWeeklyJobDetails(${idx},'skipped')">略過 ${j.skipped_count||0}</button></div>
+        </div>`).join("") || `<div class="empty-state">尚無寄送紀錄。</div>`;
+    }
+    async function saveConsoleWeeklyConfig(btn) {
+      const old=btn.textContent; btn.disabled=true; btn.textContent="儲存中...";
+      try{
+        const schoolCode=getConsoleSchoolCode();
+        const config={enabled:document.getElementById("wkEnabled").checked,sendDay:document.getElementById("wkSendDay").value,sendHour:Number(document.getElementById("wkSendHour").value||21),sendMinute:0,rollingDays:Number(document.getElementById("wkRollingDays").value||7),sendTimezone:"Asia/Taipei"};
+        const res=await TappieAPI.adminSaveWeeklyReportConfig(schoolCode,config);
+        if(!res.success) throw new Error(res.message||res.error||"儲存失敗");
+        alert("✅ 週報設定已儲存"); weeklyCache=null; await loadWeeklyData(true);
+      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+    }
+    async function saveConsoleWeeklyNotification(btn) {
+      const old=btn.textContent; btn.disabled=true; btn.textContent="儲存中...";
+      try{
+        const res=await TappieAPI.adminWeeklyReportAction({action:"save_notifications",schoolCode:getConsoleSchoolCode(),config:{settlementNotificationEnabled:document.getElementById("wkNotifyEnabled").checked,missionReportEmail:document.getElementById("wkMissionEmail").value.trim()}});
+        if(!res.success) throw new Error(res.message||res.error||"儲存失敗");
+        alert("✅ 任務通知設定已儲存"); weeklyCache=null; await loadWeeklyData(true);
+      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+    }
+    async function sendConsoleWeeklyTest(btn) {
+      const email=document.getElementById("wkTestEmail").value.trim();
+      if(!email) return alert("請先輸入測試收件信箱");
+      if(!confirm(`確定要寄一封測試週報到 ${email} 嗎？\n測試寄送不會寄給家長，也不會封存專欄。`)) return;
+      const old=btn.textContent; btn.disabled=true; btn.textContent="寄送中...";
+      try{
+        const res=await TappieAPI.adminSendWeeklyReportTest({schoolCode:getConsoleSchoolCode(),testEmail:email});
+        if(!res.success) throw new Error(res.message||res.error||"測試寄送失敗");
+        alert("✅ 測試信已送出，請檢查信箱"); weeklyCache=null; await loadWeeklyData(true);
+      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+    }
+    async function sendConsoleWeeklyNow(btn) {
+      if(weeklyCache?.todayLocked) return alert("今日週報已完成正式寄送，今日不開放再次正式寄送。");
+      const count=weeklyCache?.stats?.eligibleStudents||0;
+      if(!count) return alert("目前沒有可寄送的家長信箱。");
+      if(!confirm(`確定要正式寄出今日週報嗎？\n將寄給 ${count} 位家長。\n正式寄送成功後，今日不得再次寄送，且第 1 順位專欄會自動封存並遞補。`)) return;
+      const old=btn.textContent; btn.disabled=true; btn.textContent="正式寄送中...";
+      try{
+        const res=await TappieAPI.adminSendWeeklyReportNow({schoolCode:getConsoleSchoolCode()});
+        if(!res.success) throw new Error(res.message||res.error||"正式寄送失敗");
+        alert("✅ 正式寄送流程完成"); weeklyCache=null; await loadWeeklyData(true);
+      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+    }
+    function showConsoleWeeklyJobDetails(idx, filter="failed") {
+      const job=(weeklyCache?.latestJobs||[])[Number(idx)];
+      const rows=Array.isArray(job?.summary?.results)?job.summary.results:[];
+      const wanted=String(filter||"").toLowerCase();
+      const filtered=rows.filter(r=>{const st=String(r.status||"").toLowerCase(); const email=r.email||{}; if(wanted==="sent")return st.includes("sent")||email.sent===true; if(wanted==="failed")return st.includes("fail")||r.error||email.error; if(wanted==="skipped")return st.includes("skip")||email.skipped===true; return true;});
+      const box=document.getElementById("wkActionResult");
+      box.classList.remove("hidden");
+      if(!filtered.length){box.textContent=`📋 ${filter}：目前沒有資料。`;return;}
+      box.textContent=filtered.map((r,i)=>`${i+1}. ${r.name||"未命名"}（${r.uid||"無 UID"}）\n   ${r.deliveryTo||r.parentEmail||r.email?.to||""}${(r.error||r.errorMessage||r.email?.reason||r.email?.error)?"\n   原因："+(r.error||r.errorMessage||r.email?.reason||r.email?.error):""}`).join("\n");
+    }
+
+    function statusText(status) {
+      const map = { completed:"已完成", failed:"失敗", running:"執行中", pending:"等待中", skipped:"略過" };
+      return map[String(status||"").toLowerCase()] || (status || "未知");
+    }
+    function formatDateTime(v) {
+      if (!v) return "—";
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return String(v);
+      return `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
     }
 
     function renderPlaceholder(page) {
