@@ -626,6 +626,19 @@
     .gami-tier-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:center; padding:12px; border:1px solid var(--border); background:var(--surface-2); border-radius:16px; }
     .gami-items { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
     .gami-item-row { display:grid; grid-template-columns:1.1fr .8fr .8fr .8fr auto; gap:10px; padding:12px; border:1px solid var(--border); background:var(--surface-2); border-radius:16px; align-items:end; }
+
+    .gami-item-row.gami-avatar-row { grid-template-columns: minmax(160px,1.35fr) .65fr .75fr .95fr; }
+    .gami-item-main { display:flex; gap:12px; align-items:center; min-width:0; }
+    .gami-item-icon { width:44px; height:44px; border-radius:14px; object-fit:cover; background:var(--surface); border:1px solid var(--border); flex:0 0 auto; }
+    .gami-item-name { font-weight:950; color:var(--text); line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .gami-item-sub { font-size:12px; color:var(--muted); font-weight:760; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .gami-slider-wrap { display:grid; grid-template-columns:1fr 82px; gap:10px; align-items:center; }
+    .gami-prob-slider { width:100%; accent-color:var(--primary); }
+    .gami-prob-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+    .gami-help-card { margin-top:12px; padding:13px 14px; border-radius:16px; background:rgba(37,99,235,.07); border:1px solid rgba(37,99,235,.14); color:var(--muted); font-size:13px; font-weight:650; line-height:1.65; }
+    .gami-prob-bar { height:8px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; margin-top:7px; }
+    .gami-prob-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,#38bdf8,#2563eb); }
+    @media (max-width:720px){ .gami-item-row, .gami-item-row.gami-avatar-row { grid-template-columns:1fr; } .gami-slider-wrap { grid-template-columns:1fr; } .gami-item-name { white-space:normal; } }
     .gami-prob-badge { display:inline-flex; gap:6px; align-items:center; padding:7px 11px; border-radius:999px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-weight:900; font-size:12px; }
     .gami-prob-badge.ok { color:var(--green); border-color:rgba(22,163,74,.28); background:rgba(22,163,74,.08); }
     .gami-prob-badge.warn { color:var(--red); border-color:rgba(220,38,38,.28); background:rgba(220,38,38,.08); }
@@ -4042,6 +4055,7 @@
     // 🕹 Gamification Settings Console Full Action
     // =======================================================
     let gamificationConsoleCache = null;
+    let gamificationAvatarCache = [];
     function defaultConsoleGamification(){
       return {
         dailyChallenge: { passScore: 60, tiers: [{min:80,pts:30},{min:70,pts:20},{min:60,pts:10}] },
@@ -4065,13 +4079,54 @@
     function normalizeGamiConsole(raw){
       const d = defaultConsoleGamification();
       const g = raw && typeof raw === 'object' ? raw : {};
+      const baseItems = Array.isArray(g.gachaItems) && g.gachaItems.length
+        ? g.gachaItems.map(x=>({
+            type:x.type||'points',
+            value:x.value ?? x.avatarId ?? x.avatar_id ?? 0,
+            avatarId:x.avatarId || x.avatar_id || (x.type==='avatar' ? x.value : ''),
+            name:x.name || x.avatarName || '',
+            rarity:x.rarity||'N',
+            prob:Number(x.prob??0)
+          }))
+        : d.gachaItems;
       return {
         dailyChallenge: { ...d.dailyChallenge, ...(g.dailyChallenge || {}) },
         mission: { ...d.mission, ...(g.mission || {}) },
         leaderboard: Array.isArray(g.leaderboard) ? [Number(g.leaderboard[0]??100), Number(g.leaderboard[1]??50), Number(g.leaderboard[2]??30)] : d.leaderboard,
         gachaPicks: { ...d.gachaPicks, ...(g.gachaPicks || {}) },
-        gachaItems: Array.isArray(g.gachaItems) && g.gachaItems.length ? g.gachaItems.map(x=>({ type:x.type||'points', value:x.value??0, rarity:x.rarity||'N', prob:Number(x.prob??0) })) : d.gachaItems
+        gachaItems: mergeGachaItemsWithSchoolAvatars(baseItems)
       };
+    }
+    function isGeneralSchoolAvatarForGacha(a){
+      const scope = typeof avatarScopeOf === 'function' ? avatarScopeOf(a) : (a.school_id || a.schoolId ? 'school' : 'global');
+      const catRaw = String(a.category || '').trim();
+      const cat = catRaw.toLowerCase();
+      const isGeneral = ['一般','general','normal','regular'].includes(catRaw) || ['general','normal','regular'].includes(cat) || catRaw === '';
+      return scope === 'school' && isGeneral && a.isActive !== false && a.is_active !== false;
+    }
+    function mergeGachaItemsWithSchoolAvatars(items){
+      const existing = Array.isArray(items) ? items.map(x=>({ ...x })) : [];
+      const byAvatar = new Map(existing.filter(x=>String(x.type)==='avatar').map(x=>[String(x.avatarId || x.value || ''), x]));
+      const result = existing.filter(x=>String(x.type)!=='avatar');
+      for(const a of (gamificationAvatarCache || []).filter(isGeneralSchoolAvatarForGacha)){
+        const id = String(a.id || a.avatarId || a.avatar_id || '');
+        if(!id) continue;
+        const old = byAvatar.get(id);
+        result.push({
+          type:'avatar', value:id, avatarId:id, name:a.name || id, rarity:a.rarity || 'N', img: (typeof avatarImgOf === 'function' ? avatarImgOf(a) : ''), prob:Number(old?.prob ?? 0)
+        });
+      }
+      return result;
+    }
+    async function loadGamificationSchoolAvatars(){
+      try{
+        const schoolCode = (typeof getSchoolCodeForAdmin === 'function') ? getSchoolCodeForAdmin() : getConsoleSchoolCode();
+        const base = TappieAPI?.supabaseBaseUrl || getConsoleFunctionBase();
+        const data = await fetch(`${base}/console-get-avatars`, {
+          method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${session?.token || ''}` }, body: JSON.stringify({ schoolCode })
+        }).then(r=>r.json());
+        if(data && data.success !== false) gamificationAvatarCache = Array.isArray(data.avatars) ? data.avatars : [];
+      }catch(err){ console.warn('[loadGamificationSchoolAvatars]', err); gamificationAvatarCache = []; }
     }
     function renderGamificationConsole(){
       return `
@@ -4121,9 +4176,14 @@
               </div>
             </div>
             <div class="gami-section">
-              <div class="panel-title"><div><h3>盲盒點數獎項機率</h3><p>此處設定點數獎項的絕對機率。總和必須剛好等於 100%。</p></div><span id="gamiProbBadge" class="gami-prob-badge">總和 —</span></div>
+              <div class="panel-title"><div><h3>盲盒獎項機率</h3><p>本校「一般」角色會自動列入盲盒，預設機率可為 0；角色稀有度依角色資料，不在此調整。</p></div><span id="gamiProbBadge" class="gami-prob-badge">總和 —</span></div>
+              <div class="gami-help-card">管理建議：先調整大概比例，再按「自動校正到 100%」。系統會依照目前比例縮放，不需要手算。</div>
+              <div class="gami-prob-actions">
+                <button class="btn-compact primary" onclick="normalizeGamificationProbabilities()">自動校正到 100%</button>
+                <button class="btn-compact" onclick="zeroAvatarProbabilities()">角色機率歸零</button>
+                <button class="btn-compact" onclick="addGamificationItemRow()">新增點數獎項</button>
+              </div>
               <div id="gamiItemsList" class="gami-items"></div>
-              <button class="btn-compact" style="margin-top:12px;" onclick="addGamificationItemRow()">新增點數獎項</button>
             </div>
             <div class="modal-actions" style="margin-top:22px;">
               <button class="btn-compact" onclick="loadGamificationConsole(true)">取消變更</button>
@@ -4140,14 +4200,15 @@
     async function loadGamificationConsole(force=false){
       try{
         if(!force && gamificationConsoleCache){ fillGamificationForm(gamificationConsoleCache); return; }
-        setGamificationStatus('⏳ 正在讀取遊戲化設定...', 'warn');
+        setGamificationStatus('⏳ 正在讀取遊戲化設定與角色清單...', 'warn');
+        await loadGamificationSchoolAvatars();
         const schoolCode = getConsoleSchoolCode();
         const res = await fetch(`${getConsoleFunctionBase()}/admin-get-gamification?schoolCode=${encodeURIComponent(schoolCode)}`);
         const data = await res.json().catch(()=>({}));
         if(!data.success) throw new Error(data.message || data.error || '讀取失敗');
         gamificationConsoleCache = normalizeGamiConsole(data.config || data.gamification || data.value || data);
         fillGamificationForm(gamificationConsoleCache);
-        setGamificationStatus('遊戲化設定已同步。','ok');
+        setGamificationStatus('遊戲化設定已同步；本校一般角色已自動列入盲盒清單。','ok');
       }catch(err){ setGamificationStatus('⚠️ 讀取失敗：' + (err.message || err), 'danger'); }
     }
     function setGamificationStatus(message,type=''){
@@ -4167,11 +4228,26 @@
       updateGamificationProbability();
     }
     function renderGamificationItemRow(it={},i=0){
+      const type = String(it.type || 'points');
+      const prob = Number(it.prob ?? 0);
+      if(type === 'avatar'){
+        const name = it.name || it.avatarName || it.value || it.avatarId || '角色';
+        const id = it.avatarId || it.value || '';
+        const rarity = it.rarity || 'N';
+        const img = it.img || '/assets/gacha-box.png';
+        return `<div class="gami-item-row gami-avatar-row" data-gami-item-row data-gami-fixed="avatar">
+          <div class="gami-item-main"><img class="gami-item-icon" src="${escapeHtml(img)}" onerror="this.src='/assets/gacha-box.png'"><div style="min-width:0;"><div class="gami-item-name">${escapeHtml(name)}</div><div class="gami-item-sub">本校角色｜${escapeHtml(id)}</div></div></div>
+          <div class="gami-field"><label>類型</label><input data-gami-type value="avatar" disabled></div>
+          <div class="gami-field"><label>稀有度</label><input data-gami-rarity value="${escapeHtml(rarity)}" disabled></div>
+          <div class="gami-field"><label>機率 %</label><div class="gami-slider-wrap"><input class="gami-prob-slider" data-gami-slider type="range" min="0" max="100" step="0.1" value="${prob}" oninput="syncGamiProbInputs(this)"><input data-gami-prob type="number" step="0.1" min="0" max="100" value="${prob}" oninput="syncGamiProbInputs(this)"></div><div class="gami-prob-bar"><div class="gami-prob-fill" style="width:${Math.max(0,Math.min(100,prob))}%"></div></div></div>
+          <input data-gami-value type="hidden" value="${escapeHtml(id)}">
+        </div>`;
+      }
       return `<div class="gami-item-row" data-gami-item-row>
-        <div class="gami-field"><label>類型</label><select data-gami-type><option value="points" ${it.type==='points'?'selected':''}>點數</option></select></div>
+        <div class="gami-field"><label>類型</label><select data-gami-type><option value="points" ${type==='points'?'selected':''}>點數</option></select></div>
         <div class="gami-field"><label>數值</label><input data-gami-value type="number" value="${Number(it.value??0)}"></div>
         <div class="gami-field"><label>稀有度</label><select data-gami-rarity>${['N','R','SR','SSR','UR'].map(r=>`<option value="${r}" ${String(it.rarity||'N')===r?'selected':''}>${r}</option>`).join('')}</select></div>
-        <div class="gami-field"><label>機率 %</label><input data-gami-prob type="number" step="0.1" value="${Number(it.prob??0)}" oninput="updateGamificationProbability()"></div>
+        <div class="gami-field"><label>機率 %</label><div class="gami-slider-wrap"><input class="gami-prob-slider" data-gami-slider type="range" min="0" max="100" step="0.1" value="${prob}" oninput="syncGamiProbInputs(this)"><input data-gami-prob type="number" step="0.1" min="0" max="100" value="${prob}" oninput="syncGamiProbInputs(this)"></div><div class="gami-prob-bar"><div class="gami-prob-fill" style="width:${Math.max(0,Math.min(100,prob))}%"></div></div></div>
         <button class="btn-compact danger" onclick="this.closest('[data-gami-item-row]').remove(); updateGamificationProbability();">刪除</button>
       </div>`;
     }
@@ -4180,9 +4256,38 @@
       el.insertAdjacentHTML('beforeend', renderGamificationItemRow({type:'points',value:10,rarity:'N',prob:1}, Date.now()));
       updateGamificationProbability();
     }
+    function syncGamiProbInputs(input){
+      const row = input.closest('[data-gami-item-row]'); if(!row) return;
+      const value = Math.max(0, Math.min(100, Number(input.value || 0)));
+      const range = row.querySelector('[data-gami-slider]'); const number = row.querySelector('[data-gami-prob]');
+      if(range && range !== input) range.value = value; if(number && number !== input) number.value = value;
+      const fill = row.querySelector('.gami-prob-fill'); if(fill) fill.style.width = `${value}%`;
+      updateGamificationProbability();
+    }
+    function normalizeGamificationProbabilities(){
+      const inputs=[...document.querySelectorAll('[data-gami-prob]')]; if(!inputs.length) return;
+      const values=inputs.map(i=>Math.max(0, Number(i.value||0))); const sum=values.reduce((a,b)=>a+b,0);
+      let next=[];
+      if(sum<=0){ const even=Number((100/inputs.length).toFixed(2)); next=inputs.map(()=>even); }
+      else { next=values.map(v=>Number((v*100/sum).toFixed(2))); }
+      const diff=Number((100-next.reduce((a,b)=>a+b,0)).toFixed(2)); next[next.length-1]=Number((next[next.length-1]+diff).toFixed(2));
+      inputs.forEach((input,i)=>{ input.value=next[i]; syncGamiProbInputs(input); });
+      setGamificationStatus('✅ 已依照目前比例自動校正為 100%。','ok');
+    }
+    function zeroAvatarProbabilities(){
+      document.querySelectorAll('[data-gami-fixed="avatar"] [data-gami-prob]').forEach(input=>{ input.value=0; syncGamiProbInputs(input); });
+      setGamificationStatus('已將所有角色機率歸零，請再調整點數或角色比例。','warn');
+    }
     function readGamificationConfigFromForm(){
       const num=id=>Number(document.getElementById(id)?.value||0);
-      const rows=[...document.querySelectorAll('[data-gami-item-row]')].map(row=>({ type:row.querySelector('[data-gami-type]')?.value||'points', value:Number(row.querySelector('[data-gami-value]')?.value||0), rarity:row.querySelector('[data-gami-rarity]')?.value||'N', prob:Number(row.querySelector('[data-gami-prob]')?.value||0)}));
+      const rows=[...document.querySelectorAll('[data-gami-item-row]')].map(row=>{
+        const type=row.querySelector('[data-gami-type]')?.value||'points';
+        const valueRaw=row.querySelector('[data-gami-value]')?.value||0;
+        const value = type==='avatar' ? String(valueRaw) : Number(valueRaw||0);
+        const obj={ type, value, rarity:row.querySelector('[data-gami-rarity]')?.value||'N', prob:Number(row.querySelector('[data-gami-prob]')?.value||0) };
+        if(type==='avatar') obj.avatarId = String(valueRaw);
+        return obj;
+      });
       return { dailyChallenge:{ passScore:60, tiers:[{min:num('gamiT1Min'),pts:num('gamiT1Pts')},{min:num('gamiT2Min'),pts:num('gamiT2Pts')},{min:num('gamiT3Min'),pts:num('gamiT3Pts')}] }, mission:{ failThreshold:num('gamiFailTh'), failBasePenalty:num('gamiFailBase'), failPenaltyStep:num('gamiFailStep'), goodThreshold:num('gamiGoodTh'), goodReward:num('gamiGoodPts'), perfectThreshold:num('gamiPerfTh'), perfectReward:num('gamiPerfPts') }, leaderboard:[num('gamiLb1'),num('gamiLb2'),num('gamiLb3')], gachaPicks:{ '初階Ai':num('gamiPickEasy'), '中階Ai':num('gamiPickMed'), '高階Ai':num('gamiPickHard'), '玩家對戰':num('gamiPickPvp'), '活動Boss':1 }, gachaItems:rows };
     }
     function updateGamificationProbability(){
@@ -4199,7 +4304,8 @@
         <div class="gami-preview-row"><span>未達標規則</span><strong>${g.mission.failThreshold} 次以下 / ${g.mission.failBasePenalty} 點</strong></div>
         <div class="gami-preview-row"><span>良好 / 完美</span><strong>${g.mission.goodThreshold} 次 +${g.mission.goodReward}｜${g.mission.perfectThreshold} 次 +${g.mission.perfectReward}</strong></div>
         <div class="gami-preview-row"><span>排行榜前三</span><strong>${g.leaderboard.join(' / ')} 點</strong></div>
-        <div class="gami-preview-row"><span>抽卡次數</span><strong>AI ${g.gachaPicks['初階Ai']}/${g.gachaPicks['中階Ai']}/${g.gachaPicks['高階Ai']}｜對戰 ${g.gachaPicks['玩家對戰']}</strong></div>`;
+        <div class="gami-preview-row"><span>抽卡次數</span><strong>AI ${g.gachaPicks['初階Ai']}/${g.gachaPicks['中階Ai']}/${g.gachaPicks['高階Ai']}｜對戰 ${g.gachaPicks['玩家對戰']}</strong></div>
+        <div class="gami-preview-row"><span>盲盒獎項</span><strong>${(g.gachaItems||[]).filter(x=>x.type==='points').length} 個點數｜${(g.gachaItems||[]).filter(x=>x.type==='avatar').length} 個角色</strong></div>`;
       const daily=document.getElementById('gamiDailyMetric'); if(daily) daily.textContent=`${g.dailyChallenge.tiers[0].min}+`;
       const mission=document.getElementById('gamiMissionMetric'); if(mission) mission.textContent=`${g.mission.failThreshold}/${g.mission.goodThreshold}/${g.mission.perfectThreshold}`;
       const lb=document.getElementById('gamiLeaderboardMetric'); if(lb) lb.textContent=g.leaderboard.join('/');
