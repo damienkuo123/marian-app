@@ -1983,10 +1983,18 @@
       const freshGami = await fetchStudentGamiConfig(STUDENT_ID);
       const effectiveGami = freshGami || normalizeTappieGamiConfig(data.gamification || {});
       window.gamiConfig = effectiveGami;
-      systemPassScore = Number(effectiveGami?.dailyChallenge?.passScore ?? data.systemPassScore ?? 60);
+      // ✅ 今日挑戰通關門檻：以「最低階獎勵門檻」為準。
+      // 例：tiers = 90 / 60 / 10，平均 15 分應可通關並領取最低階獎勵。
+      // 注意：只調整今日挑戰通關判斷，不影響對戰、抽卡、錄音或其他流程。
       systemRewardTiers = (effectiveGami?.dailyChallenge?.tiers || data.rewardTiers || [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}])
         .map(t => ({ min: Number(t.min ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
+        .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts))
         .sort((a, b) => b.min - a.min);
+      const lowestRewardTierMin = systemRewardTiers.length ? Number(systemRewardTiers[systemRewardTiers.length - 1].min) : NaN;
+      const explicitPassScore = Number(effectiveGami?.dailyChallenge?.passScore ?? data.systemPassScore ?? NaN);
+      systemPassScore = (Number.isFinite(lowestRewardTierMin) && lowestRewardTierMin > 0)
+        ? lowestRewardTierMin
+        : (Number.isFinite(explicitPassScore) ? explicitPassScore : 60);
 
       scores = new Array(quizData.length).fill(null);
       document.getElementById('total-display').innerText = quizData.length;
