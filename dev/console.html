@@ -1549,6 +1549,27 @@
     .usage-insight-value { color:var(--text); font-size:15px; font-weight:950; text-align:right; }
     .usage-action-note { margin-top:2px; color:var(--muted); font-size:12.5px; font-weight:650; line-height:1.55; }
 
+
+    .daily-usage-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:14px; }
+    .daily-usage-title { font-size:16px; font-weight:950; color:var(--text); letter-spacing:-.02em; }
+    .daily-usage-sub { margin-top:5px; color:var(--muted); font-size:12.5px; font-weight:650; line-height:1.55; }
+    .usage-kpi-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .usage-kpi { border:1px solid var(--border); background:var(--surface-2); border-radius:16px; padding:12px; min-width:0; }
+    .usage-kpi-label { color:var(--muted); font-size:11.5px; font-weight:850; line-height:1.35; }
+    .usage-kpi-value { margin-top:5px; font-family:var(--font-number); color:var(--text); font-size:24px; font-weight:900; letter-spacing:-.04em; }
+    .usage-kpi-note { margin-top:3px; color:var(--muted); font-size:11.5px; font-weight:650; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .class-usage-list { display:flex; flex-direction:column; gap:10px; }
+    .class-usage-row { display:grid; grid-template-columns:72px 1fr 64px; gap:11px; align-items:center; }
+    .class-usage-name { font-weight:950; color:var(--text); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .class-usage-track { height:12px; border-radius:999px; background:rgba(148,163,184,.18); border:1px solid rgba(148,163,184,.12); overflow:hidden; }
+    .class-usage-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#38bdf8,var(--primary)); }
+    .class-usage-value { font-family:var(--font-number); font-weight:900; text-align:right; font-size:13px; color:var(--text); }
+    .watch-list { border:1px solid var(--border); background:var(--surface-2); border-radius:18px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .watch-item { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding-bottom:10px; border-bottom:1px dashed var(--border); }
+    .watch-item:last-child { border-bottom:0; padding-bottom:0; }
+    .watch-name { font-weight:950; color:var(--text); font-size:13.5px; line-height:1.35; }
+    .watch-note { color:var(--muted); font-size:12px; font-weight:650; margin-top:3px; }
+
     @media (max-width: 960px) {
       .sidebar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
       .sidebar::-webkit-scrollbar { display:none; }
@@ -1558,6 +1579,9 @@
       .student-usage-panel { grid-template-columns:1fr; }
       .usage-bar-row { grid-template-columns: 92px 1fr 50px; gap:9px; }
       .overview-lower-grid { gap:14px; }
+      .usage-kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .daily-usage-head { flex-direction:column; }
+      .class-usage-row { grid-template-columns:58px 1fr 54px; gap:8px; }
     }
 
     /* Console v2.2 mini fix: remove sidebar footer identity block to avoid it being dragged into the nav area while scrolling. */
@@ -1799,6 +1823,7 @@
     let healthCache = null;
     let healthLoading = false;
     let overviewCache = null;
+    let overviewLearningCache = null;
     let overviewLoading = false;
     let studentsCache = null;
     let studentsLoading = false;
@@ -2255,6 +2280,19 @@
         const data = await TappieAPI.consoleGetOverview({ token: session.token });
         if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_overview_failed");
         overviewCache = data;
+        if (session.role !== "owner") {
+          try {
+            const schoolCode = currentConsoleSchoolCode();
+            overviewLearningCache = (TappieAPI && typeof TappieAPI.adminGetProgress === "function")
+              ? await TappieAPI.adminGetProgress(schoolCode)
+              : await fetch(`${TappieAPI.supabaseBaseUrl}/admin-get-progress?schoolCode=${encodeURIComponent(schoolCode)}`).then(r => r.json());
+          } catch (usageErr) {
+            console.warn("overview learning usage failed", usageErr);
+            overviewLearningCache = { success:false, error: usageErr?.message || String(usageErr) };
+          }
+        } else {
+          overviewLearningCache = null;
+        }
         updateOverviewUI();
       } catch (err) {
         console.error("loadOverviewData failed", err);
@@ -2325,72 +2363,98 @@
     }
 
 
+    function buildOverviewUsageStats() {
+      const data = overviewLearningCache;
+      if (!data || !data.success || !Array.isArray(data.classes)) return null;
+      const gami = data.gamification || {};
+      const fail = learningFailThreshold(gami);
+      const good = learningGoodThreshold(gami);
+      const perfect = learningPerfectThreshold(gami);
+      const classes = data.classes || [];
+      const students = classes.flatMap(cls => (cls.students || []).map(s => ({ ...s, _class: cls })));
+      const totalStudents = students.length;
+      const activeLearners = students.filter(s => Number(s.count || 0) > 0).length;
+      const totalCompletions = students.reduce((sum, s) => sum + Number(s.count || 0), 0);
+      const riskStudents = students.filter(s => Number(s.count || 0) < fail);
+      const goodStudents = students.filter(s => Number(s.count || 0) >= good).length;
+      const perfectStudents = students.filter(s => Number(s.count || 0) >= perfect).length;
+      const scored = students.filter(s => Number(s.bestScore || s.best_score || 0) > 0);
+      const avgBest = scored.length ? Math.round(scored.reduce((sum, s) => sum + Number(s.bestScore || s.best_score || 0), 0) / scored.length) : 0;
+      const classStats = classes.map(cls => {
+        const list = cls.students || [];
+        const total = list.length;
+        const active = list.filter(s => Number(s.count || 0) > 0).length;
+        const completions = list.reduce((sum, s) => sum + Number(s.count || 0), 0);
+        const risk = list.filter(s => Number(s.count || 0) < fail).length;
+        const rate = total ? Math.round((active / total) * 100) : 0;
+        return {
+          classCode: String(cls.classCode || cls.class_code || "未分班"),
+          unitName: cls.unitName || cls.unit_name || cls.currentUnit || "未排定單元",
+          total, active, completions, risk, rate
+        };
+      }).sort((a,b) => b.rate - a.rate || b.completions - a.completions || a.classCode.localeCompare(b.classCode, "zh-Hant"));
+      const watch = riskStudents
+        .slice()
+        .sort((a,b) => Number(a.count||0) - Number(b.count||0) || String(a.name||"").localeCompare(String(b.name||""), "zh-Hant"))
+        .slice(0, 5)
+        .map(s => ({ name: s.name || "未命名", uid: s.uid || "", classCode: String(s._class?.classCode || s._class?.class_code || "未分班"), count: Number(s.count || 0), bestScore: Number(s.bestScore || s.best_score || 0) }));
+      return { fail, good, perfect, totalStudents, activeLearners, totalCompletions, riskStudents, riskCount: riskStudents.length, goodStudents, perfectStudents, avgBest, classStats, watch };
+    }
+
     function renderOverviewStudentUsage({ isOwner, schools, summary, activeStudents, studentLimitRaw, hasLimit, seatPct, weeklyEnabled, emailValid, weeklyPct, activeSchedules, nextNewsletterCount }) {
       const el = document.getElementById("overviewStudentUsage");
       if (!el) return;
       if (isOwner) {
-        if (!schools.length) {
-          el.innerHTML = `<div class="empty-state">目前沒有校區資料。</div>`;
-          return;
-        }
-        el.innerHTML = schools.map(s => {
-          const limit = s.student_limit == null || Number(s.student_limit || 0) <= 0 ? "∞" : String(s.student_limit);
+        if (!schools.length) { el.innerHTML = `<div class="empty-state">目前沒有校區資料。</div>`; return; }
+        el.innerHTML = schools.slice(0,6).map(s => {
           const score = Number(s.health_score ?? 100);
           const statusClass = score >= 90 ? "ok" : score >= 75 ? "warn" : "danger";
-          return `
-            <div class="school-score-row">
-              <div class="score-ring" style="--score:${score}"><div class="score-ring-inner">${escapeHtml(score)}</div></div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div>
-                <div class="small-note">學生 ${Number(s.active_students||0)} / ${escapeHtml(limit)} ・ 週報 ${Number(s.weekly_report_enabled_students||0)} ・ 排程 ${Number(s.active_schedules||0)} ・ 專欄 ${Number(s.next_newsletter_count||0)}</div>
-              </div>
-              <span class="badge ${statusClass}">${escapeHtml(translateHealthStatus(s.health_status))}</span>
-            </div>`;
+          return `<div class="school-score-row"><div class="score-ring" style="--score:${score}"><div class="score-ring-inner">${escapeHtml(score)}</div></div><div style="flex:1;min-width:0;"><div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div><div class="small-note">學生 ${Number(s.active_students||0)}・週報 ${Number(s.weekly_report_enabled_students||0)}・排程 ${Number(s.active_schedules||0)}</div></div><span class="badge ${statusClass}">${escapeHtml(translateHealthStatus(s.health_status))}</span></div>`;
         }).join("");
         return;
       }
 
-      const weeklyEnablePct = activeStudents > 0 ? pct(weeklyEnabled, activeStudents) : 0;
-      const emailCoveragePct = activeStudents > 0 ? pct(emailValid, activeStudents) : 0;
-      const schedulePct = activeSchedules > 0 ? 100 : 0;
-      const seatLabel = hasLimit ? `${seatPct}%` : "不限";
-      const weeklyLabel = weeklyEnabled ? `${weeklyEnablePct}%` : "0%";
-      const emailLabel = activeStudents ? `${emailCoveragePct}%` : "0%";
-      const scheduleLabel = activeSchedules > 0 ? "有排程" : "未排程";
-      const remainingSeats = hasLimit ? Math.max(0, studentLimitRaw - activeStudents) : null;
-      const inactiveStudents = Number(summary.inactiveStudents || summary.inactive_students || 0);
-      const activeClasses = Number(summary.activeClasses || summary.active_classes || 0);
+      const stats = buildOverviewUsageStats();
+      if (!stats) {
+        const weeklyEnablePct = activeStudents > 0 ? pct(weeklyEnabled, activeStudents) : 0;
+        const emailCoveragePct = activeStudents > 0 ? pct(emailValid, activeStudents) : 0;
+        el.innerHTML = `
+          <div class="student-usage-panel">
+            <div class="student-usage-chart">
+              <div class="usage-bar-row"><div class="usage-bar-label">學生席位</div><div class="usage-bar-track"><div class="usage-bar-fill ${hasLimit && seatPct >= 90 ? 'warn' : ''}" style="width:${hasLimit ? seatPct : 100}%"></div></div><div class="usage-bar-value">${hasLimit ? seatPct + '%' : '不限'}</div></div>
+              <div class="usage-bar-row"><div class="usage-bar-label">週報啟用</div><div class="usage-bar-track"><div class="usage-bar-fill" style="width:${weeklyEnablePct}%"></div></div><div class="usage-bar-value">${weeklyEnablePct}%</div></div>
+              <div class="usage-bar-row"><div class="usage-bar-label">Email 完整</div><div class="usage-bar-track"><div class="usage-bar-fill ${emailCoveragePct < 100 ? 'warn' : ''}" style="width:${emailCoveragePct}%"></div></div><div class="usage-bar-value">${emailCoveragePct}%</div></div>
+              <div class="usage-bar-row"><div class="usage-bar-label">排程狀態</div><div class="usage-bar-track"><div class="usage-bar-fill ${activeSchedules === 0 ? 'warn' : ''}" style="width:${activeSchedules > 0 ? 100 : 0}%"></div></div><div class="usage-bar-value">${activeSchedules > 0 ? '有排程' : '未排程'}</div></div>
+            </div>
+            <div class="student-usage-side"><div class="usage-insight-row"><span class="usage-insight-title">啟用學生</span><span class="usage-insight-value">${activeStudents}${hasLimit ? ` / ${studentLimitRaw}` : ''}</span></div><div class="usage-insight-row"><span class="usage-insight-title">週報對象</span><span class="usage-insight-value">${weeklyEnabled}</span></div><div class="usage-insight-row"><span class="usage-insight-title">有效 Email</span><span class="usage-insight-value">${emailValid}</span></div><div class="usage-action-note">學習使用分析暫時無法讀取，先顯示營運準備度。</div></div>
+          </div>`;
+        return;
+      }
 
+      const activeRate = pct(stats.activeLearners, stats.totalStudents);
+      const riskRate = pct(stats.riskCount, stats.totalStudents);
+      const topClasses = stats.classStats.slice(0, 5);
       el.innerHTML = `
+        <div class="daily-usage-head">
+          <div><div class="daily-usage-title">本週 / 目前單元使用分析</div><div class="daily-usage-sub">依目前進行中單元的今日挑戰完成紀錄彙整；用來快速判斷哪個班級和學生需要被提醒。</div></div>
+          <button class="btn-compact" onclick="showPage('learning')">查看學習進度</button>
+        </div>
+        <div class="usage-kpi-grid">
+          <div class="usage-kpi"><div class="usage-kpi-label">活躍學生</div><div class="usage-kpi-value">${stats.activeLearners}/${stats.totalStudents}</div><div class="usage-kpi-note">活躍率 ${activeRate}%</div></div>
+          <div class="usage-kpi"><div class="usage-kpi-label">挑戰完成</div><div class="usage-kpi-value">${stats.totalCompletions}</div><div class="usage-kpi-note">目前單元累計</div></div>
+          <div class="usage-kpi"><div class="usage-kpi-label">低活躍提醒</div><div class="usage-kpi-value">${stats.riskCount}</div><div class="usage-kpi-note">少於 ${stats.fail} 次</div></div>
+          <div class="usage-kpi"><div class="usage-kpi-label">平均最高分</div><div class="usage-kpi-value">${stats.avgBest || '—'}</div><div class="usage-kpi-note">有完成紀錄者</div></div>
+        </div>
         <div class="student-usage-panel">
-          <div class="student-usage-chart">
-            <div class="usage-bar-row">
-              <div class="usage-bar-label">學生席位</div>
-              <div class="usage-bar-track"><div class="usage-bar-fill ${hasLimit && seatPct >= 90 ? 'warn' : ''}" style="width:${hasLimit ? seatPct : 100}%"></div></div>
-              <div class="usage-bar-value">${escapeHtml(seatLabel)}</div>
-            </div>
-            <div class="usage-bar-row">
-              <div class="usage-bar-label">週報啟用</div>
-              <div class="usage-bar-track"><div class="usage-bar-fill" style="width:${weeklyEnablePct}%"></div></div>
-              <div class="usage-bar-value">${escapeHtml(weeklyLabel)}</div>
-            </div>
-            <div class="usage-bar-row">
-              <div class="usage-bar-label">Email 完整</div>
-              <div class="usage-bar-track"><div class="usage-bar-fill ${emailCoveragePct < 100 ? 'warn' : ''}" style="width:${emailCoveragePct}%"></div></div>
-              <div class="usage-bar-value">${escapeHtml(emailLabel)}</div>
-            </div>
-            <div class="usage-bar-row">
-              <div class="usage-bar-label">排程狀態</div>
-              <div class="usage-bar-track"><div class="usage-bar-fill ${activeSchedules === 0 ? 'warn' : ''}" style="width:${schedulePct}%"></div></div>
-              <div class="usage-bar-value">${escapeHtml(scheduleLabel)}</div>
+          <div>
+            <div class="daily-usage-title" style="font-size:14px;margin-bottom:10px;">各班活躍率</div>
+            <div class="class-usage-list">
+              ${topClasses.length ? topClasses.map(c => `<div class="class-usage-row"><div class="class-usage-name">${escapeHtml(c.classCode)}</div><div class="class-usage-track"><div class="class-usage-fill" style="width:${Math.max(4,c.rate)}%"></div></div><div class="class-usage-value">${c.rate}%</div></div>`).join("") : `<div class="empty-state">目前沒有班級使用資料。</div>`}
             </div>
           </div>
-          <div class="student-usage-side">
-            <div class="usage-insight-row"><span class="usage-insight-title">啟用學生</span><span class="usage-insight-value">${activeStudents}${hasLimit ? ` / ${studentLimitRaw}` : ''}</span></div>
-            <div class="usage-insight-row"><span class="usage-insight-title">剩餘席位</span><span class="usage-insight-value">${remainingSeats === null ? '不限' : remainingSeats}</span></div>
-            <div class="usage-insight-row"><span class="usage-insight-title">週報對象</span><span class="usage-insight-value">${weeklyEnabled}</span></div>
-            <div class="usage-insight-row"><span class="usage-insight-title">有效 Email</span><span class="usage-insight-value">${emailValid}</span></div>
-            <div class="usage-action-note">這區先整合「學生席位、週報啟用、Email 完整度、排程狀態」。後續可再接入本週練習次數與挑戰完成率，變成真正的學生使用趨勢圖。</div>
+          <div class="watch-list">
+            <div class="daily-usage-title" style="font-size:14px;">需要追蹤的學生</div>
+            ${stats.watch.length ? stats.watch.map(s => `<div class="watch-item"><div><div class="watch-name">${escapeHtml(s.name)}</div><div class="watch-note">${escapeHtml(s.classCode)}・${escapeHtml(s.uid)}・最高 ${s.bestScore || 0} 分</div></div><span class="badge ${s.count < stats.fail ? 'warn' : 'ok'}">${s.count}/${stats.fail} 次</span></div>`).join("") : `<div class="usage-action-note">目前沒有低活躍學生，維持提醒即可。</div>`}
           </div>
         </div>`;
     }
