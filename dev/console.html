@@ -4,7 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-mobile-layout-v1"></script>
+  <script src="./tappie-api.js?v=console-mobile-layout-v1">
+
+    // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
+    document.addEventListener('touchmove', function(e) {
+      if (!document.body.classList.contains('console-modal-open')) return;
+      const modal = e.target.closest('.console-modal');
+      if (!modal) e.preventDefault();
+    }, { passive: false });
+
+</script>
   <style>
     :root {
       --bg: #f7f9fc;
@@ -1103,6 +1112,113 @@
       .avatar-thumb { width: 62px !important; height: 62px !important; }
     }
 
+
+
+    /* =======================================================
+       Console Mobile Modal + Calendar Action Fix v1.5
+       - Lock page behind modal; modal itself scrolls.
+       - Fix schedule empty-date actions.
+       - Normalize avatar lock wording/rules.
+       ======================================================= */
+    body.console-modal-open { overflow: hidden !important; touch-action: none; }
+    body.console-modal-open .modal-backdrop.show { touch-action: none; }
+    .modal-backdrop.show { overscroll-behavior: contain; }
+    .console-modal { overscroll-behavior: contain; }
+    .modal-scroll-zone { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    #studentEditModal .form-grid,
+    #studentBatchModal .form-grid,
+    #curriculumScheduleModal .form-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #curriculumUnitModal .console-modal { max-height: min(92dvh, 860px); }
+    #curriculumUnitModal .form-grid { flex: 0 0 auto; overflow: visible; }
+    #curriculumUnitModal .unit-modal-section {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #curriculumUnitModal .modal-actions,
+    #curriculumScheduleModal .modal-actions,
+    #studentEditModal .modal-actions,
+    #studentBatchModal .modal-actions { flex: 0 0 auto; }
+    .word-list-shell { overflow: visible !important; }
+    .unit-modal-section > div:first-child { padding-left: 4px !important; padding-right: 4px !important; }
+    .calendar-day:not(.empty) { cursor: pointer; }
+    .calendar-day.addable:hover { border-color: rgba(37,99,235,.45); box-shadow: inset 0 0 0 1px rgba(37,99,235,.12); }
+    .calendar-day.addable::after {
+      content: '+';
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 950;
+      font-size: 14px;
+      color: var(--primary);
+      background: rgba(37,99,235,.10);
+      border: 1px solid rgba(37,99,235,.18);
+      opacity: .72;
+    }
+    .year-month-new {
+      width: 100%;
+      margin-top: 10px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .year-month-new:hover { color: var(--primary); border-color: rgba(37,99,235,.35); }
+
+    @media (max-width: 720px) {
+      body.console-modal-open { position: fixed; width: 100%; }
+      .modal-backdrop.show {
+        display: flex !important;
+        align-items: flex-end !important;
+        overflow: hidden !important;
+      }
+      .console-modal {
+        height: auto !important;
+        max-height: 92dvh !important;
+        overflow: hidden !important;
+      }
+      #studentEditModal .form-grid,
+      #studentBatchModal .form-grid,
+      #curriculumScheduleModal .form-grid {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      #curriculumUnitModal .unit-modal-section {
+        flex: 1 1 auto !important;
+        min-height: 220px !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      #curriculumUnitModal .form-grid {
+        flex: 0 0 auto !important;
+        overflow: visible !important;
+      }
+      .calendar-day.addable::after {
+        right: 4px;
+        top: 4px;
+        width: 18px;
+        height: 18px;
+        font-size: 12px;
+      }
+    }
+
 </style>
 </head>
 <body>
@@ -1287,6 +1403,10 @@
       <input type="hidden" id="curScheduleId" />
       <input type="hidden" id="curScheduleUnitId" />
       <div class="form-grid">
+        <div id="curScheduleUnitPickerWrap" class="form-field full" style="display:none;">
+          <label>選擇要排程的單元</label>
+          <select id="curScheduleUnitPicker" onchange="onScheduleUnitPickerChange()"></select>
+        </div>
         <div class="form-field"><label>班級代碼</label><input id="curScheduleClass" disabled /></div>
         <div class="form-field"><label>單元名稱</label><input id="curScheduleUnit" disabled /></div>
         <div class="form-field"><label>開始日期</label><input id="curScheduleStart" type="date" onchange="updateScheduleConflictPreview()" /></div>
@@ -2916,10 +3036,10 @@
       for (let d = 1; d <= days; d++) {
         const key = `${y}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
         const daySchedules = schedules.filter(s => dateRangesOverlap(key, key, s.startDate, s.endDate));
-        cells.push(`<div class="calendar-day ${key === todayKey ? "today" : ""}">
+        cells.push(`<div class="calendar-day addable ${key === todayKey ? "today" : ""}" onclick="openCurriculumScheduleFromDate('${key}')">
           <div class="calendar-date">${d}</div>
           <div class="calendar-event-stack">
-            ${daySchedules.map(s => `<button type="button" class="calendar-event ${s.isEvent ? "event" : ""}" title="${escapeHtml(s.unitName)}" onclick="openCurriculumScheduleModal(null, '${escapeJs(s.id)}')">${escapeHtml(s.unitName)}</button>`).join("")}
+            ${daySchedules.map(s => `<button type="button" class="calendar-event ${s.isEvent ? "event" : ""}" title="${escapeHtml(s.unitName)}" onclick="event.stopPropagation(); openCurriculumScheduleModal(null, '${escapeJs(s.id)}')">${escapeHtml(s.unitName)}</button>`).join("")}
           </div>
         </div>`);
       }
@@ -2942,7 +3062,8 @@
             const monthEnd = `${y}-${String(m + 1).padStart(2,"0")}-${String(new Date(y, m + 1, 0).getDate()).padStart(2,"0")}`;
             return dateRangesOverlap(monthStart, monthEnd, s.startDate, s.endDate);
           }).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
-          return `<div class="year-month-card ${list.length ? "has-items" : ""}"><div class="year-month-title">${m+1} 月<span>${list.length} 筆</span></div>${list.length ? list.slice(0,4).map(s=>`<button type="button" class="year-month-item" onclick="openCurriculumScheduleModal(null, '${escapeJs(s.id)}')"><span>${escapeHtml(s.startDate)}</span>${escapeHtml(s.unitName)}</button>`).join("") : `<div class="year-month-empty">無排程</div>`}${list.length>4?`<div class="year-month-more">+${list.length-4} 更多</div>`:""}</div>`;
+          const firstDay = `${y}-${String(m + 1).padStart(2,"0")}-01`;
+          return `<div class="year-month-card ${list.length ? "has-items" : ""}"><div class="year-month-title">${m+1} 月<span>${list.length} 筆</span></div>${list.length ? list.slice(0,4).map(s=>`<button type="button" class="year-month-item" onclick="openCurriculumScheduleModal(null, '${escapeJs(s.id)}')"><span>${escapeHtml(s.startDate)}</span>${escapeHtml(s.unitName)}</button>`).join("") : `<div class="year-month-empty">無排程</div>`}${list.length>4?`<div class="year-month-more">+${list.length-4} 更多</div>`:""}<button type="button" class="year-month-new" onclick="openCurriculumScheduleFromDate('${firstDay}')">＋ 新增排程</button></div>`;
         }).join("")}</div>
       </div>`;
     }
@@ -3026,7 +3147,62 @@
       await saveCurriculumAction("delete_unit", { unitId: unit.id || unit.unitId || null, classCode: unit.classCode, unitName: unit.unitName }, "單元已刪除");
       hideCurriculumUnitModal();
     }
+
+    function getSchedulableUnitsForCurrentFilter() {
+      const cls = normalizeEventClassCode(curriculumFilter || "");
+      if (!cls) return [];
+      return (curriculumCache?.units || [])
+        .filter(u => normalizeEventClassCode(u.classCode) === cls)
+        .filter(u => !findScheduleForUnit(u))
+        .sort((a,b)=>String(a.unitName||"").localeCompare(String(b.unitName||""), "zh-Hant"));
+    }
+    function onScheduleUnitPickerChange() {
+      const picker = document.getElementById("curScheduleUnitPicker");
+      const unit = findUnitById(picker?.value || "");
+      if (!unit) return;
+      document.getElementById("curScheduleUnitId").value = unit.id || unit.unitId || "";
+      document.getElementById("curScheduleClass").value = normalizeEventClassCode(unit.classCode || curriculumFilter || "");
+      document.getElementById("curScheduleUnit").value = unit.unitName || "";
+      const isEvent = isEventClassCode(unit.classCode || curriculumFilter || "");
+      const zone = document.getElementById("curEventAvatarZone");
+      if (zone) zone.style.display = isEvent ? "block" : "none";
+      updateScheduleConflictPreview();
+    }
+    function openCurriculumScheduleFromDate(dateKey) {
+      if (!curriculumFilter) return alert("請先選擇單一班級或 EVENT，再從月曆 / 年曆新增排程。");
+      const units = getSchedulableUnitsForCurrentFilter();
+      if (!units.length) return alert(`${classLabel(curriculumFilter)} 目前沒有可排程的未排程單元。請先新增單元，或取消既有排程後再安排。`);
+      const pickerWrap = document.getElementById("curScheduleUnitPickerWrap");
+      const picker = document.getElementById("curScheduleUnitPicker");
+      if (pickerWrap) pickerWrap.style.display = "flex";
+      if (picker) {
+        picker.innerHTML = units.map(u => `<option value="${escapeHtml(u.id || u.unitId)}">${escapeHtml(u.unitName || "未命名單元")}</option>`).join("");
+        picker.value = units[0].id || units[0].unitId || "";
+      }
+      const firstUnit = units[0];
+      currentCurriculumScheduleTarget = { unit: firstUnit, schedule: null, classCode: normalizeEventClassCode(curriculumFilter), unitName: firstUnit.unitName || "" };
+      document.getElementById("curriculumScheduleModalTitle").textContent = "新增排程";
+      document.getElementById("curScheduleId").value = "";
+      document.getElementById("curScheduleUnitId").value = firstUnit.id || firstUnit.unitId || "";
+      document.getElementById("curScheduleClass").value = normalizeEventClassCode(curriculumFilter);
+      document.getElementById("curScheduleUnit").value = firstUnit.unitName || "";
+      document.getElementById("curScheduleStart").value = dateKey;
+      document.getElementById("curScheduleEnd").value = dateKey;
+      document.getElementById("curCancelScheduleBtn").style.display = "none";
+      const isEvent = isEventClassCode(curriculumFilter);
+      const zone = document.getElementById("curEventAvatarZone");
+      zone.style.display = isEvent ? "block" : "none";
+      const sel = document.getElementById("curEventAvatarSelect");
+      sel.innerHTML = '<option value="">-- 請選擇活動首領 --</option>' + (curriculumCache?.eventAvatars || []).map(a => `<option value="${escapeHtml(a.id || a.avatarId)}">${escapeHtml(a.name || a.id || a.avatarId)} (${escapeHtml(a.id || a.avatarId)})</option>`).join("");
+      sel.value = "";
+      const conflictBox = document.getElementById("curScheduleConflictBox");
+      if (conflictBox) { conflictBox.style.display = "none"; conflictBox.innerHTML = ""; }
+      showModal("curriculumScheduleModal");
+      updateScheduleConflictPreview();
+    }
     function openCurriculumScheduleModal(unitId = "", scheduleId = "") {
+      const pickerWrap = document.getElementById("curScheduleUnitPickerWrap");
+      if (pickerWrap) pickerWrap.style.display = "none";
       let schedule = scheduleId ? findScheduleById(scheduleId) : null;
       let unit = unitId ? findUnitById(unitId) : null;
       if (!unit && schedule) unit = (curriculumCache?.units || []).find(u => (schedule.unitId && String(u.id) === String(schedule.unitId)) || (u.classCode === schedule.classCode && u.unitName === schedule.unitName));
@@ -3089,10 +3265,23 @@
       toast(okMessage || "已完成");
       return data;
     }
-    function showModal(id) { document.getElementById(id).classList.add("show"); }
-    function hideCurriculumUnitModal() { document.getElementById("curriculumUnitModal").classList.remove("show"); }
+    function showModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add("show");
+      document.body.classList.add("console-modal-open");
+    }
+    function hideModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove("show");
+      if (!document.querySelector('.modal-backdrop.show')) {
+        document.body.classList.remove("console-modal-open");
+      }
+    }
+
+    function hideCurriculumUnitModal() { hideModal("curriculumUnitModal"); }
     function closeCurriculumUnitModal(event) { if (event.target.id === "curriculumUnitModal") hideCurriculumUnitModal(); }
-    function hideCurriculumScheduleModal() { document.getElementById("curriculumScheduleModal").classList.remove("show"); }
+    function hideCurriculumScheduleModal() { hideModal("curriculumScheduleModal"); }
     function closeCurriculumScheduleModal(event) { if (event.target.id === "curriculumScheduleModal") hideCurriculumScheduleModal(); }
     function syncCurriculumEventHint() { /* reserved for future event UI hint */ }
     function toast(message) {
@@ -3160,9 +3349,9 @@
     }
     function isAvatarLockedForConsole(a){
       // Console 鎖定規則：
-      // 1) category = 預設：鎖定，但標籤仍顯示「預設」。
+      // 1) category = 預設：鎖定，標籤顯示「預設」。
       // 2) id 僅限 AI_EASY / AI_MED / AI_HARD：鎖定。
-      // 其他角色即使名稱或 category 含 AI，只要不是以上三個 ID，也不鎖定。
+      // 其他角色即使名稱或 category 含 AI，也不鎖定。
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
       const isBaseAi = ["AI_EASY", "AI_MED", "AI_HARD"].includes(upperId);
@@ -3236,7 +3425,7 @@
       setText("avatarEventCount", eventCount);
       setText("avatarAvgCost", editable.length ? avg : "—");
       const statusEl = document.getElementById("avatarsConsoleStatus");
-      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。預設角色與三個基礎 AI 鎖定；一般 / 活動角色可編輯。`;
+      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。category=預設 與 AI_EASY / AI_MED / AI_HARD 鎖定；其他一般 / 活動角色可編輯。`;
       document.getElementById("avatarViewCardsBtn")?.classList.toggle("btn-success", avatarsConsoleView === "cards");
       document.getElementById("avatarViewTableBtn")?.classList.toggle("btn-success", avatarsConsoleView === "table");
       const listEl = document.getElementById("avatarsConsoleList");
@@ -3254,7 +3443,7 @@
             <div class="avatar-badges"><span class="avatar-badge ${rarityBadgeClass(rarity)}">${escapeHtml(rarity)}</span><span class="avatar-badge">${escapeHtml(scope)}</span><span class="avatar-badge">${escapeHtml(category)}</span>${locked ? `<span class="avatar-badge">鎖定</span>` : ""}</div>
           </div>
         </div>
-        ${locked ? `<div class="avatar-lock-note">預設角色與三個基礎 AI 對手不開放在 Console 中改價或改類型，避免影響系統基礎角色與對戰 AI。</div>` : `
+        ${locked ? `<div class="avatar-lock-note">category=預設 的角色與 AI_EASY / AI_MED / AI_HARD 不開放在 Console 中改價或改類型；其他 AI 名稱角色不會自動鎖定。</div>` : `
         <div class="avatar-edit-grid">
           <div class="form-field"><label>兌換點數</label><input class="avatar-cost-input" type="number" min="0" value="${Number(a.cost || 0)}" /></div>
           <div class="form-field"><label>角色類型</label><select class="avatar-category-select"><option value="一般" ${editableCategory==="一般"?"selected":""}>一般</option><option value="活動" ${editableCategory==="活動"?"selected":""}>活動</option></select></div>
@@ -3264,7 +3453,7 @@
     }
     function renderAvatarConsoleTable(avatars){
       const rows = avatars.map(a => { const id=avatarIdOf(a); const locked=isAvatarLockedForConsole(a); const cat=avatarTypeLabelForConsole(a); const editableCat=normalizeAvatarCategoryForConsole(a.category); const rarity=String(a.rarity||"N"); const scope=avatarScopeOf(a)==="global"?"全域":"本校";
-        return `<tr data-avatar-id="${escapeHtml(id)}"><td><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)}</span></td><td>${escapeHtml(rarity)}</td><td>${escapeHtml(scope)}</td><td>${locked?`<span class="badge warn">${escapeHtml(cat)} / 鎖定</span>`:`<select class="console-select avatar-category-select"><option value="一般" ${editableCat==="一般"?"selected":""}>一般</option><option value="活動" ${editableCat==="活動"?"selected":""}>活動</option></select>`}</td><td>${locked?escapeHtml(Number(a.cost||0)):`<input class="console-input avatar-cost-input" type="number" min="0" value="${Number(a.cost||0)}" style="max-width:120px;" />`}</td><td>${locked?'<span class="small-note">預設 / 基礎 AI 不可編輯</span>':`<button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>`}</td></tr>`;
+        return `<tr data-avatar-id="${escapeHtml(id)}"><td><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)}</span></td><td>${escapeHtml(rarity)}</td><td>${escapeHtml(scope)}</td><td>${locked?`<span class="badge warn">${escapeHtml(cat)} / 鎖定</span>`:`<select class="console-select avatar-category-select"><option value="一般" ${editableCat==="一般"?"selected":""}>一般</option><option value="活動" ${editableCat==="活動"?"selected":""}>活動</option></select>`}</td><td>${locked?escapeHtml(Number(a.cost||0)):`<input class="console-input avatar-cost-input" type="number" min="0" value="${Number(a.cost||0)}" style="max-width:120px;" />`}</td><td>${locked?'<span class="small-note">預設 / 指定 AI 不可編輯</span>':`<button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>`}</td></tr>`;
       }).join("");
       return `<div class="avatar-table-wrap"><table><thead><tr><th>角色</th><th>稀有度</th><th>來源</th><th>類型</th><th>點數</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
@@ -3310,6 +3499,15 @@
 
     applyStoredTheme();
     restoreSession();
-  </script>
+  
+
+    // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
+    document.addEventListener('touchmove', function(e) {
+      if (!document.body.classList.contains('console-modal-open')) return;
+      const modal = e.target.closest('.console-modal');
+      if (!modal) e.preventDefault();
+    }, { passive: false });
+
+</script>
 </body>
 </html>
