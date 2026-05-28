@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-mobile-layout-v1">
+  <script src="./tappie-api.js?v=console-newsletters-v1">
 
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -799,6 +799,39 @@
     .avatar-table-wrap tr:last-child td{border-bottom:0;}
     @media (max-width:640px){.avatar-edit-grid{grid-template-columns:1fr}.avatar-toolbar{align-items:stretch}.avatar-filter-row{width:100%}.avatar-filter-row .console-input,.avatar-filter-row .console-select{flex:1;min-width:140px}.avatar-card{border-radius:20px}.avatar-thumb{width:64px;height:64px}}
 
+    /* =======================================================
+       📰 Newsletter Console Full Action
+       - professional queue cards / mobile-first editor modal
+       ======================================================= */
+    .newsletter-dashboard{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px;}
+    .newsletter-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:18px;align-items:start;}
+    .newsletter-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .newsletter-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .newsletter-list{display:flex;flex-direction:column;gap:12px;}
+    .newsletter-card{border:1px solid var(--border);background:var(--surface);border-radius:22px;padding:15px;box-shadow:var(--shadow);display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:13px;align-items:start;}
+    .newsletter-card.next{border-color:rgba(37,99,235,.32);background:linear-gradient(180deg,rgba(37,99,235,.06),var(--surface));}
+    .newsletter-rank{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:950;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);}
+    .newsletter-rank.hot{background:rgba(37,99,235,.12);color:var(--primary);border-color:rgba(37,99,235,.25);}
+    .newsletter-title{font-size:15px;font-weight:950;color:var(--text);line-height:1.35;word-break:break-word;}
+    .newsletter-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+    .newsletter-tag{font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);}
+    .newsletter-row-sub{font-size:12px;color:var(--muted);font-weight:750;line-height:1.55;margin-top:8px;}
+    .newsletter-card-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+    .newsletter-card-actions .btn-compact{padding:7px 9px;font-size:12px;border-radius:12px;}
+    .newsletter-preview-card{position:sticky;top:22px;border:1px solid var(--border);background:var(--surface);border-radius:24px;box-shadow:var(--shadow);overflow:hidden;}
+    .newsletter-preview-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:flex-start;background:var(--surface-2);}
+    .newsletter-preview-head h3{margin:0;font-size:16px;font-weight:950;color:var(--text);line-height:1.35;}
+    .newsletter-preview-head p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:800;line-height:1.5;}
+    .newsletter-preview-body{padding:18px;max-height:62vh;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;color:#111827;}
+    html[data-theme="dark"] .newsletter-preview-body{background:#0f172a;color:#e5e7eb;}
+    .newsletter-preview-body img{max-width:100%;height:auto;}
+    .newsletter-editor-textarea{width:100%;min-height:46vh;resize:vertical;border:1px solid var(--border);border-radius:18px;background:var(--surface-2);color:var(--text);padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:13px;line-height:1.55;outline:none;}
+    .newsletter-editor-textarea:focus{border-color:rgba(37,99,235,.45);box-shadow:0 0 0 4px rgba(37,99,235,.10);}
+    .newsletter-empty{border:1px dashed var(--border);background:var(--surface-2);border-radius:22px;padding:26px;text-align:center;color:var(--muted);font-weight:850;line-height:1.7;}
+    @media (max-width:900px){.newsletter-dashboard{grid-template-columns:repeat(2,minmax(0,1fr));}.newsletter-layout{grid-template-columns:1fr}.newsletter-preview-card{position:relative;top:auto}.newsletter-preview-body{max-height:55vh}}
+    @media (max-width:640px){.newsletter-dashboard{grid-template-columns:1fr 1fr;gap:10px}.newsletter-toolbar{align-items:stretch}.newsletter-actions{width:100%;}.newsletter-actions .btn-compact{flex:1 1 auto}.newsletter-card{grid-template-columns:38px minmax(0,1fr);padding:13px;border-radius:18px}.newsletter-card-actions{grid-column:1 / -1;justify-content:stretch}.newsletter-card-actions .btn-compact{flex:1}.newsletter-rank{width:36px;height:36px;border-radius:12px}.newsletter-preview-body{max-height:none}.newsletter-editor-textarea{min-height:52vh}}
+
+
 
 
     /* =======================================================
@@ -1424,6 +1457,28 @@
     </div>
   </div>
 
+  <div id="newsletterEditorModal" class="modal-backdrop" onclick="closeNewsletterEditorModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="newsletterEditorTitle">編輯專欄</h2>
+          <p id="newsletterEditorSubtitle">修改週報專欄 HTML。正式週報只會取 display_order = 1 的未封存專欄。</p>
+        </div>
+        <button class="btn-compact" onclick="hideNewsletterEditorModal()">關閉</button>
+      </div>
+      <input type="hidden" id="newsletterEditId" />
+      <div class="form-grid">
+        <div class="form-field full"><label>專欄 HTML</label><textarea id="newsletterEditHtml" class="newsletter-editor-textarea" placeholder="請貼上或編輯專欄 HTML"></textarea></div>
+        <div class="form-field full"><div class="form-note">測試寄給自己不會封存專欄；正式全校週報成功後，系統會自動封存第 1 順位並遞補排序。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideNewsletterEditorModal()">取消</button>
+        <div class="right"><button id="newsletterSaveBtn" class="btn-compact primary" onclick="saveNewsletterFromModal()">儲存專欄</button></div>
+      </div>
+    </div>
+  </div>
+
+
   <script>
     let loginMode = "super_admin";
     let session = null;
@@ -1610,6 +1665,9 @@
       if (page === "avatars") {
         loadAvatarsConsole(false);
       }
+      if (page === "newsletters") {
+        loadNewslettersConsole(false);
+      }
     }
 
     function renderPage(page) {
@@ -1620,6 +1678,7 @@
       if (page === "weekly") return renderWeekly();
       if (page === "curriculum") return renderCurriculum();
       if (page === "avatars") return renderAvatarsConsole();
+      if (page === "newsletters") return renderNewslettersConsole();
       return renderPlaceholder(page);
     }
 
