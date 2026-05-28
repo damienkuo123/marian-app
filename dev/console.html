@@ -1425,170 +1425,79 @@
 
 
     /* =======================================================
-       Console IA / UX 重整 v1：導航分組 + Overview v2
+       Overview Analytics Dashboard v3
        ======================================================= */
-    .nav-group { margin: 12px 0 6px; }
-    .nav-group:first-child { margin-top: 0; }
-    .nav-group-label {
-      padding: 10px 14px 6px;
-      color: var(--sidebar-muted);
-      font-size: 11px;
-      font-weight: 850;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      opacity: .72;
-    }
-    .overview-v2 { display: grid; gap: 18px; }
-    .overview-hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
-      gap: 18px;
-      align-items: stretch;
-    }
-    .overview-status-card {
-      border-radius: 30px;
-      border: 1px solid var(--border);
-      background:
-        radial-gradient(circle at 12% 20%, rgba(37,99,235,.14), transparent 32%),
-        linear-gradient(135deg, rgba(37,99,235,.08), rgba(245,158,11,.06)),
-        var(--surface);
-      box-shadow: var(--shadow);
-      padding: 28px;
-      min-height: 230px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .overview-status-top { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
-    .overview-status-badge {
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 12px; border-radius:999px;
-      border:1px solid var(--border); background:rgba(255,255,255,.55);
-      color:var(--muted); font-size:12px; font-weight:850;
-    }
-    html[data-theme="dark"] .overview-status-badge { background: rgba(17,24,39,.6); }
-    .overview-status-badge.ok { color: var(--green); border-color: rgba(22,163,74,.28); background: rgba(22,163,74,.09); }
-    .overview-status-badge.warn { color: var(--amber); border-color: rgba(217,119,6,.28); background: rgba(217,119,6,.10); }
-    .overview-status-badge.danger { color: var(--red); border-color: rgba(220,38,38,.28); background: rgba(220,38,38,.10); }
-    .overview-status-title { margin: 18px 0 10px; font-size: clamp(26px, 3vw, 42px); line-height:1.12; letter-spacing:-.055em; font-weight:900; color:var(--text); }
-    .overview-status-copy { color: var(--muted); font-size: 15px; line-height:1.75; font-weight:600; max-width: 760px; margin:0; }
-    .overview-hero-metrics { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; margin-top:24px; }
-    .overview-mini-metric { padding:14px; border:1px solid var(--border); background:rgba(255,255,255,.58); border-radius:18px; }
-    html[data-theme="dark"] .overview-mini-metric { background: rgba(17,24,39,.55); }
-    .overview-mini-label { color:var(--muted); font-size:12px; font-weight:800; }
-    .overview-mini-value { margin-top:6px; font-size:24px; line-height:1; font-weight:900; letter-spacing:-.04em; font-family:var(--font-number); }
-    .overview-action-card { background:var(--surface); border:1px solid var(--border); border-radius:30px; box-shadow:var(--shadow); padding:22px; display:flex; flex-direction:column; gap:14px; }
-    .overview-action-card h2 { margin:0; font-size:20px; letter-spacing:-.035em; }
-    .overview-action-list { display:flex; flex-direction:column; gap:10px; }
-    .overview-action-item { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:start; padding:13px; border:1px solid var(--border); border-radius:18px; background:var(--surface-2); }
-    .overview-action-dot { width:10px; height:10px; border-radius:50%; margin-top:6px; background:var(--green); }
-    .overview-action-dot.warn { background:var(--amber); }
-    .overview-action-dot.danger { background:var(--red); }
-    .overview-action-title { font-size:14px; font-weight:900; color:var(--text); }
-    .overview-action-note { margin-top:4px; font-size:12.5px; line-height:1.55; color:var(--muted); font-weight:650; }
-    .overview-action-link { border:0; background:transparent; color:var(--primary); font-weight:900; cursor:pointer; padding:3px 0; white-space:nowrap; }
-    .overview-management-grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:18px; }
-    .overview-management-card { background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:20px; box-shadow:0 12px 28px rgba(16,24,40,.045); min-height:180px; display:flex; flex-direction:column; justify-content:space-between; }
-    .overview-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
-    .overview-card-title { font-size:14px; font-weight:850; color:var(--muted); }
-    .overview-card-value { margin-top:12px; font-size:34px; font-weight:900; letter-spacing:-.05em; font-family:var(--font-number); color:var(--text); }
-    .overview-card-note { margin-top:7px; color:var(--muted); font-size:13px; font-weight:650; line-height:1.5; }
-    .overview-progress { height:9px; background:rgba(148,163,184,.18); border-radius:999px; overflow:hidden; margin-top:16px; }
-    .overview-progress > div { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg, var(--primary), #22c55e); transition:width .45s ease; }
-    .overview-progress.warn > div { background:linear-gradient(90deg, #f59e0b, #ef4444); }
-    .overview-lower-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(340px,.58fr); gap:18px; }
-    .overview-section-card { background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:22px; box-shadow:var(--shadow); }
-    .overview-section-card h2 { margin:0 0 14px; font-size:19px; letter-spacing:-.035em; }
-    .overview-quick-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; }
-    .overview-quick-btn { border:1px solid var(--border); background:var(--surface-2); color:var(--text); border-radius:16px; padding:14px; text-align:left; cursor:pointer; font-weight:850; line-height:1.35; }
-    .overview-quick-btn span { display:block; color:var(--muted); font-size:12px; font-weight:650; margin-top:5px; }
-    .overview-quick-btn:hover { border-color:rgba(37,99,235,.34); box-shadow:0 10px 22px rgba(37,99,235,.08); }
-    @media (max-width: 1180px) { .overview-hero, .overview-lower-grid { grid-template-columns:1fr; } .overview-management-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-    @media (max-width: 960px) { .nav-group-label { display:none; } .nav-group { display:flex; margin:0; } .overview-hero-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .overview-quick-grid { grid-template-columns:1fr; } }
-    @media (max-width: 640px) {
-      .overview-status-card, .overview-action-card, .overview-section-card { border-radius:22px; padding:18px; }
-      .overview-status-top { flex-direction:column; }
-      .overview-status-title { font-size:28px; }
-      .overview-status-copy { font-size:14px; }
-      .overview-hero-metrics { grid-template-columns:1fr 1fr; gap:10px; }
-      .overview-mini-value { font-size:22px; }
-      .overview-management-grid { grid-template-columns:1fr; }
-      .overview-action-item { grid-template-columns:auto 1fr; }
-      .overview-action-link { grid-column:2; justify-self:start; }
-    }
+    .overview-hero-v3{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:stretch;padding:26px;border:1px solid var(--border);border-radius:30px;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(245,158,11,.07)),var(--surface);box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden;position:relative;}
+    .overview-kicker{display:inline-flex;align-items:center;gap:8px;color:var(--primary);font-size:13px;font-weight:950;margin-bottom:10px;}
+    .overview-hero-main h2{margin:0;font-size:clamp(26px,3vw,42px);line-height:1.08;letter-spacing:-.055em;color:var(--text);font-weight:900;}
+    .overview-hero-main p{max-width:820px;color:var(--muted);font-size:15px;line-height:1.75;font-weight:650;margin:12px 0 0;}
+    .overview-hero-side{display:flex;flex-direction:column;gap:10px;min-width:150px;align-self:start;}
+    .overview-todo-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+    .overview-todo{border:1px solid var(--border);background:rgba(255,255,255,.62);color:var(--text);border-radius:999px;padding:9px 12px;font-size:13px;font-weight:850;cursor:pointer;transition:.16s ease;}
+    html[data-theme="dark"] .overview-todo{background:rgba(255,255,255,.06);}
+    .overview-todo:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(16,24,40,.08);}
+    .overview-todo.warn{color:var(--amber);border-color:rgba(217,119,6,.24);background:rgba(217,119,6,.08);}
+    .overview-todo.danger{color:var(--red);border-color:rgba(220,38,38,.24);background:rgba(220,38,38,.08);}
+    .overview-todo.ok{color:var(--green);border-color:rgba(22,163,74,.24);background:rgba(22,163,74,.08);}
+    .overview-todo.muted{color:var(--muted);}
+    .overview-top-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px;}
+    .overview-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:20px 22px;box-shadow:0 12px 28px rgba(16,24,40,.045);}
+    .overview-stat-card.emphasis{background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(56,189,248,.06)),var(--surface);border-color:rgba(37,99,235,.18);}
+    .overview-analytics-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:24px 0 14px;}
+    .overview-analytics-toolbar h2{margin:0;font-size:23px;font-weight:900;letter-spacing:-.04em;color:var(--text);}
+    .overview-analytics-toolbar p{margin:6px 0 0;color:var(--muted);font-weight:650;line-height:1.5;}
+    .range-switcher{display:inline-flex;gap:6px;padding:5px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);}
+    .range-btn{border:0;background:transparent;color:var(--muted);font-weight:900;border-radius:999px;padding:9px 14px;cursor:pointer;}
+    .range-btn.active{background:var(--surface);color:var(--text);box-shadow:0 8px 20px rgba(16,24,40,.08);}
+    .overview-chart-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.65fr);gap:18px;margin-bottom:18px;}
+    .overview-chart-grid.secondary{grid-template-columns:1.1fr .9fr .9fr;}
+    .analytics-card{background:var(--surface);border:1px solid var(--border);border-radius:26px;padding:20px;box-shadow:var(--shadow);overflow:hidden;}
+    .analytics-card.wide{min-height:390px;}
+    .analytics-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px;}
+    .analytics-card-head h3{margin:0;font-size:18px;font-weight:900;letter-spacing:-.03em;color:var(--text);}
+    .analytics-card-head p{margin:6px 0 0;color:var(--muted);font-size:13px;font-weight:650;line-height:1.55;}
+    .line-chart-shell,.bar-chart-shell{min-height:250px;}
+    .line-chart-svg{width:100%;height:270px;display:block;}
+    .chart-axis{stroke:var(--border);stroke-width:1;}
+    .chart-grid-line{stroke:var(--border);stroke-width:1;opacity:.7;}
+    .chart-line-total{fill:none;stroke:var(--primary);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;}
+    .chart-area-total{fill:url(#usageGradient);opacity:.38;}
+    .chart-point{fill:var(--primary);stroke:var(--surface);stroke-width:3;}
+    .chart-label{fill:var(--muted);font-size:11px;font-weight:800;}
+    .chart-total-label{fill:var(--text);font-size:12px;font-weight:900;}
+    .donut-wrap{display:grid;grid-template-columns:160px 1fr;gap:16px;align-items:center;min-height:250px;}
+    .donut{width:160px;height:160px;border-radius:50%;background:conic-gradient(#2563eb 0deg,#2563eb 80deg,#22c55e 80deg,#22c55e 160deg,#f59e0b 160deg,#f59e0b 240deg,#ef4444 240deg,#ef4444 320deg,#94a3b8 320deg);display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--border);}
+    .donut-inner{width:104px;height:104px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center;border:1px solid var(--border);}
+    .donut-inner strong{font-size:24px;font-weight:950;color:var(--text);line-height:1;}
+    .donut-inner span{display:block;font-size:11px;color:var(--muted);font-weight:800;margin-top:5px;}
+    .legend-list{display:flex;flex-direction:column;gap:9px;}
+    .legend-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;color:var(--muted);}
+    .legend-row:last-child{border-bottom:0;}
+    .legend-left{display:flex;align-items:center;gap:8px;min-width:0;}
+    .legend-dot{width:10px;height:10px;border-radius:999px;flex:0 0 auto;}
+    .point-bars{display:flex;align-items:flex-end;gap:8px;height:220px;padding:10px 4px 0;border-bottom:1px solid var(--border);}
+    .point-day{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0;height:100%;}
+    .point-stack{width:100%;max-width:28px;display:flex;flex-direction:column;justify-content:flex-end;min-height:8px;border-radius:8px 8px 0 0;overflow:hidden;background:var(--surface-2);}
+    .point-plus{background:rgba(22,163,74,.85);}
+    .point-minus{background:rgba(220,38,38,.75);}
+    .point-date{font-size:10px;color:var(--muted);font-weight:800;white-space:nowrap;}
+    .usage-list,.watch-list{display:flex;flex-direction:column;gap:12px;}
+    .class-usage-row{display:grid;grid-template-columns:70px 1fr 54px;gap:10px;align-items:center;}
+    .class-usage-code{font-weight:950;color:var(--text);}
+    .usage-track{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden;border:1px solid var(--border);}
+    .usage-fill{height:100%;background:linear-gradient(90deg,#2563eb,#22c55e);border-radius:999px;}
+    .usage-rate{font-size:13px;font-weight:950;color:var(--muted);text-align:right;}
+    .watch-group-title{font-size:12px;font-weight:950;color:var(--muted);text-transform:none;margin-top:4px;}
+    .watch-student{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2);}
+    .watch-student strong{font-size:13px;color:var(--text);}
+    .watch-student span{font-size:12px;color:var(--muted);font-weight:750;}
+    .overview-status-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr);gap:18px;margin-top:18px;}
+    .overview-mini-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;}
+    .overview-mini-value{font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.045em;margin:6px 0 2px;}
+    @media (max-width:1180px){.overview-chart-grid,.overview-chart-grid.secondary,.overview-status-grid{grid-template-columns:1fr;}.overview-top-grid,.overview-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.donut-wrap{grid-template-columns:140px 1fr}.donut{width:140px;height:140px}.donut-inner{width:94px;height:94px}}
+    @media (max-width:640px){.overview-hero-v3{grid-template-columns:1fr;padding:20px;border-radius:24px}.overview-hero-side{display:grid;grid-template-columns:1fr 1fr;min-width:0}.overview-top-grid,.overview-mini-grid{grid-template-columns:1fr}.overview-analytics-toolbar{align-items:stretch;flex-direction:column}.range-switcher{width:100%;}.range-btn{flex:1}.analytics-card{padding:16px;border-radius:22px}.donut-wrap{grid-template-columns:1fr;justify-items:center}.line-chart-svg{height:240px}.point-bars{height:180px}.overview-hero-main h2{font-size:27px}}
 
-
-
-    /* =======================================================
-       Overview v2.1 polish: sidebar scroll + student usage analysis
-       ======================================================= */
-    .sidebar {
-      overflow-y: auto;
-      overflow-x: hidden;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(148,163,184,.38) transparent;
-    }
-    .sidebar::-webkit-scrollbar { width: 7px; }
-    .sidebar::-webkit-scrollbar-thumb { background: rgba(148,163,184,.35); border-radius: 999px; }
-    .sidebar::-webkit-scrollbar-track { background: transparent; }
-    .side-nav { padding-bottom: 110px; }
-    .nav-group:last-child { margin-bottom: 18px; }
-
-    .student-usage-panel { display:grid; grid-template-columns: 1.08fr .92fr; gap:18px; align-items:stretch; }
-    .student-usage-chart { min-height: 250px; display:flex; flex-direction:column; gap:14px; justify-content:center; }
-    .usage-bar-row { display:grid; grid-template-columns: 110px 1fr 58px; gap:12px; align-items:center; }
-    .usage-bar-label { color:var(--muted); font-size:13px; font-weight:850; line-height:1.35; }
-    .usage-bar-track { height:12px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; border:1px solid rgba(148,163,184,.12); }
-    .usage-bar-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,var(--primary),#22c55e); transition:width .45s ease; }
-    .usage-bar-fill.warn { background:linear-gradient(90deg,#f59e0b,#ef4444); }
-    .usage-bar-value { font-family:var(--font-number); font-size:14px; font-weight:900; color:var(--text); text-align:right; }
-    .student-usage-side { border:1px solid var(--border); background:var(--surface-2); border-radius:20px; padding:16px; display:flex; flex-direction:column; gap:12px; justify-content:center; }
-    .usage-insight-row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
-    .usage-insight-row:last-child { border-bottom:0; }
-    .usage-insight-title { color:var(--muted); font-size:12.5px; font-weight:800; }
-    .usage-insight-value { color:var(--text); font-size:15px; font-weight:950; text-align:right; }
-    .usage-action-note { margin-top:2px; color:var(--muted); font-size:12.5px; font-weight:650; line-height:1.55; }
-
-
-    .daily-usage-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:14px; }
-    .daily-usage-title { font-size:16px; font-weight:950; color:var(--text); letter-spacing:-.02em; }
-    .daily-usage-sub { margin-top:5px; color:var(--muted); font-size:12.5px; font-weight:650; line-height:1.55; }
-    .usage-kpi-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
-    .usage-kpi { border:1px solid var(--border); background:var(--surface-2); border-radius:16px; padding:12px; min-width:0; }
-    .usage-kpi-label { color:var(--muted); font-size:11.5px; font-weight:850; line-height:1.35; }
-    .usage-kpi-value { margin-top:5px; font-family:var(--font-number); color:var(--text); font-size:24px; font-weight:900; letter-spacing:-.04em; }
-    .usage-kpi-note { margin-top:3px; color:var(--muted); font-size:11.5px; font-weight:650; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .class-usage-list { display:flex; flex-direction:column; gap:10px; }
-    .class-usage-row { display:grid; grid-template-columns:72px 1fr 64px; gap:11px; align-items:center; }
-    .class-usage-name { font-weight:950; color:var(--text); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .class-usage-track { height:12px; border-radius:999px; background:rgba(148,163,184,.18); border:1px solid rgba(148,163,184,.12); overflow:hidden; }
-    .class-usage-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#38bdf8,var(--primary)); }
-    .class-usage-value { font-family:var(--font-number); font-weight:900; text-align:right; font-size:13px; color:var(--text); }
-    .watch-list { border:1px solid var(--border); background:var(--surface-2); border-radius:18px; padding:14px; display:flex; flex-direction:column; gap:10px; }
-    .watch-item { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding-bottom:10px; border-bottom:1px dashed var(--border); }
-    .watch-item:last-child { border-bottom:0; padding-bottom:0; }
-    .watch-name { font-weight:950; color:var(--text); font-size:13.5px; line-height:1.35; }
-    .watch-note { color:var(--muted); font-size:12px; font-weight:650; margin-top:3px; }
-
-    @media (max-width: 960px) {
-      .sidebar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
-      .sidebar::-webkit-scrollbar { display:none; }
-      .side-nav { padding-bottom: 0; }
-    }
-    @media (max-width: 720px) {
-      .student-usage-panel { grid-template-columns:1fr; }
-      .usage-bar-row { grid-template-columns: 92px 1fr 50px; gap:9px; }
-      .overview-lower-grid { gap:14px; }
-      .usage-kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-      .daily-usage-head { flex-direction:column; }
-      .class-usage-row { grid-template-columns:58px 1fr 54px; gap:8px; }
-    }
-
-    /* Console v2.2 mini fix: remove sidebar footer identity block to avoid it being dragged into the nav area while scrolling. */
-    .side-foot { display: none !important; }
-    .sidebar { padding-bottom: 24px; }
-
-  </style>
+</style>
 </head>
 <body>
   <section id="loginView" class="login-shell">
@@ -1823,8 +1732,10 @@
     let healthCache = null;
     let healthLoading = false;
     let overviewCache = null;
-    let overviewLearningCache = null;
     let overviewLoading = false;
+    let overviewAnalyticsCache = null;
+    let overviewAnalyticsLoading = false;
+    let overviewAnalyticsRange = 7;
     let studentsCache = null;
     let studentsLoading = false;
     let weeklyCache = null;
@@ -1862,20 +1773,6 @@
         ["branding", "品牌", "◈"],
         ["health", "資料健康", "◆"],
         ["settings", "設定", "⚙"]
-      ]
-    };
-
-    const navGroupsByRole = {
-      super_admin: [
-        { label: "總覽", items: [["overview", "營運總覽", "⌘"], ["health", "資料健康", "◆"]] },
-        { label: "學生與學習", items: [["students", "學生管理", "👥"], ["learning", "學習進度", "📈"]] },
-        { label: "課程與任務", items: [["curriculum", "單元排程", "🗓"]] },
-        { label: "家長溝通", items: [["weekly", "週報", "✉"], ["newsletters", "專欄", "📰"]] },
-        { label: "遊戲化", items: [["avatars", "角色", "🎭"], ["settings", "點數與盲盒", "⚙"]] },
-        { label: "校區設定", items: [["branding", "品牌", "◈"]] }
-      ],
-      owner: [
-        { label: "Owner", items: [["overview", "總覽", "⌘"], ["schools", "校區", "▦"], ["health", "資料健康", "◆"], ["weekly", "週報", "✉"], ["automation", "自動化", "⚙"]] }
       ]
     };
 
@@ -1962,17 +1859,12 @@
     }
 
     function renderNav() {
-      const groups = navGroupsByRole[session.role] || [{ label: "Console", items: navByRole[session.role] || [] }];
+      const items = navByRole[session.role] || [];
       const nav = document.getElementById("sideNav");
-      nav.innerHTML = groups.map(group => `
-        <div class="nav-group">
-          <div class="nav-group-label">${escapeHtml(group.label)}</div>
-          ${group.items.map(([id, label, icon]) => `
-            <button class="side-item" data-page="${id}" onclick="showPage('${id}')">
-              <span>${icon}</span><span>${escapeHtml(label)}</span>
-            </button>
-          `).join("")}
-        </div>
+      nav.innerHTML = items.map(([id, label, icon]) => `
+        <button class="side-item" data-page="${id}" onclick="showPage('${id}')">
+          <span>${icon}</span><span>${label}</span>
+        </button>
       `).join("");
     }
 
@@ -1985,7 +1877,7 @@
     function showPage(page) {
       setActive(page);
       const titleMap = {
-        overview: ["營運總覽", "今天有沒有問題、這週有什麼進行中、現在需要做什麼"],
+        overview: ["Overview", "校區營運、校區營運、資料健康、週報狀態總覽"],
         schools: ["Schools", "Owner 多校區狀態與資料信心值"],
         students: ["Students", "學生資料、點數、週報、角色狀態"],
         learning: ["Learning Progress", "學習進度、單元表現與雷達診斷"],
@@ -2004,6 +1896,7 @@
       document.getElementById("pageContent").innerHTML = renderPage(page);
       if (page === "overview") {
         loadOverviewData(false);
+        loadOverviewAnalyticsData(false);
       }
       if (page === "health") {
         loadHealthData(false);
@@ -2051,93 +1944,101 @@
     function renderOverview() {
       const isOwner = session.role === "owner";
       return `
-        <div class="overview-v2">
-          <div class="overview-hero">
-            <section class="overview-status-card">
-              <div>
-                <div class="overview-status-top">
-                  <span id="ovStatusBadge" class="overview-status-badge">正在讀取</span>
-                  <button class="btn-compact" onclick="loadOverviewData(true)">重新整理</button>
-                </div>
-                <h2 id="ovStatusTitle" class="overview-status-title">正在整理校區狀態...</h2>
-                <p id="ovStatusSubtitle" class="overview-status-copy">Console 會先整理待處理事項，再把各功能頁的數據壓縮成可判斷的管理摘要。</p>
-              </div>
-              <div class="overview-hero-metrics">
-                <div class="overview-mini-metric"><div class="overview-mini-label">學生席位</div><div id="ovHeroSeats" class="overview-mini-value">—</div></div>
-                <div class="overview-mini-metric"><div class="overview-mini-label">週報健康</div><div id="ovHeroWeekly" class="overview-mini-value">—</div></div>
-                <div class="overview-mini-metric"><div class="overview-mini-label">進行中排程</div><div id="ovHeroSchedules" class="overview-mini-value">—</div></div>
-                <div class="overview-mini-metric"><div class="overview-mini-label">資料健康</div><div id="ovHeroHealth" class="overview-mini-value">—</div></div>
-              </div>
-            </section>
-            <aside class="overview-action-card">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                <h2>待處理事項</h2>
-                <span id="ovActionBadge" class="badge ok">分析中</span>
-              </div>
-              <div id="overviewActionList" class="overview-action-list">
-                <div class="empty-state">正在分析...</div>
-              </div>
-            </aside>
+        <div class="overview-hero-v3">
+          <div class="overview-hero-main">
+            <div class="overview-kicker">今日營運儀表板</div>
+            <h2 id="ovHeroTitle">正在整理校區使用狀況...</h2>
+            <p id="ovHeroSub">結合學生練習、挑戰、對戰、點數與週報狀態，讓管理員一眼看出今天是否值得放心。</p>
+            <div id="overviewActionList" class="overview-todo-list"><div class="overview-todo muted">正在分析待處理事項...</div></div>
           </div>
-
-          <div class="overview-management-grid">
-            <section class="overview-management-card">
-              <div>
-                <div class="overview-card-head"><div class="overview-card-title">學生席位使用率</div><span id="ovSeatBadge" class="badge ok">—</span></div>
-                <div id="ovSeatValue" class="overview-card-value">—</div>
-                <div id="ovSeatNote" class="overview-card-note">以啟用學生計算</div>
-              </div>
-              <div class="overview-progress" id="ovSeatProgress"><div id="ovSeatFill"></div></div>
-            </section>
-            <section class="overview-management-card">
-              <div>
-                <div class="overview-card-head"><div class="overview-card-title">家長週報準備度</div><span id="ovWeeklyBadge" class="badge ok">—</span></div>
-                <div id="ovWeeklyValue" class="overview-card-value">—</div>
-                <div id="ovWeeklyReadyNote" class="overview-card-note">收件人與專欄狀態</div>
-              </div>
-              <div class="overview-progress" id="ovWeeklyProgress"><div id="ovWeeklyFill"></div></div>
-            </section>
-            <section class="overview-management-card">
-              <div>
-                <div class="overview-card-head"><div class="overview-card-title">課程排程狀態</div><span id="ovScheduleBadge" class="badge ok">—</span></div>
-                <div id="ovScheduleValue" class="overview-card-value">—</div>
-                <div id="ovScheduleNote" class="overview-card-note">目前進行中的排程</div>
-              </div>
-              <div class="overview-progress" id="ovScheduleProgress"><div id="ovScheduleFill"></div></div>
-            </section>
-            <section class="overview-management-card">
-              <div>
-                <div class="overview-card-head"><div class="overview-card-title">資料健康分數</div><span id="ovHealthBadge" class="badge ok">—</span></div>
-                <div id="ovHealthValue" class="overview-card-value">—</div>
-                <div id="ovHealthReadyNote" class="overview-card-note">High / Critical 會優先提醒</div>
-              </div>
-              <div class="overview-progress" id="ovHealthProgress"><div id="ovHealthFill"></div></div>
-            </section>
+          <div class="overview-hero-side">
+            <button class="btn-compact primary" onclick="refreshOverviewAll()">重新整理</button>
+            <button class="btn-compact" onclick="showPage('health')">資料健康</button>
+            <button class="btn-compact" onclick="showPage('weekly')">週報設定</button>
           </div>
+        </div>
 
-          <div class="overview-lower-grid">
-            <section class="overview-section-card">
-              <div class="panel-title">
-                <h2>${isOwner ? "校區使用概況" : "學生使用分析"}</h2>
-                <button class="btn-compact" onclick="showPage('students')">查看學生</button>
-              </div>
-              <div id="overviewStudentUsage" class="empty-state">正在整理學生使用狀況...</div>
-            </section>
-            <section class="overview-section-card">
-              <h2>快速操作</h2>
-              <div class="overview-quick-grid">
-                <button class="overview-quick-btn" onclick="showPage('students')">學生管理<span>新增、停用、批量修改</span></button>
-                <button class="overview-quick-btn" onclick="showPage('curriculum')">單元排程<span>查看進行中單元</span></button>
-                <button class="overview-quick-btn" onclick="showPage('weekly')">週報中心<span>收件健康與寄送狀態</span></button>
-                <button class="overview-quick-btn" onclick="showPage('newsletters')">專欄排序<span>確認第 1 順位待發</span></button>
-                <button class="overview-quick-btn" onclick="showPage('health')">資料健康<span>查看異常清單</span></button>
-                <button class="overview-quick-btn" onclick="showPage('settings')">點數設定<span>任務、排行榜、盲盒</span></button>
-              </div>
-              <div style="margin-top:18px;" class="status-list">
-                <div class="status-row"><span><strong>最近週報</strong><br><span id="ovWeeklyStatusNote" class="small-note">尚無資料</span></span><span id="ovWeeklyStatus" class="badge ok">—</span></div>
-                <div class="status-row"><span><strong>資料更新</strong><br><span class="small-note">Console 資料時間</span></span><span id="ovGeneratedAt" class="small-note">—</span></div>
-              </div>
-            </section>
+        <div class="overview-top-grid">
+          <div class="overview-stat-card emphasis">
+            <div class="metric-label">今日使用量</div>
+            <div id="anaTodayTotal" class="metric-value">—</div>
+            <div id="anaTodayNote" class="metric-note">學生實際互動次數</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">本週活躍率</div>
+            <div id="anaActiveRate" class="metric-value">—</div>
+            <div id="anaActiveNote" class="metric-note">活躍學生 / 啟用學生</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">今日挑戰</div>
+            <div id="anaChallengeTotal" class="metric-value">—</div>
+            <div id="anaChallengeNote" class="metric-note">今日挑戰完成次數</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">點數淨流量</div>
+            <div id="anaPointNet" class="metric-value">—</div>
+            <div id="anaPointNote" class="metric-note">加分 - 扣分</div>
+          </div>
+        </div>
+
+        <div class="overview-analytics-toolbar">
+          <div>
+            <h2>校區真實使用分析</h2>
+            <p>看學生與老師這幾天到底有沒有真的在用，不再只看冷冰冰的資料筆數。</p>
+          </div>
+          <div class="range-switcher">
+            <button id="anaRange7" class="range-btn active" onclick="setAnalyticsRange(7)">近 7 天</button>
+            <button id="anaRange30" class="range-btn" onclick="setAnalyticsRange(30)">近 30 天</button>
+          </div>
+        </div>
+
+        <div class="overview-chart-grid">
+          <div class="analytics-card wide">
+            <div class="analytics-card-head">
+              <div><h3>每日使用量趨勢</h3><p>一般練習、今日挑戰、對戰、抽卡與點數活動的每日總互動。</p></div>
+              <span id="anaUsagePeak" class="badge ok">—</span>
+            </div>
+            <div id="anaUsageChart" class="line-chart-shell"><div class="empty-state">正在讀取使用趨勢...</div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>學習模式比例</h3><p>學生使用 Tappie 的模式分布。</p></div></div>
+            <div id="anaModeDonut" class="donut-wrap"><div class="empty-state">正在讀取模式比例...</div></div>
+          </div>
+        </div>
+
+        <div class="overview-chart-grid secondary">
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>老師與系統點數流動</h3><p>每日加分、扣分與淨點數變化。</p></div></div>
+            <div id="anaPointChart" class="bar-chart-shell"><div class="empty-state">正在讀取點數流動...</div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>班級活躍排行</h3><p>依本週活躍學生比例排序。</p></div></div>
+            <div id="anaClassUsage" class="usage-list"><div class="empty-state">正在讀取班級活躍度...</div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>學生追蹤名單</h3><p>高活躍與低活躍學生快速查看。</p></div></div>
+            <div id="anaStudentWatch" class="watch-list"><div class="empty-state">正在整理學生名單...</div></div>
+          </div>
+        </div>
+
+        <div class="overview-status-grid">
+          <div class="card">
+            <div class="panel-title"><h2>${isOwner ? "校區摘要" : "校區基本狀態"}</h2><span id="ovGeneratedAt" class="badge ok">—</span></div>
+            <div class="overview-mini-grid">
+              <div><div class="metric-label">${isOwner ? "校區總數" : "學生席位"}</div><div id="ovSchoolCount" class="overview-mini-value">—</div><div id="ovSchoolNote" class="metric-note">讀取中</div></div>
+              <div><div class="metric-label">週報對象</div><div id="ovWeeklyEnabled" class="overview-mini-value">—</div><div id="ovWeeklyNote" class="metric-note">已開啟週報</div></div>
+              <div><div class="metric-label">啟用排程</div><div id="ovActiveSchedules" class="overview-mini-value">—</div><div class="metric-note">目前啟用排程</div></div>
+              <div><div class="metric-label">資料健康</div><div id="ovHealthScore" class="overview-mini-value">—</div><div id="ovHealthNote" class="metric-note">資料健康分數</div></div>
+            </div>
+            <div id="overviewSchoolList" style="margin-top:16px;" class="empty-state">正在讀取 Overview...</div>
+          </div>
+          <div class="card">
+            <div class="panel-title"><h2>週報與內容準備</h2><button class="btn-compact" onclick="showPage('newsletters')">管理專欄</button></div>
+            <div class="status-list">
+              <div class="status-row"><span><strong>待發專欄</strong><br><span class="small-note">display_order = 1～10</span></span><span id="ovNextNewsletter" class="badge ok">—</span></div>
+              <div class="status-row"><span><strong>最近週報</strong><br><span id="ovWeeklyStatusNote" class="small-note">weekly_report_jobs</span></span><span id="ovWeeklyStatus" class="badge ok">—</span></div>
+              <div class="status-row"><span><strong>健康提醒</strong><br><span id="ovIssueNote" class="small-note">Critical / High</span></span><span id="ovIssueCount" class="badge ok">—</span></div>
+            </div>
           </div>
         </div>
       `;
@@ -2280,23 +2181,10 @@
         const data = await TappieAPI.consoleGetOverview({ token: session.token });
         if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_overview_failed");
         overviewCache = data;
-        if (session.role !== "owner") {
-          try {
-            const schoolCode = currentConsoleSchoolCode();
-            overviewLearningCache = (TappieAPI && typeof TappieAPI.adminGetProgress === "function")
-              ? await TappieAPI.adminGetProgress(schoolCode)
-              : await fetch(`${TappieAPI.supabaseBaseUrl}/admin-get-progress?schoolCode=${encodeURIComponent(schoolCode)}`).then(r => r.json());
-          } catch (usageErr) {
-            console.warn("overview learning usage failed", usageErr);
-            overviewLearningCache = { success:false, error: usageErr?.message || String(usageErr) };
-          }
-        } else {
-          overviewLearningCache = null;
-        }
         updateOverviewUI();
       } catch (err) {
         console.error("loadOverviewData failed", err);
-        const wrap = document.getElementById("overviewStudentUsage") || document.getElementById("pageContent");
+        const wrap = document.getElementById("overviewSchoolList") || document.getElementById("pageContent");
         if (wrap) wrap.innerHTML = `<div class="empty-state">Overview 讀取失敗：${escapeHtml(err.message || err)}</div>`;
       } finally {
         overviewLoading = false;
@@ -2336,226 +2224,208 @@
       return map[v] || value || "—";
     }
 
-    function pct(num, den) {
-      const n = Number(num || 0);
-      const d = Number(den || 0);
-      if (!d || d <= 0) return 0;
-      return Math.max(0, Math.min(100, Math.round((n / d) * 100)));
-    }
-
-    function setText(id, value) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = value;
-    }
-
-    function setBadge(id, label, cls = "ok") {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = label;
-      el.className = `badge ${cls}`;
-    }
-
-    function setProgress(id, fillId, value, warn = false) {
-      const wrap = document.getElementById(id);
-      const fill = document.getElementById(fillId);
-      if (wrap) wrap.classList.toggle("warn", !!warn);
-      if (fill) fill.style.width = `${Math.max(0, Math.min(100, Number(value || 0)))}%`;
-    }
-
-
-    function buildOverviewUsageStats() {
-      const data = overviewLearningCache;
-      if (!data || !data.success || !Array.isArray(data.classes)) return null;
-      const gami = data.gamification || {};
-      const fail = learningFailThreshold(gami);
-      const good = learningGoodThreshold(gami);
-      const perfect = learningPerfectThreshold(gami);
-      const classes = data.classes || [];
-      const students = classes.flatMap(cls => (cls.students || []).map(s => ({ ...s, _class: cls })));
-      const totalStudents = students.length;
-      const activeLearners = students.filter(s => Number(s.count || 0) > 0).length;
-      const totalCompletions = students.reduce((sum, s) => sum + Number(s.count || 0), 0);
-      const riskStudents = students.filter(s => Number(s.count || 0) < fail);
-      const goodStudents = students.filter(s => Number(s.count || 0) >= good).length;
-      const perfectStudents = students.filter(s => Number(s.count || 0) >= perfect).length;
-      const scored = students.filter(s => Number(s.bestScore || s.best_score || 0) > 0);
-      const avgBest = scored.length ? Math.round(scored.reduce((sum, s) => sum + Number(s.bestScore || s.best_score || 0), 0) / scored.length) : 0;
-      const classStats = classes.map(cls => {
-        const list = cls.students || [];
-        const total = list.length;
-        const active = list.filter(s => Number(s.count || 0) > 0).length;
-        const completions = list.reduce((sum, s) => sum + Number(s.count || 0), 0);
-        const risk = list.filter(s => Number(s.count || 0) < fail).length;
-        const rate = total ? Math.round((active / total) * 100) : 0;
-        return {
-          classCode: String(cls.classCode || cls.class_code || "未分班"),
-          unitName: cls.unitName || cls.unit_name || cls.currentUnit || "未排定單元",
-          total, active, completions, risk, rate
-        };
-      }).sort((a,b) => b.rate - a.rate || b.completions - a.completions || a.classCode.localeCompare(b.classCode, "zh-Hant"));
-      const watch = riskStudents
-        .slice()
-        .sort((a,b) => Number(a.count||0) - Number(b.count||0) || String(a.name||"").localeCompare(String(b.name||""), "zh-Hant"))
-        .slice(0, 5)
-        .map(s => ({ name: s.name || "未命名", uid: s.uid || "", classCode: String(s._class?.classCode || s._class?.class_code || "未分班"), count: Number(s.count || 0), bestScore: Number(s.bestScore || s.best_score || 0) }));
-      return { fail, good, perfect, totalStudents, activeLearners, totalCompletions, riskStudents, riskCount: riskStudents.length, goodStudents, perfectStudents, avgBest, classStats, watch };
-    }
-
-    function renderOverviewStudentUsage({ isOwner, schools, summary, activeStudents, studentLimitRaw, hasLimit, seatPct, weeklyEnabled, emailValid, weeklyPct, activeSchedules, nextNewsletterCount }) {
-      const el = document.getElementById("overviewStudentUsage");
-      if (!el) return;
-      if (isOwner) {
-        if (!schools.length) { el.innerHTML = `<div class="empty-state">目前沒有校區資料。</div>`; return; }
-        el.innerHTML = schools.slice(0,6).map(s => {
-          const score = Number(s.health_score ?? 100);
-          const statusClass = score >= 90 ? "ok" : score >= 75 ? "warn" : "danger";
-          return `<div class="school-score-row"><div class="score-ring" style="--score:${score}"><div class="score-ring-inner">${escapeHtml(score)}</div></div><div style="flex:1;min-width:0;"><div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div><div class="small-note">學生 ${Number(s.active_students||0)}・週報 ${Number(s.weekly_report_enabled_students||0)}・排程 ${Number(s.active_schedules||0)}</div></div><span class="badge ${statusClass}">${escapeHtml(translateHealthStatus(s.health_status))}</span></div>`;
-        }).join("");
-        return;
-      }
-
-      const stats = buildOverviewUsageStats();
-      if (!stats) {
-        const weeklyEnablePct = activeStudents > 0 ? pct(weeklyEnabled, activeStudents) : 0;
-        const emailCoveragePct = activeStudents > 0 ? pct(emailValid, activeStudents) : 0;
-        el.innerHTML = `
-          <div class="student-usage-panel">
-            <div class="student-usage-chart">
-              <div class="usage-bar-row"><div class="usage-bar-label">學生席位</div><div class="usage-bar-track"><div class="usage-bar-fill ${hasLimit && seatPct >= 90 ? 'warn' : ''}" style="width:${hasLimit ? seatPct : 100}%"></div></div><div class="usage-bar-value">${hasLimit ? seatPct + '%' : '不限'}</div></div>
-              <div class="usage-bar-row"><div class="usage-bar-label">週報啟用</div><div class="usage-bar-track"><div class="usage-bar-fill" style="width:${weeklyEnablePct}%"></div></div><div class="usage-bar-value">${weeklyEnablePct}%</div></div>
-              <div class="usage-bar-row"><div class="usage-bar-label">Email 完整</div><div class="usage-bar-track"><div class="usage-bar-fill ${emailCoveragePct < 100 ? 'warn' : ''}" style="width:${emailCoveragePct}%"></div></div><div class="usage-bar-value">${emailCoveragePct}%</div></div>
-              <div class="usage-bar-row"><div class="usage-bar-label">排程狀態</div><div class="usage-bar-track"><div class="usage-bar-fill ${activeSchedules === 0 ? 'warn' : ''}" style="width:${activeSchedules > 0 ? 100 : 0}%"></div></div><div class="usage-bar-value">${activeSchedules > 0 ? '有排程' : '未排程'}</div></div>
-            </div>
-            <div class="student-usage-side"><div class="usage-insight-row"><span class="usage-insight-title">啟用學生</span><span class="usage-insight-value">${activeStudents}${hasLimit ? ` / ${studentLimitRaw}` : ''}</span></div><div class="usage-insight-row"><span class="usage-insight-title">週報對象</span><span class="usage-insight-value">${weeklyEnabled}</span></div><div class="usage-insight-row"><span class="usage-insight-title">有效 Email</span><span class="usage-insight-value">${emailValid}</span></div><div class="usage-action-note">學習使用分析暫時無法讀取，先顯示營運準備度。</div></div>
-          </div>`;
-        return;
-      }
-
-      const activeRate = pct(stats.activeLearners, stats.totalStudents);
-      const riskRate = pct(stats.riskCount, stats.totalStudents);
-      const topClasses = stats.classStats.slice(0, 5);
-      el.innerHTML = `
-        <div class="daily-usage-head">
-          <div><div class="daily-usage-title">本週 / 目前單元使用分析</div><div class="daily-usage-sub">依目前進行中單元的今日挑戰完成紀錄彙整；用來快速判斷哪個班級和學生需要被提醒。</div></div>
-          <button class="btn-compact" onclick="showPage('learning')">查看學習進度</button>
-        </div>
-        <div class="usage-kpi-grid">
-          <div class="usage-kpi"><div class="usage-kpi-label">活躍學生</div><div class="usage-kpi-value">${stats.activeLearners}/${stats.totalStudents}</div><div class="usage-kpi-note">活躍率 ${activeRate}%</div></div>
-          <div class="usage-kpi"><div class="usage-kpi-label">挑戰完成</div><div class="usage-kpi-value">${stats.totalCompletions}</div><div class="usage-kpi-note">目前單元累計</div></div>
-          <div class="usage-kpi"><div class="usage-kpi-label">低活躍提醒</div><div class="usage-kpi-value">${stats.riskCount}</div><div class="usage-kpi-note">少於 ${stats.fail} 次</div></div>
-          <div class="usage-kpi"><div class="usage-kpi-label">平均最高分</div><div class="usage-kpi-value">${stats.avgBest || '—'}</div><div class="usage-kpi-note">有完成紀錄者</div></div>
-        </div>
-        <div class="student-usage-panel">
-          <div>
-            <div class="daily-usage-title" style="font-size:14px;margin-bottom:10px;">各班活躍率</div>
-            <div class="class-usage-list">
-              ${topClasses.length ? topClasses.map(c => `<div class="class-usage-row"><div class="class-usage-name">${escapeHtml(c.classCode)}</div><div class="class-usage-track"><div class="class-usage-fill" style="width:${Math.max(4,c.rate)}%"></div></div><div class="class-usage-value">${c.rate}%</div></div>`).join("") : `<div class="empty-state">目前沒有班級使用資料。</div>`}
-            </div>
-          </div>
-          <div class="watch-list">
-            <div class="daily-usage-title" style="font-size:14px;">需要追蹤的學生</div>
-            ${stats.watch.length ? stats.watch.map(s => `<div class="watch-item"><div><div class="watch-name">${escapeHtml(s.name)}</div><div class="watch-note">${escapeHtml(s.classCode)}・${escapeHtml(s.uid)}・最高 ${s.bestScore || 0} 分</div></div><span class="badge ${s.count < stats.fail ? 'warn' : 'ok'}">${s.count}/${stats.fail} 次</span></div>`).join("") : `<div class="usage-action-note">目前沒有低活躍學生，維持提醒即可。</div>`}
-          </div>
-        </div>`;
-    }
-
     function updateOverviewUI() {
-      if (!overviewCache || !document.getElementById("ovStatusTitle")) return;
+      if (!overviewCache || !document.getElementById("ovSchoolCount")) return;
       const summary = overviewCache.summary || {};
       const schools = overviewCache.schools || [];
       const isOwner = session.role === "owner";
       const first = schools[0] || {};
-      const activeStudents = Number(isOwner ? (summary.activeStudents || 0) : (first.active_students || 0));
-      const studentLimitRaw = isOwner ? 0 : Number(first.student_limit || 0);
-      const hasLimit = !isOwner && studentLimitRaw > 0;
-      const seatPct = hasLimit ? pct(activeStudents, studentLimitRaw) : 0;
-      const weeklyEnabled = Number(summary.weeklyReportEnabledStudents || 0);
-      const emailValid = Number(summary.studentsWithParentEmail || 0);
-      const weeklyPct = weeklyEnabled > 0 ? pct(emailValid, weeklyEnabled) : 100;
-      const activeSchedules = Number(summary.activeSchedules || 0);
-      const healthScore = Number(summary.avgHealthScore ?? 100);
-      const totalIssues = Number(summary.totalIssues || 0);
-      const criticalIssues = Number(summary.criticalIssues || 0);
-      const highIssues = Number(summary.highIssues || 0);
-      const mediumIssues = Number(summary.mediumIssues || 0);
-      const highPriority = criticalIssues + highIssues;
-      const noNewsletter = Number(summary.weeklyEnabledSchoolsWithoutNewsletter || 0);
-      const noSchedules = Number(summary.schoolsWithoutActiveSchedules || 0);
-      const nextNewsletterCount = Number(summary.nextNewsletterCount || 0);
+      const highPriority = Number(summary.criticalIssues || 0) + Number(summary.highIssues || 0);
 
-      let statusCls = "ok";
-      let statusLabel = "狀態良好";
-      let statusTitle = "今天看起來很穩定";
-      let statusSubtitle = "目前沒有高優先級資料問題。可以確認排程、週報與專欄是否符合本週營運安排。";
-      if (highPriority > 0) {
-        statusCls = "danger";
-        statusLabel = "需要處理";
-        statusTitle = `有 ${highPriority} 個高優先級問題`;
-        statusSubtitle = "建議先進入資料健康頁查看 Critical / High 項目，再處理週報或排程設定。";
-      } else if (mediumIssues > 0 || noNewsletter > 0 || noSchedules > 0) {
-        statusCls = "warn";
-        statusLabel = "建議檢查";
-        statusTitle = "有幾項營運提醒需要確認";
-        statusSubtitle = "目前沒有嚴重問題，但建議檢查週報專欄、進行中排程或 Medium 等級資料提醒。";
+      document.getElementById("ovSchoolCount").textContent = isOwner
+        ? String(summary.schoolCount ?? schools.length ?? 0)
+        : `${Number(first.active_students || 0)} / ${first.student_limit == null ? "∞" : Number(first.student_limit || 0)}`;
+      document.getElementById("ovSchoolNote").textContent = isOwner
+        ? `Active students：${Number(summary.activeStudents || 0)}`
+        : (first.school_name || session.school?.name || "目前校區");
+
+      document.getElementById("ovWeeklyEnabled").textContent = String(summary.weeklyReportEnabledStudents || 0);
+      document.getElementById("ovWeeklyNote").textContent = `有效 Email：${Number(summary.studentsWithParentEmail || 0)}`;
+      document.getElementById("ovActiveSchedules").textContent = String(summary.activeSchedules || 0);
+      document.getElementById("ovHealthScore").textContent = String(summary.avgHealthScore ?? 100);
+      document.getElementById("ovHealthNote").textContent = highPriority > 0 ? `優先問題 ${highPriority}` : "目前無 High/Critical";
+      document.getElementById("ovIssueCount").textContent = String(summary.totalIssues || 0);
+      document.getElementById("ovIssueNote").textContent = `Critical ${Number(summary.criticalIssues||0)} / High ${Number(summary.highIssues||0)}`;
+      document.getElementById("ovNextNewsletter").textContent = String(summary.nextNewsletterCount || 0);
+      document.getElementById("ovWeeklyStatus").textContent = translateJobStatus(summary.latestWeeklyJobStatus);
+      document.getElementById("ovWeeklyStatusNote").textContent = summary.latestWeeklyJobAt ? formatDateTime(summary.latestWeeklyJobAt) : "尚無正式週報紀錄";
+      document.getElementById("ovGeneratedAt").textContent = formatDateTime(overviewCache.generatedAt);
+
+      const list = document.getElementById("overviewSchoolList");
+      if (list) {
+        if (!schools.length) {
+          list.innerHTML = `<div class="empty-state">目前沒有校區資料。</div>`;
+        } else {
+          list.innerHTML = schools.map(s => {
+            const limit = s.student_limit == null || Number(s.student_limit || 0) <= 0 ? "∞" : String(s.student_limit);
+            const score = Number(s.health_score ?? 100);
+            const statusClass = score >= 90 ? "ok" : score >= 75 ? "warn" : "danger";
+            return `
+              <div class="school-score-row">
+                <div class="score-ring" style="--score:${score}"><div class="score-ring-inner">${escapeHtml(score)}</div></div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div>
+                  <div class="small-note">學生 ${Number(s.active_students||0)} / ${escapeHtml(limit)} ・ 週報 ${Number(s.weekly_report_enabled_students||0)} ・ 排程 ${Number(s.active_schedules||0)} ・ 專欄 ${Number(s.next_newsletter_count||0)}</div>
+                </div>
+                <span class="badge ${statusClass}">${escapeHtml(translateHealthStatus(s.health_status))}</span>
+              </div>`;
+          }).join("");
+        }
       }
-      const statusBadge = document.getElementById("ovStatusBadge");
-      if (statusBadge) {
-        statusBadge.textContent = statusLabel;
-        statusBadge.className = `overview-status-badge ${statusCls}`;
-      }
-      setText("ovStatusTitle", statusTitle);
-      setText("ovStatusSubtitle", statusSubtitle);
-
-      const seatText = isOwner ? String(summary.schoolCount ?? schools.length ?? 0) : `${activeStudents}/${hasLimit ? studentLimitRaw : "∞"}`;
-      setText("ovHeroSeats", seatText);
-      setText("ovHeroWeekly", weeklyEnabled ? `${weeklyPct}%` : "未啟用");
-      setText("ovHeroSchedules", String(activeSchedules));
-      setText("ovHeroHealth", String(healthScore));
-
-      setText("ovSeatValue", seatText);
-      setText("ovSeatNote", isOwner ? `Active students：${activeStudents}` : (hasLimit ? `剩餘 ${Math.max(0, studentLimitRaw - activeStudents)} 位；以啟用學生計算` : "未設定 student_limit，視為不限席位"));
-      setBadge("ovSeatBadge", isOwner ? "多校區" : (hasLimit && seatPct >= 90 ? "接近上限" : "正常"), hasLimit && seatPct >= 90 ? "warn" : "ok");
-      setProgress("ovSeatProgress", "ovSeatFill", hasLimit ? seatPct : 100, hasLimit && seatPct >= 90);
-
-      setText("ovWeeklyValue", weeklyEnabled ? `${emailValid}/${weeklyEnabled}` : "未啟用");
-      setText("ovWeeklyReadyNote", weeklyEnabled ? `有效 Email / 週報啟用；待發專欄 ${nextNewsletterCount}` : "目前沒有啟用家長週報的學生");
-      setBadge("ovWeeklyBadge", weeklyEnabled && weeklyPct < 100 ? "收件檢查" : "正常", weeklyEnabled && weeklyPct < 100 ? "warn" : "ok");
-      setProgress("ovWeeklyProgress", "ovWeeklyFill", weeklyEnabled ? weeklyPct : 100, weeklyEnabled && weeklyPct < 100);
-
-      setText("ovScheduleValue", String(activeSchedules));
-      setText("ovScheduleNote", noSchedules > 0 ? `${noSchedules} 校沒有 active schedule` : "目前有進行中排程");
-      setBadge("ovScheduleBadge", activeSchedules > 0 ? "進行中" : "待排程", activeSchedules > 0 ? "ok" : "warn");
-      setProgress("ovScheduleProgress", "ovScheduleFill", Math.min(100, activeSchedules * 25), activeSchedules === 0);
-
-      setText("ovHealthValue", String(healthScore));
-      setText("ovHealthReadyNote", totalIssues ? `共 ${totalIssues} 項提醒；High/Critical ${highPriority}` : "沒有資料健康提醒");
-      setBadge("ovHealthBadge", highPriority ? "優先處理" : (mediumIssues ? "建議檢查" : "良好"), highPriority ? "danger" : (mediumIssues ? "warn" : "ok"));
-      setProgress("ovHealthProgress", "ovHealthFill", healthScore, healthScore < 90);
-
-      setText("ovWeeklyStatus", translateJobStatus(summary.latestWeeklyJobStatus));
-      setText("ovWeeklyStatusNote", summary.latestWeeklyJobAt ? formatDateTime(summary.latestWeeklyJobAt) : "尚無正式週報紀錄");
-      setText("ovGeneratedAt", formatDateTime(overviewCache.generatedAt));
-
-      renderOverviewStudentUsage({ isOwner, schools, summary, activeStudents, studentLimitRaw, hasLimit, seatPct, weeklyEnabled, emailValid, weeklyPct, activeSchedules, nextNewsletterCount });
 
       const actions = [];
-      if (criticalIssues > 0) actions.push(["danger", "Critical 資料問題", `${criticalIssues} 項需要立即檢查`, "health"]);
-      if (highIssues > 0) actions.push(["danger", "High 資料問題", `${highIssues} 項建議正式上線前修復`, "health"]);
-      if (mediumIssues > 0) actions.push(["warn", "Medium 提醒", `${mediumIssues} 項建議排程處理`, "health"]);
-      if (noNewsletter > 0) actions.push(["warn", "週報專欄提醒", `${noNewsletter} 校週報啟用但沒有第 1 順位待發專欄`, "newsletters"]);
-      if (noSchedules > 0) actions.push(["warn", "排程提醒", `${noSchedules} 校目前沒有 active schedule`, "curriculum"]);
-      if (!actions.length) actions.push(["ok", "目前狀態良好", "沒有 High/Critical 問題，資料信心值正常", "overview"]);
+      if (Number(summary.criticalIssues || 0) > 0) actions.push(["danger", "Critical 資料問題", `${summary.criticalIssues} 項需要立即檢查`]);
+      if (Number(summary.highIssues || 0) > 0) actions.push(["danger", "High 資料問題", `${summary.highIssues} 項建議正式上線前修復`]);
+      if (Number(summary.mediumIssues || 0) > 0) actions.push(["warn", "Medium 提醒", `${summary.mediumIssues} 項建議排程處理`]);
+      if (Number(summary.weeklyEnabledSchoolsWithoutNewsletter || 0) > 0) actions.push(["warn", "週報專欄提醒", `${summary.weeklyEnabledSchoolsWithoutNewsletter} 校週報啟用但沒有 display_order=1 專欄`]);
+      if (Number(summary.schoolsWithoutActiveSchedules || 0) > 0) actions.push(["warn", "排程提醒", `${summary.schoolsWithoutActiveSchedules} 校目前沒有 active schedule`]);
+      if (!actions.length) actions.push(["ok", "目前狀態良好", "沒有 High/Critical 問題，資料信心值正常"]);
       const actionList = document.getElementById("overviewActionList");
       if (actionList) {
-        actionList.innerHTML = actions.map(([cls, label, note, page]) => `
-          <div class="overview-action-item">
-            <span class="overview-action-dot ${cls === "danger" ? "danger" : cls === "warn" ? "warn" : ""}"></span>
-            <span><span class="overview-action-title">${escapeHtml(label)}</span><span class="overview-action-note">${escapeHtml(note)}</span></span>
-            ${page === "overview" ? `<span class="badge ok">OK</span>` : `<button class="overview-action-link" onclick="showPage('${page}')">查看</button>`}
-          </div>
-        `).join("");
+        actionList.innerHTML = actions.map(([cls, label, note]) => {
+          const target = label.includes("專欄") ? "newsletters" : label.includes("排程") ? "curriculum" : (cls === "ok" ? "overview" : "health");
+          return `<button class="overview-todo ${cls}" onclick="showPage('${target}')"><strong>${escapeHtml(label)}</strong>｜${escapeHtml(note)}</button>`;
+        }).join("");
       }
-      setBadge("ovActionBadge", actions.some(a => a[0] === "danger") ? "優先處理" : actions.some(a => a[0] === "warn") ? "有提醒" : "OK", actions.some(a => a[0] === "danger") ? "danger" : actions.some(a => a[0] === "warn") ? "warn" : "ok");
+    }
+
+
+    function refreshOverviewAll(){
+      loadOverviewData(true);
+      loadOverviewAnalyticsData(true);
+    }
+
+    function getFunctionBaseForConsole(){
+      return (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+        ? TappieAPI.supabaseBaseUrl.replace(/\/$/, '')
+        : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+    }
+
+    function setAnalyticsRange(days){
+      overviewAnalyticsRange = Number(days) === 30 ? 30 : 7;
+      document.getElementById('anaRange7')?.classList.toggle('active', overviewAnalyticsRange === 7);
+      document.getElementById('anaRange30')?.classList.toggle('active', overviewAnalyticsRange === 30);
+      overviewAnalyticsCache = null;
+      loadOverviewAnalyticsData(true);
+    }
+
+    async function loadOverviewAnalyticsData(force = false){
+      if (!session || !session.token) return;
+      if (overviewAnalyticsLoading) return;
+      if (overviewAnalyticsCache && !force) { updateOverviewAnalyticsUI(); return; }
+      overviewAnalyticsLoading = true;
+      try{
+        const base = getFunctionBaseForConsole();
+        const res = await fetch(`${base}/console-get-analytics`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+          body: JSON.stringify({ rangeDays: overviewAnalyticsRange, schoolCode: session.school?.schoolCode || null })
+        });
+        const data = await res.json().catch(()=>({ success:false, message:'invalid_json' }));
+        if (!res.ok || !data || data.success === false) throw new Error(data?.message || data?.error || 'console_get_analytics_failed');
+        overviewAnalyticsCache = data;
+        updateOverviewAnalyticsUI();
+      }catch(err){
+        console.error('loadOverviewAnalyticsData failed', err);
+        ['anaUsageChart','anaModeDonut','anaPointChart','anaClassUsage','anaStudentWatch'].forEach(id=>{
+          const el=document.getElementById(id); if(el) el.innerHTML=`<div class="empty-state">分析資料讀取失敗：${escapeHtml(err.message || err)}</div>`;
+        });
+      }finally{ overviewAnalyticsLoading = false; }
+    }
+
+    function numFmt(n){ return Number(n||0).toLocaleString('zh-TW'); }
+    function pctFmt(n){ return `${Math.round(Number(n||0))}%`; }
+    function dateShort(key){ const s=String(key||''); return s.length>=10 ? `${Number(s.slice(5,7))}/${Number(s.slice(8,10))}` : s; }
+
+    function updateOverviewAnalyticsUI(){
+      const data = overviewAnalyticsCache || {};
+      const totals = data.totals || {};
+      const today = data.today || {};
+      const active = data.active || {};
+      const daily = Array.isArray(data.dailyUsage) ? data.dailyUsage : [];
+      const pointTrend = Array.isArray(data.pointTrend) ? data.pointTrend : [];
+      const mode = data.modeBreakdown || {};
+      document.getElementById('anaTodayTotal') && (document.getElementById('anaTodayTotal').textContent = numFmt(today.total));
+      document.getElementById('anaTodayNote') && (document.getElementById('anaTodayNote').textContent = `今日一般練習 ${numFmt(today.practice)}｜挑戰 ${numFmt(today.challenge)}｜對戰 ${numFmt((today.battle1v1||0)+(today.battleAi||0)+(today.eventBattle||0))}`);
+      document.getElementById('anaActiveRate') && (document.getElementById('anaActiveRate').textContent = pctFmt(active.rate));
+      document.getElementById('anaActiveNote') && (document.getElementById('anaActiveNote').textContent = `${numFmt(active.activeStudents)} / ${numFmt(active.totalStudents)} 位學生在區間內有互動`);
+      document.getElementById('anaChallengeTotal') && (document.getElementById('anaChallengeTotal').textContent = numFmt(today.challenge));
+      document.getElementById('anaChallengeNote') && (document.getElementById('anaChallengeNote').textContent = `區間挑戰完成 ${numFmt(totals.challenge)} 次`);
+      document.getElementById('anaPointNet') && (document.getElementById('anaPointNet').textContent = `${Number(totals.pointNet||0) >= 0 ? '+' : ''}${numFmt(totals.pointNet)}`);
+      document.getElementById('anaPointNote') && (document.getElementById('anaPointNote').textContent = `加分 ${numFmt(totals.pointPlus)}｜扣分 ${numFmt(totals.pointMinus)}`);
+
+      const heroTitle = document.getElementById('ovHeroTitle');
+      const heroSub = document.getElementById('ovHeroSub');
+      if (heroTitle) {
+        if (Number(today.total||0) > 0) heroTitle.textContent = `今天已有 ${numFmt(today.total)} 次學生互動，校區正在運轉中。`;
+        else if (Number(active.rate||0) > 0) heroTitle.textContent = `本區間活躍率 ${pctFmt(active.rate)}，但今天尚未出現新互動。`;
+        else heroTitle.textContent = `目前尚未偵測到學生互動，建議確認課程排程與入口使用。`;
+      }
+      if (heroSub) heroSub.textContent = `近 ${data.rangeDays || overviewAnalyticsRange} 天累計 ${numFmt(totals.total)} 次互動，包含練習、挑戰、對戰、抽卡與點數操作。`;
+
+      const peak = daily.reduce((best,x)=>Number(x.total||0)>Number(best.total||0)?x:best,{total:0,date:null});
+      document.getElementById('anaUsagePeak') && (document.getElementById('anaUsagePeak').textContent = peak.date ? `高峰 ${dateShort(peak.date)}：${numFmt(peak.total)}` : '尚無高峰');
+      renderUsageLineChart(daily);
+      renderModeDonut(mode);
+      renderPointTrend(pointTrend);
+      renderClassUsage(data.classUsage || []);
+      renderStudentWatch(data.topStudents || [], data.lowActivityStudents || []);
+    }
+
+    function renderUsageLineChart(rows){
+      const el=document.getElementById('anaUsageChart'); if(!el) return;
+      if(!rows.length){ el.innerHTML='<div class="empty-state">目前沒有使用紀錄。</div>'; return; }
+      const W=820,H=270,padL=44,padR=18,padT=18,padB=42;
+      const max=Math.max(1,...rows.map(r=>Number(r.total||0)));
+      const x=(i)=>padL+(rows.length===1?0:(i*(W-padL-padR)/(rows.length-1)));
+      const y=(v)=>padT+(H-padT-padB)*(1-Number(v||0)/max);
+      const pts=rows.map((r,i)=>`${x(i)},${y(r.total)}`).join(' ');
+      const area=`${padL},${H-padB} ${pts} ${x(rows.length-1)},${H-padB}`;
+      const labels=rows.map((r,i)=> i===0 || i===rows.length-1 || (rows.length<=10 && i%2===0) || (rows.length>10 && i%5===0)
+        ? `<text class="chart-label" x="${x(i)}" y="${H-14}" text-anchor="middle">${dateShort(r.date)}</text>` : '').join('');
+      const points=rows.map((r,i)=> Number(r.total||0)>0 ? `<circle class="chart-point" cx="${x(i)}" cy="${y(r.total)}" r="4"><title>${r.date}: ${r.total}</title></circle>` : '').join('');
+      el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" class="line-chart-svg" preserveAspectRatio="none">
+        <defs><linearGradient id="usageGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#2563eb" stop-opacity=".55"/><stop offset="100%" stop-color="#2563eb" stop-opacity="0"/></linearGradient></defs>
+        <line class="chart-grid-line" x1="${padL}" x2="${W-padR}" y1="${padT}" y2="${padT}"/><line class="chart-grid-line" x1="${padL}" x2="${W-padR}" y1="${y(max/2)}" y2="${y(max/2)}"/><line class="chart-axis" x1="${padL}" x2="${W-padR}" y1="${H-padB}" y2="${H-padB}"/>
+        <text class="chart-total-label" x="8" y="${padT+4}">${numFmt(max)}</text><text class="chart-label" x="8" y="${y(max/2)+4}">${numFmt(Math.round(max/2))}</text>
+        <polygon class="chart-area-total" points="${area}"/><polyline class="chart-line-total" points="${pts}"/>${points}${labels}
+      </svg>`;
+    }
+
+    function renderModeDonut(mode){
+      const el=document.getElementById('anaModeDonut'); if(!el) return;
+      const items=[
+        ['practice','一般練習','#2563eb'],['challenge','今日挑戰','#22c55e'],['battle1v1','1v1 對戰','#f59e0b'],['battleAi','AI 對戰','#8b5cf6'],['eventBattle','活動對戰','#ef4444'],['gacha','抽卡','#64748b']
+      ].map(([key,label,color])=>({key,label,color,value:Number(mode[key]||0)}));
+      const total=items.reduce((a,b)=>a+b.value,0);
+      if(!total){ el.innerHTML='<div class="empty-state">目前沒有模式使用紀錄。</div>'; return; }
+      let acc=0; const stops=[];
+      items.forEach(it=>{ const deg=it.value/total*360; stops.push(`${it.color} ${acc}deg ${acc+deg}deg`); acc+=deg; });
+      const legend=items.filter(it=>it.value>0).map(it=>`<div class="legend-row"><div class="legend-left"><span class="legend-dot" style="background:${it.color}"></span><span>${escapeHtml(it.label)}</span></div><strong>${numFmt(it.value)}</strong></div>`).join('');
+      el.innerHTML=`<div class="donut" style="background:conic-gradient(${stops.join(',')})"><div class="donut-inner"><div><strong>${numFmt(total)}</strong><span>總互動</span></div></div></div><div class="legend-list">${legend}</div>`;
+    }
+
+    function renderPointTrend(rows){
+      const el=document.getElementById('anaPointChart'); if(!el) return;
+      if(!rows.length){ el.innerHTML='<div class="empty-state">目前沒有點數流動紀錄。</div>'; return; }
+      const max=Math.max(1,...rows.map(r=>Math.max(Number(r.plus||0),Number(r.minus||0))));
+      el.innerHTML=`<div class="point-bars">${rows.map(r=>{
+        const plusH=Math.max(3,Number(r.plus||0)/max*100); const minusH=Math.max(0,Number(r.minus||0)/max*100);
+        return `<div class="point-day"><div class="point-stack"><div class="point-plus" style="height:${plusH}%" title="加分 ${r.plus}"></div><div class="point-minus" style="height:${minusH}%" title="扣分 ${r.minus}"></div></div><div class="point-date">${dateShort(r.date)}</div></div>`;
+      }).join('')}</div><div class="small-note" style="margin-top:10px;">綠色為加分，紅色為扣分；高度代表每日點數流動量。</div>`;
+    }
+
+    function renderClassUsage(rows){
+      const el=document.getElementById('anaClassUsage'); if(!el) return;
+      if(!rows.length){ el.innerHTML='<div class="empty-state">目前沒有班級資料。</div>'; return; }
+      el.innerHTML=rows.slice(0,8).map(r=>`<div class="class-usage-row"><div class="class-usage-code">${escapeHtml(r.classCode || '未分班')}</div><div class="usage-track"><div class="usage-fill" style="width:${Math.max(0,Math.min(100,Number(r.rate||0)))}%"></div></div><div class="usage-rate">${pctFmt(r.rate)}</div></div>`).join('');
+    }
+
+    function renderStudentWatch(top, low){
+      const el=document.getElementById('anaStudentWatch'); if(!el) return;
+      const topHtml=(top||[]).slice(0,4).map(s=>`<div class="watch-student"><div><strong>${escapeHtml(s.name||s.uid||'學生')}</strong><br><span>${escapeHtml(s.classCode||'未分班')}｜${numFmt(s.total)} 次互動</span></div><span class="badge ok">活躍</span></div>`).join('') || '<div class="small-note">暫無高活躍學生</div>';
+      const lowHtml=(low||[]).slice(0,5).map(s=>`<div class="watch-student"><div><strong>${escapeHtml(s.name||s.uid||'學生')}</strong><br><span>${escapeHtml(s.classCode||'未分班')}｜區間內尚無互動</span></div><span class="badge warn">追蹤</span></div>`).join('') || '<div class="small-note">沒有低活躍提醒</div>';
+      el.innerHTML=`<div class="watch-group-title">最活躍學生</div>${topHtml}<div class="watch-group-title">需要追蹤</div>${lowHtml}`;
     }
 
     async function loadHealthData(force = false) {
