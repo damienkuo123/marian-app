@@ -1517,6 +1517,49 @@
       .overview-action-link { grid-column:2; justify-self:start; }
     }
 
+
+
+    /* =======================================================
+       Overview v2.1 polish: sidebar scroll + student usage analysis
+       ======================================================= */
+    .sidebar {
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148,163,184,.38) transparent;
+    }
+    .sidebar::-webkit-scrollbar { width: 7px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(148,163,184,.35); border-radius: 999px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .side-nav { padding-bottom: 110px; }
+    .nav-group:last-child { margin-bottom: 18px; }
+
+    .student-usage-panel { display:grid; grid-template-columns: 1.08fr .92fr; gap:18px; align-items:stretch; }
+    .student-usage-chart { min-height: 250px; display:flex; flex-direction:column; gap:14px; justify-content:center; }
+    .usage-bar-row { display:grid; grid-template-columns: 110px 1fr 58px; gap:12px; align-items:center; }
+    .usage-bar-label { color:var(--muted); font-size:13px; font-weight:850; line-height:1.35; }
+    .usage-bar-track { height:12px; border-radius:999px; background:rgba(148,163,184,.18); overflow:hidden; border:1px solid rgba(148,163,184,.12); }
+    .usage-bar-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,var(--primary),#22c55e); transition:width .45s ease; }
+    .usage-bar-fill.warn { background:linear-gradient(90deg,#f59e0b,#ef4444); }
+    .usage-bar-value { font-family:var(--font-number); font-size:14px; font-weight:900; color:var(--text); text-align:right; }
+    .student-usage-side { border:1px solid var(--border); background:var(--surface-2); border-radius:20px; padding:16px; display:flex; flex-direction:column; gap:12px; justify-content:center; }
+    .usage-insight-row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+    .usage-insight-row:last-child { border-bottom:0; }
+    .usage-insight-title { color:var(--muted); font-size:12.5px; font-weight:800; }
+    .usage-insight-value { color:var(--text); font-size:15px; font-weight:950; text-align:right; }
+    .usage-action-note { margin-top:2px; color:var(--muted); font-size:12.5px; font-weight:650; line-height:1.55; }
+
+    @media (max-width: 960px) {
+      .sidebar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+      .sidebar::-webkit-scrollbar { display:none; }
+      .side-nav { padding-bottom: 0; }
+    }
+    @media (max-width: 720px) {
+      .student-usage-panel { grid-template-columns:1fr; }
+      .usage-bar-row { grid-template-columns: 92px 1fr 50px; gap:9px; }
+      .overview-lower-grid { gap:14px; }
+    }
+
   </style>
 </head>
 <body>
@@ -2045,8 +2088,11 @@
 
           <div class="overview-lower-grid">
             <section class="overview-section-card">
-              <h2>${isOwner ? "校區營運總覽" : "本校營運重點"}</h2>
-              <div id="overviewSchoolList" class="empty-state">正在讀取 Overview...</div>
+              <div class="panel-title">
+                <h2>${isOwner ? "校區使用概況" : "學生使用分析"}</h2>
+                <button class="btn-compact" onclick="showPage('students')">查看學生</button>
+              </div>
+              <div id="overviewStudentUsage" class="empty-state">正在整理學生使用狀況...</div>
             </section>
             <section class="overview-section-card">
               <h2>快速操作</h2>
@@ -2208,7 +2254,7 @@
         updateOverviewUI();
       } catch (err) {
         console.error("loadOverviewData failed", err);
-        const wrap = document.getElementById("overviewSchoolList") || document.getElementById("pageContent");
+        const wrap = document.getElementById("overviewStudentUsage") || document.getElementById("pageContent");
         if (wrap) wrap.innerHTML = `<div class="empty-state">Overview 讀取失敗：${escapeHtml(err.message || err)}</div>`;
       } finally {
         overviewLoading = false;
@@ -2272,6 +2318,77 @@
       const fill = document.getElementById(fillId);
       if (wrap) wrap.classList.toggle("warn", !!warn);
       if (fill) fill.style.width = `${Math.max(0, Math.min(100, Number(value || 0)))}%`;
+    }
+
+
+    function renderOverviewStudentUsage({ isOwner, schools, summary, activeStudents, studentLimitRaw, hasLimit, seatPct, weeklyEnabled, emailValid, weeklyPct, activeSchedules, nextNewsletterCount }) {
+      const el = document.getElementById("overviewStudentUsage");
+      if (!el) return;
+      if (isOwner) {
+        if (!schools.length) {
+          el.innerHTML = `<div class="empty-state">目前沒有校區資料。</div>`;
+          return;
+        }
+        el.innerHTML = schools.map(s => {
+          const limit = s.student_limit == null || Number(s.student_limit || 0) <= 0 ? "∞" : String(s.student_limit);
+          const score = Number(s.health_score ?? 100);
+          const statusClass = score >= 90 ? "ok" : score >= 75 ? "warn" : "danger";
+          return `
+            <div class="school-score-row">
+              <div class="score-ring" style="--score:${score}"><div class="score-ring-inner">${escapeHtml(score)}</div></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div>
+                <div class="small-note">學生 ${Number(s.active_students||0)} / ${escapeHtml(limit)} ・ 週報 ${Number(s.weekly_report_enabled_students||0)} ・ 排程 ${Number(s.active_schedules||0)} ・ 專欄 ${Number(s.next_newsletter_count||0)}</div>
+              </div>
+              <span class="badge ${statusClass}">${escapeHtml(translateHealthStatus(s.health_status))}</span>
+            </div>`;
+        }).join("");
+        return;
+      }
+
+      const weeklyEnablePct = activeStudents > 0 ? pct(weeklyEnabled, activeStudents) : 0;
+      const emailCoveragePct = activeStudents > 0 ? pct(emailValid, activeStudents) : 0;
+      const schedulePct = activeSchedules > 0 ? 100 : 0;
+      const seatLabel = hasLimit ? `${seatPct}%` : "不限";
+      const weeklyLabel = weeklyEnabled ? `${weeklyEnablePct}%` : "0%";
+      const emailLabel = activeStudents ? `${emailCoveragePct}%` : "0%";
+      const scheduleLabel = activeSchedules > 0 ? "有排程" : "未排程";
+      const remainingSeats = hasLimit ? Math.max(0, studentLimitRaw - activeStudents) : null;
+      const inactiveStudents = Number(summary.inactiveStudents || summary.inactive_students || 0);
+      const activeClasses = Number(summary.activeClasses || summary.active_classes || 0);
+
+      el.innerHTML = `
+        <div class="student-usage-panel">
+          <div class="student-usage-chart">
+            <div class="usage-bar-row">
+              <div class="usage-bar-label">學生席位</div>
+              <div class="usage-bar-track"><div class="usage-bar-fill ${hasLimit && seatPct >= 90 ? 'warn' : ''}" style="width:${hasLimit ? seatPct : 100}%"></div></div>
+              <div class="usage-bar-value">${escapeHtml(seatLabel)}</div>
+            </div>
+            <div class="usage-bar-row">
+              <div class="usage-bar-label">週報啟用</div>
+              <div class="usage-bar-track"><div class="usage-bar-fill" style="width:${weeklyEnablePct}%"></div></div>
+              <div class="usage-bar-value">${escapeHtml(weeklyLabel)}</div>
+            </div>
+            <div class="usage-bar-row">
+              <div class="usage-bar-label">Email 完整</div>
+              <div class="usage-bar-track"><div class="usage-bar-fill ${emailCoveragePct < 100 ? 'warn' : ''}" style="width:${emailCoveragePct}%"></div></div>
+              <div class="usage-bar-value">${escapeHtml(emailLabel)}</div>
+            </div>
+            <div class="usage-bar-row">
+              <div class="usage-bar-label">排程狀態</div>
+              <div class="usage-bar-track"><div class="usage-bar-fill ${activeSchedules === 0 ? 'warn' : ''}" style="width:${schedulePct}%"></div></div>
+              <div class="usage-bar-value">${escapeHtml(scheduleLabel)}</div>
+            </div>
+          </div>
+          <div class="student-usage-side">
+            <div class="usage-insight-row"><span class="usage-insight-title">啟用學生</span><span class="usage-insight-value">${activeStudents}${hasLimit ? ` / ${studentLimitRaw}` : ''}</span></div>
+            <div class="usage-insight-row"><span class="usage-insight-title">剩餘席位</span><span class="usage-insight-value">${remainingSeats === null ? '不限' : remainingSeats}</span></div>
+            <div class="usage-insight-row"><span class="usage-insight-title">週報對象</span><span class="usage-insight-value">${weeklyEnabled}</span></div>
+            <div class="usage-insight-row"><span class="usage-insight-title">有效 Email</span><span class="usage-insight-value">${emailValid}</span></div>
+            <div class="usage-action-note">這區先整合「學生席位、週報啟用、Email 完整度、排程狀態」。後續可再接入本週練習次數與挑戰完成率，變成真正的學生使用趨勢圖。</div>
+          </div>
+        </div>`;
     }
 
     function updateOverviewUI() {
@@ -2351,27 +2468,7 @@
       setText("ovWeeklyStatusNote", summary.latestWeeklyJobAt ? formatDateTime(summary.latestWeeklyJobAt) : "尚無正式週報紀錄");
       setText("ovGeneratedAt", formatDateTime(overviewCache.generatedAt));
 
-      const list = document.getElementById("overviewSchoolList");
-      if (list) {
-        if (!schools.length) {
-          list.innerHTML = `<div class="empty-state">目前沒有校區資料。</div>`;
-        } else {
-          list.innerHTML = schools.map(s => {
-            const limit = s.student_limit == null || Number(s.student_limit || 0) <= 0 ? "∞" : String(s.student_limit);
-            const score = Number(s.health_score ?? 100);
-            const statusClass = score >= 90 ? "ok" : score >= 75 ? "warn" : "danger";
-            return `
-              <div class="school-score-row">
-                <div class="score-ring" style="--score:${score}"><div class="score-ring-inner">${escapeHtml(score)}</div></div>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-weight:950;">${escapeHtml(s.school_name)} <span class="small-note">${escapeHtml(s.school_code)}</span></div>
-                  <div class="small-note">學生 ${Number(s.active_students||0)} / ${escapeHtml(limit)} ・ 週報 ${Number(s.weekly_report_enabled_students||0)} ・ 排程 ${Number(s.active_schedules||0)} ・ 專欄 ${Number(s.next_newsletter_count||0)}</div>
-                </div>
-                <span class="badge ${statusClass}">${escapeHtml(translateHealthStatus(s.health_status))}</span>
-              </div>`;
-          }).join("");
-        }
-      }
+      renderOverviewStudentUsage({ isOwner, schools, summary, activeStudents, studentLimitRaw, hasLimit, seatPct, weeklyEnabled, emailValid, weeklyPct, activeSchedules, nextNewsletterCount });
 
       const actions = [];
       if (criticalIssues > 0) actions.push(["danger", "Critical 資料問題", `${criticalIssues} 項需要立即檢查`, "health"]);
