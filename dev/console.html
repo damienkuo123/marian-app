@@ -4,16 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-newsletters-v1">
-
-    // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
-    document.addEventListener('touchmove', function(e) {
-      if (!document.body.classList.contains('console-modal-open')) return;
-      const modal = e.target.closest('.console-modal');
-      if (!modal) e.preventDefault();
-    }, { passive: false });
-
-</script>
+  <script src="./tappie-api.js?v=console-newsletters-v1"></script>
   <style>
     :root {
       --bg: #f7f9fc;
@@ -3546,6 +3537,346 @@
         if (btn) { btn.textContent = old; btn.disabled = false; }
       }
     }
+
+
+    /* =======================================================
+       📰 Newsletter Console Full Action v1.1
+       - Fix missing renderer/loader causing page title only
+       - Uses admin-newsletters Edge Function
+       ======================================================= */
+    let newslettersConsoleCache = null;
+    let newslettersConsoleLoading = false;
+    let newslettersSelectedId = null;
+
+    function renderNewslettersConsole() {
+      if (session?.role === "owner") {
+        return `
+          <div class="card">
+            <div class="panel-title"><h2>專欄中心</h2><span class="badge warn">Owner 總覽待開發</span></div>
+            <p class="muted-text">目前專欄操作先開放單一校區 Super Admin。Owner 版未來可做多校區待發專欄狀態總覽。</p>
+          </div>`;
+      }
+      return `
+        <div class="newsletter-dashboard">
+          <div class="insight-card"><div class="insight-title">待發專欄</div><div id="nlActiveCount" class="insight-main">—</div><div class="insight-sub">未封存專欄</div></div>
+          <div class="insight-card primary"><div class="insight-title">第 1 順位</div><div id="nlNextStatus" class="insight-main" style="font-size:26px;">—</div><div class="insight-sub">display_order = 1 會進入週報</div></div>
+          <div class="insight-card"><div class="insight-title">已生成</div><div id="nlGeneratedCount" class="insight-main">—</div><div class="insight-sub">AI / 手動專欄</div></div>
+          <div class="insight-card"><div class="insight-title">狀態</div><div id="nlStatus" class="insight-main" style="font-size:24px;">讀取中</div><div class="insight-sub">專欄庫狀態</div></div>
+        </div>
+
+        <div class="newsletter-toolbar">
+          <div>
+            <h2 style="margin:0;font-size:20px;letter-spacing:-.03em;">週報專欄庫</h2>
+            <p class="small-note" style="margin:6px 0 0;">正式週報只會使用第 1 順位未封存專欄；測試寄送不會封存或移動順位。</p>
+          </div>
+          <div class="newsletter-actions">
+            <button class="btn-compact" onclick="loadNewslettersConsole(true)">重新整理</button>
+            <button class="btn-compact primary" onclick="createAiNewsletter(this)">AI 自動寫一篇</button>
+            <button class="btn-compact ok" onclick="openNewsletterEditor()">手動新增</button>
+          </div>
+        </div>
+
+        <div class="newsletter-layout">
+          <div class="card">
+            <div class="panel-title">
+              <h2>待發排序</h2>
+              <span class="badge warn">上移 / 下移</span>
+            </div>
+            <div id="newsletterList" class="newsletter-list">
+              <div class="newsletter-empty">正在讀取專欄...</div>
+            </div>
+          </div>
+
+          <div id="newsletterPreviewCard" class="newsletter-preview-card">
+            <div class="newsletter-preview-head">
+              <div>
+                <h3 id="newsletterPreviewTitle">專欄預覽</h3>
+                <p id="newsletterPreviewMeta">請從左側選擇一篇專欄。</p>
+              </div>
+              <button class="btn-compact" onclick="editSelectedNewsletter()">編輯</button>
+            </div>
+            <div id="newsletterPreviewBody" class="newsletter-preview-body">
+              <div class="newsletter-empty">尚未選擇專欄。</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getNewsletterItems() {
+      const raw = newslettersConsoleCache?.items || newslettersConsoleCache?.newsletters || [];
+      return [...raw].sort((a, b) => {
+        const ao = Number(a.displayOrder ?? a.display_order ?? 9999);
+        const bo = Number(b.displayOrder ?? b.display_order ?? 9999);
+        if (ao !== bo) return ao - bo;
+        return String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || ""));
+      });
+    }
+
+    function newsletterIdOf(item) {
+      return String(item?.id || item?.newsletterId || "");
+    }
+
+    function newsletterHtmlOf(item) {
+      return String(item?.contentHtml || item?.content_html || item?.content || item?.html || "");
+    }
+
+    function newsletterTopicOf(item) {
+      const topic = String(item?.topic || "").trim();
+      if (topic) return topic;
+      const html = newsletterHtmlOf(item);
+      const h3 = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i);
+      if (h3) return stripTags(h3[1]).trim() || "未命名專欄";
+      return "未命名專欄";
+    }
+
+    function newsletterTagsOf(item) {
+      if (Array.isArray(item?.tagList)) return item.tagList;
+      if (Array.isArray(item?.tags)) return item.tags;
+      return String(item?.tags || "").split(",").map(x => x.trim()).filter(Boolean);
+    }
+
+    function stripTags(value) {
+      const div = document.createElement("div");
+      div.innerHTML = String(value || "");
+      return div.textContent || div.innerText || "";
+    }
+
+    async function callNewsletterApi(action, payload = {}) {
+      const schoolCode = getSchoolCodeForAdmin();
+      if (action === "list" && window.TappieAPI && typeof TappieAPI.adminGetNewsletters === "function") {
+        return await TappieAPI.adminGetNewsletters(schoolCode);
+      }
+      if (action === "add" && window.TappieAPI && typeof TappieAPI.adminAddNewsletter === "function") {
+        return await TappieAPI.adminAddNewsletter({ schoolCode, ...payload });
+      }
+      if (action === "update" && window.TappieAPI && typeof TappieAPI.adminUpdateNewsletter === "function") {
+        return await TappieAPI.adminUpdateNewsletter({ schoolCode, ...payload });
+      }
+      if (action === "delete" && window.TappieAPI && typeof TappieAPI.adminDeleteNewsletter === "function") {
+        return await TappieAPI.adminDeleteNewsletter({ schoolCode, ...payload });
+      }
+      if (action === "reorder" && window.TappieAPI && typeof TappieAPI.adminReorderNewsletters === "function") {
+        return await TappieAPI.adminReorderNewsletters({ schoolCode, ...payload });
+      }
+
+      const base = window.TappieAPI?.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1";
+      const res = await fetch(`${base}/admin-newsletters`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ schoolCode, action, ...payload })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || data.error || data.detail || `admin-newsletters ${action} failed`);
+      }
+      return data;
+    }
+
+    async function loadNewslettersConsole(force = false) {
+      if (newslettersConsoleLoading) return;
+      if (newslettersConsoleCache && !force) {
+        renderNewslettersList();
+        return;
+      }
+      newslettersConsoleLoading = true;
+      const list = document.getElementById("newsletterList");
+      if (list) list.innerHTML = `<div class="newsletter-empty">正在讀取專欄...</div>`;
+      try {
+        const data = await callNewsletterApi("list");
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || "專欄讀取失敗");
+        newslettersConsoleCache = data;
+        const items = getNewsletterItems();
+        if (!newslettersSelectedId && items.length) newslettersSelectedId = newsletterIdOf(items[0]);
+        if (items.length && !items.some(x => newsletterIdOf(x) === newslettersSelectedId)) newslettersSelectedId = newsletterIdOf(items[0]);
+        renderNewslettersList();
+      } catch (err) {
+        console.error("[loadNewslettersConsole]", err);
+        if (list) list.innerHTML = `<div class="newsletter-empty">專欄讀取失敗：${escapeHtml(err.message || err)}</div>`;
+        const status = document.getElementById("nlStatus");
+        if (status) status.textContent = "讀取失敗";
+      } finally {
+        newslettersConsoleLoading = false;
+      }
+    }
+
+    function renderNewslettersList() {
+      const items = getNewsletterItems();
+      const list = document.getElementById("newsletterList");
+      const activeCount = document.getElementById("nlActiveCount");
+      const nextStatus = document.getElementById("nlNextStatus");
+      const generatedCount = document.getElementById("nlGeneratedCount");
+      const status = document.getElementById("nlStatus");
+
+      if (activeCount) activeCount.textContent = String(items.length);
+      if (nextStatus) nextStatus.textContent = items.length ? "已設定" : "無專欄";
+      if (generatedCount) generatedCount.textContent = String(items.filter(x => String(x.engineStatus || x.engine_status || "").includes("生成")).length);
+      if (status) status.textContent = items.length ? "正常" : "空白";
+
+      if (!list) return;
+      if (!items.length) {
+        list.innerHTML = `<div class="newsletter-empty">目前沒有待發專欄。你可以按「AI 自動寫一篇」或「手動新增」。</div>`;
+        renderNewsletterPreview(null);
+        return;
+      }
+
+      list.innerHTML = items.map((item, idx) => {
+        const id = newsletterIdOf(item);
+        const selected = id === newslettersSelectedId;
+        const isNext = idx === 0;
+        const tags = newsletterTagsOf(item).slice(0, 4);
+        const engine = item.engineStatus || item.engine_status || "—";
+        const order = idx + 1;
+        return `
+          <div class="newsletter-card ${isNext ? "next" : ""}" data-newsletter-id="${escapeHtml(id)}">
+            <button class="newsletter-rank ${isNext ? "hot" : ""}" onclick="selectNewsletter('${escapeJs(id)}')">${order}</button>
+            <div onclick="selectNewsletter('${escapeJs(id)}')" style="cursor:pointer;min-width:0;">
+              <div class="newsletter-title">${isNext ? "🔥 " : ""}${escapeHtml(newsletterTopicOf(item))}</div>
+              <div class="newsletter-meta">
+                ${isNext ? `<span class="newsletter-tag" style="color:var(--primary);">即將寄出</span>` : ""}
+                <span class="newsletter-tag">${escapeHtml(engine)}</span>
+                ${tags.map(t => `<span class="newsletter-tag">#${escapeHtml(t)}</span>`).join("")}
+              </div>
+              <div class="newsletter-row-sub">${selected ? "目前正在預覽" : "點擊可預覽內容"} · display_order ${escapeHtml(item.displayOrder ?? item.display_order ?? idx)}</div>
+            </div>
+            <div class="newsletter-card-actions">
+              <button class="btn-compact" ${idx === 0 ? "disabled" : ""} onclick="moveNewsletter('${escapeJs(id)}', -1)">上移</button>
+              <button class="btn-compact" ${idx === items.length - 1 ? "disabled" : ""} onclick="moveNewsletter('${escapeJs(id)}', 1)">下移</button>
+              <button class="btn-compact" onclick="openNewsletterEditor('${escapeJs(id)}')">編輯</button>
+              <button class="btn-compact danger" onclick="archiveNewsletter('${escapeJs(id)}')">封存</button>
+            </div>
+          </div>`;
+      }).join("");
+
+      const selectedItem = items.find(x => newsletterIdOf(x) === newslettersSelectedId) || items[0];
+      renderNewsletterPreview(selectedItem);
+    }
+
+    function selectNewsletter(id) {
+      newslettersSelectedId = String(id || "");
+      renderNewslettersList();
+    }
+
+    function renderNewsletterPreview(item) {
+      const titleEl = document.getElementById("newsletterPreviewTitle");
+      const metaEl = document.getElementById("newsletterPreviewMeta");
+      const bodyEl = document.getElementById("newsletterPreviewBody");
+      if (!titleEl || !metaEl || !bodyEl) return;
+
+      if (!item) {
+        titleEl.textContent = "專欄預覽";
+        metaEl.textContent = "請從左側選擇一篇專欄。";
+        bodyEl.innerHTML = `<div class="newsletter-empty">尚未選擇專欄。</div>`;
+        return;
+      }
+      titleEl.textContent = newsletterTopicOf(item);
+      const tags = newsletterTagsOf(item);
+      metaEl.textContent = `${item.engineStatus || item.engine_status || "—"}${tags.length ? " · " + tags.map(t => "#" + t).join(" ") : ""}`;
+      bodyEl.innerHTML = newsletterHtmlOf(item) || `<div class="newsletter-empty">這篇專欄沒有內容。</div>`;
+    }
+
+    function openNewsletterEditor(id = "") {
+      const items = getNewsletterItems();
+      const item = id ? items.find(x => newsletterIdOf(x) === id) : null;
+      document.getElementById("newsletterEditId").value = item ? newsletterIdOf(item) : "";
+      document.getElementById("newsletterEditHtml").value = item ? newsletterHtmlOf(item) : "";
+      document.getElementById("newsletterEditorTitle").textContent = item ? "編輯專欄" : "新增專欄";
+      document.getElementById("newsletterEditorSubtitle").textContent = item ? "修改週報專欄 HTML。" : "手動新增一篇專欄 HTML，會排在待發清單最後。";
+      showModal("newsletterEditorModal");
+    }
+
+    function hideNewsletterEditorModal() {
+      hideModal("newsletterEditorModal");
+    }
+
+    function closeNewsletterEditorModal(event) {
+      if (event.target.id === "newsletterEditorModal") hideNewsletterEditorModal();
+    }
+
+    function editSelectedNewsletter() {
+      if (!newslettersSelectedId) return alert("請先選擇一篇專欄。");
+      openNewsletterEditor(newslettersSelectedId);
+    }
+
+    async function saveNewsletterFromModal() {
+      const id = document.getElementById("newsletterEditId").value.trim();
+      const content = document.getElementById("newsletterEditHtml").value.trim();
+      if (!content) return alert("請先輸入專欄 HTML。");
+      const btn = document.getElementById("newsletterSaveBtn");
+      const old = btn?.textContent || "儲存專欄";
+      if (btn) { btn.disabled = true; btn.textContent = "儲存中..."; }
+      try {
+        const data = id
+          ? await callNewsletterApi("update", { id, content })
+          : await callNewsletterApi("add", { content, topic: "手動新增" });
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || "儲存失敗");
+        hideNewsletterEditorModal();
+        newslettersConsoleCache = null;
+        await loadNewslettersConsole(true);
+        toast(id ? "專欄已更新" : "專欄已新增");
+      } catch (err) {
+        alert("專欄儲存失敗：" + (err.message || err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = old; }
+      }
+    }
+
+    async function createAiNewsletter(btn) {
+      if (!confirm("確定要讓 AI 自動寫一篇新專欄嗎？")) return;
+      const old = btn?.textContent || "AI 自動寫一篇";
+      if (btn) { btn.disabled = true; btn.textContent = "生成中..."; }
+      try {
+        const data = await callNewsletterApi("add", { content: "AI_GENERATE" });
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || "AI 生成失敗");
+        newslettersConsoleCache = null;
+        await loadNewslettersConsole(true);
+        toast("AI 專欄已新增");
+      } catch (err) {
+        alert("AI 生成專欄失敗：" + (err.message || err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = old; }
+      }
+    }
+
+    async function moveNewsletter(id, direction) {
+      const items = getNewsletterItems();
+      const idx = items.findIndex(x => newsletterIdOf(x) === id);
+      if (idx < 0) return;
+      const next = idx + Number(direction || 0);
+      if (next < 0 || next >= items.length) return;
+      const copy = [...items];
+      const [moved] = copy.splice(idx, 1);
+      copy.splice(next, 0, moved);
+      const ids = copy.map(newsletterIdOf);
+      try {
+        const data = await callNewsletterApi("reorder", { ids });
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || "排序失敗");
+        newslettersConsoleCache = { ...(newslettersConsoleCache || {}), items: copy.map((x, i) => ({ ...x, displayOrder: i, display_order: i })), newsletters: copy.map((x, i) => ({ ...x, displayOrder: i, display_order: i })) };
+        newslettersSelectedId = id;
+        renderNewslettersList();
+        toast("專欄排序已更新");
+      } catch (err) {
+        alert("專欄排序失敗：" + (err.message || err));
+      }
+    }
+
+    async function archiveNewsletter(id) {
+      const items = getNewsletterItems();
+      const item = items.find(x => newsletterIdOf(x) === id);
+      if (!item) return;
+      if (!confirm(`確定要封存「${newsletterTopicOf(item)}」嗎？\n封存後會從待發清單移除，後續順位會自動遞補。`)) return;
+      try {
+        const data = await callNewsletterApi("delete", { id });
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || "封存失敗");
+        newslettersConsoleCache = null;
+        if (newslettersSelectedId === id) newslettersSelectedId = null;
+        await loadNewslettersConsole(true);
+        toast("專欄已封存");
+      } catch (err) {
+        alert("專欄封存失敗：" + (err.message || err));
+      }
+    }
+
 
     function renderPlaceholder(page) {
       return `
