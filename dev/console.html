@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-newsletters-v1-2-post-fix"></script>
+  <script src="./tappie-api.js?v=console-newsletters-v1_3"></script>
   <style>
     :root {
       --bg: #f7f9fc;
@@ -1458,9 +1458,17 @@
         <button class="btn-compact" onclick="hideNewsletterEditorModal()">關閉</button>
       </div>
       <input type="hidden" id="newsletterEditId" />
+      <input type="hidden" id="newsletterEditMode" value="update" />
       <div class="form-grid">
-        <div class="form-field full"><label>專欄 HTML</label><textarea id="newsletterEditHtml" class="newsletter-editor-textarea" placeholder="請貼上或編輯專欄 HTML"></textarea></div>
-        <div class="form-field full"><div class="form-note">測試寄給自己不會封存專欄；正式全校週報成功後，系統會自動封存第 1 順位並遞補排序。</div></div>
+        <div class="form-field full">
+          <label>專欄標籤（給管理員辨識，不會寄給家長）</label>
+          <input id="newsletterEditTags" class="console-input" placeholder="例如：語言力量, 情緒連結, 成長引導" />
+        </div>
+        <div class="form-field full">
+          <label>專欄 HTML（標題請放在第一個 h3 內）</label>
+          <textarea id="newsletterEditHtml" class="newsletter-editor-textarea" placeholder="請貼上或編輯專欄 HTML"></textarea>
+        </div>
+        <div class="form-field full"><div class="form-note">專欄列表的標題會從 content_html 第一個 &lt;h3&gt; 自動擷取；tags 只用於後台快速辨識類型，不會放進家長週報。</div></div>
       </div>
       <div class="modal-actions">
         <button class="btn-compact" onclick="hideNewsletterEditorModal()">取消</button>
@@ -3539,12 +3547,16 @@
     }
 
 
-    /* =======================================================
-       📰 Newsletters Console Full Action v1.2 POST Fix
-       - admin-newsletters only accepts POST
-       - Directly mirrors admin.html newsletterRequest('list') pattern
-       ======================================================= */
-    let newslettersConsoleCache = { items: [], selectedId: null, loading: false, error: null };
+
+    // =======================================================
+    // 📰 專欄 Console v1.3：只以 content_html / tags 作為專欄資料
+    // - topic / source_url 是來源新聞資料，不拿來當專欄標題
+    // - 專欄標題從 content_html 第一個 <h3> 擷取
+    // - tags 只給管理員辨識，不會寄給家長
+    // =======================================================
+    let newslettersConsoleCache = null;
+    let selectedNewsletterId = null;
+    let newslettersLoading = false;
 
     function getNewsletterApiUrlForConsole() {
       const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
@@ -3554,11 +3566,14 @@
     }
 
     async function newsletterConsoleRequest(action, payload = {}) {
-      const schoolCode = getSchoolCodeForAdmin();
       const res = await fetch(getNewsletterApiUrlForConsole(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolCode, action, ...payload })
+        body: JSON.stringify({
+          schoolCode: getSchoolCodeForAdmin(),
+          action,
+          ...payload
+        })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.success === false || data.error) {
@@ -3570,274 +3585,337 @@
       return data;
     }
 
-    function normalizeNewsletterConsoleItems(data) {
+    function normalizeNewsletterItemsForConsole(data) {
       if (Array.isArray(data)) return data;
       if (Array.isArray(data?.items)) return data.items;
       if (Array.isArray(data?.newsletters)) return data.newsletters;
+      if (Array.isArray(data?.rows)) return data.rows;
       return [];
     }
 
     function newsletterIdOf(item) {
-      return String(item?.id || item?.row || item?.newsletterId || item?.newsletter_id || '').trim();
+      return String(item?.id || item?.newsletterId || item?.row || '').trim();
     }
 
     function newsletterContentOf(item) {
-      return String(item?.contentHtml || item?.content_html || item?.content || item?.html || '');
+      return String(item?.content_html ?? item?.contentHtml ?? item?.content ?? item?.html ?? '');
     }
 
-    function newsletterTitleOf(item, fallback = '未命名專欄') {
-      const explicit = String(item?.topic || item?.title || item?.subject || '').trim();
-      if (explicit) return explicit;
-      const content = newsletterContentOf(item);
-      const m = content.match(/<h[123][^>]*>(.*?)<\/h[123]>/i);
-      if (m) return m[1].replace(/<[^>]+>/g, '').trim() || fallback;
-      return fallback;
+    function stripHtmlForNewsletter(value) {
+      const box = document.createElement('div');
+      box.innerHTML = String(value || '');
+      return (box.textContent || box.innerText || '').trim();
     }
 
-    function newsletterDisplayOrderOf(item, idx = 0) {
-      const v = item?.displayOrder ?? item?.display_order ?? item?.order ?? item?.queueOrder;
-      const n = Number(v);
-      return Number.isFinite(n) && n > 0 ? n : idx + 1;
+    function newsletterTitleFromContent(content, index = 0) {
+      const html = String(content || '');
+      const match = html.match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i);
+      if (match) {
+        const title = stripHtmlForNewsletter(match[1]);
+        if (title) return title;
+      }
+      const fallback = stripHtmlForNewsletter(html).slice(0, 24);
+      return fallback || `未命名專欄 ${index + 1}`;
     }
 
-    function newsletterIsArchived(item) {
-      return Boolean(item?.archivedAt || item?.archived_at || item?.archived || item?.sentAt || item?.sent_at);
+    function normalizeNewsletterTagsForConsole(input) {
+      if (Array.isArray(input)) return input.map(t => String(t).trim()).filter(Boolean);
+      let raw = String(input ?? '').trim();
+      if (!raw) return [];
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.map(t => String(t).trim()).filter(Boolean);
+      } catch (_) {}
+      raw = raw.replace(/標籤：|🔖|🏷️|⚠️/g, '');
+      return raw.split(/[,，、\n]/).map(t => t.trim()).filter(Boolean);
     }
 
-    function newsletterDateShort(v) {
-      if (!v) return '—';
-      const d = new Date(v);
-      if (Number.isNaN(d.getTime())) return String(v);
-      return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    function newsletterTagsOf(item) {
+      return normalizeNewsletterTagsForConsole(item?.tags ?? item?.tagList ?? item?.tag_list ?? '');
+    }
+
+    function getNewsletterTagColor(tag) {
+      const t = String(tag || '');
+      if (t.includes('備用機制')) return { bg:'rgba(231,76,60,.12)', text:'#dc2626', border:'rgba(231,76,60,.28)' };
+      if (t.includes('語言') || t.includes('口說') || t.includes('英文')) return { bg:'rgba(37,99,235,.11)', text:'#2563eb', border:'rgba(37,99,235,.24)' };
+      if (t.includes('大腦') || t.includes('心理') || t.includes('專注') || t.includes('情緒')) return { bg:'rgba(22,163,74,.11)', text:'#16a34a', border:'rgba(22,163,74,.24)' };
+      if (t.includes('親子') || t.includes('教養') || t.includes('家長') || t.includes('引導')) return { bg:'rgba(217,119,6,.12)', text:'#d97706', border:'rgba(217,119,6,.25)' };
+      if (t.includes('科學') || t.includes('自然') || t.includes('現象')) return { bg:'rgba(124,58,237,.11)', text:'#7c3aed', border:'rgba(124,58,237,.23)' };
+      return { bg:'rgba(148,163,184,.13)', text:'var(--muted)', border:'rgba(148,163,184,.26)' };
+    }
+
+    function renderNewsletterTagPills(tags) {
+      const list = normalizeNewsletterTagsForConsole(tags);
+      if (!list.length) return '<span class="newsletter-tag">未標籤</span>';
+      return list.map(tag => {
+        const c = getNewsletterTagColor(tag);
+        return `<span class="newsletter-tag" style="background:${c.bg};color:${c.text};border-color:${c.border};">${escapeHtml(tag)}</span>`;
+      }).join('');
+    }
+
+    function isNewsletterArchived(item) {
+      return Boolean(item?.archived_at || item?.archivedAt);
+    }
+
+    function isNewsletterSent(item) {
+      return Boolean(item?.sent_at || item?.sentAt);
+    }
+
+    function newsletterOrderOf(item, fallbackIndex = 0) {
+      const n = Number(item?.display_order ?? item?.displayOrder ?? item?.order ?? fallbackIndex + 1);
+      return Number.isFinite(n) ? n : fallbackIndex + 1;
+    }
+
+    function activeNewsletterItems() {
+      const items = newslettersConsoleCache?.items || [];
+      return items.filter(item => !isNewsletterArchived(item)).sort((a,b) => newsletterOrderOf(a) - newsletterOrderOf(b));
+    }
+
+    function archivedNewsletterItems() {
+      const items = newslettersConsoleCache?.items || [];
+      return items.filter(item => isNewsletterArchived(item)).sort((a,b) => String(b.archived_at || b.archivedAt || '').localeCompare(String(a.archived_at || a.archivedAt || '')));
     }
 
     function renderNewslettersConsole() {
       return `
         <div class="newsletter-dashboard">
-          <div class="insight-card"><div class="insight-title">待發專欄</div><div id="nlPendingCount" class="insight-main">—</div><div class="insight-sub">未封存排序中</div></div>
-          <div class="insight-card"><div class="insight-title">第 1 順位</div><div id="nlNextTitle" class="insight-main" style="font-size:20px;line-height:1.35;letter-spacing:-.03em;">—</div><div class="insight-sub">正式週報會取這一篇</div></div>
-          <div class="insight-card"><div class="insight-title">已封存</div><div id="nlArchivedCount" class="insight-main">—</div><div class="insight-sub">已寄送或封存</div></div>
-          <div class="insight-card"><div class="insight-title">資料狀態</div><div id="nlStatusMini" class="insight-main" style="font-size:20px;">讀取中</div><div class="insight-sub">admin-newsletters POST</div></div>
+          <div class="insight-card"><div class="insight-title">待發專欄</div><div id="nlActiveCount" class="insight-main">—</div><div class="insight-sub">尚未封存，依排序寄出</div></div>
+          <div class="insight-card"><div class="insight-title">第 1 順位</div><div id="nlNextTitle" class="insight-main" style="font-size:20px;line-height:1.3;letter-spacing:-.03em;">—</div><div class="insight-sub">正式週報會使用這篇</div></div>
+          <div class="insight-card"><div class="insight-title">已封存</div><div id="nlArchivedCount" class="insight-main">—</div><div class="insight-sub">已寄出或手動封存</div></div>
+          <div class="insight-card"><div class="insight-title">標籤類型</div><div id="nlTagCount" class="insight-main">—</div><div class="insight-sub">僅供管理員辨識</div></div>
         </div>
         <div class="newsletter-toolbar">
           <div>
-            <h2 style="margin:0;font-size:20px;">教育專欄</h2>
-            <div id="newslettersConsoleStatus" class="muted-text" style="font-size:13px;margin-top:5px;">正在讀取專欄資料...</div>
+            <h2 style="margin:0;font-size:20px;letter-spacing:-.03em;">教育專欄</h2>
+            <div class="small-note">專欄標題取自 content_html 的第一個 h3；topic/source_url 只屬於來源新聞，不在此處顯示。</div>
           </div>
           <div class="newsletter-actions">
             <button class="btn-compact" onclick="loadNewslettersConsole(true)">重新整理</button>
-            <button class="btn-compact primary" onclick="addNewsletterByAiConsole(this)">AI 自動寫一篇</button>
-            <button class="btn-compact btn-success" onclick="openNewsletterEditorModal('add')">手動新增</button>
+            <button class="btn-compact" onclick="openNewsletterCreateModal()">手動新增</button>
+            <button class="btn-compact primary" onclick="createAiNewsletterConsole(this)">AI 自動寫一篇</button>
           </div>
         </div>
         <div class="newsletter-layout">
-          <div class="card" style="padding:18px;">
-            <div class="panel-title"><h2>待發排序</h2><span class="badge ok">上移 / 下移</span></div>
-            <div id="newslettersConsoleList" class="newsletter-list"><div class="newsletter-empty">正在讀取...</div></div>
+          <div class="card">
+            <div class="panel-title"><h2>待發順序</h2><span class="badge ok">display_order</span></div>
+            <div id="newsletterActiveList" class="newsletter-list"><div class="empty-state">正在讀取專欄...</div></div>
+            <div class="panel-title" style="margin-top:22px;"><h2>已封存</h2><span class="badge warn">archived</span></div>
+            <div id="newsletterArchivedList" class="newsletter-list"><div class="empty-state">正在讀取封存專欄...</div></div>
           </div>
-          <div id="newsletterPreviewWrap" class="newsletter-preview-card">
-            <div class="newsletter-preview-head"><div><h3>專欄預覽</h3><p>點選左側專欄查看內容</p></div></div>
-            <div id="newsletterPreviewBody" class="newsletter-preview-body"><div class="newsletter-empty">尚未選擇專欄。</div></div>
+          <div class="newsletter-preview-card">
+            <div class="newsletter-preview-head">
+              <div><h3 id="newsletterPreviewTitle">專欄預覽</h3><p id="newsletterPreviewMeta">選擇左側專欄查看內容</p></div>
+              <button class="btn-compact" onclick="clearNewsletterPreview()">清空</button>
+            </div>
+            <div id="newsletterPreviewBody" class="newsletter-preview-body"><div class="newsletter-empty">尚未選擇專欄</div></div>
           </div>
         </div>
       `;
     }
 
     async function loadNewslettersConsole(force = false) {
-      const statusEl = document.getElementById('newslettersConsoleStatus');
-      const listEl = document.getElementById('newslettersConsoleList');
-      if (statusEl) statusEl.textContent = '讀取專欄資料中...';
-      if (listEl) listEl.innerHTML = '<div class="newsletter-empty">正在讀取...</div>';
-      newslettersConsoleCache.loading = true;
-      newslettersConsoleCache.error = null;
-      try {
-        const data = await newsletterConsoleRequest('list');
-        const items = normalizeNewsletterConsoleItems(data);
-        newslettersConsoleCache.items = items;
-        if (!newslettersConsoleCache.selectedId && items.length) newslettersConsoleCache.selectedId = newsletterIdOf(items[0]);
-        renderNewslettersConsoleList();
-      } catch (err) {
-        console.error('[loadNewslettersConsole]', err);
-        newslettersConsoleCache.error = err;
-        if (statusEl) statusEl.textContent = '專欄讀取失敗：' + (err.message || err);
-        if (listEl) listEl.innerHTML = `<div class="newsletter-empty" style="color:var(--red);">專欄讀取失敗：${escapeHtml(err.message || err)}</div>`;
-        const mini = document.getElementById('nlStatusMini');
-        if (mini) mini.textContent = '失敗';
-      } finally {
-        newslettersConsoleCache.loading = false;
-      }
-    }
-
-    function renderNewslettersConsoleList() {
-      const listEl = document.getElementById('newslettersConsoleList');
-      const statusEl = document.getElementById('newslettersConsoleStatus');
-      if (!listEl) return;
-      const all = newslettersConsoleCache.items || [];
-      const active = all.filter(item => !newsletterIsArchived(item))
-        .sort((a,b) => newsletterDisplayOrderOf(a,0) - newsletterDisplayOrderOf(b,0));
-      const archived = all.filter(item => newsletterIsArchived(item));
-      const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      setText('nlPendingCount', active.length);
-      setText('nlArchivedCount', archived.length);
-      setText('nlNextTitle', active[0] ? newsletterTitleOf(active[0], '第 1 順位') : '無');
-      setText('nlStatusMini', '正常');
-      if (statusEl) statusEl.textContent = `已讀取 ${all.length} 篇，待發 ${active.length} 篇，已封存 ${archived.length} 篇。`;
-      if (!active.length) {
-        listEl.innerHTML = '<div class="newsletter-empty">目前沒有待發專欄。可以用 AI 自動寫一篇或手動新增。</div>';
-        renderNewsletterPreview(null);
+      if (newslettersLoading) return;
+      if (newslettersConsoleCache && !force) {
+        updateNewslettersConsoleUI();
         return;
       }
-      if (!active.some(item => newsletterIdOf(item) === newslettersConsoleCache.selectedId)) newslettersConsoleCache.selectedId = newsletterIdOf(active[0]);
-      listEl.innerHTML = active.map((item, idx) => renderNewsletterConsoleCard(item, idx, active.length)).join('');
-      const selected = active.find(item => newsletterIdOf(item) === newslettersConsoleCache.selectedId) || active[0];
-      renderNewsletterPreview(selected);
+      newslettersLoading = true;
+      const activeEl = document.getElementById('newsletterActiveList');
+      if (activeEl) activeEl.innerHTML = '<div class="empty-state">正在讀取專欄...</div>';
+      try {
+        const data = await newsletterConsoleRequest('list');
+        newslettersConsoleCache = { items: normalizeNewsletterItemsForConsole(data), raw: data };
+        const active = activeNewsletterItems();
+        selectedNewsletterId = selectedNewsletterId || newsletterIdOf(active[0] || null) || null;
+        updateNewslettersConsoleUI();
+      } catch (err) {
+        console.error('[loadNewslettersConsole]', err);
+        if (activeEl) activeEl.innerHTML = `<div class="empty-state" style="color:var(--red);">專欄讀取失敗：${escapeHtml(err.message || err)}</div>`;
+      } finally {
+        newslettersLoading = false;
+      }
     }
 
-    function renderNewsletterConsoleCard(item, idx, total) {
+    function updateNewslettersConsoleUI() {
+      const items = newslettersConsoleCache?.items || [];
+      const active = activeNewsletterItems();
+      const archived = archivedNewsletterItems();
+      const tagSet = new Set();
+      items.forEach(item => newsletterTagsOf(item).forEach(tag => tagSet.add(tag)));
+      const next = active[0];
+      const nextTitle = next ? newsletterTitleFromContent(newsletterContentOf(next), 0) : '—';
+      setText('nlActiveCount', active.length);
+      setText('nlArchivedCount', archived.length);
+      setText('nlTagCount', tagSet.size);
+      setText('nlNextTitle', nextTitle);
+      const activeEl = document.getElementById('newsletterActiveList');
+      const archivedEl = document.getElementById('newsletterArchivedList');
+      if (activeEl) activeEl.innerHTML = active.length ? active.map((item, idx) => renderNewsletterCard(item, idx, false)).join('') : '<div class="newsletter-empty">目前沒有待發專欄。</div>';
+      if (archivedEl) archivedEl.innerHTML = archived.length ? archived.map((item, idx) => renderNewsletterCard(item, idx, true)).join('') : '<div class="newsletter-empty">目前沒有已封存專欄。</div>';
+      if (selectedNewsletterId) {
+        const selected = items.find(item => newsletterIdOf(item) === selectedNewsletterId);
+        if (selected) renderNewsletterPreview(selected);
+      } else if (next) {
+        selectedNewsletterId = newsletterIdOf(next);
+        renderNewsletterPreview(next);
+      } else {
+        clearNewsletterPreview();
+      }
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(value ?? '—');
+    }
+
+    function renderNewsletterCard(item, index = 0, archived = false) {
       const id = newsletterIdOf(item);
-      const selected = newslettersConsoleCache.selectedId === id;
-      const title = newsletterTitleOf(item, `文章 #${idx + 1}`);
-      const order = newsletterDisplayOrderOf(item, idx);
-      const engine = item.engineStatus || item.engine_status || item.source || '';
-      const created = item.created_at || item.createdAt || '';
-      const sent = item.sent_at || item.sentAt || '';
-      const archived = item.archived_at || item.archivedAt || '';
-      return `
-        <div class="newsletter-card ${idx === 0 ? 'next' : ''}" data-id="${escapeHtml(id)}" style="${selected ? 'outline:2px solid rgba(37,99,235,.35);' : ''}">
-          <button class="newsletter-rank ${idx === 0 ? 'hot' : ''}" onclick="selectNewsletterConsole('${escapeJs(id)}')">${idx === 0 ? '寄' : order}</button>
-          <div style="min-width:0;" onclick="selectNewsletterConsole('${escapeJs(id)}')">
-            <div class="newsletter-title">${idx === 0 ? '📮 ' : '📄 '}${escapeHtml(title)}</div>
-            <div class="newsletter-meta">
-              ${idx === 0 ? '<span class="newsletter-tag" style="color:var(--primary);">即將寄出</span>' : `<span class="newsletter-tag">順位 ${order}</span>`}
-              ${engine ? `<span class="newsletter-tag">${escapeHtml(engine)}</span>` : ''}
-              ${created ? `<span class="newsletter-tag">建立 ${escapeHtml(newsletterDateShort(created))}</span>` : ''}
-              ${sent ? `<span class="newsletter-tag">已寄 ${escapeHtml(newsletterDateShort(sent))}</span>` : ''}
-              ${archived ? `<span class="newsletter-tag">封存 ${escapeHtml(newsletterDateShort(archived))}</span>` : ''}
-            </div>
-            <div class="newsletter-row-sub">${escapeHtml(newsletterContentOf(item).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) || '沒有摘要')}</div>
+      const content = newsletterContentOf(item);
+      const title = newsletterTitleFromContent(content, index);
+      const tags = newsletterTagsOf(item);
+      const order = newsletterOrderOf(item, index);
+      const isNext = !archived && index === 0;
+      const sent = isNewsletterSent(item);
+      return `<div class="newsletter-card ${isNext ? 'next' : ''}" data-newsletter-id="${escapeHtml(id)}">
+        <button class="newsletter-rank ${isNext ? 'hot' : ''}" onclick="selectNewsletterForPreview('${escapeJs(id)}')">${archived ? '封' : (isNext ? '1' : escapeHtml(order))}</button>
+        <div style="min-width:0;">
+          <div class="newsletter-title">${escapeHtml(title)}</div>
+          <div class="newsletter-meta">
+            ${isNext ? '<span class="newsletter-tag" style="background:rgba(37,99,235,.12);color:var(--primary);border-color:rgba(37,99,235,.24);">即將寄出</span>' : ''}
+            ${sent ? '<span class="newsletter-tag">已寄出</span>' : ''}
+            ${renderNewsletterTagPills(tags)}
           </div>
-          <div class="newsletter-card-actions">
-            <button class="btn-compact" onclick="openNewsletterEditorModal('edit','${escapeJs(id)}')">編輯</button>
-            <button class="btn-compact" ${idx === 0 ? 'disabled' : ''} onclick="moveNewsletterConsole('${escapeJs(id)}','up')">上移</button>
-            <button class="btn-compact" ${idx === total - 1 ? 'disabled' : ''} onclick="moveNewsletterConsole('${escapeJs(id)}','down')">下移</button>
-            <button class="btn-compact danger" onclick="archiveNewsletterConsole('${escapeJs(id)}')">封存</button>
-          </div>
-        </div>`;
+          <div class="newsletter-row-sub">${archived ? '已封存' : `順位 ${escapeHtml(order)}`} ・ ${escapeHtml(stripHtmlForNewsletter(content).slice(0, 80) || '無內容摘要')}</div>
+        </div>
+        <div class="newsletter-card-actions">
+          <button class="btn-compact" onclick="selectNewsletterForPreview('${escapeJs(id)}')">預覽</button>
+          ${archived ? '' : `<button class="btn-compact" onclick="moveNewsletterConsole('${escapeJs(id)}','up')">上移</button><button class="btn-compact" onclick="moveNewsletterConsole('${escapeJs(id)}','down')">下移</button>`}
+          <button class="btn-compact" onclick="openNewsletterEditModal('${escapeJs(id)}')">編輯</button>
+          ${archived ? '' : `<button class="btn-compact danger" onclick="archiveNewsletterConsole('${escapeJs(id)}')">封存</button>`}
+        </div>
+      </div>`;
     }
 
-    function selectNewsletterConsole(id) {
-      newslettersConsoleCache.selectedId = id;
-      renderNewslettersConsoleList();
+    function selectNewsletterForPreview(id) {
+      const item = (newslettersConsoleCache?.items || []).find(n => newsletterIdOf(n) === String(id));
+      if (!item) return;
+      selectedNewsletterId = String(id);
+      renderNewsletterPreview(item);
     }
 
     function renderNewsletterPreview(item) {
+      const title = newsletterTitleFromContent(newsletterContentOf(item), 0);
+      const tags = newsletterTagsOf(item);
+      setText('newsletterPreviewTitle', title);
+      const meta = document.getElementById('newsletterPreviewMeta');
+      if (meta) meta.innerHTML = `${renderNewsletterTagPills(tags)} <span class="small-note">content_html 預覽</span>`;
       const body = document.getElementById('newsletterPreviewBody');
-      const wrap = document.getElementById('newsletterPreviewWrap');
-      if (!body || !wrap) return;
-      if (!item) {
-        body.innerHTML = '<div class="newsletter-empty">尚未選擇專欄。</div>';
-        return;
-      }
-      const title = newsletterTitleOf(item);
-      const content = newsletterContentOf(item) || '<p>沒有內容</p>';
-      wrap.querySelector('.newsletter-preview-head').innerHTML = `<div><h3>${escapeHtml(title)}</h3><p>display_order = ${escapeHtml(newsletterDisplayOrderOf(item))}｜正式週報會使用第 1 順位</p></div><button class="btn-compact" onclick="openNewsletterEditorModal('edit','${escapeJs(newsletterIdOf(item))}')">編輯</button>`;
-      body.innerHTML = content;
+      if (body) body.innerHTML = newsletterContentOf(item) || '<div class="newsletter-empty">此專欄沒有 content_html。</div>';
     }
 
-    function openNewsletterEditorModal(mode = 'edit', id = '') {
-      const modal = document.getElementById('newsletterEditorModal');
-      const title = document.getElementById('newsletterEditorTitle');
-      const subtitle = document.getElementById('newsletterEditorSubtitle');
-      const idInput = document.getElementById('newsletterEditId');
-      const htmlInput = document.getElementById('newsletterEditHtml');
-      if (!modal || !htmlInput) return alert('找不到專欄編輯視窗。');
-      const item = (newslettersConsoleCache.items || []).find(n => newsletterIdOf(n) === id);
-      idInput.value = mode === 'add' ? '' : id;
-      htmlInput.value = mode === 'add' ? '<h3>專欄標題</h3>\n<p>請在這裡輸入專欄內容。</p>' : newsletterContentOf(item);
-      if (title) title.textContent = mode === 'add' ? '新增專欄' : '編輯專欄';
-      if (subtitle) subtitle.textContent = mode === 'add' ? '新增後會排在待發清單最後一位。' : '修改週報專欄 HTML。正式週報只會取 display_order = 1 的未封存專欄。';
-      modal.classList.add('show');
-      document.body.classList.add('console-modal-open');
-      setTimeout(() => htmlInput.focus(), 50);
+    function clearNewsletterPreview() {
+      selectedNewsletterId = null;
+      setText('newsletterPreviewTitle', '專欄預覽');
+      setText('newsletterPreviewMeta', '選擇左側專欄查看內容');
+      const body = document.getElementById('newsletterPreviewBody');
+      if (body) body.innerHTML = '<div class="newsletter-empty">尚未選擇專欄</div>';
     }
 
-    function closeNewsletterEditorModal(e) {
-      if (e && e.target !== e.currentTarget) return;
-      hideNewsletterEditorModal();
+    function openNewsletterCreateModal() {
+      document.getElementById('newsletterEditMode').value = 'add';
+      document.getElementById('newsletterEditId').value = '';
+      document.getElementById('newsletterEditorTitle').textContent = '新增專欄';
+      document.getElementById('newsletterEditorSubtitle').textContent = '請輸入 content_html；標題會自動取第一個 h3。';
+      document.getElementById('newsletterEditTags').value = '';
+      document.getElementById('newsletterEditHtml').value = '<h3 style="color:#007bff; margin-bottom:15px;">請輸入專欄標題</h3>\n<div style="background:#f8f9fa; padding:15px; border-left:5px solid #007bff; margin-bottom:20px;">\n<strong>【本週教育碎報】</strong><br>請輸入重點摘要。\n</div>\n<div style="margin-bottom:20px;">\n<h4 style="color:#2c3e50;">這對寶貝有什麼影響？</h4>\n請輸入專欄內容。\n</div>\n<div style="background:rgba(241,196,15,0.05); padding:15px; border-radius:15px;">\n<h4 style="color:#d35400;">給家長的實踐錦囊</h4>\n請輸入家長建議。\n</div>';
+      showModal('newsletterEditorModal');
     }
 
-    function hideNewsletterEditorModal() {
-      document.getElementById('newsletterEditorModal')?.classList.remove('show');
-      document.body.classList.remove('console-modal-open');
+    function openNewsletterEditModal(id) {
+      const item = (newslettersConsoleCache?.items || []).find(n => newsletterIdOf(n) === String(id));
+      if (!item) return alert('找不到專欄資料。');
+      document.getElementById('newsletterEditMode').value = 'update';
+      document.getElementById('newsletterEditId').value = String(id);
+      document.getElementById('newsletterEditorTitle').textContent = '編輯專欄';
+      document.getElementById('newsletterEditorSubtitle').textContent = newsletterTitleFromContent(newsletterContentOf(item), 0);
+      document.getElementById('newsletterEditTags').value = newsletterTagsOf(item).join(', ');
+      document.getElementById('newsletterEditHtml').value = newsletterContentOf(item);
+      showModal('newsletterEditorModal');
     }
+
+    function hideNewsletterEditorModal() { hideModal('newsletterEditorModal'); }
+    function closeNewsletterEditorModal(event) { if (event.target.id === 'newsletterEditorModal') hideNewsletterEditorModal(); }
 
     async function saveNewsletterFromModal() {
       const btn = document.getElementById('newsletterSaveBtn');
-      const id = String(document.getElementById('newsletterEditId')?.value || '').trim();
-      const content = String(document.getElementById('newsletterEditHtml')?.value || '').trim();
-      if (!content) return alert('請輸入專欄 HTML。');
       const old = btn?.textContent || '儲存專欄';
-      if (btn) { btn.textContent = '儲存中...'; btn.disabled = true; }
+      const mode = document.getElementById('newsletterEditMode').value || 'update';
+      const id = document.getElementById('newsletterEditId').value;
+      const content = document.getElementById('newsletterEditHtml').value || '';
+      const tags = normalizeNewsletterTagsForConsole(document.getElementById('newsletterEditTags').value || '');
+      if (!content.trim()) return alert('請輸入專欄 HTML。');
+      if (btn) { btn.disabled = true; btn.textContent = '儲存中...'; }
       try {
-        if (id) await newsletterConsoleRequest('update', { id, content });
-        else await newsletterConsoleRequest('add', { content });
+        if (mode === 'add') {
+          await newsletterConsoleRequest('add', { content, tags });
+        } else {
+          await newsletterConsoleRequest('update', { id, content, tags });
+        }
         hideNewsletterEditorModal();
-        toast('專欄已儲存');
+        newslettersConsoleCache = null;
         await loadNewslettersConsole(true);
+        toast('專欄已儲存');
       } catch (err) {
-        console.error('[saveNewsletterFromModal]', err);
-        alert('儲存失敗：' + (err.message || err));
+        alert('專欄儲存失敗：' + (err.message || err));
       } finally {
-        if (btn) { btn.textContent = old; btn.disabled = false; }
+        if (btn) { btn.disabled = false; btn.textContent = old; }
       }
     }
 
-    async function addNewsletterByAiConsole(btn) {
-      if (!confirm('要讓 AI 自動寫一篇新的週報專欄嗎？')) return;
+    async function createAiNewsletterConsole(btn) {
+      if (!confirm('要讓 AI 自動寫一篇新專欄嗎？')) return;
       const old = btn?.textContent || 'AI 自動寫一篇';
-      if (btn) { btn.textContent = '生成中...'; btn.disabled = true; }
+      if (btn) { btn.disabled = true; btn.textContent = 'AI 撰寫中...'; }
       try {
         await newsletterConsoleRequest('add', { content: 'AI_GENERATE' });
-        toast('AI 專欄已新增');
+        newslettersConsoleCache = null;
         await loadNewslettersConsole(true);
+        toast('AI 專欄已新增');
       } catch (err) {
-        console.error('[addNewsletterByAiConsole]', err);
-        alert('AI 新增失敗：' + (err.message || err));
+        alert('AI 專欄新增失敗：' + (err.message || err));
       } finally {
-        if (btn) { btn.textContent = old; btn.disabled = false; }
+        if (btn) { btn.disabled = false; btn.textContent = old; }
       }
     }
 
     async function archiveNewsletterConsole(id) {
-      const item = (newslettersConsoleCache.items || []).find(n => newsletterIdOf(n) === id);
-      const title = newsletterTitleOf(item, id);
-      if (!confirm(`確定要封存 / 刪除「${title}」嗎？\n\n此動作會將它從待發清單移除。`)) return;
+      if (!confirm('確定要封存這篇專欄嗎？後面的待發專欄會自動遞補。')) return;
       try {
         await newsletterConsoleRequest('delete', { id });
-        if (newslettersConsoleCache.selectedId === id) newslettersConsoleCache.selectedId = null;
-        toast('專欄已封存');
+        newslettersConsoleCache = null;
+        selectedNewsletterId = null;
         await loadNewslettersConsole(true);
+        toast('專欄已封存');
       } catch (err) {
-        console.error('[archiveNewsletterConsole]', err);
         alert('封存失敗：' + (err.message || err));
       }
     }
 
     async function moveNewsletterConsole(id, direction) {
-      const active = (newslettersConsoleCache.items || []).filter(item => !newsletterIsArchived(item))
-        .sort((a,b) => newsletterDisplayOrderOf(a,0) - newsletterDisplayOrderOf(b,0));
-      const idx = active.findIndex(item => newsletterIdOf(item) === id);
+      const active = activeNewsletterItems();
+      const idx = active.findIndex(item => newsletterIdOf(item) === String(id));
       if (idx < 0) return;
-      const swapWith = direction === 'up' ? idx - 1 : idx + 1;
-      if (swapWith < 0 || swapWith >= active.length) return;
-      [active[idx], active[swapWith]] = [active[swapWith], active[idx]];
-      const ids = active.map(newsletterIdOf).filter(Boolean);
+      const target = direction === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= active.length) return;
+      const reordered = [...active];
+      [reordered[idx], reordered[target]] = [reordered[target], reordered[idx]];
+      const ids = reordered.map(newsletterIdOf).filter(Boolean);
       try {
         await newsletterConsoleRequest('reorder', { ids });
-        toast('專欄排序已更新');
+        newslettersConsoleCache = null;
         await loadNewslettersConsole(true);
+        toast('專欄排序已更新');
       } catch (err) {
-        console.error('[moveNewsletterConsole]', err);
         alert('排序失敗：' + (err.message || err));
       }
     }
