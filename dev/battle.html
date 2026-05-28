@@ -1610,6 +1610,7 @@
       try {
         const url = `https://diptahklguohjtjnwnbf.supabase.co/functions/v1/get-student-gamification?uid=${encodeURIComponent(STUDENT_ID)}`;
         const data = await originalFetch(url).then(r => r.json()).catch(() => null);
+        hydrateGachaCharacterAssetsFromPayload(data);
         const cfg = data?.gamification || data?.config || data?.value || data?.settings || data?.data?.gamification || data?.data?.config || null;
         if (cfg && typeof cfg === 'object') {
           window.gamiConfig = cfg;
@@ -1638,6 +1639,54 @@
 
     function avatarTheme(avatar) {
       return avatar?.theme || avatar?.category || 'default';
+    }
+
+
+    // v1.1：只補盲盒角色素材 hydration。
+    // Gami 的 gachaItems 只存 { type:'avatar', value:'AVATAR_ID', rarity, prob }，
+    // 實際角色名稱、圖片與 mask 需要從 get-student-gamification 回傳的 avatars 轉進 characterAssets。
+    function hydrateGachaCharacterAssetsFromPayload(payload) {
+      try {
+        const avatarSources = [
+          payload?.avatars,
+          payload?.data?.avatars,
+          payload?.gamification?.avatars,
+          payload?.config?.avatars,
+          payload?.data?.gamification?.avatars,
+          payload?.data?.config?.avatars
+        ];
+        const avatars = avatarSources.find(Array.isArray) || [];
+        if (!avatars.length) return;
+
+        window.characterAssets = window.characterAssets || {};
+
+        avatars.forEach(a => {
+          const id = String(a?.id || a?.avatarId || a?.avatar_id || a?.value || '').trim();
+          if (!id) return;
+
+          const name = a?.name || a?.avatarName || a?.avatar_name || a?.displayName || a?.display_name || a?.label || id;
+          const img = a?.fullImg || a?.full_img_url || a?.full_img || a?.image_url || a?.imageUrl || a?.img || a?.url || '';
+          const mask = a?.mask || a?.mask_url || a?.maskUrl || a?.mask_img_url || '';
+          const rarity = String(a?.rarity || 'N').toUpperCase();
+          const theme = a?.theme || a?.category || 'default';
+
+          window.characterAssets[id] = {
+            ...(window.characterAssets[id] || {}),
+            name,
+            img,
+            mask,
+            rarity,
+            theme
+          };
+        });
+
+        if (typeof characterAssets !== 'undefined') {
+          characterAssets = window.characterAssets;
+        }
+        console.log('🎭 Gacha characterAssets hydrated from avatars:', Object.keys(window.characterAssets).length);
+      } catch (err) {
+        console.warn('Gacha characterAssets hydrate failed:', err);
+      }
     }
 
     function toLegacyStatus(data) {
