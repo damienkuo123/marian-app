@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-newsletters-v1-4"></script>
+  <script src="./tappie-api.js?v=console-branding-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -1271,6 +1271,52 @@
       #newsletterEditorModal .newsletter-editor-textarea { min-height: 58dvh; }
     }
 
+
+    /* =======================================================
+       🎨 Branding Console Full Action v1
+       - school logo / app icon upload, preview, delete
+       - mobile-safe cards and modals
+       ======================================================= */
+    .branding-grid { display:grid; grid-template-columns: 1fr; gap:18px; margin-top:18px; }
+    @media (min-width: 1040px) { .branding-grid { grid-template-columns: minmax(0,1fr) minmax(360px,.78fr); } }
+    .branding-assets { display:grid; grid-template-columns:1fr; gap:16px; }
+    @media (min-width: 780px) { .branding-assets { grid-template-columns: 1fr 1fr; } }
+    .branding-asset-card { border:1px solid var(--border); background:var(--surface); border-radius:24px; padding:18px; box-shadow:var(--shadow); overflow:hidden; }
+    .branding-asset-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:14px; }
+    .branding-asset-head h3 { margin:0; font-size:17px; font-weight:950; color:var(--text); letter-spacing:-.02em; }
+    .branding-asset-head p { margin:6px 0 0; color:var(--muted); font-weight:650; font-size:13px; line-height:1.55; }
+    .branding-preview-box { min-height:220px; border-radius:20px; background:linear-gradient(135deg, rgba(37,99,235,.08), rgba(245,158,11,.06)), var(--surface-2); border:1px dashed var(--border); display:flex; align-items:center; justify-content:center; padding:20px; overflow:hidden; }
+    .branding-preview-box.logo img { max-width: min(280px, 92%); max-height:132px; object-fit:contain; filter: drop-shadow(0 12px 20px rgba(15,23,42,.14)); }
+    .branding-preview-box.icon img { width:112px; height:112px; object-fit:cover; border-radius:28px; box-shadow:0 18px 34px rgba(15,23,42,.20); background:#fff; border:1px solid rgba(148,163,184,.25); }
+    .branding-action-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+    .branding-action-row .btn-compact { flex:1 1 150px; }
+    .branding-file { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+    .branding-status { margin-top:14px; border-radius:16px; padding:13px 14px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:13px; font-weight:750; line-height:1.6; }
+    .branding-status.ok { color:var(--green); background:rgba(22,163,74,.08); border-color:rgba(22,163,74,.22); }
+    .branding-status.warn { color:var(--amber); background:rgba(217,119,6,.08); border-color:rgba(217,119,6,.22); }
+    .branding-status.danger { color:var(--red); background:rgba(220,38,38,.08); border-color:rgba(220,38,38,.22); }
+    .branding-live-card { border:1px solid var(--border); background:var(--surface); border-radius:24px; box-shadow:var(--shadow); overflow:hidden; position:sticky; top:22px; }
+    .branding-live-hero { padding:22px; min-height:180px; display:flex; flex-direction:column; justify-content:space-between; background:radial-gradient(circle at 10% 0%, rgba(37,99,235,.18), transparent 36%), radial-gradient(circle at 88% 22%, rgba(245,158,11,.16), transparent 34%), var(--surface-2); }
+    .branding-live-logo { max-width:210px; max-height:70px; object-fit:contain; align-self:flex-start; }
+    .branding-live-title { font-size:22px; font-weight:950; letter-spacing:-.04em; margin-top:24px; color:var(--text); }
+    .branding-live-sub { color:var(--muted); font-weight:650; font-size:13px; line-height:1.55; margin-top:6px; }
+    .branding-live-body { padding:18px 22px 22px; display:grid; gap:12px; }
+    .branding-live-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+    .branding-live-row:last-child { border-bottom:0; }
+    .branding-live-icon { width:52px; height:52px; border-radius:16px; object-fit:cover; box-shadow:0 10px 22px rgba(15,23,42,.14); }
+    .branding-guide { margin-top:18px; display:grid; gap:10px; }
+    .branding-guide-row { border:1px solid var(--border); background:var(--surface); border-radius:18px; padding:14px 16px; color:var(--muted); font-size:13px; font-weight:700; line-height:1.65; }
+    .branding-guide-row strong { color:var(--text); }
+    @media (max-width: 640px) {
+      .branding-assets { grid-template-columns:1fr; }
+      .branding-preview-box { min-height:180px; padding:16px; }
+      .branding-action-row { flex-direction:column; }
+      .branding-action-row .btn-compact { width:100%; flex:auto; }
+      .branding-live-card { position:relative; top:auto; }
+      .branding-live-hero { min-height:160px; padding:18px; }
+      .branding-live-title { font-size:20px; }
+    }
+
 </style>
 </head>
 <body>
@@ -1689,6 +1735,9 @@
       if (page === "newsletters") {
         loadNewslettersConsole(false);
       }
+      if (page === "branding") {
+        loadBrandingConsole(false);
+      }
     }
 
     function renderPage(page) {
@@ -1700,6 +1749,7 @@
       if (page === "curriculum") return renderCurriculum();
       if (page === "avatars") return renderAvatarsConsole();
       if (page === "newsletters") return renderNewslettersConsole();
+      if (page === "branding") return renderBrandingConsole();
       return renderPlaceholder(page);
     }
 
@@ -3943,6 +3993,178 @@
         toast('專欄排序已更新');
       } catch (err) {
         alert('排序失敗：' + (err.message || err));
+      }
+    }
+
+
+
+    // =======================================================
+    // 🎨 Branding Console Full Action v1
+    // =======================================================
+    let brandingConsoleCache = null;
+    function getConsoleSchoolCode() {
+      return session?.school?.schoolCode || session?.school?.school_code || '';
+    }
+    function brandAssetUrl(type) {
+      const data = brandingConsoleCache || {};
+      if (type === 'icon') return data.iconUrl || data.icon_url || '/assets/app-icon.png';
+      return data.logoUrl || data.logo_url || '/assets/logo.webp';
+    }
+    function renderBrandingConsole() {
+      const schoolName = session?.school?.name || session?.school?.schoolName || session?.school?.schoolCode || '目前校區';
+      return `
+        <div class="grid cards">
+          <div class="card"><div class="metric-label">品牌 Logo</div><div id="brandingLogoState" class="metric-value" style="font-size:28px;">—</div><div class="metric-note">Dashboard / 週報識別</div></div>
+          <div class="card"><div class="metric-label">App 圖示</div><div id="brandingIconState" class="metric-value" style="font-size:28px;">—</div><div class="metric-note">手機桌面與入口圖示</div></div>
+          <div class="card"><div class="metric-label">圖片限制</div><div class="metric-value" style="font-size:28px;">1MB</div><div class="metric-note">PNG / JPG / WEBP</div></div>
+          <div class="card"><div class="metric-label">目前校區</div><div class="metric-value" style="font-size:24px;line-height:1.2;">${escapeHtml(getConsoleSchoolCode() || '—')}</div><div class="metric-note">${escapeHtml(schoolName)}</div></div>
+        </div>
+        <div class="branding-grid">
+          <div>
+            <div class="card">
+              <div class="panel-title">
+                <div><h2>校區視覺設定</h2><p>上傳校區 Logo 與 App 圖示。系統會套用到學生 Dashboard、週報品牌區與手機入口。</p></div>
+                <button class="badge ok" onclick="loadBrandingConsole(true)">重新整理</button>
+              </div>
+              <div class="branding-assets">
+                <div class="branding-asset-card">
+                  <div class="branding-asset-head">
+                    <div><h3>品牌 Logo</h3><p>建議使用透明背景 PNG / WEBP，橫式 logo 顯示效果最佳。</p></div>
+                    <span class="badge ok">Logo</span>
+                  </div>
+                  <div class="branding-preview-box logo"><img id="brandingLogoPreview" src="/assets/logo.webp" alt="Logo preview"></div>
+                  <div class="branding-action-row">
+                    <button class="btn-compact primary" onclick="triggerBrandingUpload('logo')">上傳 Logo</button>
+                    <button class="btn-compact danger" onclick="deleteBrandingAssetConsole('logo')">移除 Logo</button>
+                  </div>
+                  <input id="brandingLogoInput" class="branding-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="handleBrandingFileSelect(this,'logo')">
+                </div>
+                <div class="branding-asset-card">
+                  <div class="branding-asset-head">
+                    <div><h3>App 圖示</h3><p>建議使用正方形圖片，安裝到手機桌面時較不易變形。</p></div>
+                    <span class="badge warn">Icon</span>
+                  </div>
+                  <div class="branding-preview-box icon"><img id="brandingIconPreview" src="/assets/app-icon.png" alt="Icon preview"></div>
+                  <div class="branding-action-row">
+                    <button class="btn-compact primary" onclick="triggerBrandingUpload('icon')">上傳 Icon</button>
+                    <button class="btn-compact danger" onclick="deleteBrandingAssetConsole('icon')">移除 Icon</button>
+                  </div>
+                  <input id="brandingIconInput" class="branding-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="handleBrandingFileSelect(this,'icon')">
+                </div>
+              </div>
+              <div id="brandingStatus" class="branding-status">正在讀取目前品牌設定...</div>
+            </div>
+            <div class="branding-guide">
+              <div class="branding-guide-row"><strong>圖片格式：</strong>支援 PNG、JPG、WEBP。單一檔案請小於 1MB，避免學生 Dashboard 與週報載入過慢。</div>
+              <div class="branding-guide-row"><strong>Logo 建議：</strong>使用透明背景、橫式比例，較適合週報頁首與 Dashboard 品牌區。</div>
+              <div class="branding-guide-row"><strong>Icon 建議：</strong>請盡量使用正方形圖片，手機桌面安裝時比較不會被裁切。</div>
+            </div>
+          </div>
+          <div class="branding-live-card">
+            <div class="branding-live-hero">
+              <img id="brandingLiveLogo" class="branding-live-logo" src="/assets/logo.webp" alt="Live logo">
+              <div>
+                <div class="branding-live-title">${escapeHtml(schoolName)}</div>
+                <div class="branding-live-sub">這裡模擬學生 Dashboard / 家長週報會看到的品牌識別。</div>
+              </div>
+            </div>
+            <div class="branding-live-body">
+              <div class="branding-live-row"><div><strong>手機入口圖示</strong><div class="small-note">App icon / apple-touch-icon</div></div><img id="brandingLiveIcon" class="branding-live-icon" src="/assets/app-icon.png" alt="Live icon"></div>
+              <div class="branding-live-row"><div><strong>週報品牌區</strong><div class="small-note">Email header / school branding</div></div><span class="badge ok">啟用</span></div>
+              <div class="branding-live-row"><div><strong>學生 Dashboard</strong><div class="small-note">登入後首頁識別</div></div><span class="badge ok">同步</span></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    function setBrandingStatus(message, type='') {
+      const el = document.getElementById('brandingStatus');
+      if (!el) return;
+      el.textContent = message;
+      el.className = 'branding-status' + (type ? ' ' + type : '');
+    }
+    function updateBrandingPreview(config={}) {
+      const logo = config.logoUrl || config.logo_url || '/assets/logo.webp';
+      const icon = config.iconUrl || config.icon_url || '/assets/app-icon.png';
+      ['brandingLogoPreview','brandingLiveLogo'].forEach(id => { const el=document.getElementById(id); if(el) el.src=logo; });
+      ['brandingIconPreview','brandingLiveIcon'].forEach(id => { const el=document.getElementById(id); if(el) el.src=icon; });
+      const logoState = document.getElementById('brandingLogoState');
+      const iconState = document.getElementById('brandingIconState');
+      if (logoState) logoState.textContent = (config.logoUrl || config.logo_url) ? '已設定' : '預設';
+      if (iconState) iconState.textContent = (config.iconUrl || config.icon_url) ? '已設定' : '預設';
+    }
+    async function loadBrandingConsole(force=false) {
+      try {
+        if (!force && brandingConsoleCache) { updateBrandingPreview(brandingConsoleCache); return; }
+        setBrandingStatus('⏳ 正在讀取品牌設定...');
+        const schoolCode = getConsoleSchoolCode();
+        if (!schoolCode) throw new Error('缺少 schoolCode，Owner 模式暫不支援直接編輯單校品牌');
+        const data = await TappieAPI.adminGetBranding(schoolCode);
+        if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取品牌設定失敗');
+        brandingConsoleCache = data;
+        updateBrandingPreview(data);
+        setBrandingStatus('品牌設定已同步。', 'ok');
+      } catch (err) {
+        setBrandingStatus('⚠️ 讀取失敗：' + (err.message || err), 'danger');
+      }
+    }
+    function triggerBrandingUpload(type) {
+      const id = type === 'icon' ? 'brandingIconInput' : 'brandingLogoInput';
+      const input = document.getElementById(id);
+      if (input) input.click();
+    }
+    async function handleBrandingFileSelect(input, type) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      try {
+        if (file.size > 1048576) throw new Error('檔案太大，請上傳小於 1MB 的圖片。');
+        if (!/^image\/(png|jpeg|webp)$/.test(file.type)) throw new Error('格式不支援，請上傳 PNG、JPG 或 WEBP。');
+        if (type === 'icon') {
+          const squareOk = await new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => { const ok = Math.abs(img.width - img.height) <= 5; URL.revokeObjectURL(img.src); resolve(ok); };
+            img.onerror = () => resolve(true);
+            img.src = URL.createObjectURL(file);
+          });
+          if (!squareOk && !confirm('App 圖示建議使用正方形圖片。仍要繼續上傳嗎？')) { input.value=''; return; }
+        }
+        setBrandingStatus('⏳ 正在處理圖片並上傳...', 'warn');
+        const dataUrl = await readFileAsDataURL(file);
+        const base64 = String(dataUrl).includes(',') ? String(dataUrl).split(',')[1] : String(dataUrl);
+        const schoolCode = getConsoleSchoolCode();
+        const data = await TappieAPI.adminUploadBrandingAsset({ schoolCode, assetType:type, fileName:file.name, mimeType:file.type, base64 });
+        if (!data || !data.success) throw new Error(data?.message || data?.error || '上傳失敗');
+        brandingConsoleCache = null;
+        await loadBrandingConsole(true);
+        toast(type === 'icon' ? 'App 圖示已更新' : 'Logo 已更新');
+      } catch (err) {
+        alert('上傳失敗：' + (err.message || err));
+        setBrandingStatus('⚠️ 上傳失敗：' + (err.message || err), 'danger');
+      } finally {
+        input.value = '';
+      }
+    }
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('讀取檔案失敗'));
+        reader.readAsDataURL(file);
+      });
+    }
+    async function deleteBrandingAssetConsole(type) {
+      if (!confirm(type === 'icon' ? '確定要移除 App 圖示並恢復預設嗎？' : '確定要移除 Logo 並恢復預設嗎？')) return;
+      try {
+        setBrandingStatus('⏳ 正在移除品牌素材...', 'warn');
+        const schoolCode = getConsoleSchoolCode();
+        const data = await TappieAPI.adminDeleteBrandingAsset({ schoolCode, assetType:type });
+        if (!data || !data.success) throw new Error(data?.message || data?.error || '移除失敗');
+        brandingConsoleCache = null;
+        await loadBrandingConsole(true);
+        toast(type === 'icon' ? 'App 圖示已移除' : 'Logo 已移除');
+      } catch (err) {
+        alert('移除失敗：' + (err.message || err));
+        setBrandingStatus('⚠️ 移除失敗：' + (err.message || err), 'danger');
       }
     }
 
