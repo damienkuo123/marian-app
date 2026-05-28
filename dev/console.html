@@ -4,7 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-newsletters-v1_3"></script>
+  <script src="./tappie-api.js?v=console-newsletters-v1-4"></script>
+  <script>
+    // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
+    document.addEventListener('touchmove', function(e) {
+      if (!document.body.classList.contains('console-modal-open')) return;
+      const modal = e.target.closest('.console-modal');
+      if (!modal) e.preventDefault();
+    }, { passive: false });
+  </script>
   <style>
     :root {
       --bg: #f7f9fc;
@@ -1243,6 +1251,26 @@
       }
     }
 
+
+    /* Newsletter v1.4 modal mobile scroll repair */
+    #newsletterEditorModal .form-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #newsletterEditorModal .console-modal { max-height: min(92dvh, 860px); }
+    #newsletterEditorModal .modal-actions { flex: 0 0 auto; }
+    @media (max-width: 720px) {
+      #newsletterEditorModal .form-grid {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      #newsletterEditorModal .newsletter-editor-textarea { min-height: 58dvh; }
+    }
+
 </style>
 </head>
 <body>
@@ -1457,18 +1485,12 @@
         </div>
         <button class="btn-compact" onclick="hideNewsletterEditorModal()">關閉</button>
       </div>
-      <input type="hidden" id="newsletterEditId" />
       <input type="hidden" id="newsletterEditMode" value="update" />
+      <input type="hidden" id="newsletterEditId" />
       <div class="form-grid">
-        <div class="form-field full">
-          <label>專欄標籤（給管理員辨識，不會寄給家長）</label>
-          <input id="newsletterEditTags" class="console-input" placeholder="例如：語言力量, 情緒連結, 成長引導" />
-        </div>
-        <div class="form-field full">
-          <label>專欄 HTML（標題請放在第一個 h3 內）</label>
-          <textarea id="newsletterEditHtml" class="newsletter-editor-textarea" placeholder="請貼上或編輯專欄 HTML"></textarea>
-        </div>
-        <div class="form-field full"><div class="form-note">專欄列表的標題會從 content_html 第一個 &lt;h3&gt; 自動擷取；tags 只用於後台快速辨識類型，不會放進家長週報。</div></div>
+        <div class="form-field full"><label>管理標籤（逗號分隔，不會寄給家長）</label><input id="newsletterEditTags" class="console-input" placeholder="例如：語言力量, 情緒連結, 成長引導" /></div>
+        <div class="form-field full"><label>專欄 HTML</label><textarea id="newsletterEditHtml" class="newsletter-editor-textarea" placeholder="請貼上或編輯專欄 HTML，標題會自動取第一個 h3"></textarea></div>
+        <div class="form-field full"><div class="form-note">專欄標題取自 content_html 的第一個 &lt;h3&gt;。tags 只給管理員辨識，不會出現在家長週報。正式全校週報成功後，系統會自動封存第 1 順位並遞補排序。</div></div>
       </div>
       <div class="modal-actions">
         <button class="btn-compact" onclick="hideNewsletterEditorModal()">取消</button>
@@ -2713,6 +2735,16 @@
         const schoolCode = getConsoleSchoolCode();
         const data = await TappieAPI.adminGetWeeklyReports(schoolCode);
         if (!data || !data.success) throw new Error(data?.message || data?.error || "讀取週報資料失敗");
+        // Weekly API 的 currentNewsletter 仍可能只含 topic/source_url；Console 顯示要以 content_html 第一個 h3 為專欄標題。
+        try {
+          const nlData = await newsletterConsoleRequest('list', { includeArchived: true });
+          const nlItems = normalizeNewsletterItemsForConsole(nlData);
+          data.newsletterItems = nlItems;
+          const activeItems = nlItems.filter(item => !isNewsletterArchived(item)).sort((a,b)=>newsletterOrderOf(a)-newsletterOrderOf(b));
+          data.currentNewsletterDetail = activeItems.find(item => newsletterOrderOf(item) === 1) || activeItems[0] || null;
+        } catch (nlErr) {
+          console.warn('[weekly newsletter detail failed]', nlErr);
+        }
         weeklyCache = data;
         renderWeeklyData(data);
       } catch (err) {
@@ -2736,9 +2768,11 @@
       document.getElementById("wkRecipientBar").style.width = Math.max(0, Math.min(100,pct)) + "%";
       document.getElementById("wkTodayStatus").textContent = data.todayLocked ? "已寄送" : "未寄送";
       document.getElementById("wkTodayNote").textContent = data.todayReportKey || "今日 report_key";
-      const nl = data.currentNewsletter || {};
+      const nl = data.currentNewsletterDetail || data.currentNewsletter || {};
+      const nlContent = newsletterContentOf(nl);
+      const nlTitle = nl.id ? (nlContent ? newsletterTitleFromContent(nlContent, 0) : (nl.title || nl.topic || "第 1 順位專欄")) : "";
       document.getElementById("wkNewsletter").textContent = nl.id ? "1" : "0";
-      document.getElementById("wkNewsletterNote").textContent = nl.id ? (nl.topic || "第 1 順位專欄") : "目前無第 1 順位";
+      document.getElementById("wkNewsletterNote").textContent = nl.id ? nlTitle : "目前無第 1 順位";
 
       document.getElementById("wkEnabled").checked = enabled;
       document.getElementById("wkSendDay").value = cfg.sendDay || "MON";
@@ -2764,7 +2798,7 @@
 
       document.getElementById("wkNewsletterBox").innerHTML = nl.id ? `
         <div class="weekly-status-title"><span class="badge ok">第 1 順位專欄待寄出</span></div>
-        <div class="weekly-status-sub">${escapeHtml(nl.topic || "未命名專欄")}<br>正式全校寄送成功後，系統會寫入 sent_at / archived_at，並將後續 display_order 往前遞補。</div>
+        <div class="weekly-status-sub"><strong>${escapeHtml(nlTitle || "未命名專欄")}</strong><br>${nlContent ? renderNewsletterTagPills(newsletterTagsOf(nl)) + '<br>' : ''}正式全校寄送成功後，系統會寫入 sent_at / archived_at，並將後續 display_order 往前遞補。</div>
       ` : `
         <div class="weekly-status-title"><span class="badge warn">目前沒有第 1 順位專欄</span></div>
         <div class="weekly-status-sub">週報仍可寄送，但不會包含專欄區塊。</div>`;
@@ -3546,14 +3580,6 @@
       }
     }
 
-
-
-    // =======================================================
-    // 📰 專欄 Console v1.3：只以 content_html / tags 作為專欄資料
-    // - topic / source_url 是來源新聞資料，不拿來當專欄標題
-    // - 專欄標題從 content_html 第一個 <h3> 擷取
-    // - tags 只給管理員辨識，不會寄給家長
-    // =======================================================
     let newslettersConsoleCache = null;
     let selectedNewsletterId = null;
     let newslettersLoading = false;
@@ -3663,7 +3689,7 @@
 
     function newsletterOrderOf(item, fallbackIndex = 0) {
       const n = Number(item?.display_order ?? item?.displayOrder ?? item?.order ?? fallbackIndex + 1);
-      return Number.isFinite(n) ? n : fallbackIndex + 1;
+      return (Number.isFinite(n) && n > 0) ? n : fallbackIndex + 1;
     }
 
     function activeNewsletterItems() {
@@ -3723,7 +3749,7 @@
       const activeEl = document.getElementById('newsletterActiveList');
       if (activeEl) activeEl.innerHTML = '<div class="empty-state">正在讀取專欄...</div>';
       try {
-        const data = await newsletterConsoleRequest('list');
+        const data = await newsletterConsoleRequest('list', { includeArchived: true });
         newslettersConsoleCache = { items: normalizeNewsletterItemsForConsole(data), raw: data };
         const active = activeNewsletterItems();
         selectedNewsletterId = selectedNewsletterId || newsletterIdOf(active[0] || null) || null;
@@ -3773,7 +3799,7 @@
       const content = newsletterContentOf(item);
       const title = newsletterTitleFromContent(content, index);
       const tags = newsletterTagsOf(item);
-      const order = newsletterOrderOf(item, index);
+      const order = archived ? '—' : String(index + 1);
       const isNext = !archived && index === 0;
       const sent = isNewsletterSent(item);
       return `<div class="newsletter-card ${isNext ? 'next' : ''}" data-newsletter-id="${escapeHtml(id)}">
@@ -3919,6 +3945,7 @@
         alert('排序失敗：' + (err.message || err));
       }
     }
+
 
     function renderPlaceholder(page) {
       return `
