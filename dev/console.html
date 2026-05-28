@@ -609,6 +609,40 @@
 
 
     /* =======================================================
+       🕹 Gamification Settings Console Full Action
+       ======================================================= */
+    .gami-grid { display:grid; grid-template-columns: minmax(0,1fr); gap:18px; margin-top:18px; }
+    @media (min-width:1120px){ .gami-grid { grid-template-columns: minmax(0,1fr) minmax(360px,.72fr); } }
+    .gami-panel { background:var(--surface); border:1px solid var(--border); border-radius:24px; padding:22px; box-shadow:var(--shadow); }
+    .gami-panel h3 { margin:0 0 6px; font-size:18px; font-weight:950; color:var(--text); letter-spacing:-.02em; }
+    .gami-panel p { margin:0; color:var(--muted); font-size:13px; font-weight:650; line-height:1.6; }
+    .gami-section { margin-top:18px; padding-top:18px; border-top:1px solid var(--border); }
+    .gami-form-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; }
+    .gami-form-grid.three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .gami-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+    .gami-field label { color:var(--muted); font-size:12px; font-weight:850; }
+    .gami-field input, .gami-field select { width:100%; border:1px solid var(--border); background:var(--surface-2); color:var(--text); border-radius:14px; padding:11px 12px; font-weight:760; outline:none; }
+    .gami-field input:focus, .gami-field select:focus { border-color:var(--primary); box-shadow:0 0 0 4px rgba(37,99,235,.12); }
+    .gami-tier-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:center; padding:12px; border:1px solid var(--border); background:var(--surface-2); border-radius:16px; }
+    .gami-items { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    .gami-item-row { display:grid; grid-template-columns:1.1fr .8fr .8fr .8fr auto; gap:10px; padding:12px; border:1px solid var(--border); background:var(--surface-2); border-radius:16px; align-items:end; }
+    .gami-prob-badge { display:inline-flex; gap:6px; align-items:center; padding:7px 11px; border-radius:999px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-weight:900; font-size:12px; }
+    .gami-prob-badge.ok { color:var(--green); border-color:rgba(22,163,74,.28); background:rgba(22,163,74,.08); }
+    .gami-prob-badge.warn { color:var(--red); border-color:rgba(220,38,38,.28); background:rgba(220,38,38,.08); }
+    .gami-preview { position:sticky; top:22px; }
+    .gami-preview-list { display:flex; flex-direction:column; gap:12px; margin-top:14px; }
+    .gami-preview-row { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); color:var(--muted); font-weight:700; }
+    .gami-preview-row strong { color:var(--text); }
+    @media (max-width:720px){
+      .gami-panel { padding:18px; border-radius:22px; }
+      .gami-form-grid, .gami-form-grid.three { grid-template-columns:1fr; }
+      .gami-tier-row { grid-template-columns:1fr; }
+      .gami-item-row { grid-template-columns:1fr; }
+      .gami-preview { position:relative; top:auto; }
+    }
+
+
+    /* =======================================================
        ✉️ Weekly Reports Console Full Action
        ======================================================= */
 
@@ -1304,6 +1338,8 @@
     .branding-live-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
     .branding-live-row:last-child { border-bottom:0; }
     .branding-live-icon { width:52px; height:52px; border-radius:16px; object-fit:cover; box-shadow:0 10px 22px rgba(15,23,42,.14); }
+    .branding-logo-circle { width:58px; height:58px; border-radius:999px; background:var(--surface-2); border:1px solid var(--border); display:grid; place-items:center; box-shadow:0 10px 22px rgba(15,23,42,.10); overflow:hidden; flex:0 0 auto; }
+    .branding-logo-circle img { max-width:82%; max-height:82%; object-fit:contain; }
     .branding-guide { margin-top:18px; display:grid; gap:10px; }
     .branding-guide-row { border:1px solid var(--border); background:var(--surface); border-radius:18px; padding:14px 16px; color:var(--muted); font-size:13px; font-weight:700; line-height:1.65; }
     .branding-guide-row strong { color:var(--text); }
@@ -1703,7 +1739,7 @@
         newsletters: ["Newsletters", "教育專欄排序、預覽與封存"],
         avatars: ["Avatars", "角色、稀有度、價格、套組管理"],
         branding: ["Branding", "校區 Logo、品牌素材、週報識別"],
-        settings: ["Settings", "校區限制、密碼、遊戲化設定"],
+        settings: ["Gamification Settings", "每日挑戰、任務結算、排行榜與盲盒機率"],
         health: ["Data Health", "資料健康檢查、問題分級、修復建議"],
         automation: ["Automation", "Cron、任務結算、每日清理監控"]
       };
@@ -1738,6 +1774,9 @@
       if (page === "branding") {
         loadBrandingConsole(false);
       }
+      if (page === "settings") {
+        loadGamificationConsole(false);
+      }
     }
 
     function renderPage(page) {
@@ -1750,6 +1789,7 @@
       if (page === "avatars") return renderAvatarsConsole();
       if (page === "newsletters") return renderNewslettersConsole();
       if (page === "branding") return renderBrandingConsole();
+      if (page === "settings") return renderGamificationConsole();
       return renderPlaceholder(page);
     }
 
@@ -3999,6 +4039,191 @@
 
 
     // =======================================================
+    // 🕹 Gamification Settings Console Full Action
+    // =======================================================
+    let gamificationConsoleCache = null;
+    function defaultConsoleGamification(){
+      return {
+        dailyChallenge: { passScore: 60, tiers: [{min:80,pts:30},{min:70,pts:20},{min:60,pts:10}] },
+        mission: { failThreshold:5, failBasePenalty:-250, failPenaltyStep:50, goodThreshold:10, goodReward:100, perfectThreshold:15, perfectReward:200 },
+        leaderboard:[100,50,30],
+        gachaPicks: { "初階Ai":1, "中階Ai":2, "高階Ai":3, "玩家對戰":3, "活動Boss":1 },
+        gachaItems:[
+          { type:'points', value:0, rarity:'N', prob:25 },
+          { type:'points', value:5, rarity:'N', prob:20 },
+          { type:'points', value:10, rarity:'N', prob:15 },
+          { type:'points', value:20, rarity:'R', prob:15 },
+          { type:'points', value:30, rarity:'R', prob:10 },
+          { type:'points', value:50, rarity:'R', prob:8 },
+          { type:'points', value:70, rarity:'SR', prob:4 },
+          { type:'points', value:90, rarity:'SR', prob:2 },
+          { type:'points', value:500, rarity:'SSR', prob:1 }
+        ]
+      };
+    }
+    function getConsoleFunctionBase(){ return (window.TappieAPI && TappieAPI.supabaseBaseUrl) ? TappieAPI.supabaseBaseUrl.replace(/\/$/,'') : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1'; }
+    function normalizeGamiConsole(raw){
+      const d = defaultConsoleGamification();
+      const g = raw && typeof raw === 'object' ? raw : {};
+      return {
+        dailyChallenge: { ...d.dailyChallenge, ...(g.dailyChallenge || {}) },
+        mission: { ...d.mission, ...(g.mission || {}) },
+        leaderboard: Array.isArray(g.leaderboard) ? [Number(g.leaderboard[0]??100), Number(g.leaderboard[1]??50), Number(g.leaderboard[2]??30)] : d.leaderboard,
+        gachaPicks: { ...d.gachaPicks, ...(g.gachaPicks || {}) },
+        gachaItems: Array.isArray(g.gachaItems) && g.gachaItems.length ? g.gachaItems.map(x=>({ type:x.type||'points', value:x.value??0, rarity:x.rarity||'N', prob:Number(x.prob??0) })) : d.gachaItems
+      };
+    }
+    function renderGamificationConsole(){
+      return `
+        <div class="grid cards">
+          <div class="card"><div class="metric-label">每日挑戰</div><div id="gamiDailyMetric" class="metric-value" style="font-size:28px;">—</div><div class="metric-note">分數階梯與通關門檻</div></div>
+          <div class="card"><div class="metric-label">任務結算</div><div id="gamiMissionMetric" class="metric-value" style="font-size:28px;">—</div><div class="metric-note">未達標、良好、完美門檻</div></div>
+          <div class="card"><div class="metric-label">排行榜獎勵</div><div id="gamiLeaderboardMetric" class="metric-value" style="font-size:28px;">—</div><div class="metric-note">前三名點數</div></div>
+          <div class="card"><div class="metric-label">盲盒機率</div><div id="gamiProbMetric" class="metric-value" style="font-size:28px;">—</div><div class="metric-note">總和需等於 100%</div></div>
+        </div>
+        <div class="gami-grid">
+          <div class="gami-panel">
+            <div class="panel-title">
+              <div><h2>進階點數設定</h2><p>這些設定會影響學生 Dashboard、今日挑戰點數、任務結算、排行榜獎勵與盲盒抽獎。</p></div>
+              <button class="btn-compact" onclick="loadGamificationConsole(true)">重新整理</button>
+            </div>
+            <div class="gami-section">
+              <h3>每日挑戰點數</h3><p>學生完成今日挑戰後，依最高分對應點數階梯。</p>
+              <div class="gami-form-grid three">
+                <div class="gami-tier-row"><div class="gami-field"><label>第 1 階分數 ≥</label><input id="gamiT1Min" type="number"></div><div class="gami-field"><label>獎勵點數</label><input id="gamiT1Pts" type="number"></div></div>
+                <div class="gami-tier-row"><div class="gami-field"><label>第 2 階分數 ≥</label><input id="gamiT2Min" type="number"></div><div class="gami-field"><label>獎勵點數</label><input id="gamiT2Pts" type="number"></div></div>
+                <div class="gami-tier-row"><div class="gami-field"><label>第 3 階分數 ≥</label><input id="gamiT3Min" type="number"></div><div class="gami-field"><label>獎勵點數</label><input id="gamiT3Pts" type="number"></div></div>
+              </div>
+            </div>
+            <div class="gami-section">
+              <h3>任務結算規則</h3><p>Auto Settlement 會依完成次數計算未達標扣點、良好與完美獎勵。</p>
+              <div class="gami-form-grid three">
+                <div class="gami-field"><label>未達標次數</label><input id="gamiFailTh" type="number"></div>
+                <div class="gami-field"><label>基礎扣點</label><input id="gamiFailBase" type="number"></div>
+                <div class="gami-field"><label>遞增扣點</label><input id="gamiFailStep" type="number"></div>
+                <div class="gami-field"><label>良好門檻</label><input id="gamiGoodTh" type="number"></div>
+                <div class="gami-field"><label>良好獎勵</label><input id="gamiGoodPts" type="number"></div>
+                <div class="gami-field"><label>完美門檻</label><input id="gamiPerfTh" type="number"></div>
+                <div class="gami-field"><label>完美獎勵</label><input id="gamiPerfPts" type="number"></div>
+              </div>
+            </div>
+            <div class="gami-section">
+              <h3>排行榜與對戰抽卡次數</h3><p>排行榜依目前單元最高分排序；同分時完成日期較早者優先。</p>
+              <div class="gami-form-grid three">
+                <div class="gami-field"><label>第 1 名</label><input id="gamiLb1" type="number"></div>
+                <div class="gami-field"><label>第 2 名</label><input id="gamiLb2" type="number"></div>
+                <div class="gami-field"><label>第 3 名</label><input id="gamiLb3" type="number"></div>
+                <div class="gami-field"><label>初階 AI</label><input id="gamiPickEasy" type="number"></div>
+                <div class="gami-field"><label>中階 AI</label><input id="gamiPickMed" type="number"></div>
+                <div class="gami-field"><label>高階 AI</label><input id="gamiPickHard" type="number"></div>
+                <div class="gami-field"><label>玩家對戰</label><input id="gamiPickPvp" type="number"></div>
+                <div class="gami-field"><label>活動 Boss</label><input id="gamiPickBoss" type="number" disabled></div>
+              </div>
+            </div>
+            <div class="gami-section">
+              <div class="panel-title"><div><h3>盲盒點數獎項機率</h3><p>此處設定點數獎項的絕對機率。總和必須剛好等於 100%。</p></div><span id="gamiProbBadge" class="gami-prob-badge">總和 —</span></div>
+              <div id="gamiItemsList" class="gami-items"></div>
+              <button class="btn-compact" style="margin-top:12px;" onclick="addGamificationItemRow()">新增點數獎項</button>
+            </div>
+            <div class="modal-actions" style="margin-top:22px;">
+              <button class="btn-compact" onclick="loadGamificationConsole(true)">取消變更</button>
+              <div class="right"><button id="gamiSaveBtn" class="btn-compact primary" onclick="saveGamificationConsole(this)">儲存遊戲化設定</button></div>
+            </div>
+            <div id="gamiStatus" class="branding-status" style="margin-top:14px;">正在讀取設定...</div>
+          </div>
+          <div class="gami-panel gami-preview">
+            <h3>設定影響預覽</h3><p>這裡用管理者語言整理目前數值會影響哪些功能。</p>
+            <div id="gamiPreviewList" class="gami-preview-list"></div>
+          </div>
+        </div>`;
+    }
+    async function loadGamificationConsole(force=false){
+      try{
+        if(!force && gamificationConsoleCache){ fillGamificationForm(gamificationConsoleCache); return; }
+        setGamificationStatus('⏳ 正在讀取遊戲化設定...', 'warn');
+        const schoolCode = getConsoleSchoolCode();
+        const res = await fetch(`${getConsoleFunctionBase()}/admin-get-gamification?schoolCode=${encodeURIComponent(schoolCode)}`);
+        const data = await res.json().catch(()=>({}));
+        if(!data.success) throw new Error(data.message || data.error || '讀取失敗');
+        gamificationConsoleCache = normalizeGamiConsole(data.config || data.gamification || data.value || data);
+        fillGamificationForm(gamificationConsoleCache);
+        setGamificationStatus('遊戲化設定已同步。','ok');
+      }catch(err){ setGamificationStatus('⚠️ 讀取失敗：' + (err.message || err), 'danger'); }
+    }
+    function setGamificationStatus(message,type=''){
+      const el=document.getElementById('gamiStatus'); if(!el) return;
+      el.textContent=message; el.className='branding-status' + (type ? ' '+type : '');
+    }
+    function fillGamificationForm(g){
+      g=normalizeGamiConsole(g); const tiers=(g.dailyChallenge.tiers||[]);
+      [['gamiT1Min',tiers[0]?.min],['gamiT1Pts',tiers[0]?.pts],['gamiT2Min',tiers[1]?.min],['gamiT2Pts',tiers[1]?.pts],['gamiT3Min',tiers[2]?.min],['gamiT3Pts',tiers[2]?.pts]].forEach(([id,v])=>{const el=document.getElementById(id); if(el) el.value=Number(v??0);});
+      const m=g.mission||{}; [['gamiFailTh',m.failThreshold],['gamiFailBase',m.failBasePenalty],['gamiFailStep',m.failPenaltyStep],['gamiGoodTh',m.goodThreshold],['gamiGoodPts',m.goodReward],['gamiPerfTh',m.perfectThreshold],['gamiPerfPts',m.perfectReward]].forEach(([id,v])=>{const el=document.getElementById(id); if(el) el.value=Number(v??0);});
+      [['gamiLb1',g.leaderboard?.[0]],['gamiLb2',g.leaderboard?.[1]],['gamiLb3',g.leaderboard?.[2]],['gamiPickEasy',g.gachaPicks?.['初階Ai']],['gamiPickMed',g.gachaPicks?.['中階Ai']],['gamiPickHard',g.gachaPicks?.['高階Ai']],['gamiPickPvp',g.gachaPicks?.['玩家對戰']],['gamiPickBoss',g.gachaPicks?.['活動Boss']??1]].forEach(([id,v])=>{const el=document.getElementById(id); if(el) el.value=Number(v??0);});
+      renderGamificationItems(g.gachaItems||[]); updateGamificationPreview();
+    }
+    function renderGamificationItems(items){
+      const el=document.getElementById('gamiItemsList'); if(!el) return;
+      el.innerHTML=(items||[]).map((it,i)=>renderGamificationItemRow(it,i)).join('');
+      updateGamificationProbability();
+    }
+    function renderGamificationItemRow(it={},i=0){
+      return `<div class="gami-item-row" data-gami-item-row>
+        <div class="gami-field"><label>類型</label><select data-gami-type><option value="points" ${it.type==='points'?'selected':''}>點數</option></select></div>
+        <div class="gami-field"><label>數值</label><input data-gami-value type="number" value="${Number(it.value??0)}"></div>
+        <div class="gami-field"><label>稀有度</label><select data-gami-rarity>${['N','R','SR','SSR','UR'].map(r=>`<option value="${r}" ${String(it.rarity||'N')===r?'selected':''}>${r}</option>`).join('')}</select></div>
+        <div class="gami-field"><label>機率 %</label><input data-gami-prob type="number" step="0.1" value="${Number(it.prob??0)}" oninput="updateGamificationProbability()"></div>
+        <button class="btn-compact danger" onclick="this.closest('[data-gami-item-row]').remove(); updateGamificationProbability();">刪除</button>
+      </div>`;
+    }
+    function addGamificationItemRow(){
+      const el=document.getElementById('gamiItemsList'); if(!el) return;
+      el.insertAdjacentHTML('beforeend', renderGamificationItemRow({type:'points',value:10,rarity:'N',prob:1}, Date.now()));
+      updateGamificationProbability();
+    }
+    function readGamificationConfigFromForm(){
+      const num=id=>Number(document.getElementById(id)?.value||0);
+      const rows=[...document.querySelectorAll('[data-gami-item-row]')].map(row=>({ type:row.querySelector('[data-gami-type]')?.value||'points', value:Number(row.querySelector('[data-gami-value]')?.value||0), rarity:row.querySelector('[data-gami-rarity]')?.value||'N', prob:Number(row.querySelector('[data-gami-prob]')?.value||0)}));
+      return { dailyChallenge:{ passScore:60, tiers:[{min:num('gamiT1Min'),pts:num('gamiT1Pts')},{min:num('gamiT2Min'),pts:num('gamiT2Pts')},{min:num('gamiT3Min'),pts:num('gamiT3Pts')}] }, mission:{ failThreshold:num('gamiFailTh'), failBasePenalty:num('gamiFailBase'), failPenaltyStep:num('gamiFailStep'), goodThreshold:num('gamiGoodTh'), goodReward:num('gamiGoodPts'), perfectThreshold:num('gamiPerfTh'), perfectReward:num('gamiPerfPts') }, leaderboard:[num('gamiLb1'),num('gamiLb2'),num('gamiLb3')], gachaPicks:{ '初階Ai':num('gamiPickEasy'), '中階Ai':num('gamiPickMed'), '高階Ai':num('gamiPickHard'), '玩家對戰':num('gamiPickPvp'), '活動Boss':1 }, gachaItems:rows };
+    }
+    function updateGamificationProbability(){
+      const sum=[...document.querySelectorAll('[data-gami-prob]')].reduce((a,input)=>a+Number(input.value||0),0);
+      const badge=document.getElementById('gamiProbBadge'); if(badge){ badge.textContent=`總和 ${sum.toFixed(sum%1?1:0)}%`; badge.className='gami-prob-badge ' + (Math.abs(sum-100)<0.001?'ok':'warn'); }
+      const metric=document.getElementById('gamiProbMetric'); if(metric) metric.textContent=sum.toFixed(sum%1?1:0)+'%';
+    }
+    function updateGamificationPreview(){
+      updateGamificationProbability();
+      const g=readGamificationConfigFromForm();
+      const preview=document.getElementById('gamiPreviewList');
+      if(preview) preview.innerHTML=`
+        <div class="gami-preview-row"><span>每日挑戰最高階</span><strong>${g.dailyChallenge.tiers[0].min} 分 / +${g.dailyChallenge.tiers[0].pts} 點</strong></div>
+        <div class="gami-preview-row"><span>未達標規則</span><strong>${g.mission.failThreshold} 次以下 / ${g.mission.failBasePenalty} 點</strong></div>
+        <div class="gami-preview-row"><span>良好 / 完美</span><strong>${g.mission.goodThreshold} 次 +${g.mission.goodReward}｜${g.mission.perfectThreshold} 次 +${g.mission.perfectReward}</strong></div>
+        <div class="gami-preview-row"><span>排行榜前三</span><strong>${g.leaderboard.join(' / ')} 點</strong></div>
+        <div class="gami-preview-row"><span>抽卡次數</span><strong>AI ${g.gachaPicks['初階Ai']}/${g.gachaPicks['中階Ai']}/${g.gachaPicks['高階Ai']}｜對戰 ${g.gachaPicks['玩家對戰']}</strong></div>`;
+      const daily=document.getElementById('gamiDailyMetric'); if(daily) daily.textContent=`${g.dailyChallenge.tiers[0].min}+`;
+      const mission=document.getElementById('gamiMissionMetric'); if(mission) mission.textContent=`${g.mission.failThreshold}/${g.mission.goodThreshold}/${g.mission.perfectThreshold}`;
+      const lb=document.getElementById('gamiLeaderboardMetric'); if(lb) lb.textContent=g.leaderboard.join('/');
+    }
+    document.addEventListener('input', (e)=>{ if(e.target && String(e.target.id||'').startsWith('gami')) updateGamificationPreview(); });
+    async function saveGamificationConsole(btn){
+      try{
+        const config=readGamificationConfigFromForm();
+        const sum=(config.gachaItems||[]).reduce((a,x)=>a+Number(x.prob||0),0);
+        if(Math.abs(sum-100)>0.001) throw new Error(`盲盒機率總和必須等於 100%，目前為 ${sum}%`);
+        if(btn){btn.disabled=true; btn.textContent='儲存中...';}
+        const schoolCode=getConsoleSchoolCode();
+        const res=await fetch(`${getConsoleFunctionBase()}/admin-save-gamification`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({schoolCode, key:'Gamification_Config', config})});
+        const data=await res.json().catch(()=>({}));
+        if(!data.success) throw new Error(data.message||data.error||'儲存失敗');
+        gamificationConsoleCache=normalizeGamiConsole(config);
+        fillGamificationForm(gamificationConsoleCache);
+        setGamificationStatus('✅ 遊戲化設定已同步至 Supabase。','ok'); toast('遊戲化設定已儲存');
+      }catch(err){ alert('儲存失敗：'+(err.message||err)); setGamificationStatus('⚠️ 儲存失敗：'+(err.message||err),'danger'); }
+      finally{ if(btn){btn.disabled=false; btn.textContent='儲存遊戲化設定';} }
+    }
+
+
+    // =======================================================
     // 🎨 Branding Console Full Action v1
     // =======================================================
     let brandingConsoleCache = null;
@@ -4069,9 +4294,9 @@
               </div>
             </div>
             <div class="branding-live-body">
-              <div class="branding-live-row"><div><strong>手機入口圖示</strong><div class="small-note">App icon / apple-touch-icon</div></div><img id="brandingLiveIcon" class="branding-live-icon" src="/assets/app-icon.png" alt="Live icon"></div>
-              <div class="branding-live-row"><div><strong>週報品牌區</strong><div class="small-note">Email header / school branding</div></div><span class="badge ok">啟用</span></div>
-              <div class="branding-live-row"><div><strong>學生 Dashboard</strong><div class="small-note">登入後首頁識別</div></div><span class="badge ok">同步</span></div>
+              <div class="branding-live-row"><div><strong>手機入口圖示</strong><div class="small-note">學生加入主畫面時看到的 Icon</div></div><img id="brandingLiveIcon" class="branding-live-icon" src="/assets/app-icon.png" alt="Live icon"></div>
+              <div class="branding-live-row"><div><strong>週報品牌區</strong><div class="small-note">家長週報頁首 Logo</div></div><span class="branding-logo-circle"><img id="brandingLiveNewsletterLogo" src="/assets/logo.webp" alt="Weekly logo"></span></div>
+              <div class="branding-live-row"><div><strong>學生 Dashboard</strong><div class="small-note">學生登入首頁 Logo</div></div><span class="branding-logo-circle"><img id="brandingLiveDashboardLogo" src="/assets/logo.webp" alt="Dashboard logo"></span></div>
             </div>
           </div>
         </div>
@@ -4086,7 +4311,7 @@
     function updateBrandingPreview(config={}) {
       const logo = config.logoUrl || config.logo_url || '/assets/logo.webp';
       const icon = config.iconUrl || config.icon_url || '/assets/app-icon.png';
-      ['brandingLogoPreview','brandingLiveLogo'].forEach(id => { const el=document.getElementById(id); if(el) el.src=logo; });
+      ['brandingLogoPreview','brandingLiveLogo','brandingLiveNewsletterLogo','brandingLiveDashboardLogo'].forEach(id => { const el=document.getElementById(id); if(el) el.src=logo; });
       ['brandingIconPreview','brandingLiveIcon'].forEach(id => { const el=document.getElementById(id); if(el) el.src=icon; });
       const logoState = document.getElementById('brandingLogoState');
       const iconState = document.getElementById('brandingIconState');
