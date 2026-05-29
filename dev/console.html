@@ -1810,40 +1810,43 @@
     }
 
 
+
     /* =======================================================
-       Overview v2.5.2｜Safe desktop-only chart refinements
-       - Keep the previously good point-flow visual style
-       - Only allow 30-day desktop horizontal scrolling
-       - Desktop mode chart switches to clean top/bottom layout
+       Overview v2.5.2｜Desktop chart fix only
+       - keep previous working point-flow chart
+       - add safe horizontal scroll for 30-day point chart
+       - make desktop mode chart stacked instead of cramped side-by-side
        ======================================================= */
+    .point-scroll-x{
+      width:100%;
+      overflow-x:auto;
+      overflow-y:hidden;
+      -webkit-overflow-scrolling:touch;
+      padding:0 2px 6px;
+    }
+    .point-scroll-x .point-bars{
+      min-width:100%;
+    }
+    .point-scroll-x::-webkit-scrollbar{height:8px;}
+    .point-scroll-x::-webkit-scrollbar-thumb{background:rgba(148,163,184,.35);border-radius:999px;}
+    .point-scroll-x::-webkit-scrollbar-track{background:transparent;}
     @media (min-width:641px){
-      #anaModeDonut.donut-wrap.pro-mode-wrap{
+      #anaModeDonut .donut-wrap.pro-mode-wrap{
         grid-template-columns:1fr !important;
-        justify-items:center !important;
-        align-items:start !important;
-        gap:22px !important;
-        min-height:0 !important;
+        justify-items:center;
+        align-items:center;
+        gap:18px;
+        min-height:0;
       }
       #anaModeDonut .pro-legend-list{
-        width:100% !important;
-        max-width:560px !important;
-        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-        align-self:stretch !important;
+        grid-template-columns:repeat(2,minmax(150px,1fr));
+        max-width:440px;
+        justify-content:center;
       }
-      #anaPointChart.point-chart-scrollable{
-        overflow-x:auto !important;
-        overflow-y:visible !important;
-        -webkit-overflow-scrolling:touch;
-        padding-bottom:6px;
-      }
-      #anaPointChart.point-chart-scrollable .pro-point-bars{
-        width:max-content;
-      }
-      #anaPointChart.point-chart-scrollable .pro-point-day{
-        flex:0 0 50px !important;
+      #anaModeDonut .mode-legend-row{
+        min-height:58px;
       }
     }
-
 </style>
 </head>
 <body>
@@ -2856,13 +2859,11 @@
       if(!rows.length){ el.innerHTML='<div class="empty-state">目前沒有點數流動紀錄。</div>'; return; }
       window.__overviewPointRows=rows;
       const max=Math.max(1,...rows.map(r=>Math.max(Number(r.plus||0),Number(r.minus||0))));
-      const isLongRange = rows.length > 14;
-      const chartMinWidth = isLongRange ? Math.max(760, rows.length * 58) : 0;
-      el.classList.toggle('point-chart-scrollable', isLongRange);
-      el.innerHTML=`<div class="point-bars pro-point-bars" style="${isLongRange ? `min-width:${chartMinWidth}px;` : ''}">${rows.map((r,i)=>{
+      const scrollStyle = rows.length > 14 ? `min-width:${Math.max(1000, rows.length * 54)}px;` : '';
+      el.innerHTML=`<div class="point-scroll-x"><div class="point-bars pro-point-bars" style="${scrollStyle}">${rows.map((r,i)=>{
         const plusH=Number(r.plus||0)>0 ? Math.max(8,Number(r.plus||0)/max*100) : 0; const minusH=Number(r.minus||0)>0 ? Math.max(6,Number(r.minus||0)/max*100) : 0;
         return `<button class="point-day pro-point-day" onmouseenter="showPointDayDetail(${i}, event)" onmousemove="moveChartTooltip(event)" onmouseleave="hideChartTooltip()" onclick="showPointDayDetail(${i}, event)"><div class="point-stack"><div class="point-plus" style="height:${plusH}%"></div><div class="point-minus" style="height:${minusH}%"></div></div><div class="point-date">${dateShort(r.date)}</div></button>`;
-      }).join('')}</div><div id="anaPointDetail" class="analytics-detail-panel compact"></div><div class="small-note mobile-tap-note">點擊任一天查看加分、扣分與淨流量。</div>`;
+      }).join('')}</div></div><div id="anaPointDetail" class="analytics-detail-panel compact"></div><div class="small-note mobile-tap-note">點擊任一天查看加分、扣分與淨流量。</div>`;
       updatePointDetail(rows[rows.length-1]);
     }
 
