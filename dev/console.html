@@ -2012,7 +2012,57 @@
         min-height:58px;
       }
     }
-</style>
+
+
+    /* =======================================================
+       Step 9D-UX-1.2｜Student List UX Polish
+       - desktop cleaner table
+       - mobile card list
+       - issue filter and batch visual state
+       ======================================================= */
+    .student-table-shell { overflow:auto; border:1px solid var(--border); border-radius:18px; background:var(--surface); }
+    .student-list-table { width:100%; min-width:980px; border-collapse:collapse; }
+    .student-list-table th { color:var(--muted); background:var(--surface-2); font-size:12px; font-weight:850; padding:12px 14px; border-bottom:1px solid var(--border); text-align:left; }
+    .student-list-table td { padding:14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .student-list-table tr:last-child td { border-bottom:0; }
+    .student-main-cell { display:flex; align-items:center; gap:12px; min-width:0; }
+    .student-avatar-dot { width:38px; height:38px; border-radius:14px; display:grid; place-items:center; flex:0 0 auto; background:linear-gradient(135deg, rgba(37,99,235,.16), rgba(245,158,11,.13)); color:var(--primary); font-weight:950; border:1px solid var(--border); }
+    .student-main-name { font-weight:950; color:var(--text); line-height:1.25; }
+    .student-main-sub { color:var(--muted); font-size:12px; font-weight:720; margin-top:4px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .student-pill-stack { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+    .student-status-line { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .student-points-main { font-family:var(--font-number); font-size:18px; font-weight:920; color:var(--text); letter-spacing:-.04em; }
+    .student-email-note { font-size:12px; color:var(--muted); font-weight:700; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .student-email-note.problem { color:var(--red); }
+    .student-batch-column { width:46px; text-align:center; }
+    .student-card-list { display:none; flex-direction:column; gap:12px; }
+    .student-mobile-card { border:1px solid var(--border); border-radius:20px; background:var(--surface); padding:15px; box-shadow:0 10px 24px rgba(16,24,40,.045); }
+    .student-mobile-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .student-mobile-title { display:flex; gap:11px; align-items:center; min-width:0; }
+    .student-mobile-name { font-size:15px; font-weight:950; color:var(--text); line-height:1.25; word-break:break-word; }
+    .student-mobile-sub { font-size:12px; color:var(--muted); font-weight:720; margin-top:4px; word-break:break-all; }
+    .student-mobile-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:13px; }
+    .student-mobile-field { border:1px solid var(--border); background:var(--surface-2); border-radius:14px; padding:10px 11px; min-width:0; }
+    .student-mobile-label { color:var(--muted); font-size:11px; font-weight:850; margin-bottom:4px; }
+    .student-mobile-value { color:var(--text); font-weight:900; font-size:13px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .student-mobile-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:13px; }
+    .batch-actions.show { display:flex; }
+    .batch-actions.show strong { color:var(--primary); }
+    @media (max-width: 760px) {
+      .student-table-shell { display:none; }
+      .student-card-list { display:flex; }
+      .student-mobile-grid { grid-template-columns:1fr 1fr; }
+      .student-mobile-actions .btn-compact { width:100%; }
+      #studentSearchInput { min-width:0 !important; width:100%; }
+      .toolbar > div { width:100%; }
+      .toolbar .select, .toolbar .search-input { flex:1 1 140px; min-width:0; }
+    }
+    @media (max-width: 420px) {
+      .student-mobile-grid { grid-template-columns:1fr; }
+      .student-mobile-actions { grid-template-columns:1fr; }
+    }
+
+  </style>
 </head>
 <body>
   <section id="loginView" class="login-shell">
@@ -2687,6 +2737,13 @@
                 <option value="enabled">週報啟用</option>
                 <option value="disabled">週報未啟用</option>
                 <option value="invalid_email">Email 異常</option>
+              </select>
+              <select id="studentIssueFilter" class="select" onchange="renderStudentsTable()">
+                <option value="all">資料狀態</option>
+                <option value="needs_check">需要檢查</option>
+                <option value="missing_class">未分班</option>
+                <option value="missing_card">卡號缺漏</option>
+                <option value="email_issue">Email 異常</option>
               </select>
             </div>
           </div>
@@ -3408,24 +3465,52 @@
       if (["all", ...classes].includes(current)) select.value = current;
     }
 
-    function renderStudentsTable() {
-      if (!studentsCache || !document.getElementById("studentsTableWrap")) return;
+    function studentDisplayIdLine(s) {
+      const uid = String(s?.uid || "").trim();
+      const cardId = String(s?.card_id || "").trim();
+      return uid && cardId && uid !== cardId ? `${uid} ・ ${cardId}` : (uid || cardId || "-");
+    }
+
+    function applyStudentFilters(rows) {
       const q = String(document.getElementById("studentSearchInput")?.value || "").trim().toLowerCase();
       const classFilter = document.getElementById("studentClassFilter")?.value || "all";
       const statusFilter = document.getElementById("studentStatusFilter")?.value || "active";
       const weeklyFilter = document.getElementById("studentWeeklyFilter")?.value || "all";
+      const issueFilter = document.getElementById("studentIssueFilter")?.value || "all";
 
-      let rows = studentsCache.students || [];
+      let out = rows || [];
       if (q) {
-        rows = rows.filter(s => [s.name, s.uid, s.card_id, s.parent_email, s.school_code]
+        out = out.filter(s => [s.name, s.uid, s.card_id, s.parent_email, s.school_code, s.class_code]
           .some(v => String(v || "").toLowerCase().includes(q)));
       }
-      if (classFilter !== "all") rows = rows.filter(s => String(s.class_code || "") === classFilter);
-      if (statusFilter === "active") rows = rows.filter(s => Boolean(s.is_active));
-      if (statusFilter === "inactive") rows = rows.filter(s => !Boolean(s.is_active));
-      if (weeklyFilter === "enabled") rows = rows.filter(s => Boolean(s.weekly_report_enabled));
-      if (weeklyFilter === "disabled") rows = rows.filter(s => !Boolean(s.weekly_report_enabled));
-      if (weeklyFilter === "invalid_email") rows = rows.filter(s => hasStudentEmailIssue(s));
+      if (classFilter !== "all") out = out.filter(s => String(s.class_code || "") === classFilter);
+      if (statusFilter === "active") out = out.filter(s => Boolean(s.is_active));
+      if (statusFilter === "inactive") out = out.filter(s => !Boolean(s.is_active));
+      if (weeklyFilter === "enabled") out = out.filter(s => Boolean(s.weekly_report_enabled));
+      if (weeklyFilter === "disabled") out = out.filter(s => !Boolean(s.weekly_report_enabled));
+      if (weeklyFilter === "invalid_email") out = out.filter(s => hasStudentEmailIssue(s));
+      if (issueFilter === "needs_check") out = out.filter(s => getStudentDataIssues(s).length > 0);
+      if (issueFilter === "missing_class") out = out.filter(s => !String(s.class_code || "").trim());
+      if (issueFilter === "missing_card") out = out.filter(s => !String(s.card_id || "").trim());
+      if (issueFilter === "email_issue") out = out.filter(s => hasStudentEmailIssue(s));
+      return out;
+    }
+
+    function renderStudentStatusBadges(s, email, weekly) {
+      const issues = getStudentDataIssues(s);
+      const issueBadge = issues.length ? `<span class="badge warn">需檢查 ${issues.length}</span>` : `<span class="badge ok">資料正常</span>`;
+      return `
+        <div class="student-status-line">
+          <span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span>
+          <span class="badge ${weekly ? "ok" : "warn"}">${weekly ? "週報啟用" : "週報關閉"}</span>
+          ${issueBadge}
+        </div>
+        <div class="student-email-note ${hasStudentEmailIssue(s) ? "problem" : ""}">${escapeHtml(email || "無 Email")}</div>`;
+    }
+
+    function renderStudentsTable() {
+      if (!studentsCache || !document.getElementById("studentsTableWrap")) return;
+      const rows = applyStudentFilters(studentsCache.students || []);
 
       const note = document.getElementById("studentTableNote");
       if (note) {
@@ -3433,37 +3518,82 @@
         note.textContent = `顯示 ${rows.length} 筆｜啟用 ${activeTotal}｜總資料 ${(studentsCache.students || []).length}`;
       }
 
-      const body = rows.length ? rows.map(s => {
+      const thSelect = studentBatchMode ? `<th class="student-batch-column">選取</th>` : "";
+      const colSpan = studentBatchMode ? 8 : 7;
+
+      const tableBody = rows.length ? rows.map(s => {
         const email = String(s.parent_email || "").trim();
-        const emailOk = email ? isValidEmail(email) : false;
         const weekly = Boolean(s.weekly_report_enabled);
         const avatarName = s.equipped_avatar_name || s.equipped_avatar_id || "未設定";
         const checked = selectedStudentIds.has(String(s.id)) ? "checked" : "";
-        const uid = String(s.uid || "").trim();
-        const cardId = String(s.card_id || "").trim();
-        const studentIdLine = uid && cardId && uid !== cardId ? `${uid} ・ ${cardId}` : (uid || cardId || "-");
+        const studentIdLine = studentDisplayIdLine(s);
+        const initial = String(s.name || s.uid || "?").trim().slice(0,1).toUpperCase();
         return `
           <tr>
-            <td>${studentBatchMode ? `<input class="student-check" type="checkbox" ${checked} onchange="updateStudentSelection('${escapeHtml(s.id)}', this.checked)">` : "—"}</td>
-            <td><strong>${escapeHtml(s.name || "-")}</strong><br><span class="small-note">${escapeHtml(studentIdLine)}</span></td>
-            <td><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><br><span class="small-note">${escapeHtml(s.student_type || "normal")}</span></td>
-            <td><strong>${Number(s.points || 0).toLocaleString()}</strong><br><span class="small-note">${escapeHtml(s.title || "無 title")}</span></td>
-            <td><span class="badge ${weekly ? "ok" : "warn"}">${weekly ? "已啟用" : "未啟用"}</span><br><span class="small-note" style="color:${hasStudentEmailIssue(s) ? "var(--red)" : "var(--muted)"}">${escapeHtml(email || "無 Email")}</span></td>
+            ${studentBatchMode ? `<td class="student-batch-column"><input class="student-check" type="checkbox" ${checked} onchange="updateStudentSelection('${escapeHtml(s.id)}', this.checked)"></td>` : ""}
+            <td>
+              <div class="student-main-cell">
+                <div class="student-avatar-dot">${escapeHtml(initial)}</div>
+                <div style="min-width:0;">
+                  <div class="student-main-name">${escapeHtml(s.name || "-")}</div>
+                  <div class="student-main-sub">${escapeHtml(studentIdLine)}</div>
+                </div>
+              </div>
+            </td>
+            <td><div class="student-pill-stack"><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><span class="small-note">${escapeHtml(s.student_type || "normal")}</span></div></td>
+            <td><div class="student-points-main">${Number(s.points || 0).toLocaleString()}</div><div class="small-note">${escapeHtml(s.title || "無 title")}</div></td>
+            <td>${renderStudentStatusBadges(s, email, weekly)}</td>
             <td><strong>${escapeHtml(avatarName)}</strong><br><span class="small-note">解鎖 ${Number(s.unlocked_avatar_count || 0)} 個</span></td>
             <td><span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span><br><span class="small-note">${escapeHtml(s.school_code || "")}</span></td>
             <td><div class="student-action-row"><button class="btn-compact" onclick="openStudentEditor('${escapeHtml(s.id)}')">編輯</button>${s.is_active ? `<button class="btn-compact danger" onclick="openStudentEditor('${escapeHtml(s.id)}')">停用</button>` : `<button class="btn-compact ok" onclick="openStudentEditor('${escapeHtml(s.id)}')">啟用</button>`}</div></td>
           </tr>`;
-      }).join("") : `<tr><td colspan="8"><div class="empty-state">沒有符合條件的學生。</div></td></tr>`;
+      }).join("") : `<tr><td colspan="${colSpan}"><div class="empty-state">沒有符合條件的學生。</div></td></tr>`;
+
+      const cardBody = rows.length ? rows.map(s => {
+        const email = String(s.parent_email || "").trim();
+        const weekly = Boolean(s.weekly_report_enabled);
+        const avatarName = s.equipped_avatar_name || s.equipped_avatar_id || "未設定";
+        const checked = selectedStudentIds.has(String(s.id)) ? "checked" : "";
+        const studentIdLine = studentDisplayIdLine(s);
+        const initial = String(s.name || s.uid || "?").trim().slice(0,1).toUpperCase();
+        return `
+          <div class="student-mobile-card">
+            <div class="student-mobile-head">
+              <div class="student-mobile-title">
+                ${studentBatchMode ? `<input class="student-check" type="checkbox" ${checked} onchange="updateStudentSelection('${escapeHtml(s.id)}', this.checked)">` : `<div class="student-avatar-dot">${escapeHtml(initial)}</div>`}
+                <div style="min-width:0;">
+                  <div class="student-mobile-name">${escapeHtml(s.name || "-")}</div>
+                  <div class="student-mobile-sub">${escapeHtml(studentIdLine)}</div>
+                </div>
+              </div>
+              <span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span>
+            </div>
+            <div class="student-mobile-grid">
+              <div class="student-mobile-field"><div class="student-mobile-label">班級</div><div class="student-mobile-value">${escapeHtml(s.class_code || "未分班")}</div></div>
+              <div class="student-mobile-field"><div class="student-mobile-label">點數</div><div class="student-mobile-value">${Number(s.points || 0).toLocaleString()}</div></div>
+              <div class="student-mobile-field"><div class="student-mobile-label">週報 / Email</div><div class="student-mobile-value ${hasStudentEmailIssue(s) ? "problem" : ""}">${weekly ? "啟用" : "關閉"}・${escapeHtml(email || "無 Email")}</div></div>
+              <div class="student-mobile-field"><div class="student-mobile-label">角色</div><div class="student-mobile-value">${escapeHtml(avatarName)}</div></div>
+            </div>
+            <div class="student-mobile-actions">
+              <button class="btn-compact" onclick="openStudentEditor('${escapeHtml(s.id)}')">編輯</button>
+              ${s.is_active ? `<button class="btn-compact danger" onclick="openStudentEditor('${escapeHtml(s.id)}')">停用</button>` : `<button class="btn-compact ok" onclick="openStudentEditor('${escapeHtml(s.id)}')">啟用</button>`}
+            </div>
+          </div>`;
+      }).join("") : `<div class="empty-state">沒有符合條件的學生。</div>`;
 
       document.getElementById("studentsTableWrap").innerHTML = `
-        <table style="min-width:1040px;">
-          <thead><tr><th style="width:42px;">選取</th><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
-          <tbody>${body}</tbody>
-        </table>`;
+        <div class="student-table-shell">
+          <table class="student-list-table">
+            <thead><tr>${thSelect}<th>學生</th><th>班級</th><th>點數</th><th>週報 / 資料狀態</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
+            <tbody>${tableBody}</tbody>
+          </table>
+        </div>
+        <div class="student-card-list">${cardBody}</div>`;
       const bar = document.getElementById("studentBatchActions");
       if (bar) bar.classList.toggle("show", studentBatchMode);
       updateSelectedStudentCount();
     }
+
 
 
 
@@ -3630,20 +3760,9 @@
     function clearStudentSelection() { selectedStudentIds.clear(); renderStudentsTable(); updateSelectedStudentCount(); }
     function updateSelectedStudentCount() { const el = document.getElementById("studentSelectedCount"); if (el) el.textContent = `已選 ${selectedStudentIds.size} 位`; }
     function getVisibleStudentRows() {
-      const q = String(document.getElementById("studentSearchInput")?.value || "").trim().toLowerCase();
-      const classFilter = document.getElementById("studentClassFilter")?.value || "all";
-      const statusFilter = document.getElementById("studentStatusFilter")?.value || "active";
-      const weeklyFilter = document.getElementById("studentWeeklyFilter")?.value || "all";
-      let rows = studentsCache?.students || [];
-      if (q) rows = rows.filter(s => [s.name, s.uid, s.card_id, s.parent_email, s.school_code].some(v => String(v || "").toLowerCase().includes(q)));
-      if (classFilter !== "all") rows = rows.filter(s => String(s.class_code || "") === classFilter);
-      if (statusFilter === "active") rows = rows.filter(s => Boolean(s.is_active));
-      if (statusFilter === "inactive") rows = rows.filter(s => !Boolean(s.is_active));
-      if (weeklyFilter === "enabled") rows = rows.filter(s => Boolean(s.weekly_report_enabled));
-      if (weeklyFilter === "disabled") rows = rows.filter(s => !Boolean(s.weekly_report_enabled));
-      if (weeklyFilter === "invalid_email") rows = rows.filter(s => hasStudentEmailIssue(s));
-      return rows;
+      return applyStudentFilters(studentsCache?.students || []);
     }
+
     function selectVisibleStudents(checked) { for (const s of getVisibleStudentRows()) { if (checked) selectedStudentIds.add(String(s.id)); else selectedStudentIds.delete(String(s.id)); } renderStudentsTable(); updateSelectedStudentCount(); }
     function openBatchStudentEditor() {
       if (!selectedStudentIds.size) { alert("請先勾選學生。"); return; }
