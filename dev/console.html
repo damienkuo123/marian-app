@@ -1158,6 +1158,21 @@
     .gami-battle-pick-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
     .gami-battle-pick-grid label { display:flex; flex-direction:column; gap:8px; padding:12px; border:1px solid var(--border); border-radius:16px; background:var(--surface); }
     .gami-battle-pick-grid span { color:var(--muted); font-size:12px; font-weight:900; }
+
+    /* Step 9D-UX-4.1｜Gamification small polish */
+    .gami-reward-layout { grid-template-columns: 1fr; }
+    .gami-rank-grid, .gami-battle-pick-grid { grid-template-columns: 1fr; }
+    .gami-rank-card, .gami-battle-pick-grid label {
+      display:grid;
+      grid-template-columns: minmax(150px, .72fr) minmax(220px, 1fr);
+      align-items:center;
+      gap:14px;
+    }
+    .gami-rank-card input, .gami-battle-pick-grid input { min-height:46px; font-size:15px; }
+    @media (max-width:720px) {
+      .gami-rank-card, .gami-battle-pick-grid label { grid-template-columns:1fr; }
+    }
+
     .gami-gacha-panel-pro .gami-gacha-top { background:linear-gradient(180deg, rgba(37,99,235,.045), transparent); }
     .gami-gacha-toolbox { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 22px; border-bottom:1px solid var(--border); background:var(--surface-2); }
     .gami-gacha-toolbox strong { display:block; color:var(--text); font-size:14px; margin-bottom:3px; }
@@ -2710,6 +2725,7 @@
       }
       if (page === "curriculum") {
         loadCurriculumData(false);
+        loadSettlementNotificationData(false);
       }
       if (page === "avatars") {
         loadAvatarsConsole(false);
@@ -4203,11 +4219,11 @@
         <div class="weekly-console-grid">
           <div class="weekly-panel">
             <div class="weekly-panel-head">
-              <div><h3>家長週報設定</h3><p>控制每校自動週報排程。正式寄送採當下往前 7 天，並有今日不得重寄保護。</p></div>
+              <div><h3>家長週報自動寄送</h3><p>設定家長週報是否自動寄送、固定星期與寄送時間。正式寄送採當下往前 7 天，並有今日不得重寄保護。</p></div>
               <span id="wkConfigBadge" class="badge warn">讀取中</span>
             </div>
             <div class="weekly-toggle">
-              <div><strong>啟用家長週報</strong><span>關閉時自動 Gate 不會正式寄送。</span></div>
+              <div><strong>啟用家長週報</strong><span>關閉時，系統不會自動正式寄送週報給家長。</span></div>
               <input type="checkbox" id="wkEnabled" />
             </div>
             <div class="weekly-form-grid two" style="margin-top:14px;">
@@ -4218,21 +4234,7 @@
             </div>
             <div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyConfig(this)">儲存週報設定</button></div>
           </div>
-
-          <div class="weekly-panel">
-            <div class="weekly-panel-head">
-              <div><h3>任務結算通知</h3><p>單元任務結算後，寄送未達標名單與排行榜摘要給校區管理信箱。</p></div>
-              <span id="wkNotifyBadge" class="badge warn">讀取中</span>
-            </div>
-            <div class="weekly-toggle">
-              <div><strong>啟用任務結算通知</strong><span>Auto Settlement 完成後通知校區管理者。</span></div>
-              <input type="checkbox" id="wkNotifyEnabled" />
-            </div>
-            <div class="weekly-field" style="margin-top:14px;"><label>校區通知信箱</label><input id="wkMissionEmail" placeholder="例如：admin@school.com" /></div>
-            <div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyNotification(this)">儲存通知設定</button></div>
-          </div>
-
-          <div class="weekly-panel">
+<div class="weekly-panel">
             <div class="weekly-panel-head"><div><h3>今日寄送狀態</h3><p>正式寄送成功後，今天內不提供重寄，避免重複寄信與成本浪費。</p></div></div>
             <div id="wkTodayBox" class="weekly-status-card">正在讀取...</div>
           </div>
@@ -4270,6 +4272,42 @@
       sel.innerHTML = Array.from({length:24}, (_,h)=>`<option value="${h}">${String(h).padStart(2,"0")}:00</option>`).join("");
       sel.dataset.ready = "1";
     }
+
+    async function loadSettlementNotificationData(force=false) {
+      if (session.role === "owner") return;
+      const notifyBadge = document.getElementById("wkNotifyBadge");
+      const notifyToggle = document.getElementById("wkNotifyEnabled");
+      const notifyEmail = document.getElementById("wkMissionEmail");
+      if (!notifyBadge || !notifyToggle || !notifyEmail) return;
+      try {
+        if (weeklyCache && !force) {
+          renderSettlementNotificationData(weeklyCache.notificationConfig || {});
+          return;
+        }
+        notifyBadge.textContent = "讀取中";
+        notifyBadge.className = "badge warn";
+        const data = await TappieAPI.adminGetWeeklyReports(getConsoleSchoolCode());
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "讀取結算通知設定失敗");
+        weeklyCache = data;
+        renderSettlementNotificationData(data.notificationConfig || {});
+      } catch (err) {
+        console.error(err);
+        notifyBadge.textContent = "讀取失敗";
+        notifyBadge.className = "badge danger";
+      }
+    }
+
+    function renderSettlementNotificationData(notify = {}) {
+      const notifyToggle = document.getElementById("wkNotifyEnabled");
+      const notifyEmail = document.getElementById("wkMissionEmail");
+      const notifyBadge = document.getElementById("wkNotifyBadge");
+      if (!notifyToggle || !notifyEmail || !notifyBadge) return;
+      notifyToggle.checked = !!notify.settlementNotificationEnabled;
+      notifyEmail.value = notify.missionReportEmail || "";
+      notifyBadge.textContent = notify.settlementNotificationEnabled ? "已啟用" : "未啟用";
+      notifyBadge.className = "badge " + (notify.settlementNotificationEnabled ? "ok" : "warn");
+    }
+
     async function loadWeeklyData(force=false) {
       if (session.role === "owner") return;
       if (weeklyLoading) return;
@@ -4326,10 +4364,7 @@
       document.getElementById("wkConfigBadge").textContent = enabled ? "已啟用" : "未啟用";
       document.getElementById("wkConfigBadge").className = "badge " + (enabled ? "ok" : "warn");
 
-      document.getElementById("wkNotifyEnabled").checked = !!notify.settlementNotificationEnabled;
-      document.getElementById("wkMissionEmail").value = notify.missionReportEmail || "";
-      document.getElementById("wkNotifyBadge").textContent = notify.settlementNotificationEnabled ? "已啟用" : "未啟用";
-      document.getElementById("wkNotifyBadge").className = "badge " + (notify.settlementNotificationEnabled ? "ok" : "warn");
+      renderSettlementNotificationData(notify);
 
       const today = data.todayJob || {};
       document.getElementById("wkTodayBox").innerHTML = data.todayLocked ? `
@@ -4381,7 +4416,9 @@
       try{
         const res=await TappieAPI.adminWeeklyReportAction({action:"save_notifications",schoolCode:getConsoleSchoolCode(),config:{settlementNotificationEnabled:document.getElementById("wkNotifyEnabled").checked,missionReportEmail:document.getElementById("wkMissionEmail").value.trim()}});
         if(!res.success) throw new Error(res.message||res.error||"儲存失敗");
-        alert("✅ 任務通知設定已儲存"); weeklyCache=null; await loadWeeklyData(true);
+        alert("✅ 單元結算通知設定已儲存"); weeklyCache=null;
+        if (document.getElementById("wkTodayBox")) await loadWeeklyData(true);
+        else await loadSettlementNotificationData(true);
       }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
     }
     async function sendConsoleWeeklyTest(btn) {
@@ -4476,6 +4513,26 @@
             <div class="curriculum-progress"><div id="curScheduleRateBar"></div></div>
           </div>
         </div>
+
+        <div class="curriculum-settlement-panel weekly-panel" style="margin-top:18px;">
+          <div class="weekly-panel-head">
+            <div>
+              <h3>單元結算通知</h3>
+              <p>單元結束並完成結算後，系統可寄送未達標名單與排行榜摘要給校區管理信箱。這是單元排程完成後的通知設定。</p>
+            </div>
+            <span id="wkNotifyBadge" class="badge warn">讀取中</span>
+          </div>
+          <div class="weekly-toggle">
+            <div><strong>啟用單元結算通知</strong><span>結算完成後通知校區管理者，方便追蹤未達標學生與獎勵結果。</span></div>
+            <input type="checkbox" id="wkNotifyEnabled" />
+          </div>
+          <div class="weekly-form-grid two" style="margin-top:14px;">
+            <div class="weekly-field"><label>校區通知信箱</label><input id="wkMissionEmail" placeholder="例如：admin@school.com" /></div>
+            <div class="weekly-field"><label>通知內容</label><input value="未達標名單與排行榜摘要" disabled /></div>
+          </div>
+          <div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyNotification(this)">儲存結算通知設定</button></div>
+        </div>
+
         <div class="card" style="margin-top:18px;">
           <div class="curriculum-panel-intro">
             <div>
@@ -5671,7 +5728,7 @@
                   <h3>今日挑戰規則</h3>
                   <p>學生進入單元排程的今日挑戰後，系統會依平均分數落在哪個階梯給點。最低階門檻也會影響今日挑戰是否能送出。</p>
                 </div>
-                <span class="gami-impact-pill">影響 arena.html / claim-practice-challenge</span>
+                <span class="gami-impact-pill">影響今日挑戰通過與給點</span>
               </div>
               <div class="gami-tier-grid">
                 <div class="gami-tier-card high"><div class="gami-tier-label">高分達標</div><div class="gami-tier-form"><div class="gami-field"><label>分數 ≥</label><input id="gamiT1Min" type="number"></div><div class="gami-field"><label>獎勵點數</label><input id="gamiT1Pts" type="number"></div></div></div>
@@ -5682,7 +5739,7 @@
             </div>
 
             <div class="gami-config-card">
-              <div class="gami-config-head"><div><h3>單元任務結算</h3><p>Auto Settlement 會在單元結束後，依學生完成次數套用扣點、良好獎勵與完美獎勵。</p></div><span class="gami-impact-pill neutral">影響單元結算</span></div>
+              <div class="gami-config-head"><div><h3>單元任務結算</h3><p>系統會在單元結束後，依學生完成次數套用扣點、良好獎勵與完美獎勵。</p></div><span class="gami-impact-pill neutral">影響單元結算</span></div>
               <div class="gami-rule-grid gami-mission-grid">
                 <div class="gami-rule-card mission-danger"><strong>未達標扣點</strong><div class="gami-field"><label>未達標次數</label><input id="gamiFailTh" type="number"></div><div class="gami-field"><label>基礎扣點</label><input id="gamiFailBase" type="number"></div><div class="gami-field"><label>每少一次額外扣點</label><input id="gamiFailStep" type="number"></div></div>
                 <div class="gami-rule-card mission-good"><strong>良好任務</strong><div class="gami-field"><label>完成次數 ≥</label><input id="gamiGoodTh" type="number"></div><div class="gami-field"><label>獎勵點數</label><input id="gamiGoodPts" type="number"></div></div>
