@@ -520,6 +520,65 @@
       .student-alert-strip { flex-direction:column; align-items:flex-start; }
     }
 
+    /* Students page focused refinements */
+    .student-seat-value {
+      display:flex;
+      align-items:baseline;
+      gap:10px;
+      flex-wrap:wrap;
+      font-family:var(--font-number);
+      line-height:.95;
+      letter-spacing:-.06em;
+    }
+    .student-seat-active { font-size:clamp(48px, 6vw, 72px); font-weight:920; color:var(--text); }
+    .student-seat-limit { font-size:clamp(22px, 2.6vw, 32px); font-weight:780; color:var(--muted); letter-spacing:-.025em; }
+    .student-check-strip {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      margin:0 0 12px;
+      padding:14px 16px;
+      border-radius:18px;
+      border:1px solid var(--border);
+      background:var(--surface);
+      box-shadow:0 10px 24px rgba(16,24,40,.04);
+      color:var(--muted);
+      font-size:13.5px;
+      font-weight:650;
+      line-height:1.55;
+    }
+    .student-check-strip.warn { background:rgba(217,119,6,.08); border-color:rgba(217,119,6,.22); color:#92400e; }
+    .student-check-strip.ok { background:rgba(22,163,74,.08); border-color:rgba(22,163,74,.20); color:#166534; }
+    html[data-theme="dark"] .student-check-strip.warn { color:#fbbf24; }
+    html[data-theme="dark"] .student-check-strip.ok { color:#86efac; }
+    .student-check-strip strong { color:var(--text); font-weight:900; }
+    .student-data-check-panel {
+      margin:0 0 18px;
+      border:1px solid var(--border);
+      background:var(--surface);
+      border-radius:20px;
+      box-shadow:0 12px 28px rgba(16,24,40,.045);
+      overflow:hidden;
+    }
+    .student-data-check-panel.hidden { display:none; }
+    .student-data-check-head { padding:16px 18px; border-bottom:1px solid var(--border); }
+    .student-data-check-head strong { display:block; color:var(--text); font-size:15px; margin-bottom:4px; }
+    .student-data-check-head span { color:var(--muted); font-size:13px; font-weight:650; line-height:1.55; }
+    .student-data-check-table { width:100%; border-collapse:collapse; min-width:0; }
+    .student-data-check-table th, .student-data-check-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:13px; }
+    .student-data-check-table tr:last-child td { border-bottom:0; }
+    .student-data-check-table td:last-child, .student-data-check-table th:last-child { text-align:right; font-family:var(--font-number); font-weight:900; }
+    .student-data-check-table .problem td:last-child { color:var(--amber); }
+    .batch-actions { display:none; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:12px 14px; margin:0 0 14px; border:1px solid rgba(37,99,235,.16); background:rgba(37,99,235,.06); border-radius:16px; }
+    .batch-actions.show { display:flex; }
+    @media (max-width:640px) {
+      .student-check-strip { flex-direction:column; align-items:flex-start; }
+      .student-seat-active { font-size:48px; }
+      .student-seat-limit { font-size:22px; }
+      .batch-actions { align-items:flex-start; }
+    }
+
     /* =======================================================
        Step 9D-4B.1｜Console Modal UX Repair
        - Fix unstyled student editor / batch editor showing as raw HTML
@@ -2558,7 +2617,7 @@
               <div class="student-seat-top">
                 <div>
                   <div class="student-seat-title">學生席位</div>
-                  <div class="student-seat-value"><span id="stuSeatActive">—</span><span> / <span id="stuSeatLimit">—</span></span></div>
+                  <div class="student-seat-value"><span id="stuSeatActive" class="student-seat-active">—</span><span class="student-seat-limit">/ <span id="stuSeatLimit">—</span></span></div>
                   <div id="stuSeatNote" class="student-seat-note">以啟用學生計算，不包含停用學生</div>
                 </div>
                 <div id="stuSeatState" class="student-seat-state ok">狀態判斷中</div>
@@ -2592,35 +2651,26 @@
               </div>
               <div id="stuClassBars" class="class-bars"><div class="insight-sub">正在統計...</div></div>
             </div>
-
-            <div class="student-analysis-card">
-              <div class="student-analysis-head">
-                <div>
-                  <div class="student-analysis-title">資料完整度</div>
-                  <div id="stuDataHealthNote" class="student-analysis-sub">檢查啟用學生的基本資料</div>
-                </div>
-                <div id="stuDataHealthMain" class="student-analysis-number">—</div>
-              </div>
-              <div id="stuDataIssueList" class="student-data-list"><div class="insight-sub">正在檢查...</div></div>
-            </div>
           </div>
         </div>
 
-        <div id="studentAlertStrip" class="student-alert-strip ok">
-          <span>正在檢查學生資料狀態...</span>
+        <div id="studentAlertStrip" class="student-check-strip ok">
+          <span id="studentCheckSummary">正在檢查學生資料狀態...</span>
+          <button class="btn-compact" onclick="toggleStudentDataCheck()">一鍵檢查學生資料</button>
         </div>
+        <div id="studentDataCheckPanel" class="student-data-check-panel hidden"></div>
 
         <div class="card" style="margin-top:18px;">
           <div class="panel-title">
             <h2>學生資料管理</h2>
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
               <button class="btn-compact" onclick="loadStudentsData(true)">重新整理</button>
-              <button class="btn-compact" onclick="toggleStudentBatchMode()" id="studentBatchToggleBtn">批量模式</button>
+              <button class="btn-compact" onclick="toggleStudentBatchMode()" id="studentBatchToggleBtn">${studentBatchMode ? "結束批量" : "批量模式"}</button>
               <button class="btn-compact primary" onclick="openStudentEditor(null)">新增學生</button>
             </div>
           </div>
           <div class="table-hint-row">
-            <span>這裡是查找、編輯與批量管理學生資料用。上方會先提示席位、班級與資料完整度。</span>
+            <span>這裡是查找、編輯與批量管理學生資料用。上方會先提示席位、班級與資料狀態。</span>
             <span id="studentTableNote">正在讀取學生資料...</span>
           </div>
           <div class="toolbar">
@@ -2640,7 +2690,7 @@
               </select>
             </div>
           </div>
-          <div id="studentBatchActions" class="batch-actions">
+          <div id="studentBatchActions" class="batch-actions ${studentBatchMode ? "show" : ""}">
             <div><strong id="studentSelectedCount">已選 0 位</strong><div class="small-note">批量修改只會處理目前勾選學生</div></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn-compact" onclick="selectVisibleStudents(true)">勾選目前列表</button>
@@ -3194,23 +3244,30 @@
       return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
     }
 
+    let studentDataCheckExpanded = false;
+    let studentDataCheckState = null;
+
+    function hasStudentEmailIssue(student) {
+      const email = String(student?.parent_email || "").trim();
+      const weekly = Boolean(student?.weekly_report_enabled);
+      if (email && !isValidEmail(email)) return true;
+      if (email && !weekly) return true;
+      return false;
+    }
+
     function getStudentDataIssues(student) {
       const issues = [];
-      if (!String(student?.class_code || "").trim()) issues.push("缺班級");
-      if (!String(student?.uid || "").trim()) issues.push("缺 UID");
-      if (!String(student?.card_id || "").trim()) issues.push("缺卡號");
-      const email = String(student?.parent_email || "").trim();
-      if (!email) issues.push("缺 Email");
-      else if (!isValidEmail(email)) issues.push("Email 格式異常");
+      if (!String(student?.class_code || "").trim()) issues.push("未分班");
+      if (!String(student?.uid || "").trim()) issues.push("UID 缺漏");
+      if (!String(student?.card_id || "").trim()) issues.push("卡號缺漏");
+      if (hasStudentEmailIssue(student)) issues.push("週報未啟用但有 Email / Email 格式異常");
       return issues;
     }
 
     function updateStudentDataHealth(activeRows) {
-      const main = document.getElementById("stuDataHealthMain");
-      const note = document.getElementById("stuDataHealthNote");
-      const list = document.getElementById("stuDataIssueList");
       const alert = document.getElementById("studentAlertStrip");
-      if (!main || !note || !list || !alert) return;
+      const summary = document.getElementById("studentCheckSummary");
+      if (!alert || !summary) return;
       const rows = activeRows || [];
       const stats = { missingClass: 0, missingUid: 0, missingCard: 0, emailIssue: 0 };
       let issueStudents = 0;
@@ -3220,31 +3277,57 @@
         if (!String(s.class_code || "").trim()) stats.missingClass += 1;
         if (!String(s.uid || "").trim()) stats.missingUid += 1;
         if (!String(s.card_id || "").trim()) stats.missingCard += 1;
-        const email = String(s.parent_email || "").trim();
-        if (!email || !isValidEmail(email)) stats.emailIssue += 1;
+        if (hasStudentEmailIssue(s)) stats.emailIssue += 1;
       }
-      const complete = Math.max(0, rows.length - issueStudents);
-      const pct = rows.length ? Math.round(complete / rows.length * 100) : 100;
-      main.textContent = `${pct}%`;
-      note.textContent = rows.length ? `完整 ${complete} 位｜需檢查 ${issueStudents} 位` : "目前沒有啟用學生";
-      list.innerHTML = [
-        ["Email 缺漏 / 格式異常", stats.emailIssue],
+      studentDataCheckState = { total: rows.length, issueStudents, stats };
+      if (issueStudents > 0) {
+        alert.className = "student-check-strip warn";
+        summary.innerHTML = `<strong>目前有 ${issueStudents} 位啟用學生資料需要檢查。</strong> 按下右側按鈕查看細項。`;
+      } else {
+        alert.className = "student-check-strip ok";
+        summary.innerHTML = `<strong>學生資料狀態良好。</strong> 按下右側按鈕可查看完整檢查結果。`;
+      }
+      renderStudentDataCheckPanel();
+    }
+
+    function toggleStudentDataCheck() {
+      studentDataCheckExpanded = !studentDataCheckExpanded;
+      renderStudentDataCheckPanel();
+    }
+
+    function renderStudentDataCheckPanel() {
+      const panel = document.getElementById("studentDataCheckPanel");
+      if (!panel || !studentDataCheckState) return;
+      if (!studentDataCheckExpanded) {
+        panel.classList.add("hidden");
+        panel.innerHTML = "";
+        return;
+      }
+      const { total, issueStudents, stats } = studentDataCheckState;
+      panel.classList.remove("hidden");
+      if (!issueStudents) {
+        panel.innerHTML = `
+          <div class="student-data-check-head">
+            <strong>學生資料狀態良好。</strong>
+            <span>啟用學生的班級、UID、卡號與 Email 目前沒有明顯缺漏。</span>
+          </div>`;
+        return;
+      }
+      const rows = [
+        ["週報未啟用但有 Email / Email 格式異常", stats.emailIssue],
         ["未分班", stats.missingClass],
         ["UID 缺漏", stats.missingUid],
         ["卡號缺漏", stats.missingCard]
-      ].map(([label, count]) => `<div class="student-data-row ${count ? "problem" : ""}"><span>${escapeHtml(label)}</span><strong>${count}</strong></div>`).join("");
-      if (issueStudents > 0) {
-        const parts = [];
-        if (stats.emailIssue) parts.push(`${stats.emailIssue} 位 Email 需檢查`);
-        if (stats.missingClass) parts.push(`${stats.missingClass} 位未分班`);
-        if (stats.missingUid) parts.push(`${stats.missingUid} 位缺 UID`);
-        if (stats.missingCard) parts.push(`${stats.missingCard} 位缺卡號`);
-        alert.className = "student-alert-strip warn";
-        alert.innerHTML = `<span><strong>目前有 ${issueStudents} 位啟用學生資料需要檢查。</strong> ${escapeHtml(parts.join("、"))}</span><span>建議先修正會影響登入、分班或家長通知的欄位。</span>`;
-      } else {
-        alert.className = "student-alert-strip ok";
-        alert.innerHTML = `<span><strong>學生資料狀態良好。</strong> 啟用學生的班級、UID、卡號與 Email 目前沒有明顯缺漏。</span>`;
-      }
+      ];
+      panel.innerHTML = `
+        <div class="student-data-check-head">
+          <strong>目前有 ${issueStudents} 位啟用學生資料需要檢查。</strong>
+          <span>共檢查 ${total} 位啟用學生。建議先修正會影響登入、分班或家長通知判斷的欄位。</span>
+        </div>
+        <table class="student-data-check-table">
+          <thead><tr><th>檢查項目</th><th>異常數</th></tr></thead>
+          <tbody>${rows.map(([label, count]) => `<tr class="${count ? "problem" : ""}"><td>${escapeHtml(label)}</td><td>${count}</td></tr>`).join("")}</tbody>
+        </table>`;
     }
 
     function updateStudentsUI() {
@@ -3342,7 +3425,7 @@
       if (statusFilter === "inactive") rows = rows.filter(s => !Boolean(s.is_active));
       if (weeklyFilter === "enabled") rows = rows.filter(s => Boolean(s.weekly_report_enabled));
       if (weeklyFilter === "disabled") rows = rows.filter(s => !Boolean(s.weekly_report_enabled));
-      if (weeklyFilter === "invalid_email") rows = rows.filter(s => s.parent_email && !isValidEmail(s.parent_email));
+      if (weeklyFilter === "invalid_email") rows = rows.filter(s => hasStudentEmailIssue(s));
 
       const note = document.getElementById("studentTableNote");
       if (note) {
@@ -3356,13 +3439,16 @@
         const weekly = Boolean(s.weekly_report_enabled);
         const avatarName = s.equipped_avatar_name || s.equipped_avatar_id || "未設定";
         const checked = selectedStudentIds.has(String(s.id)) ? "checked" : "";
+        const uid = String(s.uid || "").trim();
+        const cardId = String(s.card_id || "").trim();
+        const studentIdLine = uid && cardId && uid !== cardId ? `${uid} ・ ${cardId}` : (uid || cardId || "-");
         return `
           <tr>
             <td>${studentBatchMode ? `<input class="student-check" type="checkbox" ${checked} onchange="updateStudentSelection('${escapeHtml(s.id)}', this.checked)">` : "—"}</td>
-            <td><strong>${escapeHtml(s.name || "-")}</strong><br><span class="small-note">${escapeHtml(s.uid || "-")} ・ ${escapeHtml(s.card_id || "-")}</span></td>
+            <td><strong>${escapeHtml(s.name || "-")}</strong><br><span class="small-note">${escapeHtml(studentIdLine)}</span></td>
             <td><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><br><span class="small-note">${escapeHtml(s.student_type || "normal")}</span></td>
             <td><strong>${Number(s.points || 0).toLocaleString()}</strong><br><span class="small-note">${escapeHtml(s.title || "無 title")}</span></td>
-            <td><span class="badge ${weekly ? "ok" : "warn"}">${weekly ? "已啟用" : "未啟用"}</span><br><span class="small-note" style="color:${email && !emailOk ? "var(--red)" : "var(--muted)"}">${escapeHtml(email || "無 Email")}</span></td>
+            <td><span class="badge ${weekly ? "ok" : "warn"}">${weekly ? "已啟用" : "未啟用"}</span><br><span class="small-note" style="color:${hasStudentEmailIssue(s) ? "var(--red)" : "var(--muted)"}">${escapeHtml(email || "無 Email")}</span></td>
             <td><strong>${escapeHtml(avatarName)}</strong><br><span class="small-note">解鎖 ${Number(s.unlocked_avatar_count || 0)} 個</span></td>
             <td><span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span><br><span class="small-note">${escapeHtml(s.school_code || "")}</span></td>
             <td><div class="student-action-row"><button class="btn-compact" onclick="openStudentEditor('${escapeHtml(s.id)}')">編輯</button>${s.is_active ? `<button class="btn-compact danger" onclick="openStudentEditor('${escapeHtml(s.id)}')">停用</button>` : `<button class="btn-compact ok" onclick="openStudentEditor('${escapeHtml(s.id)}')">啟用</button>`}</div></td>
@@ -3374,6 +3460,8 @@
           <thead><tr><th style="width:42px;">選取</th><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
           <tbody>${body}</tbody>
         </table>`;
+      const bar = document.getElementById("studentBatchActions");
+      if (bar) bar.classList.toggle("show", studentBatchMode);
       updateSelectedStudentCount();
     }
 
@@ -3553,7 +3641,7 @@
       if (statusFilter === "inactive") rows = rows.filter(s => !Boolean(s.is_active));
       if (weeklyFilter === "enabled") rows = rows.filter(s => Boolean(s.weekly_report_enabled));
       if (weeklyFilter === "disabled") rows = rows.filter(s => !Boolean(s.weekly_report_enabled));
-      if (weeklyFilter === "invalid_email") rows = rows.filter(s => s.parent_email && !isValidEmail(s.parent_email));
+      if (weeklyFilter === "invalid_email") rows = rows.filter(s => hasStudentEmailIssue(s));
       return rows;
     }
     function selectVisibleStudents(checked) { for (const s of getVisibleStudentRows()) { if (checked) selectedStudentIds.add(String(s.id)); else selectedStudentIds.delete(String(s.id)); } renderStudentsTable(); updateSelectedStudentCount(); }
