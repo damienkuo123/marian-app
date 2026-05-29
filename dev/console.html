@@ -2106,23 +2106,39 @@
 
     const navByRole = {
       owner: [
-        ["overview", "總覽", "⌘"],
-        ["schools", "校區", "▦"],
-        ["health", "資料健康", "◆"],
-        ["weekly", "週報", "✉"],
-        ["automation", "自動化", "⚙"]
+        { group: "總覽", items: [
+          ["overview", "總覽", "⌘"],
+          ["schools", "校區", "▦"]
+        ]},
+        { group: "營運監控", items: [
+          ["health", "資料健康", "◆"],
+          ["weekly", "週報", "✉"],
+          ["automation", "自動化", "⚙"]
+        ]}
       ],
       super_admin: [
-        ["overview", "總覽", "⌘"],
-        ["students", "學生", "👥"],
-        ["learning", "學習進度", "📈"],
-        ["curriculum", "單元排程", "🗓"],
-        ["weekly", "週報", "✉"],
-        ["newsletters", "專欄", "📰"],
-        ["avatars", "角色", "🎭"],
-        ["branding", "品牌", "◈"],
-        ["health", "資料健康", "◆"],
-        ["settings", "設定", "⚙"]
+        { group: "總覽", items: [
+          ["overview", "總覽", "⌘"],
+          ["health", "資料健康", "◆"]
+        ]},
+        { group: "學生與學習", items: [
+          ["students", "學生", "👥"],
+          ["learning", "學習進度", "📈"]
+        ]},
+        { group: "課程與任務", items: [
+          ["curriculum", "單元排程", "🗓"]
+        ]},
+        { group: "家長溝通", items: [
+          ["weekly", "週報", "✉"],
+          ["newsletters", "專欄", "📰"]
+        ]},
+        { group: "遊戲化", items: [
+          ["avatars", "角色", "🎭"],
+          ["settings", "設定", "⚙"]
+        ]},
+        { group: "校區設定", items: [
+          ["branding", "品牌", "◈"]
+        ]}
       ]
     };
 
@@ -2209,12 +2225,17 @@
     }
 
     function renderNav() {
-      const items = navByRole[session.role] || [];
+      const groups = navByRole[session.role] || [];
       const nav = document.getElementById("sideNav");
-      nav.innerHTML = items.map(([id, label, icon]) => `
-        <button class="side-item" data-page="${id}" onclick="showPage('${id}')">
-          <span>${icon}</span><span>${label}</span>
-        </button>
+      nav.innerHTML = groups.map(group => `
+        <div class="side-group">
+          <div class="side-group-label">${group.group}</div>
+          ${group.items.map(([id, label, icon]) => `
+            <button class="side-item" data-page="${id}" onclick="showPage('${id}')">
+              <span>${icon}</span><span>${label}</span>
+            </button>
+          `).join("")}
+        </div>
       `).join("");
     }
 
