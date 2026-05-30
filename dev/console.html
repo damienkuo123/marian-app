@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-owner-weekly-fix-v2"></script>
+  <script src="./tappie-api.js?v=console-owner-students-fix-v3"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -4511,13 +4511,14 @@
     }
 
     async function consoleSaveStudentsAction(payload) {
+      const scopedPayload = { ...(payload || {}), ...getActiveScopePayload() };
       if (TappieAPI && typeof TappieAPI.consoleSaveStudents === "function") {
-        return await TappieAPI.consoleSaveStudents({ token: session.token, ...payload });
+        return await TappieAPI.consoleSaveStudents({ token: session.token, ...scopedPayload });
       }
       return await fetch(`${TappieAPI.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1"}/console-save-students`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.token}` },
-        body: JSON.stringify({ token: session.token, ...payload })
+        body: JSON.stringify({ token: session.token, ...scopedPayload })
       }).then(r => r.json());
     }
 
@@ -4535,7 +4536,7 @@
     }
 
     function openStudentEditor(studentId) {
-      if (session.role !== "super_admin") { alert("只有校區 Super Admin 可以編輯學生。"); return; }
+      if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯學生。"); return; }
       const isNew = !studentId;
       if (isNew) {
         const seat = canAddActiveStudent();
