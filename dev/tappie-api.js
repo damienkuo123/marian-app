@@ -40,6 +40,7 @@ const TappieAPI = {
     adminNewsletters: "/admin-newsletters",
     adminWeeklyReports: "/admin-weekly-reports",
     consoleAuth: "/console-auth",
+    consoleGetSchools: "/console-get-schools",
     consoleGetHealth: "/console-get-health",
     consoleGetOverview: "/console-get-overview",
     consoleGetStudents: "/console-get-students",
@@ -56,6 +57,32 @@ const TappieAPI = {
       body: JSON.stringify(body),
       signal: options.signal
     });
+    return await res.json();
+  },
+
+  async _consoleGet(path, token = "") {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(this.supabaseBaseUrl + path, {
+      method: "GET",
+      headers
+    });
+
+    return await res.json();
+  },
+
+  async _consolePost(path, body = {}, token = "", options = {}) {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(this.supabaseBaseUrl + path, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body || {}),
+      signal: options.signal
+    });
+
     return await res.json();
   },
   async resolveStudentByUid(uid) { return await this._get(`${this.endpoints.resolveStudent}?uid=${encodeURIComponent(uid)}`); },
@@ -207,6 +234,10 @@ const TappieAPI = {
 
   async consoleAuth(payload = {}) {
     return await this._post(this.endpoints.consoleAuth, payload);
+  },
+
+  async consoleGetSchools(token = "") {
+    return await this._consoleGet(this.endpoints.consoleGetSchools, token);
   },
 
   async consoleGetHealth({ token } = {}) {
