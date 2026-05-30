@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-owner-scope-v1"></script>
+  <script src="./tappie-api.js?v=console-api-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -4507,7 +4507,7 @@
 
 
     function currentConsoleSchoolCode() {
-      return session?.school?.schoolCode || session?.schoolCode || studentsCache?.schoolCode || "";
+      return getActiveSchoolCode() || studentsCache?.schoolCode || "";
     }
 
     async function consoleSaveStudentsAction(payload) {
@@ -4767,9 +4767,7 @@
       learningLoading = true;
       try {
         const schoolCode = currentConsoleSchoolCode();
-        const data = (TappieAPI && typeof TappieAPI.adminGetProgress === "function")
-          ? await TappieAPI.adminGetProgress(schoolCode)
-          : await fetch(`${TappieAPI.supabaseBaseUrl}/admin-get-progress?schoolCode=${encodeURIComponent(schoolCode)}`).then(r => r.json());
+        const data = await TappieAPI.consoleGetProgress({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode });
         if (!data || !data.success) throw new Error(data?.message || data?.error || "admin_get_progress_failed");
         learningCache = data;
         updateLearningUI();
@@ -4967,7 +4965,7 @@
         }
         notifyBadge.textContent = "讀取中";
         notifyBadge.className = "badge warn";
-        const data = await TappieAPI.adminGetWeeklyReports(getConsoleSchoolCode());
+        const data = await TappieAPI.consoleGetWeeklyReports({ token: session?.token || "", schoolCode: getConsoleSchoolCode(), scopeMode: getActiveScopePayload().scopeMode });
         if (!data || !data.success) throw new Error(data?.message || data?.error || "讀取結算通知設定失敗");
         weeklyCache = data;
         renderSettlementNotificationData(data.notificationConfig || {});
@@ -4997,7 +4995,7 @@
       try {
         initWeeklyHourOptions();
         const schoolCode = getConsoleSchoolCode();
-        const data = await TappieAPI.adminGetWeeklyReports(schoolCode);
+        const data = await TappieAPI.consoleGetWeeklyReports({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode });
         if (!data || !data.success) throw new Error(data?.message || data?.error || "讀取週報資料失敗");
         // Weekly API 的 currentNewsletter 仍可能只含 topic/source_url；Console 顯示要以 content_html 第一個 h3 為專欄標題。
         try {
@@ -5088,7 +5086,7 @@
       try{
         const schoolCode=getConsoleSchoolCode();
         const config={enabled:document.getElementById("wkEnabled").checked,sendDay:document.getElementById("wkSendDay").value,sendHour:Number(document.getElementById("wkSendHour").value||21),sendMinute:0,rollingDays:Number(document.getElementById("wkRollingDays").value||7),sendTimezone:"Asia/Taipei"};
-        const res=await TappieAPI.adminSaveWeeklyReportConfig(schoolCode,config);
+        const res=await TappieAPI.consoleSaveWeeklyReportConfig(schoolCode,config,session?.token || "");
         if(!res.success) throw new Error(res.message||res.error||"儲存失敗");
         alert("✅ 週報設定已儲存"); weeklyCache=null; await loadWeeklyData(true);
       }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
@@ -5096,7 +5094,7 @@
     async function saveConsoleWeeklyNotification(btn) {
       const old=btn.textContent; btn.disabled=true; btn.textContent="儲存中...";
       try{
-        const res=await TappieAPI.adminWeeklyReportAction({action:"save_notifications",schoolCode:getConsoleSchoolCode(),config:{settlementNotificationEnabled:document.getElementById("wkNotifyEnabled").checked,missionReportEmail:document.getElementById("wkMissionEmail").value.trim()}});
+        const res=await TappieAPI.consoleWeeklyReportAction({token:session?.token || "",action:"save_notifications",schoolCode:getConsoleSchoolCode(),scopeMode:getActiveScopePayload().scopeMode,config:{settlementNotificationEnabled:document.getElementById("wkNotifyEnabled").checked,missionReportEmail:document.getElementById("wkMissionEmail").value.trim()}});
         if(!res.success) throw new Error(res.message||res.error||"儲存失敗");
         alert("✅ 單元結算通知設定已儲存"); weeklyCache=null;
         if (document.getElementById("wkTodayBox")) await loadWeeklyData(true);
@@ -5109,7 +5107,7 @@
       if(!confirm(`確定要寄一封測試週報到 ${email} 嗎？\n測試寄送不會寄給家長，也不會封存專欄。`)) return;
       const old=btn.textContent; btn.disabled=true; btn.textContent="寄送中...";
       try{
-        const res=await TappieAPI.adminSendWeeklyReportTest({schoolCode:getConsoleSchoolCode(),testEmail:email});
+        const res=await TappieAPI.consoleSendWeeklyReportTest({token:session?.token || "",schoolCode:getConsoleSchoolCode(),scopeMode:getActiveScopePayload().scopeMode,testEmail:email});
         if(!res.success) throw new Error(res.message||res.error||"測試寄送失敗");
         alert("✅ 測試信已送出，請檢查信箱"); weeklyCache=null; await loadWeeklyData(true);
       }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
@@ -5121,7 +5119,7 @@
       if(!confirm(`確定要正式寄出今日週報嗎？\n將寄給 ${count} 位家長。\n正式寄送成功後，今日不得再次寄送，且第 1 順位專欄會自動封存並遞補。`)) return;
       const old=btn.textContent; btn.disabled=true; btn.textContent="正式寄送中...";
       try{
-        const res=await TappieAPI.adminSendWeeklyReportNow({schoolCode:getConsoleSchoolCode()});
+        const res=await TappieAPI.consoleSendWeeklyReportNow({token:session?.token || "",schoolCode:getConsoleSchoolCode(),scopeMode:getActiveScopePayload().scopeMode});
         if(!res.success) throw new Error(res.message||res.error||"正式寄送失敗");
         alert("✅ 正式寄送流程完成"); weeklyCache=null; await loadWeeklyData(true);
       }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
@@ -5165,7 +5163,7 @@
       return v === "EVENT" ? "🎪 活動 EVENT" : (v || "未分班");
     }
     function getSchoolCodeForAdmin() {
-      return session?.school?.schoolCode || session?.schoolCode || "TEST01";
+      return getActiveSchoolCode();
     }
     function renderCurriculum() {
       return `
@@ -5247,8 +5245,8 @@
       curriculumLoading = true;
       try {
         const schoolCode = getSchoolCodeForAdmin();
-        if (!window.TappieAPI || typeof TappieAPI.adminGetData !== "function") throw new Error("TappieAPI.adminGetData 尚未載入");
-        const data = await TappieAPI.adminGetData(schoolCode, "tasks");
+        if (!window.TappieAPI || typeof TappieAPI.consoleGetData !== "function") throw new Error("TappieAPI.consoleGetData 尚未載入");
+        const data = await TappieAPI.consoleGetData({ token: session?.token || "", schoolCode, mode: "tasks", scopeMode: getActiveScopePayload().scopeMode });
         if (!data || data.success === false) throw new Error(data?.message || data?.error || "讀取失敗");
         curriculumCache = normalizeCurriculumData(data);
         renderCurriculumData();
@@ -5707,8 +5705,8 @@
     }
     async function saveCurriculumAction(action, payload, okMessage) {
       const schoolCode = getSchoolCodeForAdmin();
-      if (!window.TappieAPI || typeof TappieAPI.adminSaveTasks !== "function") throw new Error("TappieAPI.adminSaveTasks 尚未載入");
-      const data = await TappieAPI.adminSaveTasks({ schoolCode, action, ...payload });
+      if (!window.TappieAPI || typeof TappieAPI.consoleSaveTasks !== "function") throw new Error("TappieAPI.consoleSaveTasks 尚未載入");
+      const data = await TappieAPI.consoleSaveTasks({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode, action, ...payload });
       if (!data || data.success === false) throw new Error(data?.message || data?.error || "操作失敗");
       curriculumCache = null;
       await loadCurriculumData(true);
@@ -6024,8 +6022,7 @@
       try {
         const schoolCode = getSchoolCodeForAdmin();
         const base = TappieAPI?.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1";
-        const res = await fetch(`${base}/admin-save-avatar-settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ schoolCode, avatarId, cost, category }) });
-        const data = await res.json().catch(()=>({}));
+        const data = await TappieAPI.consoleSaveAvatarSettings({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode, avatarId, cost, category });
         if (!data.success) throw new Error(data.message || data.error || "角色設定儲存失敗");
         if (avatarsConsoleCache?.avatars) avatarsConsoleCache.avatars = avatarsConsoleCache.avatars.map(a => avatarIdOf(a) === avatarId ? { ...a, cost, category } : a);
         if (statusEl) statusEl.textContent = "已儲存";
@@ -6048,22 +6045,19 @@
       const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
         ? TappieAPI.supabaseBaseUrl
         : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
-      return `${base}/admin-newsletters`;
+      return `${base}/console-newsletters`;
     }
 
     async function newsletterConsoleRequest(action, payload = {}) {
-      const res = await fetch(getNewsletterApiUrlForConsole(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolCode: getSchoolCodeForAdmin(),
-          action,
-          ...payload
-        })
+      const data = await TappieAPI.consoleNewsletterAction({
+        token: session?.token || "",
+        schoolCode: getSchoolCodeForAdmin(),
+        scopeMode: getActiveScopePayload().scopeMode,
+        action,
+        ...payload
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.success === false || data.error) {
-        const msg = data.message || data.detail || data.error || `HTTP ${res.status}`;
+      if (data.success === false || data.error) {
+        const msg = data.message || data.detail || data.error || "專欄操作失敗";
         const err = new Error(msg);
         err.payload = data;
         throw err;
@@ -6602,8 +6596,7 @@
         setGamificationStatus('⏳ 正在讀取遊戲化設定與角色清單...', 'warn');
         await loadGamificationSchoolAvatars();
         const schoolCode = getConsoleSchoolCode();
-        const res = await fetch(`${getConsoleFunctionBase()}/admin-get-gamification?schoolCode=${encodeURIComponent(schoolCode)}`);
-        const data = await res.json().catch(()=>({}));
+        const data = await TappieAPI.consoleGetGamification({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode });
         if(!data.success) throw new Error(data.message || data.error || '讀取失敗');
         gamificationConsoleCache = normalizeGamiConsole(data.config || data.gamification || data.value || data);
         fillGamificationForm(gamificationConsoleCache);
@@ -6738,8 +6731,7 @@
         if(Math.abs(sum-100)>0.001) throw new Error(`盲盒機率總和必須等於 100%，目前為 ${sum}%`);
         if(btn){btn.disabled=true; btn.textContent='儲存中...';}
         const schoolCode=getConsoleSchoolCode();
-        const res=await fetch(`${getConsoleFunctionBase()}/admin-save-gamification`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({schoolCode, key:'Gamification_Config', config})});
-        const data=await res.json().catch(()=>({}));
+        const data=await TappieAPI.consoleSaveGamification({token:session?.token || "", schoolCode, scopeMode:getActiveScopePayload().scopeMode, key:'Gamification_Config', config});
         if(!data.success) throw new Error(data.message||data.error||'儲存失敗');
         gamificationConsoleCache=normalizeGamiConsole(config);
         fillGamificationForm(gamificationConsoleCache);
@@ -6754,7 +6746,7 @@
     // =======================================================
     let brandingConsoleCache = null;
     function getConsoleSchoolCode() {
-      return session?.school?.schoolCode || session?.school?.school_code || '';
+      return getActiveSchoolCode();
     }
     function brandAssetUrl(type) {
       const data = brandingConsoleCache || {};
@@ -6915,7 +6907,7 @@
         setBrandingStatus('⏳ 正在讀取品牌設定...');
         const schoolCode = getConsoleSchoolCode();
         if (!schoolCode) throw new Error('缺少 schoolCode，Owner 模式暫不支援直接編輯單校品牌');
-        const data = await TappieAPI.adminGetBranding(schoolCode);
+        const data = await TappieAPI.consoleGetBranding({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode });
         if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取品牌設定失敗');
         brandingConsoleCache = data;
         updateBrandingPreview(data);
@@ -6948,7 +6940,7 @@
         const dataUrl = await readFileAsDataURL(file);
         const base64 = String(dataUrl).includes(',') ? String(dataUrl).split(',')[1] : String(dataUrl);
         const schoolCode = getConsoleSchoolCode();
-        const data = await TappieAPI.adminUploadBrandingAsset({ schoolCode, assetType:type, fileName:file.name, mimeType:file.type, base64 });
+        const data = await TappieAPI.consoleUploadBrandingAsset({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode, assetType:type, fileName:file.name, mimeType:file.type, base64 });
         if (!data || !data.success) throw new Error(data?.message || data?.error || '上傳失敗');
         brandingConsoleCache = null;
         await loadBrandingConsole(true);
@@ -6973,7 +6965,7 @@
       try {
         setBrandingStatus('⏳ 正在移除品牌素材...', 'warn');
         const schoolCode = getConsoleSchoolCode();
-        const data = await TappieAPI.adminDeleteBrandingAsset({ schoolCode, assetType:type });
+        const data = await TappieAPI.consoleDeleteBrandingAsset({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode, assetType:type });
         if (!data || !data.success) throw new Error(data?.message || data?.error || '移除失敗');
         brandingConsoleCache = null;
         await loadBrandingConsole(true);
