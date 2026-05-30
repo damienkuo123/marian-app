@@ -41,6 +41,17 @@ const TappieAPI = {
     adminWeeklyReports: "/admin-weekly-reports",
     consoleAuth: "/console-auth",
     consoleGetSchools: "/console-get-schools",
+    consoleGetData: "/console-get-data",
+    consoleGetProgress: "/console-get-progress",
+    consoleGetBranding: "/console-get-branding",
+    consoleUploadBrandingAsset: "/console-upload-branding-asset",
+    consoleDeleteBrandingAsset: "/console-delete-branding-asset",
+    consoleGetGamification: "/console-get-gamification",
+    consoleSaveTasks: "/console-save-tasks",
+    consoleWeeklyReports: "/console-weekly-reports",
+    consoleNewsletters: "/console-newsletters",
+    consoleSaveGamification: "/console-save-gamification",
+    consoleSaveAvatarSettings: "/console-save-avatar-settings",
     consoleGetHealth: "/console-get-health",
     consoleGetOverview: "/console-get-overview",
     consoleGetStudents: "/console-get-students",
@@ -287,6 +298,108 @@ const TappieAPI = {
       body: JSON.stringify(payload || {})
     });
     return await res.json();
+  },
+
+  _extractConsolePayload(payload = {}) {
+    const token = payload && payload.token ? payload.token : "";
+    const body = { ...(payload || {}) };
+    delete body.token;
+    return { token, body };
+  },
+
+  async consoleGetData({ token = "", schoolCode = "", mode = "all", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetData, { schoolCode, mode, scopeMode }, token);
+  },
+
+  async consoleGetProgress({ token = "", schoolCode = "", date = "", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetProgress, { schoolCode, date, scopeMode }, token);
+  },
+
+  async consoleGetBranding({ token = "", schoolCode = "", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetBranding, { schoolCode, scopeMode }, token);
+  },
+
+  async consoleGetGamification({ token = "", schoolCode = "", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetGamification, { schoolCode, scopeMode }, token);
+  },
+
+  async consoleSaveTasks(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveTasks, body, token);
+  },
+
+  async consoleWeeklyReportAction(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleWeeklyReports, body, token);
+  },
+
+  async consoleGetWeeklyReports({ token = "", schoolCode = "", scopeMode = "" } = {}) {
+    return await this.consoleWeeklyReportAction({ token, action: "get", schoolCode, scopeMode });
+  },
+
+  async consoleSaveWeeklyReportConfig(schoolCode = "", config = {}, token = "") {
+    return await this.consoleWeeklyReportAction({ token, action: "save_config", schoolCode, config });
+  },
+
+  async consolePreviewWeeklyReport(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "preview" });
+  },
+
+  async consoleSendWeeklyReportTest(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "send_test" });
+  },
+
+  async consoleSendWeeklyReportNow(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "send_now" });
+  },
+
+  async consoleForceResendWeeklyReport(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "force_resend" });
+  },
+
+  async consoleNewsletterAction(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleNewsletters, body, token);
+  },
+
+  async consoleGetNewsletters({ token = "", schoolCode = "", scopeMode = "", includeArchived = false } = {}) {
+    return await this.consoleNewsletterAction({ token, action: "list", schoolCode, scopeMode, includeArchived });
+  },
+
+  async consoleAddNewsletter(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "add" });
+  },
+
+  async consoleUpdateNewsletter(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "update" });
+  },
+
+  async consoleDeleteNewsletter(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "delete" });
+  },
+
+  async consoleReorderNewsletters(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "reorder" });
+  },
+
+  async consoleUploadBrandingAsset(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleUploadBrandingAsset, body, token);
+  },
+
+  async consoleDeleteBrandingAsset(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleDeleteBrandingAsset, body, token);
+  },
+
+  async consoleSaveGamification(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveGamification, body, token);
+  },
+
+  async consoleSaveAvatarSettings(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveAvatarSettings, body, token);
   },
 
   toLegacyDashboard(data) {
