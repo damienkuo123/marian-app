@@ -940,6 +940,13 @@
     .weekly-progress{height:8px;background:var(--bg-soft);border-radius:999px;overflow:hidden;margin-top:12px;border:1px solid var(--border);}
     .weekly-progress>div{height:100%;background:linear-gradient(90deg,#22c55e,#38bdf8);border-radius:999px;width:0%;transition:.4s ease;}
 
+    .newsletter-archive-fold { border:1px solid var(--border); background:var(--surface-2); border-radius:18px; padding:0; overflow:hidden; }
+    .newsletter-archive-summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; font-weight:900; color:var(--text); }
+    .newsletter-archive-summary::-webkit-details-marker { display:none; }
+    .newsletter-archive-summary::after { content:'展開'; color:var(--muted); font-size:12px; font-weight:850; }
+    .newsletter-archive-fold[open] .newsletter-archive-summary::after { content:'收合'; }
+    .newsletter-archive-fold .newsletter-list { padding:0 14px 14px; }
+
   
 
     /* =======================================================
@@ -4560,7 +4567,6 @@
                   <div class="learning-detail-box"><div class="learning-detail-label">本單元完成次數</div><div class="learning-detail-value">${Number(s.count || 0)} 次</div></div>
                   <div class="learning-detail-box"><div class="learning-detail-label">最高分</div><div class="learning-detail-value">${s.bestScore ? Number(s.bestScore) + ' 分 ' + medal : '尚無'}</div></div>
                   <div class="learning-detail-box"><div class="learning-detail-label">最佳完成時間</div><div class="learning-detail-value">${escapeHtml(formatDateTime(s.bestCompletedAt))}</div></div>
-                  <div class="learning-detail-box"><div class="learning-detail-label">任務門檻</div><div class="learning-detail-value">⚠️${fail} / 🔥${good} / 🌟${perfect}</div></div>
                 </div>
                 <div class="learning-records"><div class="learning-record-title">今日挑戰完成紀錄</div>${renderLearningRecords(s.records || [])}</div>
               </div>
@@ -4732,10 +4738,11 @@
       document.getElementById("wkTodayStatus").textContent = data.todayLocked ? "已寄送" : "未寄送";
       document.getElementById("wkTodayNote").textContent = data.todayReportKey || "今日 report_key";
       const nl = data.currentNewsletterDetail || data.currentNewsletter || {};
+      const nlId = newsletterIdOf(nl);
       const nlContent = newsletterContentOf(nl);
-      const nlTitle = nl.id ? (nlContent ? newsletterTitleFromContent(nlContent, 0) : (nl.title || nl.topic || "第 1 順位專欄")) : "";
-      document.getElementById("wkNewsletter").textContent = nl.id ? "1" : "0";
-      document.getElementById("wkNewsletterNote").textContent = nl.id ? nlTitle : "目前無第 1 順位";
+      const nlTitle = nlId ? newsletterTitleFromContent(nlContent, 0) : "";
+      document.getElementById("wkNewsletter").textContent = nlId ? "1" : "0";
+      document.getElementById("wkNewsletterNote").textContent = nlId ? nlTitle : "目前無第 1 順位";
 
       document.getElementById("wkEnabled").checked = enabled;
       document.getElementById("wkSendDay").value = cfg.sendDay || "MON";
@@ -4756,7 +4763,7 @@
       const sendBtn = document.getElementById("wkSendNowBtn");
       if (sendBtn) { sendBtn.disabled = !!data.todayLocked; sendBtn.textContent = data.todayLocked ? "今日已寄送" : "正式寄送"; }
 
-      document.getElementById("wkNewsletterBox").innerHTML = nl.id ? `
+      document.getElementById("wkNewsletterBox").innerHTML = nlId ? `
         <div class="weekly-status-title"><span class="badge ok">第 1 順位專欄待寄出</span></div>
         <div class="weekly-status-sub"><strong>${escapeHtml(nlTitle || "未命名專欄")}</strong><br>${nlContent ? renderNewsletterTagPills(newsletterTagsOf(nl)) + '<br>' : ''}正式全校寄送成功後，系統會寫入 sent_at / archived_at，並將後續 display_order 往前遞補。</div>
       ` : `
@@ -5883,8 +5890,13 @@
           <div class="card">
             <div class="panel-title"><h2>待發順序</h2><span class="badge ok">display_order</span></div>
             <div id="newsletterActiveList" class="newsletter-list"><div class="empty-state">正在讀取專欄...</div></div>
-            <div class="panel-title" style="margin-top:22px;"><h2>已封存</h2><span class="badge warn">archived</span></div>
-            <div id="newsletterArchivedList" class="newsletter-list"><div class="empty-state">正在讀取封存專欄...</div></div>
+            <details class="newsletter-archive-fold" style="margin-top:22px;">
+              <summary class="newsletter-archive-summary">
+                <span>已封存專欄</span>
+                <span class="badge warn">點開查看</span>
+              </summary>
+              <div id="newsletterArchivedList" class="newsletter-list" style="margin-top:12px;"><div class="empty-state">正在讀取封存專欄...</div></div>
+            </details>
           </div>
           <div class="newsletter-preview-card">
             <div class="newsletter-preview-head">
