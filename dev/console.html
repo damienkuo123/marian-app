@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-api-v1"></script>
+  <script src="./tappie-api.js?v=console-owner-weekly-fix-v2"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -4880,12 +4880,8 @@
     }
 
     function renderWeekly() {
-      if (session.role === "owner") {
-        return `
-          <div class="card">
-            <div class="panel-title"><h2>週報中心</h2><span class="badge warn">Owner 總覽待開發</span></div>
-            <p style="color:var(--muted);font-weight:700;line-height:1.8;">目前週報操作先開放給單一校區 Super Admin。Owner 版會做成多校區寄送狀態總覽，不提供跨校一鍵寄送。</p>
-          </div>`;
+      if (isOwnerAllMode()) {
+        return renderSingleSchoolGuard("週報中心", "Owner 全部校區模式目前只提供週報狀態總覽。請先選擇單一校區，再管理週報設定、測試寄送與專欄內容。");
       }
       return `
         <div class="weekly-insight-strip">
@@ -4953,7 +4949,8 @@
     }
 
     async function loadSettlementNotificationData(force=false) {
-      if (session.role === "owner") return;
+      if (isOwnerAllMode()) return;
+      if (!getConsoleSchoolCode()) return;
       const notifyBadge = document.getElementById("wkNotifyBadge");
       const notifyToggle = document.getElementById("wkNotifyEnabled");
       const notifyEmail = document.getElementById("wkMissionEmail");
@@ -4988,7 +4985,8 @@
     }
 
     async function loadWeeklyData(force=false) {
-      if (session.role === "owner") return;
+      if (isOwnerAllMode()) return;
+      if (!getConsoleSchoolCode()) return;
       if (weeklyLoading) return;
       if (weeklyCache && !force) { renderWeeklyData(weeklyCache); return; }
       weeklyLoading = true;
