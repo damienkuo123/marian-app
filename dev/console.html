@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-branding-v1"></script>
+  <script src="./tappie-api.js?v=console-owner-scope-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -2716,6 +2716,11 @@
           <p id="pageSubtitle">Tappie Console Overview</p>
         </div>
         <div class="top-actions">
+          <span id="scopeSwitcherWrap" class="chip hidden" style="padding:7px 10px;">
+            <select id="scopeSchoolSelect" class="select" style="border:0;background:transparent;padding:4px 6px;box-shadow:none;" onchange="changeConsoleScope(this.value)">
+              <option value="all">全部校區</option>
+            </select>
+          </span>
           <span id="sessionChip" class="chip">-</span>
           <button class="icon-btn" onclick="toggleTheme()" title="切換深色/淺色">◐</button>
           <button class="icon-btn" onclick="logoutConsole()" title="登出">⎋</button>
@@ -2902,6 +2907,25 @@
     let currentCurriculumScheduleTarget = null;
     let studentBatchMode = false;
     let selectedStudentIds = new Set();
+    let currentConsolePage = "overview";
+
+    // Owner Scope v1：Owner 可在「全部校區 / 單一校區」間切換；Super Admin 永遠固定單一校區。
+    let consoleScope = {
+      mode: "all",
+      selectedSchoolCode: "",
+      selectedSchoolName: "",
+      schools: []
+    };
+
+    const SINGLE_SCHOOL_PAGES = new Set([
+      "students",
+      "learning",
+      "curriculum",
+      "newsletters",
+      "avatars",
+      "branding",
+      "settings"
+    ]);
 
     const navByRole = {
       owner: [
@@ -3013,18 +3037,173 @@
       document.getElementById("loginView").classList.remove("hidden");
     }
 
-    function enterApp() {
+    async function enterApp() {
       document.getElementById("loginView").classList.add("hidden");
       document.getElementById("appView").classList.remove("hidden");
-      document.getElementById("sessionChip").textContent = session.role === "owner" ? "Owner" : session.school?.schoolCode || "Super Admin";
-      document.getElementById("sideRole").textContent = session.role === "owner" ? "Owner 總控台" : "Super Admin 後台";
-      document.getElementById("sideScope").textContent = session.role === "owner" ? "全部校區" : (session.school?.name || session.school?.schoolCode || "單一校區");
+      await initConsoleScope();
+      updateConsoleScopeUI();
       renderNav();
       showPage("overview");
     }
 
+    function isOwner() {
+      return session?.role === "owner";
+    }
+
+    function isSuperAdmin() {
+      return session?.role === "super_admin";
+    }
+
+    function isOwnerAllMode() {
+      return isOwner() && consoleScope.mode === "all";
+    }
+
+    function isSingleSchoolMode() {
+      return isSuperAdmin() || (isOwner() && consoleScope.mode === "single" && !!consoleScope.selectedSchoolCode);
+    }
+
+    function getActiveSchoolCode() {
+      if (isSuperAdmin()) {
+        return session?.school?.schoolCode || session?.school?.school_code || session?.schoolCode || "";
+      }
+      if (isOwner() && consoleScope.mode === "single") {
+        return consoleScope.selectedSchoolCode || "";
+      }
+      return "";
+    }
+
+    function getActiveSchoolName() {
+      if (isSuperAdmin()) {
+        return session?.school?.name || session?.school?.schoolName || session?.school?.schoolCode || "目前校區";
+      }
+      if (isOwner() && consoleScope.mode === "single") {
+        return consoleScope.selectedSchoolName || consoleScope.selectedSchoolCode || "選定校區";
+      }
+      return "全部校區";
+    }
+
+    function getActiveScopePayload() {
+      if (isOwnerAllMode()) return { scopeMode: "all" };
+      return { scopeMode: "single", schoolCode: getActiveSchoolCode() };
+    }
+
+    async function initConsoleScope() {
+      if (!session) return;
+
+      if (isSuperAdmin()) {
+        consoleScope.mode = "single";
+        consoleScope.selectedSchoolCode = session.school?.schoolCode || session.school?.school_code || session.schoolCode || "";
+        consoleScope.selectedSchoolName = session.school?.name || session.school?.schoolName || consoleScope.selectedSchoolCode || "";
+        consoleScope.schools = consoleScope.selectedSchoolCode ? [{
+          schoolCode: consoleScope.selectedSchoolCode,
+          schoolName: consoleScope.selectedSchoolName,
+          name: consoleScope.selectedSchoolName
+        }] : [];
+        return;
+      }
+
+      consoleScope.mode = "all";
+      consoleScope.selectedSchoolCode = "";
+      consoleScope.selectedSchoolName = "";
+      consoleScope.schools = [];
+
+      try {
+        if (!window.TappieAPI || typeof TappieAPI.consoleGetSchools !== "function") {
+          throw new Error("TappieAPI.consoleGetSchools 尚未載入");
+        }
+        const data = await TappieAPI.consoleGetSchools(session.token);
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_schools_failed");
+        consoleScope.schools = Array.isArray(data.schools) ? data.schools : [];
+      } catch (err) {
+        console.error("initConsoleScope failed", err);
+        consoleScope.schools = [];
+      }
+    }
+
+    function updateConsoleScopeUI() {
+      const chip = document.getElementById("sessionChip");
+      const sideRole = document.getElementById("sideRole");
+      const sideScope = document.getElementById("sideScope");
+      const wrap = document.getElementById("scopeSwitcherWrap");
+      const select = document.getElementById("scopeSchoolSelect");
+
+      if (chip) chip.textContent = isOwner() ? "Owner" : (getActiveSchoolCode() || "Super Admin");
+      if (sideRole) sideRole.textContent = isOwner() ? "Owner 總控台" : "Super Admin 後台";
+      if (sideScope) sideScope.textContent = getActiveSchoolName();
+
+      if (!wrap || !select) return;
+      if (!isOwner()) {
+        wrap.classList.add("hidden");
+        return;
+      }
+
+      wrap.classList.remove("hidden");
+      select.innerHTML = `
+        <option value="all">全部校區</option>
+        ${consoleScope.schools.map(s => {
+          const code = s.schoolCode || s.school_code || "";
+          const name = s.schoolName || s.name || code;
+          return `<option value="${escapeHtml(code)}">${escapeHtml(code)}｜${escapeHtml(name)}</option>`;
+        }).join("")}
+      `;
+      select.value = consoleScope.mode === "single" ? consoleScope.selectedSchoolCode : "all";
+    }
+
+    function clearConsolePageCaches() {
+      healthCache = null;
+      overviewCache = null;
+      overviewAnalyticsCache = null;
+      studentsCache = null;
+      weeklyCache = null;
+      learningCache = null;
+      curriculumCache = null;
+      if (typeof avatarsConsoleCache !== "undefined") avatarsConsoleCache = null;
+      if (typeof newslettersCache !== "undefined") newslettersCache = null;
+      if (typeof brandingCache !== "undefined") brandingCache = null;
+      if (typeof gamificationCache !== "undefined") gamificationCache = null;
+    }
+
+    function changeConsoleScope(value) {
+      if (!isOwner()) return;
+
+      if (value === "all") {
+        consoleScope.mode = "all";
+        consoleScope.selectedSchoolCode = "";
+        consoleScope.selectedSchoolName = "";
+      } else {
+        const school = consoleScope.schools.find(s => String(s.schoolCode || s.school_code || "") === String(value));
+        consoleScope.mode = "single";
+        consoleScope.selectedSchoolCode = value;
+        consoleScope.selectedSchoolName = school?.schoolName || school?.name || value;
+      }
+
+      clearConsolePageCaches();
+      updateConsoleScopeUI();
+      renderNav();
+
+      if (isOwnerAllMode() && SINGLE_SCHOOL_PAGES.has(currentConsolePage)) {
+        showPage("overview");
+      } else {
+        showPage(currentConsolePage || "overview");
+      }
+    }
+
+    function getConsoleNavGroups() {
+      if (isOwner() && isSingleSchoolMode()) {
+        return [
+          { group: "總覽", items: [
+            ["overview", "總覽", "⌘"],
+            ["schools", "校區", "▦"],
+            ["health", "資料健康", "◆"]
+          ]},
+          ...navByRole.super_admin.slice(1)
+        ];
+      }
+      return navByRole[session.role] || [];
+    }
+
     function renderNav() {
-      const groups = navByRole[session.role] || [];
+      const groups = getConsoleNavGroups();
       const nav = document.getElementById("sideNav");
       nav.innerHTML = groups.map(group => `
         <div class="side-group">
@@ -3045,7 +3224,8 @@
     }
 
     function showPage(page) {
-      setActive(page);
+      currentConsolePage = page || "overview";
+      setActive(currentConsolePage);
       const titleMap = {
         overview: ["Overview", "校區營運、校區營運、資料健康、週報狀態總覽"],
         schools: ["Schools", "Owner 多校區狀態與資料信心值"],
@@ -3060,11 +3240,18 @@
         health: ["Data Health", "資料健康檢查、問題分級、修復建議"],
         automation: ["Automation", "Cron、任務結算、每日清理監控"]
       };
-      const [title, subtitle] = titleMap[page] || ["Console", ""];
+      const [title, subtitle] = titleMap[currentConsolePage] || ["Console", ""];
       document.getElementById("pageTitle").textContent = title;
       document.getElementById("pageSubtitle").textContent = subtitle;
-      document.getElementById("pageContent").innerHTML = renderPage(page);
-      setupMobileInsightCollapse(page);
+
+      if (isOwnerAllMode() && SINGLE_SCHOOL_PAGES.has(currentConsolePage)) {
+        document.getElementById("pageContent").innerHTML = renderSingleSchoolGuard(currentConsolePage);
+        return;
+      }
+
+      document.getElementById("pageContent").innerHTML = renderPage(currentConsolePage);
+      setupMobileInsightCollapse(currentConsolePage);
+      page = currentConsolePage;
       if (page === "overview") {
         loadOverviewData(false);
         loadOverviewAnalyticsData(false);
@@ -3130,6 +3317,7 @@
 
     function renderPage(page) {
       if (page === "overview") return renderOverview();
+      if (page === "schools") return renderSchoolsConsole();
       if (page === "health") return renderHealth();
       if (page === "students") return renderStudents();
       if (page === "learning") return renderLearning();
@@ -3140,6 +3328,106 @@
       if (page === "branding") return renderBrandingConsole();
       if (page === "settings") return renderGamificationConsole();
       return renderPlaceholder(page);
+    }
+
+    function renderSingleSchoolGuard(page) {
+      const title = {
+        students: "學生管理",
+        learning: "學習進度",
+        curriculum: "單元排程",
+        newsletters: "專欄管理",
+        avatars: "角色管理",
+        branding: "品牌設定",
+        settings: "遊戲化設定"
+      }[page] || "此功能";
+
+      return `
+        <div class="card">
+          <div class="panel-title">
+            <h2>${title}</h2>
+            <span class="badge warn">請先選擇單一校區</span>
+          </div>
+          <p class="muted-text">Owner 目前位於「全部校區」模式。為了避免跨校誤操作，請先在右上角校區切換器選擇一個校區，再進入 ${title}。</p>
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-compact primary" onclick="document.getElementById('scopeSchoolSelect')?.focus()">選擇校區</button>
+            <button class="btn-compact" onclick="showPage('schools')">查看校區列表</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSchoolsConsole() {
+      const schools = consoleScope.schools || [];
+
+      if (!isOwner()) {
+        return `
+          <div class="card">
+            <div class="panel-title"><h2>目前校區</h2><span class="badge ok">Super Admin</span></div>
+            <p class="muted-text">Super Admin 固定管理自己的校區：${escapeHtml(getActiveSchoolName())}</p>
+          </div>
+        `;
+      }
+
+      if (!schools.length) {
+        return `
+          <div class="card">
+            <div class="panel-title"><h2>校區列表</h2><span class="badge warn">尚無資料</span></div>
+            <p class="muted-text">目前尚未載入校區清單。請確認 console-get-schools 已部署，且 tappie-api.js 已更新。</p>
+            <button class="btn-compact primary" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入</button>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="toolbar">
+          <div>
+            <h2 style="margin:0;">Owner 校區總覽</h2>
+            <p class="muted-text" style="margin:6px 0 0;">選擇單一校區後，可進入學生、課程、週報、專欄、品牌與遊戲化設定。</p>
+          </div>
+          <button class="btn-compact" onclick="changeConsoleScope('all')">回到全部校區</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>校區</th>
+                <th>學生席位</th>
+                <th>課程資料</th>
+                <th>週報</th>
+                <th>品牌/角色</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${schools.map(s => {
+                const code = s.schoolCode || s.school_code || "";
+                const name = s.schoolName || s.name || code;
+                const counts = s.counts || {};
+                const limits = s.limits || {};
+                const activeStudents = counts.activeStudents ?? s.active_students ?? 0;
+                const studentLimit = limits.studentLimit ?? s.student_limit ?? 0;
+                const weekly = counts.weeklyReportEnabledStudents ?? s.weekly_report_enabled_students ?? 0;
+                const activeClasses = counts.activeClasses ?? s.active_classes ?? 0;
+                const activeUnits = counts.activeUnits ?? s.active_units ?? 0;
+                const activeSchedules = counts.activeSchedules ?? s.active_schedules ?? 0;
+                const activeNewsletters = counts.activeNewsletters ?? s.active_newsletters ?? 0;
+                const schoolAvatars = counts.schoolAvatars ?? s.school_avatars ?? 0;
+                const selected = consoleScope.mode === "single" && consoleScope.selectedSchoolCode === code;
+                return `
+                  <tr>
+                    <td><strong>${escapeHtml(code)}</strong><div class="small-note">${escapeHtml(name)}</div></td>
+                    <td>${Number(activeStudents)} / ${Number(studentLimit || 0) || "∞"}<div class="small-note">剩餘 ${limits.remainingStudentSlots ?? "—"}</div></td>
+                    <td>${Number(activeClasses)} 班｜${Number(activeUnits)} 單元<div class="small-note">${Number(activeSchedules)} 筆排程</div></td>
+                    <td>${Number(weekly)} 人啟用<div class="small-note">${Number(activeNewsletters)} 篇待發/可用專欄</div></td>
+                    <td>${Number(schoolAvatars)} 個校區角色<div class="small-note">Global ${counts.globalAvatarsVisible ?? "—"}</div></td>
+                    <td><button class="btn-compact ${selected ? "ok" : "primary"}" onclick="changeConsoleScope('${escapeHtml(code)}')">${selected ? "目前校區" : "管理此校區"}</button></td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
     }
 
     function renderOverview() {
@@ -3558,6 +3846,13 @@
 
     async function loadOverviewAnalyticsData(force = false){
       if (!session || !session.token) return;
+      if (isOwnerAllMode()) {
+        overviewAnalyticsCache = null;
+        ['anaUsageChart','anaModeDonut','anaPointChart','anaClassUsage','anaStudentWatch'].forEach(id=>{
+          const el=document.getElementById(id); if(el) el.innerHTML=`<div class="empty-state">Owner 全部校區模式先顯示總覽統計；選擇單一校區後會載入詳細互動分析。</div>`;
+        });
+        return;
+      }
       if (overviewAnalyticsLoading) return;
       if (overviewAnalyticsCache && !force) { updateOverviewAnalyticsUI(); return; }
       overviewAnalyticsLoading = true;
@@ -3566,7 +3861,7 @@
         const res = await fetch(`${base}/console-get-analytics`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
-          body: JSON.stringify({ rangeDays: overviewAnalyticsRange, schoolCode: session.school?.schoolCode || null })
+          body: JSON.stringify({ rangeDays: overviewAnalyticsRange, schoolCode: getActiveSchoolCode() || null, scopeMode: isOwnerAllMode() ? 'all' : 'single' })
         });
         const data = await res.json().catch(()=>({ success:false, message:'invalid_json' }));
         if (!res.ok || !data || data.success === false) throw new Error(data?.message || data?.error || 'console_get_analytics_failed');
@@ -4651,7 +4946,7 @@
       `;
     }
 
-    function getConsoleSchoolCode() { return session?.school?.schoolCode || session?.school?.school_code || ""; }
+    function getConsoleSchoolCode() { return getActiveSchoolCode(); }
     function initWeeklyHourOptions() {
       const sel = document.getElementById("wkSendHour");
       if (!sel || sel.dataset.ready) return;
