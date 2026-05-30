@@ -1057,6 +1057,23 @@
     .avatar-table-thumb{width:42px;height:42px;border-radius:12px;object-fit:cover;background:var(--surface-2);border:1px solid var(--border);}
     .avatar-source-note{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;color:var(--muted);font-size:12.5px;font-weight:700;line-height:1.55;}
     .avatar-source-note span{border:1px solid var(--border);background:var(--surface-2);border-radius:999px;padding:7px 10px;}
+    .avatar-table-polished table{min-width:1040px;table-layout:fixed;}
+    .avatar-table-polished .col-role{width:31%;}
+    .avatar-table-polished .col-rarity{width:8%;}
+    .avatar-table-polished .col-type{width:19%;}
+    .avatar-table-polished .col-assets{width:15%;}
+    .avatar-table-polished .col-price{width:17%;}
+    .avatar-table-polished .col-action{width:10%;}
+    .avatar-table-polished th,.avatar-table-polished td{padding:14px 16px;}
+    .avatar-table-polished .avatar-table-role{min-width:0;}
+    .avatar-table-polished .avatar-table-role strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+    .avatar-table-lock{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;}
+    .avatar-table-lock .small-note{line-height:1.45;white-space:normal;}
+    .avatar-table-assets{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+    .avatar-table-select{width:100%;min-width:120px;}
+    .avatar-table-cost{width:100%;min-width:120px;max-width:220px;}
+    .avatar-table-price-static{font-family:var(--font-number);font-weight:850;color:var(--muted);}
+
     @media (max-width:1100px){.avatar-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.avatar-overview-card.primary{grid-column:1/-1;}}
     @media (max-width:700px){.avatar-overview-grid{grid-template-columns:1fr;}.avatar-overview-metrics{grid-template-columns:1fr;}.avatar-panel-intro{flex-direction:column;}.avatar-grid{grid-template-columns:1fr;}.avatar-toolbar{align-items:stretch}.avatar-filter-row{width:100%;}.avatar-filter-row .console-input,.avatar-filter-row .console-select{width:100%;min-width:0;flex:1 1 100%;}.avatar-card-head{gap:12px}.avatar-thumb{width:68px;height:68px}.avatar-asset-strip{grid-template-columns:1fr;}}
 
@@ -5194,7 +5211,11 @@
     function avatarMaskOf(a){ return a.mask || a.mask_url || a.maskUrl || a.mask_img_url || a.maskImg || ""; }
     function avatarHasImage(a){ const img = String(avatarImgOf(a) || ""); return Boolean(img && img !== "/assets/gacha-box.png"); }
     function avatarHasMask(a){ return Boolean(String(avatarMaskOf(a) || "").trim()); }
-    function avatarHasAssetIssue(a){ return !avatarHasImage(a) || !avatarHasMask(a); }
+    function avatarRequiresMask(a){
+      // N 稀有度角色本來就不需要 Mask；避免誤判為素材缺漏。
+      return String(a.rarity || "N").trim().toUpperCase() !== "N";
+    }
+    function avatarHasAssetIssue(a){ return !avatarHasImage(a) || (avatarRequiresMask(a) && !avatarHasMask(a)); }
     function avatarLockReasonForConsole(a){
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
@@ -5312,6 +5333,7 @@
       const scope = avatarScopeOf(a) === "global" ? "全域" : "本校";
       const hasImg = avatarHasImage(a);
       const hasMask = avatarHasMask(a);
+      const needsMask = avatarRequiresMask(a);
       const lockReason = avatarLockReasonForConsole(a);
       return `<div class="avatar-card ${locked ? "locked" : ""}" data-avatar-id="${escapeHtml(id)}">
         <div class="avatar-card-head">
@@ -5332,7 +5354,7 @@
         </div>
         <div class="avatar-asset-strip">
           <div class="avatar-asset-item ${hasImg ? "ok" : "warn"}"><span>角色圖片</span><strong>${hasImg ? "OK" : "缺少"}</strong></div>
-          <div class="avatar-asset-item ${hasMask ? "ok" : "warn"}"><span>Mask 素材</span><strong>${hasMask ? "OK" : "缺少"}</strong></div>
+          <div class="avatar-asset-item ${!needsMask || hasMask ? "ok" : "warn"}"><span>Mask 素材</span><strong>${!needsMask ? "不需" : (hasMask ? "OK" : "缺少")}</strong></div>
         </div>
         ${locked ? `<div class="avatar-lock-note"><strong>${escapeHtml(lockReason)}</strong>此角色不開放在 Console 中改價或改類型；若要調整素材，請回到資料庫或素材管理流程處理。</div>` : `
         <div class="avatar-edit-grid">
@@ -5352,19 +5374,31 @@
         const scope=avatarScopeOf(a)==="global"?"全域":"本校";
         const hasImg=avatarHasImage(a);
         const hasMask=avatarHasMask(a);
+        const needsMask=avatarRequiresMask(a);
         const lockReason=avatarLockReasonForConsole(a);
-        const assetHtml = `<span class="avatar-badge ${hasImg ? "asset-ok" : "asset-warn"}">圖片 ${hasImg ? "OK" : "缺"}</span> <span class="avatar-badge ${hasMask ? "asset-ok" : "asset-warn"}">Mask ${hasMask ? "OK" : "缺"}</span>`;
+        const assetHtml = `<div class="avatar-table-assets">
+          <span class="avatar-badge ${hasImg ? "asset-ok" : "asset-warn"}">圖片 ${hasImg ? "OK" : "缺"}</span>
+          <span class="avatar-badge ${(!needsMask || hasMask) ? "asset-ok" : "asset-warn"}">Mask ${!needsMask ? "不需" : (hasMask ? "OK" : "缺")}</span>
+        </div>`;
+        const typeHtml = locked
+          ? `<div class="avatar-table-lock"><span class="badge warn">${escapeHtml(cat)} / 鎖定</span><span class="small-note">${escapeHtml(lockReason)}</span></div>`
+          : `<select class="console-select avatar-category-select avatar-table-select"><option value="一般" ${editableCat==="一般"?"selected":""}>一般</option><option value="活動" ${editableCat==="活動"?"selected":""}>活動</option></select>`;
+        const costHtml = locked
+          ? `<span class="avatar-table-price-static">${escapeHtml(Number(a.cost||0))}</span>`
+          : `<input class="console-input avatar-cost-input avatar-table-cost" type="number" min="0" value="${Number(a.cost||0)}" />`;
+        const actionHtml = locked
+          ? '<span class="small-note">系統保護</span>'
+          : `<button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>`;
         return `<tr data-avatar-id="${escapeHtml(id)}">
-          <td><div class="avatar-table-role"><img class="avatar-table-thumb" src="${escapeHtml(avatarImgOf(a))}" onerror="this.src='/assets/gacha-box.png'" /><div><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)}</span></div></div></td>
+          <td><div class="avatar-table-role"><img class="avatar-table-thumb" src="${escapeHtml(avatarImgOf(a))}" onerror="this.src='/assets/gacha-box.png'" /><div><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)} · ${escapeHtml(scope)}</span></div></div></td>
           <td><span class="avatar-badge ${rarityBadgeClass(rarity)}">${escapeHtml(rarity)}</span></td>
-          <td>${escapeHtml(scope)}</td>
-          <td>${locked?`<span class="badge warn">${escapeHtml(cat)} / 鎖定</span><br><span class="small-note">${escapeHtml(lockReason)}</span>`:`<select class="console-select avatar-category-select"><option value="一般" ${editableCat==="一般"?"selected":""}>一般</option><option value="活動" ${editableCat==="活動"?"selected":""}>活動</option></select>`}</td>
+          <td>${typeHtml}</td>
           <td>${assetHtml}</td>
-          <td>${locked?escapeHtml(Number(a.cost||0)):`<input class="console-input avatar-cost-input" type="number" min="0" value="${Number(a.cost||0)}" style="max-width:160px;" />`}</td>
-          <td>${locked?'<span class="small-note">系統保護</span>':`<button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>`}</td>
+          <td>${costHtml}</td>
+          <td>${actionHtml}</td>
         </tr>`;
       }).join("");
-      return `<div class="avatar-table-wrap"><table><thead><tr><th>角色</th><th>稀有度</th><th>來源</th><th>類型 / 鎖定原因</th><th>素材狀態</th><th>點數</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      return `<div class="avatar-table-wrap avatar-table-polished"><table><colgroup><col class="col-role"><col class="col-rarity"><col class="col-type"><col class="col-assets"><col class="col-price"><col class="col-action"></colgroup><thead><tr><th>角色</th><th>稀有度</th><th>類型 / 狀態</th><th>素材</th><th>點數</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
     function cssSafeId(value){ return String(value||"").replace(/[^a-zA-Z0-9_-]/g,"_"); }
     function escapeJs(value){ return String(value ?? "").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\n/g,"\\n"); }
