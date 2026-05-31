@@ -1021,14 +1021,26 @@
         document.getElementById('header-points').innerText = `${dashboard.currentPoints || 0} PTS`;
 
         const allAssetIds = Object.keys(characterAssets);
-        const firstDefaultId = allAssetIds.find(id => {
-          const c = String(characterAssets[id]?.category || '').trim().toLowerCase();
+        const isDefaultCategory = (category) => {
+          const c = String(category || '').trim().toLowerCase();
           return c === '預設' || c === 'default' || c === 'preset' || c === 'starter';
-        }) || 'DEFAULT_MARIAN';
+        };
+
+        // DEFAULT_MARIAN 只是舊校區 / 無角色校區的 fallback。
+        // 如果目前校區已經有自己的「預設」角色，就不要把 DEFAULT_MARIAN 塞進學生角色清單。
+        const schoolDefaultId = allAssetIds.find(id => {
+          if (id === 'DEFAULT_MARIAN') return false;
+          return isDefaultCategory(characterAssets[id]?.category);
+        });
+        const firstDefaultId = schoolDefaultId || 'DEFAULT_MARIAN';
 
         const equippedFromShop = avatarShop?.student?.equippedAvatarId || avatarShop?.student?.equipped_avatar_id || avatarShop?.equippedAvatar?.avatarId || avatarShop?.equippedAvatar?.id;
         const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboardRaw.student?.equipped_avatar_id || dashboard.raw?.student?.equippedAvatarId || dashboard.raw?.student?.equipped_avatar_id;
         userEquipped = equippedFromShop || equippedFromDashboard || firstDefaultId;
+
+        if (schoolDefaultId && userEquipped === 'DEFAULT_MARIAN') {
+          userEquipped = schoolDefaultId;
+        }
 
         const ownedIds = [];
         if (Array.isArray(avatarShop?.unlockedAvatarIds)) ownedIds.push(...avatarShop.unlockedAvatarIds);
@@ -1036,9 +1048,15 @@
           ownedIds.push(...avatarShop.unlockedAvatars.map(a => a.avatarId || a.avatar_id || a.id).filter(Boolean));
         }
 
+        const ownedIdsForDisplay = schoolDefaultId
+          ? ownedIds.filter(id => id !== 'DEFAULT_MARIAN')
+          : ownedIds;
+
         // 展示區只顯示真正擁有的角色；活動掉落角色也會出現在 unlockedAvatars / student_avatars。
-        userUnlocked = Array.from(new Set([firstDefaultId, userEquipped, ...ownedIds].filter(Boolean)))
-          .filter(id => characterAssets[id]);
+        // 若校區已有自己的預設角色，DEFAULT_MARIAN 不再作為 fallback 顯示。
+        userUnlocked = Array.from(new Set([firstDefaultId, userEquipped, ...ownedIdsForDisplay].filter(Boolean)))
+          .filter(id => characterAssets[id])
+          .filter(id => !(schoolDefaultId && id === 'DEFAULT_MARIAN'));
 
         if (!characterAssets[userEquipped]) {
           userEquipped = firstDefaultId;
