@@ -1552,7 +1552,7 @@
         .then(res => res.json())
         .then(data => {
           currentRoomId = data.roomId;
-          createBtn.innerText = "❌ 取消對戰房間";
+          createBtn.innerText = "❌ 取消戰場";
           createBtn.style.pointerEvents = "auto";
           createBtn.style.filter = "hue-rotate(320deg)"; 
           createBtn.onclick = () => cancelMyRoom();
@@ -1778,6 +1778,25 @@
          const createBtn = document.getElementById('create-room-btn');
          const pvpList = document.getElementById('pvp-room-list');
 
+         // ✅ 如果自己已經有 1v1 房間，按鈕必須維持「取消對戰房間」。
+         // refreshLobby / renderStaminaUI 會反覆呼叫 updateBattleButtons，不能把它重設回「建立 1v1 戰場」。
+         if (currentRoomId) {
+             aiBanners.forEach(b => { b.style.filter = "none"; });
+             if(eventBanner) { eventBanner.style.filter = "none"; }
+
+             createBtn.style.background = "";
+             createBtn.style.color = "";
+             createBtn.style.boxShadow = "";
+             createBtn.style.borderColor = "";
+             createBtn.style.pointerEvents = "auto";
+             createBtn.style.filter = "hue-rotate(320deg)";
+             createBtn.innerText = "❌ 取消對戰房間";
+             createBtn.onclick = () => cancelMyRoom();
+
+             if (pvpList) pvpList.style.opacity = "1";
+             return;
+         }
+
          // 只要有其中一個不合格，就把按鈕封印變灰
          if (!hasStamina || !hasVoice) {
              aiBanners.forEach(b => { b.style.filter = "grayscale(0.8) opacity(0.5)"; });
@@ -1787,6 +1806,8 @@
              createBtn.style.color = "#ecf0f1";
              createBtn.style.boxShadow = "none";
              createBtn.style.borderColor = "transparent";
+             createBtn.style.filter = "none";
+             createBtn.style.pointerEvents = "auto";
              
              // 根據是誰沒了來顯示不同的專屬文字
              if (!hasVoice) {
@@ -1805,7 +1826,10 @@
              createBtn.style.color = "";
              createBtn.style.boxShadow = "";
              createBtn.style.borderColor = "";
+             createBtn.style.filter = "none";
+             createBtn.style.pointerEvents = "auto";
              createBtn.innerText = "建立 1v1 戰場";
+             createBtn.onclick = () => createBattleRoom();
              
              pvpList.style.opacity = "1";
          }
