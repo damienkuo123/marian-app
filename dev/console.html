@@ -3554,6 +3554,31 @@
           </div>
         </div>
 
+        <div class="overview-analytics-toolbar">
+          <div>
+            <h2>全校區真實使用分析</h2>
+            <p>聚合所有校區近 7 / 30 天的學生互動，不含點數人工加扣分，適合 Owner 判斷整體使用熱度。</p>
+          </div>
+          <div class="range-switcher">
+            <button id="anaRange7" class="range-btn active" onclick="setAnalyticsRange(7)">近 7 天</button>
+            <button id="anaRange30" class="range-btn" onclick="setAnalyticsRange(30)">近 30 天</button>
+          </div>
+        </div>
+
+        <div class="overview-chart-grid">
+          <div class="analytics-card wide">
+            <div class="analytics-card-head">
+              <div><h3>每日使用量趨勢</h3><p>所有校區的一般練習、今日挑戰、對戰與抽卡互動總和。</p></div>
+              <span id="anaUsagePeak" class="badge ok">—</span>
+            </div>
+            <div id="anaUsageChart" class="line-chart-shell"><div class="empty-state">正在讀取全校區使用趨勢...</div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>學習模式比例</h3><p>所有校區學生使用 Tappie 的模式分布。</p></div></div>
+            <div id="anaModeDonut" class="donut-wrap"><div class="empty-state">正在讀取全校區模式比例...</div></div>
+          </div>
+        </div>
+
         <div class="overview-status-grid">
           <div class="card">
             <div class="panel-title"><h2>${isOwner ? "校區摘要" : "校區基本狀態"}</h2><span id="ovGeneratedAt" class="badge ok">—</span></div>
@@ -4096,13 +4121,6 @@
 
     async function loadOverviewAnalyticsData(force = false){
       if (!session || !session.token) return;
-      if (isOwnerAllMode()) {
-        overviewAnalyticsCache = null;
-        ['anaUsageChart','anaModeDonut','anaPointChart','anaClassUsage','anaStudentWatch'].forEach(id=>{
-          const el=document.getElementById(id); if(el) el.innerHTML=`<div class="empty-state">Owner 全部校區模式先顯示總覽統計；選擇單一校區後會載入詳細互動分析。</div>`;
-        });
-        return;
-      }
       if (overviewAnalyticsLoading) return;
       if (overviewAnalyticsCache && !force) { updateOverviewAnalyticsUI(); return; }
       overviewAnalyticsLoading = true;
