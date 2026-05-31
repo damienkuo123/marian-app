@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=owner-all-usage-v4"></script>
+  <script src="./tappie-api.js?v=owner-automation-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3284,6 +3284,9 @@
       if (page === "settings") {
         loadGamificationConsole(false);
       }
+      if (page === "automation") {
+        loadAutomationData(false);
+      }
     }
 
 
@@ -3300,7 +3303,8 @@
         avatars: { title: "查看角色素材分析", note: "可編輯、鎖定、素材缺漏與角色類型", selectors: [".avatar-overview-grid"] },
         newsletters: { title: "查看專欄摘要", note: "待發順序、封存與標籤類型", selectors: [".newsletter-dashboard"] },
         branding: { title: "查看品牌摘要", note: "校區 Logo、手機入口與品牌預覽", selectors: [".brand-center-hero", ".brand-summary-grid"] },
-        settings: { title: "查看遊戲規則摘要", note: "今日挑戰、任務、排行榜與盲盒機率", selectors: [".gami-rule-hero", ".gami-rule-metrics"] }
+        settings: { title: "查看遊戲規則摘要", note: "今日挑戰、任務、排行榜與盲盒機率", selectors: [".gami-rule-hero", ".gami-rule-metrics"] },
+        automation: { title: "查看自動化摘要", note: "週報、任務結算與清理狀態", selectors: [".automation-insight-strip"] }
       };
       const cfg = configs[page];
       if (!cfg) return;
@@ -3327,6 +3331,7 @@
       if (page === "newsletters") return renderNewslettersConsole();
       if (page === "branding") return renderBrandingConsole();
       if (page === "settings") return renderGamificationConsole();
+      if (page === "automation") return renderAutomationConsole();
       return renderPlaceholder(page);
     }
 
@@ -5151,7 +5156,7 @@
           <div class="weekly-insight">
             <div class="label">全校應寄對象</div>
             <div id="ownerWkEligible" class="value">—</div>
-            <div id="ownerWkEligibleNote" class="note">已啟用週報且有家長 Email</div>
+            <div id="ownerWkEligibleNote" class="note">啟用學生＋週報啟用＋有效 Email</div>
             <div class="weekly-progress"><div id="ownerWkEligibleBar"></div></div>
           </div>
           <div class="weekly-insight">
@@ -5196,7 +5201,7 @@
                 <thead>
                   <tr>
                     <th>校區</th>
-                    <th>啟用 / 可寄送</th>
+                    <th>週報啟用 / 可寄送</th>
                     <th>Email 完整度</th>
                     <th>週報設定</th>
                     <th>最近寄送</th>
@@ -5408,7 +5413,7 @@
 
       const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
       setText("ownerWkEligible", String(eligible));
-      setText("ownerWkEligibleNote", `啟用週報 ${enabled}｜缺 Email ${missing}`);
+      setText("ownerWkEligibleNote", `啟用學生且開週報 ${enabled}｜缺 Email ${missing}`);
       const bar = document.getElementById("ownerWkEligibleBar");
       if (bar) bar.style.width = Math.max(0, Math.min(100, coveragePct)) + "%";
       setText("ownerWkSent", String(sent));
@@ -5429,7 +5434,7 @@
         summaryBox.innerHTML = `
           <div class="weekly-status-title"><span class="badge ${issueCount ? "warn" : "ok"}">${issueCount ? "需要檢查" : "狀態良好"}</span></div>
           <div class="weekly-status-sub">
-            全校區週報設定啟用 ${configEnabled}/${activeSchools} 校，家長 Email 完整度 ${coveragePct}%。<br>
+            全校區週報設定啟用 ${configEnabled}/${activeSchools} 校，可寄送完整度 ${coveragePct}%（只計算啟用中的學生）。<br>
             最近週報 job 加總：已寄出 ${sent}、失敗 ${failed}、略過 ${skipped}。<br>
             專欄準備：${newsletterReady}/${activeSchools} 校區目前有 display_order = 1 的待發專欄。
           </div>`;
@@ -5449,7 +5454,7 @@
         return `
           <tr>
             <td><strong>${name}</strong><br><span class="small-note">${code}</span></td>
-            <td>${enabledStudents} / ${eligibleStudents}<br><span class="small-note">缺 Email ${schoolMissing}</span></td>
+            <td>${enabledStudents} / ${eligibleStudents}<br><span class="small-note">只計啟用學生｜缺 Email ${schoolMissing}</span></td>
             <td>${schoolCoverage}%<div class="weekly-progress"><div style="width:${Math.max(0, Math.min(100, schoolCoverage))}%"></div></div></td>
             <td>${configText}</td>
             <td>${latestText}</td>
@@ -5465,7 +5470,7 @@
         const code = escapeHtml(s.schoolCode || "");
         const name = escapeHtml(s.schoolName || s.name || code);
         if (!s.configEnabled) actions.push({ level:"warn", text:`${name} 週報設定未啟用`, code });
-        if (Number(s.missingEmail || 0) > 0) actions.push({ level:"warn", text:`${name} 有 ${Number(s.missingEmail || 0)} 位啟用週報學生缺家長 Email`, code });
+        if (Number(s.missingEmail || 0) > 0) actions.push({ level:"warn", text:`${name} 有 ${Number(s.missingEmail || 0)} 位啟用中且開週報的學生缺家長 Email`, code });
         if (Number(s.nextNewsletterCount || 0) <= 0) actions.push({ level:"warn", text:`${name} 缺少待發專欄`, code });
         if ((s.latestJob && Number(s.latestJob.failed_count || 0) > 0)) actions.push({ level:"danger", text:`${name} 最近寄送失敗 ${Number(s.latestJob.failed_count || 0)} 封`, code });
       });
@@ -7451,6 +7456,154 @@
       } catch (err) {
         alert('移除失敗：' + (err.message || err));
         setBrandingStatus('⚠️ 移除失敗：' + (err.message || err), 'danger');
+      }
+    }
+
+
+    /* =======================================================
+       ⚙ Owner 全校區｜自動化監控中心 v1
+       ======================================================= */
+    let automationCache = null;
+    let automationLoading = false;
+
+    function renderAutomationConsole() {
+      if (!isOwnerAllMode()) {
+        return `
+          <div class="card">
+            <div class="panel-title"><h2>自動化監控</h2><span class="badge warn">Owner 全校區模式</span></div>
+            <p class="muted-text">自動化監控中心目前設計給 Owner 全校區模式使用，用來查看週報、任務結算與日常清理的跨校區執行狀態。</p>
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn-compact primary" onclick="changeConsoleScope('all'); showPage('automation');">切回全部校區</button>
+              <button class="btn-compact" onclick="showPage('weekly')">查看單校週報</button>
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="weekly-insight-strip automation-insight-strip">
+          <div class="weekly-insight"><div class="label">週報自動化</div><div id="autoWeeklyStatus" class="value" style="font-size:26px;">—</div><div id="autoWeeklyNote" class="note">最近一次週報 job</div></div>
+          <div class="weekly-insight"><div class="label">任務自動結算</div><div id="autoSettlementStatus" class="value" style="font-size:26px;">—</div><div id="autoSettlementNote" class="note">mission_settlements 最近紀錄</div></div>
+          <div class="weekly-insight"><div class="label">每日清理</div><div id="autoCleanupStatus" class="value" style="font-size:26px;">未接入</div><div id="autoCleanupNote" class="note">目前 cron-daily-cleanup 尚未寫入 DB log</div></div>
+          <div class="weekly-insight"><div class="label">需要注意</div><div id="autoRiskCount" class="value">—</div><div id="autoRiskNote" class="note">異常 / 過久未執行 / 失敗</div></div>
+        </div>
+
+        <div class="weekly-console-grid">
+          <div class="weekly-panel wide">
+            <div class="weekly-panel-head">
+              <div><h3>Owner 自動化監控中心</h3><p>這裡只監控跨校區排程工作，不直接觸發 cron。重點是確認週報、自動結算與清理是否正常運作。</p></div>
+              <button class="weekly-btn" onclick="loadAutomationData(true)">重新整理</button>
+            </div>
+            <div id="autoSummaryBox" class="weekly-status-card">正在讀取自動化狀態...</div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head"><div><h3>週報 Jobs</h3><p>最近全校區週報產生 / 寄送紀錄。</p></div></div>
+            <div id="autoWeeklyJobList" class="weekly-mini-list">正在讀取...</div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head"><div><h3>任務結算紀錄</h3><p>最近自動結算產生的 mission_settlements。</p></div></div>
+            <div id="autoSettlementList" class="weekly-mini-list">正在讀取...</div>
+          </div>
+
+          <div class="weekly-panel wide">
+            <div class="weekly-panel-head"><div><h3>需要 Owner 介入</h3><p>系統會列出排程失敗、太久未執行、或缺少監控紀錄的項目。</p></div></div>
+            <div id="autoActionList" class="weekly-mini-list">正在讀取...</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function automationStatusText(status) {
+      const s = String(status || '').toLowerCase();
+      if (['completed','success','sent'].includes(s)) return '完成';
+      if (['completed_with_errors'].includes(s)) return '完成但有錯誤';
+      if (['failed','error'].includes(s)) return '失敗';
+      if (['running'].includes(s)) return '執行中';
+      if (['pending'].includes(s)) return '等待中';
+      if (['skipped'].includes(s)) return '略過';
+      return status || '尚無';
+    }
+
+    async function loadAutomationData(force = false) {
+      if (!isOwnerAllMode()) return;
+      if (automationLoading) return;
+      if (automationCache && !force) { renderAutomationData(automationCache); return; }
+      automationLoading = true;
+      try {
+        const res = await fetch(`${TappieAPI.supabaseBaseUrl}/console-automation-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.token || ''}` },
+          body: JSON.stringify({ scopeMode: 'all' })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || data.error || '自動化資料讀取失敗');
+        automationCache = data;
+        renderAutomationData(data);
+      } catch (err) {
+        console.error(err);
+        const box = document.getElementById('autoSummaryBox');
+        if (box) box.innerHTML = `<div class="weekly-status-title"><span class="badge danger">讀取失敗</span></div><div class="weekly-status-sub">${escapeHtml(err.message || err)}</div>`;
+      } finally {
+        automationLoading = false;
+      }
+    }
+
+    function renderAutomationData(data) {
+      const weekly = data.weekly || {};
+      const settlement = data.settlement || {};
+      const cleanup = data.cleanup || {};
+      const actions = Array.isArray(data.actions) ? data.actions : [];
+      const latestWeekly = weekly.latestJob || null;
+      const latestSettlement = settlement.latestSettlement || null;
+      const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+
+      setText('autoWeeklyStatus', latestWeekly ? automationStatusText(latestWeekly.status) : '尚無');
+      setText('autoWeeklyNote', latestWeekly ? `${formatDateTime(latestWeekly.updated_at || latestWeekly.created_at)}｜成功 ${Number(latestWeekly.sent_count || 0)} / 失敗 ${Number(latestWeekly.failed_count || 0)}` : '尚無週報 job');
+      setText('autoSettlementStatus', latestSettlement ? automationStatusText(latestSettlement.status) : '尚無');
+      setText('autoSettlementNote', latestSettlement ? `${formatDateTime(latestSettlement.updated_at || latestSettlement.created_at)}｜${escapeHtml(latestSettlement.schoolName || latestSettlement.schoolCode || '')}` : '尚無結算紀錄');
+      setText('autoCleanupStatus', cleanup.statusText || '未接入');
+      setText('autoCleanupNote', cleanup.note || 'cron-daily-cleanup 目前只有執行 log，尚未寫入 DB 狀態表');
+      setText('autoRiskCount', String(actions.length));
+      setText('autoRiskNote', actions.length ? '建議檢查下方清單' : '目前沒有明顯異常');
+
+      const summaryBox = document.getElementById('autoSummaryBox');
+      if (summaryBox) {
+        summaryBox.innerHTML = `
+          <div class="weekly-status-title"><span class="badge ${actions.length ? 'warn' : 'ok'}">${actions.length ? '需要檢查' : '狀態良好'}</span></div>
+          <div class="weekly-status-sub">
+            週報最近 job：${latestWeekly ? `${escapeHtml(automationStatusText(latestWeekly.status))}，${formatDateTime(latestWeekly.updated_at || latestWeekly.created_at)}` : '尚無紀錄'}。<br>
+            任務結算最近紀錄：${latestSettlement ? `${escapeHtml(latestSettlement.schoolName || latestSettlement.schoolCode || '')}，${formatDateTime(latestSettlement.updated_at || latestSettlement.created_at)}` : '尚無紀錄'}。<br>
+            每日清理：${escapeHtml(cleanup.note || '目前尚未接入 DB log，建議未來新增 automation_runs。')}
+          </div>`;
+      }
+
+      const wList = document.getElementById('autoWeeklyJobList');
+      if (wList) {
+        const jobs = Array.isArray(weekly.latestJobs) ? weekly.latestJobs : [];
+        wList.innerHTML = jobs.slice(0, 10).map(j => `
+          <div class="weekly-row">
+            <div><div class="weekly-row-title">${escapeHtml(j.schoolName || j.schoolCode || '未知校區')}｜${escapeHtml(automationStatusText(j.status))}</div><div class="weekly-row-sub">${escapeHtml(j.report_key || '無 report_key')}｜${formatDateTime(j.updated_at || j.created_at)}</div></div>
+            <div class="weekly-row-sub" style="text-align:right;">成功 ${Number(j.sent_count || 0)}<br>失敗 ${Number(j.failed_count || 0)}｜略過 ${Number(j.skipped_count || 0)}</div>
+          </div>`).join('') || `<div class="empty-state">尚無週報 job 紀錄。</div>`;
+      }
+
+      const sList = document.getElementById('autoSettlementList');
+      if (sList) {
+        const rows = Array.isArray(settlement.latestSettlements) ? settlement.latestSettlements : [];
+        sList.innerHTML = rows.slice(0, 10).map(r => `
+          <div class="weekly-row">
+            <div><div class="weekly-row-title">${escapeHtml(r.schoolName || r.schoolCode || '未知校區')}｜${escapeHtml(r.class_code || '')}｜${escapeHtml(r.unit_name || '')}</div><div class="weekly-row-sub">結算日 ${escapeHtml(r.settled_for_date || '')}｜${formatDateTime(r.updated_at || r.created_at)}</div></div>
+            <span class="badge ${String(r.status).toLowerCase()==='completed' ? 'ok' : 'warn'}">${escapeHtml(automationStatusText(r.status))}</span>
+          </div>`).join('') || `<div class="empty-state">尚無任務結算紀錄。</div>`;
+      }
+
+      const aList = document.getElementById('autoActionList');
+      if (aList) {
+        aList.innerHTML = actions.map(a => `
+          <div class="weekly-row">
+            <div><div class="weekly-row-title">${a.level === 'danger' ? '🚨' : '⚠️'} ${escapeHtml(a.title || '')}</div><div class="weekly-row-sub">${escapeHtml(a.note || '')}</div></div>
+            ${a.schoolCode ? `<button class="btn-compact" onclick="changeConsoleScope('${escapeHtml(a.schoolCode)}'); showPage('${escapeHtml(a.targetPage || 'overview')}');">前往</button>` : ''}
+          </div>`).join('') || `<div class="empty-state">目前沒有需要 Owner 介入的自動化問題。</div>`;
       }
     }
 
