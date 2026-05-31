@@ -152,6 +152,8 @@ const GlobalAudio = {
 
         if (currentPath.includes('dashboard')) {
             targetBGM = this.bgm.dashboard;
+        } else if (currentPath.includes('battle')) {
+            targetBGM = this.bgm.arenaBattle;
         } else if (currentPath.includes('arena')) {
             if (urlParams.get('mode') === 'battle' || urlParams.get('roomId')) {
                 targetBGM = this.bgm.arenaBattle;
