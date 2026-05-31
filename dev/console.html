@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=owner-automation-v1"></script>
+  <script src="./tappie-api.js?v=owner-school-management-v2"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3373,7 +3373,9 @@
         `;
       }
 
-      if (!schools.length) {
+      const enriched = schools.map(normalizeOwnerSchoolRow);
+
+      if (!enriched.length) {
         return `
           <div class="card">
             <div class="panel-title"><h2>校區列表</h2><span class="badge warn">尚無資料</span></div>
@@ -3383,34 +3385,36 @@
         `;
       }
 
-      const enriched = schools.map(normalizeOwnerSchoolRow);
+      const activeSchools = enriched.filter(s => s.isActive !== false).length;
+      const inactiveSchools = enriched.length - activeSchools;
       const totalActive = enriched.reduce((n, s) => n + Number(s.activeStudents || 0), 0);
       const totalLimit = enriched.reduce((n, s) => n + Number(s.studentLimit || 0), 0);
       const avgHealth = enriched.length
         ? Math.round(enriched.reduce((n, s) => n + Number(s.healthScore ?? 100), 0) / enriched.length)
         : 100;
-      const riskySchools = enriched.filter(s => Number(s.highCount || 0) > 0 || Number(s.healthScore ?? 100) < 80).length;
-      const noSchedule = enriched.filter(s => Number(s.activeSchedules || 0) <= 0).length;
-      const noNewsletter = enriched.filter(s => Number(s.weeklyEnabled || 0) > 0 && Number(s.nextNewsletterCount || 0) <= 0).length;
+      const riskySchools = enriched.filter(s => s.isActive !== false && (Number(s.highCount || 0) > 0 || Number(s.healthScore ?? 100) < 80)).length;
+      const noSchedule = enriched.filter(s => s.isActive !== false && Number(s.activeSchedules || 0) <= 0).length;
+      const noNewsletter = enriched.filter(s => s.isActive !== false && Number(s.weeklyEnabled || 0) > 0 && Number(s.nextNewsletterCount || 0) <= 0).length;
 
       return `
         <div class="overview-hero-v3">
           <div class="overview-hero-main">
-            <div class="overview-kicker">Schools Operations</div>
-            <h2>全校區狀態與快速切換</h2>
-            <p>這裡不是單校設定頁，而是 Owner 用來判斷哪個校區健康、哪個校區快滿、哪個校區缺排程或週報內容的營運總表。</p>
+            <div class="overview-kicker">Schools Management</div>
+            <h2>Owner 校區管理中心</h2>
+            <p>這裡用來新增校區、調整校區名稱與系統限額、啟用或停用校區。單校學生、課程、週報、專欄、品牌與遊戲化仍維持在「管理此校區」後的單校模式處理。</p>
           </div>
           <div class="overview-hero-side">
-            <button class="btn-compact primary" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入校區</button>
+            <button class="btn-compact primary" onclick="openSchoolEditor()">新增校區</button>
+            <button class="btn-compact" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入校區</button>
             <button class="btn-compact" onclick="changeConsoleScope('all')">全部校區模式</button>
           </div>
         </div>
 
         <div class="overview-top-grid">
           <div class="overview-stat-card emphasis">
-            <div class="metric-label">啟用校區</div>
+            <div class="metric-label">校區總數</div>
             <div class="metric-value">${numFmt(enriched.length)}</div>
-            <div class="metric-note">Owner 管理範圍內校區</div>
+            <div class="metric-note">啟用 ${numFmt(activeSchools)}｜停用 ${numFmt(inactiveSchools)}</div>
           </div>
           <div class="overview-stat-card">
             <div class="metric-label">啟用學生</div>
@@ -3420,7 +3424,7 @@
           <div class="overview-stat-card">
             <div class="metric-label">平均健康分</div>
             <div class="metric-value">${numFmt(avgHealth)}</div>
-            <div class="metric-note">${riskySchools ? `${riskySchools} 校需要檢查` : "所有校區資料狀態穩定"}</div>
+            <div class="metric-note">${riskySchools ? `${riskySchools} 校需要檢查` : "啟用校區資料狀態穩定"}</div>
           </div>
           <div class="overview-stat-card">
             <div class="metric-label">營運提醒</div>
@@ -3435,38 +3439,57 @@
             <span class="badge ${riskySchools ? "warn" : "ok"}">${riskySchools ? "有校區需檢查" : "整體穩定"}</span>
           </div>
           <div class="toolbar">
-            <div class="muted-text">點「管理此校區」會切到 Owner 單一校區模式，並沿用 Super Admin 的學生、課程、週報、專欄、品牌與遊戲化功能。</div>
+            <div class="muted-text">Owner 可在此新增校區、調整校區限額與啟用狀態。停用校區會保留資料，但不建議切入單校管理。</div>
+            <button class="btn-compact primary" onclick="openSchoolEditor()">＋ 新增校區</button>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>校區</th>
-                  <th>健康</th>
+                  <th>狀態 / 校區</th>
+                  <th>限額</th>
                   <th>學生席位</th>
                   <th>課程準備</th>
                   <th>週報觸達</th>
-                  <th>品牌 / 角色</th>
+                  <th>健康 / 初始化</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
                 ${enriched.map(s => {
                   const selected = consoleScope.mode === "single" && consoleScope.selectedSchoolCode === s.code;
+                  const activeCls = s.isActive === false ? "danger" : "ok";
                   const healthCls = Number(s.highCount || 0) > 0 || Number(s.healthScore || 100) < 70 ? "danger" : Number(s.healthScore || 100) < 90 ? "warn" : "ok";
-                  const seatNote = s.studentLimit > 0 ? `${pctFmt(s.activeStudents / Math.max(s.studentLimit, 1) * 100)} 使用率｜剩餘 ${s.remainingSlots ?? "—"}` : "未設定上限";
+                  const seatNote = s.studentLimit > 0 ? `${pctFmt(s.activeStudents / Math.max(s.studentLimit, 1) * 100)} 使用率｜剩餘 ${s.remainingSlots ?? "—"}` : "未設定學生上限";
                   const weeklyBase = Math.max(Number(s.parentEmailStudents || 0), 1);
                   const weeklyRate = Number(s.weeklyEnabled || 0) / weeklyBase * 100;
                   const weeklyCls = s.weeklyEnabled > 0 && s.nextNewsletterCount <= 0 ? "warn" : "ok";
+                  const initHints = [];
+                  if (Number(s.activeSchedules || 0) <= 0 && s.isActive !== false) initHints.push("缺排程");
+                  if (Number(s.schoolAvatars || 0) <= 0 && s.isActive !== false) initHints.push("缺校區角色");
+                  if (Number(s.weeklyEnabled || 0) > 0 && Number(s.nextNewsletterCount || 0) <= 0) initHints.push("缺待發專欄");
                   return `
                     <tr>
-                      <td><strong>${escapeHtml(s.code)}</strong><div class="small-note">${escapeHtml(s.name)}</div></td>
-                      <td><span class="badge ${healthCls}">${numFmt(s.healthScore ?? 100)} 分</span><div class="small-note">High ${numFmt(s.highCount || 0)}｜總問題 ${numFmt(s.totalIssueCount || 0)}</div></td>
+                      <td>
+                        <span class="badge ${activeCls}">${s.isActive === false ? "停用" : "啟用"}</span>
+                        <div style="margin-top:8px;"><strong>${escapeHtml(s.code)}</strong></div>
+                        <div class="small-note">${escapeHtml(s.name)}</div>
+                      </td>
+                      <td>
+                        學生 ${s.studentLimit ? numFmt(s.studentLimit) : "不限"}
+                        <div class="small-note">Speech ${numFmt(s.speechLimit || 0)}｜Battle ${numFmt(s.battleLimit || 0)}</div>
+                      </td>
                       <td>${numFmt(s.activeStudents)} / ${s.studentLimit ? numFmt(s.studentLimit) : "∞"}<div class="small-note">${escapeHtml(seatNote)}</div></td>
                       <td>${numFmt(s.activeClasses)} 班｜${numFmt(s.activeUnits)} 單元<div class="small-note">${numFmt(s.activeSchedules)} 個啟用排程</div></td>
                       <td><span class="badge ${weeklyCls}">${pctFmt(weeklyRate)}</span><div class="small-note">${numFmt(s.weeklyEnabled)} 位啟用｜待發專欄 ${numFmt(s.nextNewsletterCount)}</div></td>
-                      <td>${numFmt(s.schoolAvatars)} 個校區角色<div class="small-note">Global ${numFmt(s.globalAvatarsVisible || 0)}｜專欄 ${numFmt(s.activeNewsletters)}</div></td>
-                      <td><button class="btn-compact ${selected ? "ok" : "primary"}" onclick="changeConsoleScope('${escapeHtml(s.code)}')">${selected ? "目前校區" : "管理此校區"}</button></td>
+                      <td><span class="badge ${healthCls}">${numFmt(s.healthScore ?? 100)} 分</span><div class="small-note">${initHints.length ? initHints.map(escapeHtml).join("｜") : `High ${numFmt(s.highCount || 0)}｜總問題 ${numFmt(s.totalIssueCount || 0)}`}</div></td>
+                      <td>
+                        <div class="student-action-row">
+                          <button class="btn-compact" onclick="openSchoolEditor('${escapeHtml(s.code)}')">編輯</button>
+                          <button class="btn-compact ${s.isActive === false ? "ok" : "danger"}" onclick="toggleSchoolActive('${escapeHtml(s.code)}', ${s.isActive === false ? "true" : "false"})">${s.isActive === false ? "啟用" : "停用"}</button>
+                          <button class="btn-compact ${selected ? "ok" : "primary"}" ${s.isActive === false ? "disabled" : ""} onclick="changeConsoleScope('${escapeHtml(s.code)}')">${selected ? "目前校區" : "管理此校區"}</button>
+                        </div>
+                      </td>
                     </tr>
                   `;
                 }).join("")}
@@ -3474,7 +3497,181 @@
             </table>
           </div>
         </div>
+
+        ${renderSchoolEditorModal()}
       `;
+    }
+
+    function renderSchoolEditorModal() {
+      return `
+        <div id="schoolEditorModal" class="modal-backdrop">
+          <div class="console-modal">
+            <div class="modal-head">
+              <div>
+                <h2 id="schoolEditorTitle">新增校區</h2>
+                <p id="schoolEditorSubtitle">建立或調整校區基本資料。校區代碼建立後不建議修改，避免影響既有學生 UID、卡片與路由。</p>
+              </div>
+              <button class="icon-btn" onclick="closeSchoolEditor()">×</button>
+            </div>
+            <div class="form-grid">
+              <input id="schoolEditorMode" type="hidden" value="create" />
+              <input id="schoolEditorOriginalCode" type="hidden" value="" />
+              <div class="form-field">
+                <label>校區代碼 school_code</label>
+                <input id="schoolEditorCode" placeholder="例如 SW01 / TP01" autocomplete="off" />
+              </div>
+              <div class="form-field">
+                <label>校區名稱</label>
+                <input id="schoolEditorName" placeholder="例如 三重五華校區" autocomplete="off" />
+              </div>
+              <div class="form-field">
+                <label>學生上限 student_limit</label>
+                <input id="schoolEditorStudentLimit" type="number" min="0" step="1" placeholder="0 代表不限或未設定" />
+              </div>
+              <div class="form-field">
+                <label>Speech limit</label>
+                <input id="schoolEditorSpeechLimit" type="number" min="0" step="1" placeholder="80" />
+              </div>
+              <div class="form-field">
+                <label>Battle limit</label>
+                <input id="schoolEditorBattleLimit" type="number" min="0" step="1" placeholder="2" />
+              </div>
+              <div class="form-field">
+                <label>狀態</label>
+                <select id="schoolEditorIsActive">
+                  <option value="true">啟用</option>
+                  <option value="false">停用</option>
+                </select>
+              </div>
+              <div class="form-field full">
+                <label>Legacy Sheet ID（選填）</label>
+                <input id="schoolEditorLegacySheetId" placeholder="GAS / Google Sheet 遷移時可暫存，沒有就留空" autocomplete="off" />
+              </div>
+              <div class="form-field full">
+                <div class="form-note">提醒：這裡只管理 schools 基本資料。Admin 密碼、週報設定、遊戲化設定、品牌與學生資料仍在單校模式處理。</div>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="btn-compact" onclick="closeSchoolEditor()">取消</button>
+              <div class="right">
+                <button id="schoolEditorSubmitBtn" class="btn-compact primary" onclick="submitSchoolEditor()">儲存校區</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getOwnerSchoolByCode(code) {
+      const target = String(code || "").trim().toUpperCase();
+      return (consoleScope.schools || []).find(s => String(s.schoolCode || s.school_code || s.raw?.school_code || "").trim().toUpperCase() === target) || null;
+    }
+
+    function openSchoolEditor(code = "") {
+      if (!isOwner() || !isOwnerAllMode()) {
+        alert("只有 Owner 全部校區模式可以管理校區基本資料。");
+        return;
+      }
+      const modal = document.getElementById("schoolEditorModal");
+      if (!modal) return;
+      const raw = code ? getOwnerSchoolByCode(code) : null;
+      const s = raw ? normalizeOwnerSchoolRow(raw) : null;
+      const isEdit = Boolean(s);
+      document.getElementById("schoolEditorMode").value = isEdit ? "update" : "create";
+      document.getElementById("schoolEditorOriginalCode").value = isEdit ? s.code : "";
+      document.getElementById("schoolEditorTitle").textContent = isEdit ? `編輯校區：${s.code}` : "新增校區";
+      document.getElementById("schoolEditorSubtitle").textContent = isEdit ? "調整校區名稱、限額與啟用狀態。校區代碼建立後不建議修改。" : "建立新校區基本資料。建立後再切入單校模式設定密碼、品牌、課程與學生。";
+      const codeInput = document.getElementById("schoolEditorCode");
+      codeInput.value = isEdit ? s.code : "";
+      codeInput.disabled = isEdit;
+      document.getElementById("schoolEditorName").value = isEdit ? s.name : "";
+      document.getElementById("schoolEditorStudentLimit").value = isEdit ? Number(s.studentLimit || 0) : 0;
+      document.getElementById("schoolEditorSpeechLimit").value = isEdit ? Number(s.speechLimit || 80) : 80;
+      document.getElementById("schoolEditorBattleLimit").value = isEdit ? Number(s.battleLimit || 2) : 2;
+      document.getElementById("schoolEditorLegacySheetId").value = isEdit ? String(raw?.legacySheetId || raw?.legacy_sheet_id || raw?.raw?.legacy_sheet_id || "") : "";
+      document.getElementById("schoolEditorIsActive").value = isEdit && s.isActive === false ? "false" : "true";
+      modal.classList.add("show");
+      document.body.classList.add("console-modal-open");
+      setTimeout(() => (isEdit ? document.getElementById("schoolEditorName") : codeInput)?.focus(), 0);
+    }
+
+    function closeSchoolEditor() {
+      document.getElementById("schoolEditorModal")?.classList.remove("show");
+      document.body.classList.remove("console-modal-open");
+    }
+
+    function readSchoolEditorPayload() {
+      const mode = document.getElementById("schoolEditorMode")?.value || "create";
+      const originalCode = String(document.getElementById("schoolEditorOriginalCode")?.value || "").trim().toUpperCase();
+      const schoolCode = String(document.getElementById("schoolEditorCode")?.value || "").trim().toUpperCase();
+      const name = String(document.getElementById("schoolEditorName")?.value || "").trim();
+      const studentLimit = Math.max(0, Math.floor(Number(document.getElementById("schoolEditorStudentLimit")?.value || 0)));
+      const speechLimit = Math.max(0, Math.floor(Number(document.getElementById("schoolEditorSpeechLimit")?.value || 0)));
+      const battleLimit = Math.max(0, Math.floor(Number(document.getElementById("schoolEditorBattleLimit")?.value || 0)));
+      const legacySheetId = String(document.getElementById("schoolEditorLegacySheetId")?.value || "").trim();
+      const isActive = String(document.getElementById("schoolEditorIsActive")?.value || "true") === "true";
+      return { mode, originalCode, schoolCode, name, studentLimit, speechLimit, battleLimit, legacySheetId, isActive };
+    }
+
+    async function submitSchoolEditor() {
+      const payload = readSchoolEditorPayload();
+      if (!payload.name) return alert("請輸入校區名稱。");
+      if (payload.mode === "create" && !payload.schoolCode) return alert("請輸入校區代碼。");
+      if (payload.mode === "create" && !/^[A-Z0-9_-]{2,24}$/.test(payload.schoolCode)) return alert("校區代碼只能使用 2-24 個大寫英文、數字、底線或連字號。");
+
+      const btn = document.getElementById("schoolEditorSubmitBtn");
+      const oldText = btn?.textContent || "儲存校區";
+      if (btn) { btn.disabled = true; btn.textContent = "儲存中..."; }
+      try {
+        const res = await TappieAPI.consoleSaveSchool({
+          token: session.token,
+          action: payload.mode === "create" ? "create" : "update",
+          schoolCode: payload.mode === "create" ? payload.schoolCode : payload.originalCode,
+          data: {
+            schoolCode: payload.schoolCode,
+            name: payload.name,
+            studentLimit: payload.studentLimit,
+            speechLimit: payload.speechLimit,
+            battleLimit: payload.battleLimit,
+            legacySheetId: payload.legacySheetId,
+            isActive: payload.isActive
+          }
+        });
+        if (!res || !res.success) throw new Error(res?.message || res?.detail || res?.error || "save_school_failed");
+        closeSchoolEditor();
+        await initConsoleScope();
+        updateConsoleScopeUI();
+        showPage("schools");
+      } catch (err) {
+        alert("校區儲存失敗：" + (err?.message || err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = oldText; }
+      }
+    }
+
+    async function toggleSchoolActive(code, nextActive) {
+      if (!isOwner() || !isOwnerAllMode()) return alert("只有 Owner 全部校區模式可以啟用或停用校區。");
+      const actionText = nextActive ? "啟用" : "停用";
+      if (!confirm(`確定要${actionText}校區 ${code} 嗎？`)) return;
+      try {
+        const res = await TappieAPI.consoleSaveSchool({
+          token: session.token,
+          action: "set_active",
+          schoolCode: code,
+          isActive: Boolean(nextActive)
+        });
+        if (!res || !res.success) throw new Error(res?.message || res?.detail || res?.error || "set_school_active_failed");
+        if (!nextActive && consoleScope.selectedSchoolCode === code) {
+          consoleScope.mode = "all";
+          consoleScope.selectedSchoolCode = "";
+          consoleScope.selectedSchoolName = "";
+        }
+        await initConsoleScope();
+        updateConsoleScopeUI();
+        showPage("schools");
+      } catch (err) {
+        alert(`${actionText}校區失敗：` + (err?.message || err));
+      }
     }
 
     function renderOverview() {
