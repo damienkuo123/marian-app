@@ -966,10 +966,18 @@
           'DEFAULT_MARIAN': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '預設', cost: 0 }
         };
 
+        function isCoreAiAvatarId(id) {
+          const upperId = String(id || '').trim().toUpperCase();
+          return upperId === 'AI_EASY' || upperId === 'AI_MED' || upperId === 'AI_HARD'
+            || upperId.endsWith('_AI_EASY')
+            || upperId.endsWith('_AI_MED')
+            || upperId.endsWith('_AI_HARD');
+        }
+
         function normalizeAvatarAsset(a) {
           if (!a) return null;
           const id = a.avatarId || a.avatar_id || a.id;
-          if (!id) return null;
+          if (!id || isCoreAiAvatarId(id)) return null;
           return {
             id,
             name: a.name || id,

@@ -6616,7 +6616,7 @@
           <div class="avatar-source-note">
             <span>本校一般 / 活動角色：可改價格與類型</span>
             <span>本校預設角色：系統保護</span>
-            <span>AI_EASY / AI_MED / AI_HARD：核心 AI 對手鎖定</span>
+            <span>AI_EASY / AI_MED / AI_HARD（含校區前綴）：核心 AI 對手鎖定</span>
           </div>
           <div class="avatar-toolbar">
             <div class="avatar-filter-row">
@@ -6666,10 +6666,17 @@
       return avatarHasMask(a) ? "ok" : "warn";
     }
     function avatarHasAssetIssue(a){ return !avatarHasImage(a) || (avatarNeedsMask(a) && !avatarHasMask(a)); }
+    function isCoreAiAvatarIdForConsole(id){
+      const upperId = String(id || "").trim().toUpperCase();
+      return ["AI_EASY", "AI_MED", "AI_HARD"].includes(upperId)
+        || upperId.endsWith("_AI_EASY")
+        || upperId.endsWith("_AI_MED")
+        || upperId.endsWith("_AI_HARD");
+    }
     function avatarLockReasonForConsole(a){
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
-      if (["AI_EASY", "AI_MED", "AI_HARD"].includes(upperId)) return "核心 AI 對手，系統保護";
+      if (isCoreAiAvatarIdForConsole(upperId)) return "核心 AI 對手，系統保護";
       if (category === "預設") return "預設角色，系統保護";
       return "可編輯本校角色";
     }
@@ -6687,13 +6694,13 @@
       // 其他角色即使名稱或 category 含 AI，也不鎖定。
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
-      const isBaseAi = ["AI_EASY", "AI_MED", "AI_HARD"].includes(upperId);
+      const isBaseAi = isCoreAiAvatarIdForConsole(upperId);
       return category === "預設" || isBaseAi;
     }
     function avatarTypeLabelForConsole(a){
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
-      if (["AI_EASY", "AI_MED", "AI_HARD"].includes(upperId)) return "AI 對手";
+      if (isCoreAiAvatarIdForConsole(upperId)) return "AI 對手";
       return category;
     }
     function avatarScopeOf(a){
