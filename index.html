@@ -70,6 +70,26 @@
         .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .nav-btn:active { transform: scale(0.95); }
 
+        .nav-actions { display: flex; align-items: center; gap: 12px; }
+        .nav-btn.secondary {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.16);
+            color: rgba(255,255,255,0.9);
+        }
+        .nav-btn.secondary:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.28);
+            transform: translateY(-1px);
+        }
+        @media (max-width: 520px) {
+            nav { padding: 0 16px; }
+            .nav-logo { font-size: 18px; gap: 8px; }
+            .nav-logo img { width: 34px; }
+            .nav-actions { gap: 8px; }
+            .nav-btn { padding: 8px 12px; font-size: 12px; }
+        }
+
+
         /* ========================================= */
         /* 🏰 第一屏：Hero 區塊與登入器 */
         /* ========================================= */
@@ -1093,7 +1113,10 @@
             <img src="/assets/logo.webp" alt="Tappie Logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'40\' fill=\'%23f1c40f\'/></svg>'">
             Tappie
         </div>
-        <div class="nav-btn" onclick="document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })">加入Tappie</div>
+        <div class="nav-actions">
+            <button class="nav-btn secondary" onclick="window.location.href='console.html'">登入後台</button>
+            <button class="nav-btn" onclick="document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })">加入Tappie</button>
+        </div>
     </nav>
 
     <section class="section">
@@ -1805,6 +1828,7 @@
         致力於為教育機構提供最先進的 AI 口說訓練方案。
     </footer>
 
+    <script src="./tappie-api.js"></script>
     <script>
         // =======================================================
         // 🎛️ 分眾切換引擎 (Tab Switcher)
@@ -2022,15 +2046,14 @@
             btn.style.pointerEvents = "none";
             
             // 🚀 向 GAS 發送驗證請求，不再直接跳轉！
-            fetch(`${GAS_URL}?action=verify_manual_login&id=${encodeURIComponent(combinedUid)}`)
-                .then(res => res.json())
+            TappieAPI.resolveStudentByUid(combinedUid)
                 .then(data => {
                     if (data.success) {
                         btn.innerText = "✅ 驗證成功，傳送中...";
                         btn.style.background = "linear-gradient(135deg, #2ecc71, #27ae60)";
-                        setTimeout(() => { window.location.href = `dashboard.html?id=${combinedUid}`; }, 500);
+                        setTimeout(() => { window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid || combinedUid)}`; }, 500);
                     } else {
-                        alert(data.msg); // GAS 會回傳「沒有這個校區」或「查無此帳號」
+                        alert(data.message || data.msg || "查無此帳號");
                         btn.innerText = originalText;
                         btn.style.pointerEvents = "auto";
                     }
@@ -2112,8 +2135,7 @@
                         window.location.href = `dashboard.html?id=${extractedUid}`;
                     }, 300);
                 } else {
-                    fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
-                        .then(res => res.json())
+                    TappieAPI.resolveStudentByCard(inputStr)
                         .then(data => {
                             if (data.success) {
                                 msg.innerText = "✅ 驗證成功，傳送中...";
@@ -2121,7 +2143,7 @@
                                 statusDot.style.background = "var(--marian-green)";
                                 statusDot.style.boxShadow = "0 0 10px var(--marian-green)";
                                 setTimeout(() => {
-                                    window.location.href = `dashboard.html?id=${data.uid}`;
+                                    window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
                                 }, 300);
                             } else {
                                 showError();

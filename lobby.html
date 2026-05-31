@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
+  <script src="./tappie-api.js?v=20260522-micro-polish-v2"></script>
 
   <style>
     /* =======================================================
@@ -665,7 +666,7 @@
     <div class="action-zone">
       <button id="equip-btn" class="btn-equip" onclick="equipCurrentCharacter()">裝備此角色</button>
       <div class="nav-buttons">
-        <button class="btn-nav btn-back" onclick="window.location.href='dashboard.html?id=' + STUDENT_ID">🔙 返回主頁</button>
+        <button class="btn-nav btn-back" onclick="window.location.href='./dashboard.html?id=' + encodeURIComponent(STUDENT_ID)">🔙 返回主頁</button>
         <button class="btn-nav btn-battle" onclick="goToBattleRoom()">⚔️ 選擇戰場</button>
       </div>
     </div>
@@ -704,14 +705,16 @@
     
     <div class="battle-content">
       
-      <div class="section-divider">突發事件</div>
-      <div>
-        <div class="event-banner">
-          <div class="event-overlay">
-            <div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 目前不開放</div>
+      <div id="event-section" style="display:none;">
+        <div class="section-divider">突發事件</div>
+        <div>
+          <div class="event-banner">
+            <div class="event-overlay">
+              <div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 目前不開放</div>
+            </div>
           </div>
+          <button id="event-vocab-btn" class="event-info-btn" onclick="openEventVocab()">📖 查看事件題庫</button>
         </div>
-        <button id="event-vocab-btn" class="event-info-btn" onclick="openEventVocab()">📖 查看事件題庫</button>
       </div>
 
       <div class="section-divider">Ai 對戰</div>
@@ -720,7 +723,7 @@
           <div class="ai-banner-overlay"></div>
           <div class="ai-banner-text">
             <h4>初階 Ai</h4>
-            <p>挑戰獎勵：1次抽獎</p>
+            <p id="ai-reward-easy">挑戰獎勵：1次抽獎</p>
           </div>
         </div>
 
@@ -728,7 +731,7 @@
           <div class="ai-banner-overlay"></div>
           <div class="ai-banner-text">
             <h4>中階 Ai</h4>
-            <p>挑戰獎勵：2次抽獎</p>
+            <p id="ai-reward-med">挑戰獎勵：2次抽獎</p>
           </div>
         </div>
 
@@ -736,7 +739,7 @@
           <div class="ai-banner-overlay"></div>
           <div class="ai-banner-text">
             <h4>高階 Ai</h4>
-            <p>挑戰獎勵：3次抽獎</p>
+            <p id="ai-reward-hard">挑戰獎勵：3次抽獎</p>
           </div>
         </div>
       </div>
@@ -902,6 +905,7 @@
     let userUnlocked = [];
     let userEquipped = "";
     let currentCenteredId = ""; 
+    let lobbyGamiConfig = null;
 
     let lobbyRefreshTimer = null;
     let battleStatusTimer = null;
@@ -910,41 +914,174 @@
     let roomExpireTimer = null;
     const GITHUB_APP_URL = "/";
 
+    function getLobbyGachaPick(key, fallback = 1) {
+      const picks = lobbyGamiConfig?.gachaPicks || {};
+      const raw = picks[key] ?? fallback;
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(1, Math.min(6, n));
+    }
+    
+    function updateLobbyGachaRewardLabels() {
+      const easy = document.getElementById('ai-reward-easy');
+      const med = document.getElementById('ai-reward-med');
+      const hard = document.getElementById('ai-reward-hard');
+    
+      if (easy) easy.innerText = `挑戰獎勵：${getLobbyGachaPick('初階Ai', 1)}次抽獎`;
+      if (med) med.innerText = `挑戰獎勵：${getLobbyGachaPick('中階Ai', 2)}次抽獎`;
+      if (hard) hard.innerText = `挑戰獎勵：${getLobbyGachaPick('高階Ai', 3)}次抽獎`;
+    }
+
     async function initLobby() {
       try {
-        const res = await fetch(`${GAS_URL}?action=get_lobby_data&id=${STUDENT_ID}`);
-        const data = await res.json();
+        if (!window.TappieAPI) throw new Error("TappieAPI 尚未載入");
+
+        const dashboardRaw = await TappieAPI.getDashboard(STUDENT_ID);
+        const dashboard = TappieAPI.toLegacyDashboard(dashboardRaw);
         
-        // 🚀 關鍵修復：檢查是否有錯誤
-        if (data.success === false || data.error) {
+        lobbyGamiConfig =
+          dashboard.gamification ||
+          dashboardRaw?.gamification ||
+          dashboardRaw?.practice?.gamification ||
+          {};
+        
+        window.gamiConfig = lobbyGamiConfig;
+        updateLobbyGachaRewardLabels();
+
+        if (!dashboardRaw || dashboardRaw.success === false || dashboard.success === false || dashboard.error) {
             alert("⚠️ 查無此帳號或權限不足！");
-            window.location.href = "index.html"; // 強制踢回首頁
+            window.location.href = "index.html";
             return;
         }
-                
-        characterAssets = data.assets;
-        document.getElementById('header-name').innerText = data.profile.name || STUDENT_ID;
-        document.getElementById('header-points').innerText = `${data.profile.points} PTS`;
-        userUnlocked = (data.profile.unlocked || "A001").split(',').map(s => s.trim()).filter(s => s !== "");
-        userEquipped = data.profile.equipped || "A001"; 
+
+        const schoolCode = (() => {
+          const p = new URLSearchParams(window.location.search);
+          if (p.get('school')) return p.get('school');
+          if (String(STUDENT_ID || '').includes('-')) return String(STUDENT_ID).split('-')[0];
+          return 'TEST01';
+        })();
+
+        // 角色資產：先載入安全預設，再合併 Supabase 角色表與學生已擁有角色。
+        characterAssets = {
+          'DEFAULT_MARIAN': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '預設', cost: 0 }
+        };
+
+        function normalizeAvatarAsset(a) {
+          if (!a) return null;
+          const id = a.avatarId || a.avatar_id || a.id;
+          if (!id) return null;
+          return {
+            id,
+            name: a.name || id,
+            img: a.fullImg || a.full_img_url || a.full_img || a.img || '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp',
+            mask: a.mask || a.mask_url || '',
+            rarity: a.rarity || 'N',
+            category: a.category || '一般',
+            cost: Number(a.cost || 0),
+            startTime: a.startTime || a.start_time || null,
+            endTime: a.endTime || a.end_time || null,
+            isActive: a.isActive !== false && a.is_active !== false
+          };
+        }
+
+        function mergeAvatarList(list) {
+          if (!Array.isArray(list)) return;
+          list.forEach(a => {
+            const asset = normalizeAvatarAsset(a);
+            if (!asset) return;
+            characterAssets[asset.id] = asset;
+          });
+        }
+
+        try {
+          const settings = await TappieAPI.adminGetData(schoolCode, 'settings');
+          if (settings && settings.success) {
+            mergeAvatarList(settings.avatars);
+          }
+        } catch (assetErr) {
+          console.warn('Supabase 角色資產載入失敗，使用預設角色:', assetErr);
+        }
+
+        let avatarShop = null;
+        try {
+          if (window.TappieAPI && typeof TappieAPI.getAvatarShop === 'function') {
+            avatarShop = await TappieAPI.getAvatarShop(STUDENT_ID);
+            if (avatarShop && avatarShop.success) {
+              mergeAvatarList(avatarShop.avatars);
+              mergeAvatarList(avatarShop.unlockedAvatars);
+              mergeAvatarList(avatarShop.shop?.available);
+              if (avatarShop.equippedAvatar) mergeAvatarList([avatarShop.equippedAvatar]);
+            }
+          }
+        } catch (shopErr) {
+          console.warn('學生角色資料載入失敗，改用基本角色:', shopErr);
+        }
+
+        document.getElementById('header-name').innerText = dashboard.studentName || STUDENT_ID;
+        document.getElementById('header-points').innerText = `${dashboard.currentPoints || 0} PTS`;
+
+        const allAssetIds = Object.keys(characterAssets);
+        const isDefaultCategory = (category) => {
+          const c = String(category || '').trim().toLowerCase();
+          return c === '預設' || c === 'default' || c === 'preset' || c === 'starter';
+        };
+
+        // DEFAULT_MARIAN 只是舊校區 / 無角色校區的 fallback。
+        // 如果目前校區已經有自己的「預設」角色，就不要把 DEFAULT_MARIAN 塞進學生角色清單。
+        const schoolDefaultId = allAssetIds.find(id => {
+          if (id === 'DEFAULT_MARIAN') return false;
+          return isDefaultCategory(characterAssets[id]?.category);
+        });
+        const firstDefaultId = schoolDefaultId || 'DEFAULT_MARIAN';
+
+        const equippedFromShop = avatarShop?.student?.equippedAvatarId || avatarShop?.student?.equipped_avatar_id || avatarShop?.equippedAvatar?.avatarId || avatarShop?.equippedAvatar?.id;
+        const equippedFromDashboard = dashboardRaw.student?.equippedAvatarId || dashboardRaw.student?.equipped_avatar_id || dashboard.raw?.student?.equippedAvatarId || dashboard.raw?.student?.equipped_avatar_id;
+        userEquipped = equippedFromShop || equippedFromDashboard || firstDefaultId;
+
+        if (schoolDefaultId && userEquipped === 'DEFAULT_MARIAN') {
+          userEquipped = schoolDefaultId;
+        }
+
+        const ownedIds = [];
+        if (Array.isArray(avatarShop?.unlockedAvatarIds)) ownedIds.push(...avatarShop.unlockedAvatarIds);
+        if (Array.isArray(avatarShop?.unlockedAvatars)) {
+          ownedIds.push(...avatarShop.unlockedAvatars.map(a => a.avatarId || a.avatar_id || a.id).filter(Boolean));
+        }
+
+        const ownedIdsForDisplay = schoolDefaultId
+          ? ownedIds.filter(id => id !== 'DEFAULT_MARIAN')
+          : ownedIds;
+
+        // 展示區只顯示真正擁有的角色；活動掉落角色也會出現在 unlockedAvatars / student_avatars。
+        // 若校區已有自己的預設角色，DEFAULT_MARIAN 不再作為 fallback 顯示。
+        userUnlocked = Array.from(new Set([firstDefaultId, userEquipped, ...ownedIdsForDisplay].filter(Boolean)))
+          .filter(id => characterAssets[id])
+          .filter(id => !(schoolDefaultId && id === 'DEFAULT_MARIAN'));
+
+        if (!characterAssets[userEquipped]) {
+          userEquipped = firstDefaultId;
+          if (!userUnlocked.includes(firstDefaultId)) userUnlocked.unshift(firstDefaultId);
+        }
 
         const rarityWeight = { 'UR': 5, 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
         userUnlocked.sort((a, b) => {
           const wA = characterAssets[a] ? (rarityWeight[characterAssets[a].rarity] || 0) : 0;
           const wB = characterAssets[b] ? (rarityWeight[characterAssets[b].rarity] || 0) : 0;
-          return wB - wA; 
+          return wB - wA;
         });
 
         renderCarousel();
-        checkEventStatus();
+
+        // 事件 Boss 仍保留舊系統路徑，Supabase PvP MVP 不依賴它。若舊 GAS 不可用，不能阻斷 Lobby。
+        try { checkEventStatus(); } catch (eventErr) { console.warn('活動狀態略過:', eventErr); }
       } catch (e) {
-        console.error("載入失敗：", e);
+        console.error("Supabase Lobby 載入失敗：", e);
         document.getElementById('hero-name').innerText = "⚠️ 離線預設模式";
         characterAssets = {
-          'A001': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '一般' }, 
+          'DEFAULT_MARIAN': { name: 'Marian 瑪麗安', img: '/assets/Marian%20%E7%91%AA%E9%BA%97%E5%AE%89.webp', rarity: 'N', category: '預設' },
         };
-        userUnlocked = ["A001"];
-        userEquipped = "A001";
+        userUnlocked = ["DEFAULT_MARIAN"];
+        userEquipped = "DEFAULT_MARIAN";
         renderCarousel();
       }
     }
@@ -1026,24 +1163,40 @@
       }
     }
 
-    function equipCurrentCharacter() {
+    async function equipCurrentCharacter() {
       if (currentCenteredId === userEquipped) return;
-      const btn = document.getElementById('equip-btn');
-      btn.innerText = "連線中...";
-      btn.classList.add('is-equipped');
+      if (!currentCenteredId || !characterAssets[currentCenteredId]) return;
 
-      fetch(`${GAS_URL}?action=equip_avatar&id=${STUDENT_ID}&avatarId=${currentCenteredId}`)
-        .then(res => res.json()).then(data => {
-          if(data.success) {
-            userEquipped = currentCenteredId;
-            updateCenterInfo(currentCenteredId); 
-            showToast("裝備成功！");
-          }
-        }).catch(() => {
+      const btn = document.getElementById('equip-btn');
+      const originalText = btn.innerText;
+      btn.innerText = "連線中...";
+      btn.style.pointerEvents = "none";
+
+      try {
+        if (!window.TappieAPI || typeof TappieAPI.equipAvatar !== 'function') {
+          throw new Error('equipAvatar 尚未載入');
+        }
+
+        const data = await TappieAPI.equipAvatar({
+          uid: STUDENT_ID,
+          avatarId: currentCenteredId
+        });
+
+        if (data && data.success) {
           userEquipped = currentCenteredId;
           updateCenterInfo(currentCenteredId);
-          showToast("裝備成功！(離線模式)");
-        });
+          showToast("裝備成功！");
+        } else {
+          throw new Error(data?.message || data?.error || "裝備失敗");
+        }
+      } catch (err) {
+        console.error('equip-avatar failed:', err);
+        btn.innerText = originalText;
+        btn.classList.toggle('is-equipped', currentCenteredId === userEquipped);
+        showToast("裝備失敗，請稍後再試");
+      } finally {
+        btn.style.pointerEvents = "auto";
+      }
     }
 
     // =======================================================
@@ -1066,8 +1219,20 @@
       rarities.forEach(rarity => {
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
-          
-          if (char.category === "限定") {
+
+          // 🛒 商店顯示規則（只修商店，不影響對戰展示/掉落）
+          // 預設：新生自動獲得，不進商店
+          // Ai：只在對戰時出現，不進商店
+          // 一般：可購買
+          // 活動：商店可展示，但只能顯示「活動限定」，不可購買
+          const category = String(char.category || '一般').trim();
+          const categoryKey = category.toLowerCase();
+          const isAiCategory = ['ai', 'a.i.', '機器人', 'ai角色'].includes(categoryKey) || category === 'Ai' || category === 'AI';
+          const isDefaultCategory = ['default', 'preset', 'starter'].includes(categoryKey) || category === '預設' || category === '默认';
+
+          if (isAiCategory || isDefaultCategory) return false;
+
+          if (category === "限定") {
             if (char.endTime) {
               const end = new Date(char.endTime);
               if (now > end) return false; 
@@ -1088,9 +1253,10 @@
 
         items.forEach(([id, char]) => {
           const isOwned = userUnlocked.includes(id);
-          const isLimited = (char.category === "限定");
-          const isEvent = (char.category === "活動"); 
-          const cost = char.cost || 500; 
+          const category = String(char.category || '一般').trim();
+          const isLimited = (category === "限定");
+          const isEvent = (category === "活動"); 
+          const cost = Number(char.cost || 500); 
 
           const cardEl = document.createElement('div');
           cardEl.className = 'shop-card-wrapper' + (isOwned ? ' owned' : '');
@@ -1130,47 +1296,63 @@
           console.log("角色解鎖中...");
           return;
       }
-      
+
+      const char = characterAssets[id] || {};
+      const category = String(char.category || '一般').trim();
+      const categoryKey = category.toLowerCase();
+      const isAiCategory = ['ai', 'a.i.', '機器人', 'ai角色'].includes(categoryKey) || category === 'Ai' || category === 'AI';
+      const isDefaultCategory = ['default', 'preset', 'starter'].includes(categoryKey) || category === '預設' || category === '默认';
+
+      if (isAiCategory || isDefaultCategory) {
+          alert("這個角色不開放兌換。");
+          return;
+      }
+      if (category === "活動") {
+          alert("這是活動限定角色，只能透過活動獲得。");
+          return;
+      }
+
       // 2. 瀏覽器確認視窗
       if (!confirm(`確定要花費 ${cost} 點兌換此角色嗎？`)) return;
-      
+
       // 3. 進入購買狀態：全域上鎖
       isPurchasing = true;
 
-      // 4. 尋找畫面上所有的購買按鈕，將它們全部變灰並鎖定 (避免他跑去點別隻角色)
+      // 4. 尋找畫面上所有的購買按鈕，將它們全部變灰並鎖定
       const allBuyBtns = document.querySelectorAll('.btn-buy');
       allBuyBtns.forEach(btn => {
-          if (!btn.disabled) { // 只改那些原本可以按的
-              btn.dataset.originalText = btn.innerText; // 記住原本的字
+          if (!btn.disabled) {
+              btn.dataset.originalText = btn.innerText;
               btn.innerText = "⏳ 處理中...";
               btn.style.pointerEvents = "none";
               btn.style.filter = "grayscale(1)";
           }
       });
 
-      // 5. 蓋上一層隱形的防護網，徹底阻擋任何可能的觸控操作
+      // 5. 防護網
       const purchaseBlocker = document.createElement('div');
       purchaseBlocker.id = "purchase-blocker";
       purchaseBlocker.style.cssText = "position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); color: #f1c40f; font-size: 24px; font-weight: 900; letter-spacing: 2px;";
       purchaseBlocker.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center;"><div class="spinner" style="width:40px; height:40px; border-width:4px; margin-bottom:15px;"></div>角色解鎖中...</div>`;
       document.body.appendChild(purchaseBlocker);
 
-      // 6. 發送請求給 GAS
-      fetch(`${GAS_URL}?action=purchase_avatar&id=${STUDENT_ID}&avatarId=${id}`)
-        .then(res => res.json())
-        .then(data => {
-          // 解除全域鎖定
-          isPurchasing = false;
-          const blocker = document.getElementById('purchase-blocker');
-          if (blocker) blocker.remove();
+      // 6. Supabase 購買 API
+      (async () => {
+        try {
+          if (!window.TappieAPI || typeof TappieAPI.purchaseAvatar !== 'function') {
+            throw new Error('purchaseAvatar 尚未載入');
+          }
 
-          alert(data.msg);
-          
+          const data = await TappieAPI.purchaseAvatar({
+            uid: STUDENT_ID,
+            avatarId: id
+          });
+
+          alert(data.message || data.msg || (data.success ? "兌換成功！" : "兌換失敗"));
+
           if (data.success) {
-              // 成功的話直接重整畫面
               location.reload(); 
           } else {
-              // 如果失敗 (例如點數不足)，恢復所有按鈕的狀態
               allBuyBtns.forEach(btn => {
                   if (btn.dataset.originalText) {
                       btn.innerText = btn.dataset.originalText;
@@ -1179,15 +1361,9 @@
                   }
               });
           }
-        })
-        .catch(() => {
-          isPurchasing = false;
-          const blocker = document.getElementById('purchase-blocker');
-          if (blocker) blocker.remove();
-
-          alert("連線失敗，請稍後再試。");
-          
-          // 恢復按鈕狀態
+        } catch (err) {
+          console.error('purchase-avatar failed:', err);
+          alert("兌換失敗：" + String(err.message || err));
           allBuyBtns.forEach(btn => {
               if (btn.dataset.originalText) {
                   btn.innerText = btn.dataset.originalText;
@@ -1195,7 +1371,12 @@
                   btn.style.filter = "none";
               }
           });
-        });
+        } finally {
+          isPurchasing = false;
+          const blocker = document.getElementById('purchase-blocker');
+          if (blocker) blocker.remove();
+        }
+      })();
     }
 
     // =======================================================
@@ -1468,21 +1649,32 @@
     }
 
     function cancelAiChallenge() {
-      if(aiTimerInterval) { 
+      // ✅ 取消舊版 GAS 倒數 timer
+      if (typeof aiTimerInterval !== 'undefined' && aiTimerInterval) { 
         clearInterval(aiTimerInterval); 
         aiTimerInterval = null; 
       }
-      document.getElementById('ai-countdown-overlay').style.display = 'none';
-
-      // 🚀 關鍵修復：玩家手動取消倒數時，務必解除活動按鈕的點擊封印！
+    
+      // ✅ 取消新版 Supabase AI / Boss 倒數 timer
+      if (window.aiTimerInterval) {
+        clearInterval(window.aiTimerInterval);
+        window.aiTimerInterval = null;
+      }
+    
+      // ✅ 加一道取消旗標，避免 async setInterval 已經進入最後一秒時仍繼續送出
+      window.aiTeleportCancelled = true;
+    
+      const overlay = document.getElementById('ai-countdown-overlay');
+      if (overlay) overlay.style.display = 'none';
+    
       const eventBanner = document.querySelector('.event-banner');
       if (eventBanner) {
-          eventBanner.style.pointerEvents = 'auto';
+        eventBanner.style.pointerEvents = 'auto';
       }
     }
 
     function jumpToBattle(roomId) {
-      const targetUrl = `${GITHUB_APP_URL}arena.html?id=${STUDENT_ID}&mode=battle&roomId=${roomId}`;
+      const targetUrl = `./battle.html?id=${encodeURIComponent(STUDENT_ID)}&roomCode=${encodeURIComponent(roomId)}&v=bav2`;
       window.location.href = targetUrl;
     }
     
@@ -1590,7 +1782,7 @@
              
              // 根據是誰沒了來顯示不同的專屬文字
              if (!hasVoice) {
-                 createBtn.innerText = "🎙️ 語音額度耗盡";
+                 createBtn.innerText = `🎙️ 今日口說 ${globalUserStatus.count}/${globalUserStatus.limit}`;
              } else {
                  createBtn.innerText = "🔋 體力耗盡";
              }
@@ -1678,10 +1870,15 @@
     let currentEventWords = []; 
 
     function checkEventStatus() {
+      const eventSection = document.getElementById('event-section');
       const eventBanner = document.querySelector('.event-banner');
       const vocabBtn = document.getElementById('event-vocab-btn');
-      if (!eventBanner) return; 
+      if (!eventBanner) {
+        if (eventSection) eventSection.style.display = 'none';
+        return;
+      }
 
+      if (eventSection) eventSection.style.display = 'none';
       const overlay = eventBanner.querySelector('.event-overlay');
       if (overlay) overlay.innerHTML = '<div class="locked-tag" style="background: rgba(0,0,0,0.8); color: #fff; border-color: #fff;">⏳ 檢查活動中...</div>';
       eventBanner.style.pointerEvents = 'none';
@@ -1703,6 +1900,7 @@
                 overlay.innerHTML = `<div class="locked-tag" style="background: rgba(142,68,173,0.9); color: white; border-color: white; box-shadow: 0 0 20px rgba(142,68,173,0.8);">✨ ${data.eventName} ✨</div>` + dateHtml;
             }
             
+            if (eventSection) eventSection.style.display = 'block';
             eventBanner.style.pointerEvents = 'auto';
             eventBanner.style.opacity = '1';
             eventBanner.onclick = () => startEvent(data.eventCode, data.eventAvatar);
@@ -1711,13 +1909,19 @@
             if (vocabBtn) vocabBtn.style.display = 'block';
 
           } else {
+            if (eventSection) eventSection.style.display = 'none';
             eventBanner.style.backgroundImage = `url('/assets/event-bg.webp')`;
             if (overlay) overlay.innerHTML = `<div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 現在不開放</div>`;
             eventBanner.style.opacity = '0.5';
             eventBanner.style.pointerEvents = 'none';
+            eventBanner.onclick = null;
+            currentEventWords = [];
             if (vocabBtn) vocabBtn.style.display = 'none';
           }
         }).catch(err => {
+          if (eventSection) eventSection.style.display = 'none';
+          currentEventWords = [];
+          if (vocabBtn) vocabBtn.style.display = 'none';
           if (overlay) overlay.innerHTML = `<div class="locked-tag">⚠️ 連線失敗</div>`;
         });
     }
@@ -1833,6 +2037,329 @@
       }, 1000);
     }
 
+
+
+    // =======================================================
+    // ✅ Supabase Lobby Level Patch v2
+    // 1v1 選級數：classCode = A1/A2/B1...，後端從該級數所有 active 單元抽 10 題
+    // =======================================================
+    (function installSupabaseLobbyLevelPatch(){
+      const SUPA_SCHOOL_CODE = (() => {
+        const p = new URLSearchParams(window.location.search);
+        if (p.get('school')) return p.get('school');
+        if (String(STUDENT_ID || '').includes('-')) return String(STUDENT_ID).split('-')[0];
+        return 'TEST01';
+      })();
+
+      function getSelectedBattleClassCode() {
+        return (document.getElementById('pvp-level')?.value || '').trim();
+      }
+
+      function getBattleClassListFromTasks(data) {
+        const set = new Set();
+        const words = data?.words || [];
+        words.forEach(item => {
+          const code = String(item.classId || item.classCode || item.class_code || '').trim();
+          if (!code) return;
+          if (code.toUpperCase().includes('EVENT')) return;
+          set.add(code);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+      }
+
+      window.loadAvailableClasses = async function loadAvailableClassesSupabase() {
+        const selector = document.getElementById('dynamic-difficulty-selector');
+        const levelInput = document.getElementById('pvp-level');
+        if (!selector || !levelInput) return;
+
+        selector.innerHTML = `<div style="color:#a4b0be;font-size:14px;font-weight:bold;padding:20px;">🔄 正在載入 Supabase 戰場級數...</div>`;
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+          const data = await TappieAPI.adminGetData(SUPA_SCHOOL_CODE, 'tasks');
+          if (!data?.success) throw new Error(data?.message || data?.error || 'admin-get-data failed');
+
+          const validClasses = getBattleClassListFromTasks(data);
+
+          if (validClasses.length === 0) {
+            selector.innerHTML = `<div style="color:#e74c3c;font-size:14px;font-weight:bold;padding:20px;">⚠️ Supabase 目前沒有可用級數</div>`;
+            levelInput.value = '';
+            return;
+          }
+
+          selector.innerHTML = '';
+          validClasses.forEach((classCode, index) => {
+            const btn = document.createElement('div');
+            btn.className = `diff-btn ${index === 0 ? 'active' : ''}`;
+            btn.innerText = classCode;
+            btn.onclick = function() {
+              selectDifficulty(this, classCode);
+              refreshLobby();
+            };
+            selector.appendChild(btn);
+          });
+
+          levelInput.value = validClasses[0];
+        } catch (err) {
+          console.error('Supabase 戰場級數載入失敗:', err);
+          selector.innerHTML = `<div style="color:#e74c3c;font-size:14px;font-weight:bold;padding:20px;">🚨 連線失敗，請重試<br><span style="font-size:11px;color:#95a5a6;">${String(err.message || err)}</span></div>`;
+          levelInput.value = '';
+        }
+      };
+
+      window.goToBattleRoom = async function goToBattleRoomSupabase() {
+        const btn = document.querySelector('.btn-battle');
+        const originalText = btn ? btn.innerHTML : '';
+        if (btn) {
+          btn.innerHTML = '📡 連線 Supabase...';
+          btn.style.pointerEvents = 'none';
+        }
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+
+          const dashboard = await TappieAPI.getDashboard(STUDENT_ID);
+          const selectedClassCode = getSelectedBattleClassCode();
+          const lobby = await TappieAPI.getLobbyData(STUDENT_ID, selectedClassCode);
+
+          if (!dashboard?.success) throw new Error(dashboard?.message || dashboard?.error || 'dashboard failed');
+          if (!lobby?.success) throw new Error(lobby?.message || lobby?.error || 'lobby failed');
+
+          globalUserStatus = {
+            canPlay: dashboard.usage?.canPracticeVoice !== false,
+            count: dashboard.usage?.voiceCount ?? 0,
+            limit: dashboard.usage?.voiceLimit ?? 80,
+            canPlayBattle: lobby.usage?.canCreateBattle !== false,
+            battleCount: lobby.usage?.battleCount ?? 0,
+            battleLimit: lobby.usage?.battleLimit ?? 2,
+            rawDashboard: dashboard,
+            rawLobby: lobby
+          };
+
+          renderStaminaUI();
+
+          document.getElementById('battle-view').classList.add('active');
+          document.getElementById('armory-view').classList.add('slide-out');
+
+          refreshLobby();
+          if (lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+          lobbyRefreshTimer = setInterval(refreshLobby, 4000);
+        } catch (err) {
+          console.error('Supabase 戰場入口失敗:', err);
+          alert('⚠️ 無法取得戰場資料：' + String(err.message || err));
+        } finally {
+          if (btn) {
+            btn.innerHTML = originalText;
+            btn.style.pointerEvents = 'auto';
+          }
+        }
+      };
+
+      window.refreshLobby = async function refreshLobbySupabase() {
+        const container = document.getElementById('pvp-room-list');
+        const signal = document.getElementById('radar-signal-count');
+        if (!container) return;
+
+        const classCode = getSelectedBattleClassCode();
+
+        if (!classCode) {
+          container.innerHTML = `
+            <div class="radar-container">
+              <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">請先選擇戰場級數</p>
+            </div>`;
+          if (signal) signal.innerText = '0 個信號';
+          return;
+        }
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+          const data = await TappieAPI.getLobbyData(STUDENT_ID, classCode);
+          if (!data?.success) throw new Error(data?.message || data?.error || 'get-lobby-data failed');
+
+          // 同步更新體力狀態，避免建房前用舊資料判斷
+          if (globalUserStatus) {
+            globalUserStatus.canPlayBattle = data.usage?.canCreateBattle !== false;
+            globalUserStatus.battleCount = data.usage?.battleCount ?? globalUserStatus.battleCount;
+            globalUserStatus.battleLimit = data.usage?.battleLimit ?? globalUserStatus.battleLimit;
+            renderStaminaUI();
+          }
+
+          const rooms = data.rooms || [];
+          if (signal) signal.innerText = `${rooms.length} 個信號`;
+
+          if (rooms.length === 0) {
+            container.innerHTML = `
+              <div class="radar-container">
+                <div class="radar-beam"></div>
+                <div class="radar-beam" style="animation-delay:1s;"></div>
+                <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">正在掃描 ${classCode} 戰場...</p>
+              </div>`;
+            return;
+          }
+
+          const now = Date.now();
+          container.innerHTML = rooms.map(room => {
+            const isMyRoom = !!room.isOwnRoom;
+            const remain = Math.max(0, Math.floor((new Date(room.expiresAt).getTime() - now) / 1000));
+            const btnHtml = isMyRoom
+              ? `<button class="btn-join" style="background:rgba(255,255,255,0.1);color:#a4b0be;cursor:not-allowed;box-shadow:none;border:1px solid rgba(255,255,255,0.2);" disabled>⏳ 等待中</button>`
+              : `<button class="btn-join" onclick="joinBattle('${room.roomCode}')">⚔️ 加入</button>`;
+
+            return `
+              <div class="room-item" style="${isMyRoom ? 'border-left-color:#2ecc71;' : ''}">
+                <div class="room-info">
+                  <span class="room-name">${room.hostName || '未知玩家'} 的 ${room.classCode || classCode} 戰場</span>
+                  <span class="room-meta">級數: ${room.classCode || classCode}｜題庫: ${room.unitName || '全單元挑戰'}｜⏱ ${remain}s</span>
+                </div>
+                ${btnHtml}
+              </div>`;
+          }).join('');
+        } catch (err) {
+          console.error('Supabase 掃描戰場失敗:', err);
+          if (signal) signal.innerText = '0 個信號';
+          container.innerHTML = `
+            <div class="radar-container">
+              <p style="font-size:15px;margin-top:25px;color:#e74c3c;font-weight:900;letter-spacing:2px;line-height:1.6;">⚠️ 戰場掃描失敗<br><span style="font-size:12px;color:#95a5a6;">${String(err.message || err)}</span></p>
+            </div>`;
+        }
+      };
+
+      window.createBattleRoom = async function createBattleRoomSupabase() {
+        if (!checkBattleLimits()) return;
+
+        const classCode = getSelectedBattleClassCode();
+        if (!classCode) {
+          alert('請先選擇 1v1 戰場級數，例如 A1');
+          return;
+        }
+
+        const createBtn = document.getElementById('create-room-btn');
+        createBtn.innerText = '⏳ 建立中...';
+        createBtn.style.pointerEvents = 'none';
+        createBtn.style.filter = 'grayscale(1)';
+
+        try {
+          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
+          const data = await TappieAPI.createBattleRoom({
+            uid: STUDENT_ID,
+            classCode,
+            battleType: 'pvp',
+            rewardPoints: 50
+          });
+
+          if (!data?.success) throw new Error(data?.message || data?.error || 'create-battle-room failed');
+
+          currentRoomId = data.room?.roomCode;
+          createBtn.innerText = '❌ 取消戰場';
+          createBtn.style.pointerEvents = 'auto';
+          createBtn.style.filter = 'hue-rotate(320deg)';
+          createBtn.onclick = () => cancelMyRoom();
+
+          showToast(`⚔️ ${classCode} 戰場已建立`);
+          console.log('Battle quiz source:', data.quizSource, data.quizPreview);
+
+          if (battleStatusTimer) clearInterval(battleStatusTimer);
+          battleStatusTimer = setInterval(checkRoomStatus, 2500);
+          if (roomExpireTimer) clearTimeout(roomExpireTimer);
+          roomExpireTimer = setTimeout(() => { if (currentRoomId) cancelMyRoom(true); }, 120000);
+
+          // 更新體力數字
+          if (globalUserStatus && data.usage?.ok) {
+            globalUserStatus.battleCount = data.usage.count ?? globalUserStatus.battleCount;
+            globalUserStatus.battleLimit = data.usage.limit ?? globalUserStatus.battleLimit;
+            globalUserStatus.canPlayBattle = globalUserStatus.battleCount < globalUserStatus.battleLimit;
+            renderStaminaUI();
+          }
+
+          refreshLobby();
+        } catch (err) {
+          console.error('Supabase 建立戰場失敗:', err);
+          alert('⚠️ 建立戰場失敗：' + String(err.message || err));
+          createBtn.innerText = '建立 1v1 戰場';
+          createBtn.style.pointerEvents = 'auto';
+          createBtn.style.filter = 'none';
+          createBtn.onclick = () => createBattleRoom();
+        }
+      };
+
+      window.cancelMyRoom = async function cancelMyRoomSupabase(isTimeout = false) {
+        if (currentRoomId && window.TappieAPI) {
+          try {
+            await TappieAPI.cancelBattleRoom({
+              uid: STUDENT_ID,
+              roomCode: currentRoomId,
+              reason: isTimeout ? 'lobby_timeout' : 'player_cancelled'
+            });
+          } catch (err) {
+            console.warn('取消戰場失敗:', err);
+          }
+        }
+
+        if (battleStatusTimer) clearInterval(battleStatusTimer);
+        if (roomExpireTimer) clearTimeout(roomExpireTimer);
+        currentRoomId = null;
+
+        const createBtn = document.getElementById('create-room-btn');
+        createBtn.innerText = '建立 1v1 戰場';
+        createBtn.style.filter = 'none';
+        createBtn.style.pointerEvents = 'auto';
+        createBtn.onclick = () => createBattleRoom();
+
+        if (isTimeout) alert('已超過 2 分鐘無人挑戰，戰場自動關閉。');
+        refreshLobby();
+      };
+
+      window.joinBattle = async function joinBattleSupabase(roomCode) {
+        if (!checkBattleLimits()) return;
+
+        if (currentRoomId) {
+          await cancelMyRoom(false);
+        }
+
+        if (lobbyRefreshTimer) clearInterval(lobbyRefreshTimer);
+        const list = document.getElementById('pvp-room-list');
+        if (list) list.innerHTML = '<p style="color:var(--gold);text-align:center;font-weight:bold;letter-spacing:2px;margin-top:20px;">🔗 正在建立 Supabase 連線...</p>';
+
+        try {
+          const data = await TappieAPI.joinBattleRoom({
+            uid: STUDENT_ID,
+            roomCode
+          });
+          if (!data?.success) throw new Error(data?.message || data?.error || 'join-battle-room failed');
+          jumpToBattle(data.room?.roomCode || roomCode);
+        } catch (err) {
+          console.error('加入 Supabase 戰場失敗:', err);
+          alert('戰場已關閉、滿員，或無法加入：' + String(err.message || err));
+          refreshLobby();
+          lobbyRefreshTimer = setInterval(refreshLobby, 4000);
+        }
+      };
+
+      window.checkRoomStatus = async function checkRoomStatusSupabase() {
+        if (!currentRoomId || !window.TappieAPI) return;
+        try {
+          const data = await TappieAPI.getBattleStatus(STUDENT_ID, { roomCode: currentRoomId });
+          if (!data?.success) return;
+          if (data.room?.status === 'ready' || data.room?.status === 'active') {
+            if (battleStatusTimer) clearInterval(battleStatusTimer);
+            jumpToBattle(currentRoomId);
+          }
+        } catch (err) {
+          console.warn('檢查戰場狀態失敗:', err);
+        }
+      };
+
+      window.jumpToBattle = function jumpToBattleSupabase(roomCode) {
+        const targetUrl = `./battle.html?id=${encodeURIComponent(STUDENT_ID)}&roomCode=${encodeURIComponent(roomCode)}&v=bav2`;
+        window.location.href = targetUrl;
+      };
+
+      window.onload = () => {
+        initLobby();
+        loadAvailableClasses();
+      };
+    })();
+
     // 🚀 靜置自動登出
     let idleTimer;
     const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = "index.html"; }, 180000); };
@@ -1902,7 +2429,7 @@
               if (adminAuth) {
                   window.location.replace(`admin.html?id=${extractedUid}`);
               } else {
-                  window.location.href = `dashboard.html?id=${extractedUid}`;
+                  window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
               }
           } else {
               // 🌟 狀況 B：這是舊版純數字卡，需要連線去問 GAS 大腦
@@ -1934,7 +2461,7 @@
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `dashboard.html?id=${data.uid}`;
+                          window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
                       }
                   } 
                   else { 
@@ -1952,5 +2479,269 @@
     })();
     
   </script>
+
+    <!-- =======================================================
+         ✅ Supabase AI Battle Migration MVP Patch
+         保留原本初階Ai / 中階Ai / 高階Ai / 活動Boss 名稱，不重新命名。
+         ======================================================= -->
+    <script>
+    (function installSupabaseAiBattlePatch(){
+      function getSelectedClassCodeForAi(){
+        const levelInput = document.getElementById('pvp-level');
+        if (levelInput && levelInput.value) return levelInput.value.trim();
+        if (window.globalUserStatus?.rawDashboard?.student?.classCode) return window.globalUserStatus.rawDashboard.student.classCode;
+        return '';
+      }
+
+      function clearOwnPvpRoomIfAny(){
+        if (!window.currentRoomId || !window.TappieAPI) return Promise.resolve();
+        const room = window.currentRoomId;
+        window.currentRoomId = null;
+        return TappieAPI.cancelBattleRoom({ uid: STUDENT_ID, roomCode: room, reason: 'switch_to_ai_battle' }).catch(()=>{});
+      }
+
+      function jumpToAiBattle(roomCode, level, extraQuery=''){
+        const qs = new URLSearchParams({
+          id: STUDENT_ID,
+          roomCode: roomCode,
+          mode: 'ai',
+          aiLevel: level,
+          v: 'ai-mvp1'
+        });
+        if (extraQuery) {
+          const extra = new URLSearchParams(extraQuery.replace(/^\?/, ''));
+          extra.forEach((v,k)=>qs.set(k,v));
+        }
+        window.location.href = `./battle.html?${qs.toString()}`;
+      }
+
+      window.startAiChallenge = async function startAiChallengeSupabase(level){
+        if (typeof checkBattleLimits === 'function' && !checkBattleLimits()) return;
+        if (window.aiTimerInterval) return;
+
+        await clearOwnPvpRoomIfAny();
+
+        const overlay = document.getElementById('ai-countdown-overlay');
+        if (overlay) overlay.style.display = 'flex';
+
+        let count = 5;
+        const aiTimerEl = document.getElementById('ai-timer');
+        const aiMsgEl = document.getElementById('ai-msg');
+        if (aiTimerEl) aiTimerEl.innerText = count;
+        if (aiMsgEl) aiMsgEl.innerText = `連線至 ${level}...`;
+        window.aiTeleportCancelled = false;
+
+        window.aiTimerInterval = setInterval(async () => {
+          count--;
+          if (aiTimerEl) aiTimerEl.innerText = count;
+          if (count > 0) return;
+        
+          clearInterval(window.aiTimerInterval);
+          window.aiTimerInterval = null;
+        
+          if (window.aiTeleportCancelled) return;
+        
+          if (aiMsgEl) aiMsgEl.innerText = '🚀 傳送中...';
+
+          try {
+            if (!window.TappieAPI || !TappieAPI.createAiBattleRoom) throw new Error('TappieAPI.createAiBattleRoom 尚未載入');
+            const classCode = getSelectedClassCodeForAi();
+            if (!classCode) throw new Error('請先選擇級數，例如 A1');
+
+            const data = await TappieAPI.createAiBattleRoom({
+              uid: STUDENT_ID,
+              classCode,
+              level,
+              battleType: 'ai'
+            });
+
+            if (!data?.success) throw new Error(data?.message || data?.error || 'create-ai-battle-room failed');
+            jumpToAiBattle(data.room?.roomCode, level);
+          } catch (err) {
+            console.error('Supabase AI 對戰建立失敗:', err);
+            alert('AI 對戰連線失敗：' + String(err.message || err));
+            if (typeof cancelAiChallenge === 'function') cancelAiChallenge();
+            else if (overlay) overlay.style.display = 'none';
+          }
+        }, 1000);
+      };
+
+      window.startEventChallenge = async function startEventChallengeSupabase(eventClassCode, eventAvatarId){
+        if (typeof checkBattleLimits === 'function' && !checkBattleLimits()) return;
+        if (window.aiTimerInterval) return;
+
+        await clearOwnPvpRoomIfAny();
+
+        const overlay = document.getElementById('ai-countdown-overlay');
+        if (overlay) overlay.style.display = 'flex';
+        let count = 5;
+        const aiTimerEl = document.getElementById('ai-timer');
+        const aiMsgEl = document.getElementById('ai-msg');
+        if (aiTimerEl) aiTimerEl.innerText = count;
+        if (aiMsgEl) aiMsgEl.innerText = '連線至 突發事件...';
+
+        window.aiTimerInterval = setInterval(async () => {
+          count--;
+          if (aiTimerEl) aiTimerEl.innerText = count;
+          if (count > 0) return;
+
+          clearInterval(window.aiTimerInterval);
+          window.aiTimerInterval = null;
+          if (aiMsgEl) aiMsgEl.innerText = '🚀 傳送中...';
+
+          try {
+            if (!window.TappieAPI || !TappieAPI.createAiBattleRoom) throw new Error('TappieAPI.createAiBattleRoom 尚未載入');
+            const data = await TappieAPI.createAiBattleRoom({
+              uid: STUDENT_ID,
+              classCode: eventClassCode,
+              level: '活動Boss',
+              battleType: 'boss',
+              eventAvatar: eventAvatarId
+            });
+            if (!data?.success) throw new Error(data?.message || data?.error || 'create-ai-battle-room failed');
+            jumpToAiBattle(data.room?.roomCode, '活動Boss', `isEvent=true&eventAvatar=${encodeURIComponent(eventAvatarId || '')}`);
+          } catch (err) {
+            console.error('Supabase 活動 Boss 建立失敗:', err);
+            alert('活動載入失敗：' + String(err.message || err));
+            if (typeof cancelAiChallenge === 'function') cancelAiChallenge();
+            else if (overlay) overlay.style.display = 'none';
+          }
+        }, 1000);
+      };
+
+
+      // =======================================================
+      // ✅ Supabase Event Boss MVP Patch
+      // 讀 Supabase unit_schedules.is_event + event_avatar_id，不再依賴 GAS get_current_event。
+      // =======================================================
+      checkEventStatus = async function checkEventStatusSupabase(){
+        const eventSection = document.getElementById('event-section');
+        const eventBanner = document.querySelector('.event-banner');
+        const vocabBtn = document.getElementById('event-vocab-btn');
+        if (!eventBanner) {
+          if (eventSection) eventSection.style.display = 'none';
+          return;
+        }
+        if (eventSection) eventSection.style.display = 'none';
+        const overlay = eventBanner.querySelector('.event-overlay');
+        if (overlay) overlay.innerHTML = '<div class="locked-tag" style="background: rgba(0,0,0,0.8); color: #fff; border-color: #fff;">⏳ 檢查活動中...</div>';
+        eventBanner.style.pointerEvents = 'none';
+
+        try {
+          if (!window.TappieAPI || !TappieAPI.getCurrentEvent) throw new Error('TappieAPI.getCurrentEvent 尚未載入');
+          const data = await TappieAPI.getCurrentEvent(STUDENT_ID);
+          if (data && data.status === 'success') {
+            let bossImg = '/assets/event-bg.webp';
+            if (data.eventAvatarData && data.eventAvatarData.full_img_url) bossImg = data.eventAvatarData.full_img_url;
+            else if (data.eventAvatar && window.characterAssets && characterAssets[data.eventAvatar]) bossImg = characterAssets[data.eventAvatar].img;
+
+            eventBanner.style.backgroundImage = `url('${bossImg}')`;
+            const dateHtml = data.endDate ? `<div style="position:absolute; bottom:10px; right:15px; background:rgba(0,0,0,0.8); color:#f1c40f; font-size:11px; padding:6px 12px; border-radius:12px; border:1px solid rgba(241,196,15,0.5); font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.4);">⏳ 截止: ${data.endDate}</div>` : '';
+            if (overlay) overlay.innerHTML = `<div class="locked-tag" style="background: rgba(142,68,173,0.9); color: white; border-color: white; box-shadow: 0 0 20px rgba(142,68,173,0.8);">✨ ${data.eventName || '活動Boss'} ✨</div>` + dateHtml;
+            if (eventSection) eventSection.style.display = 'block';
+            eventBanner.style.pointerEvents = 'auto';
+            eventBanner.style.opacity = '1';
+            eventBanner.onclick = () => startEvent(data.eventCode, data.eventAvatar, data.eventUnitId);
+
+            if (Array.isArray(data.words)) currentEventWords = data.words;
+            if (vocabBtn) vocabBtn.style.display = 'block';
+          } else {
+            if (eventSection) eventSection.style.display = 'none';
+            eventBanner.style.backgroundImage = `url('/assets/event-bg.webp')`;
+            if (overlay) overlay.innerHTML = `<div class="locked-tag" style="color: #bdc3c7; border-color: #bdc3c7;">🔒 現在不開放</div>`;
+            eventBanner.style.opacity = '0.5';
+            eventBanner.style.pointerEvents = 'none';
+            eventBanner.onclick = null;
+            currentEventWords = [];
+            if (vocabBtn) vocabBtn.style.display = 'none';
+          }
+        } catch (err) {
+          console.warn('Supabase 活動狀態載入失敗:', err);
+          if (eventSection) eventSection.style.display = 'none';
+          currentEventWords = [];
+          if (overlay) overlay.innerHTML = `<div class="locked-tag">⚠️ 連線失敗</div>`;
+          eventBanner.style.opacity = '0.5';
+          eventBanner.style.pointerEvents = 'none';
+          if (vocabBtn) vocabBtn.style.display = 'none';
+        }
+      };
+
+      startEvent = async function startEventSupabase(eventClassCode, eventAvatarId, eventUnitId){
+        if (typeof checkBattleLimits === 'function' && !checkBattleLimits()) return;
+        if (window.aiTimerInterval) return;
+        await clearOwnPvpRoomIfAny();
+
+        const eventBanner = document.querySelector('.event-banner');
+        if (eventBanner) eventBanner.style.pointerEvents = 'none';
+        const overlay = document.getElementById('ai-countdown-overlay');
+        if (overlay) overlay.style.display = 'flex';
+        let count = 5;
+        const aiTimerEl = document.getElementById('ai-timer');
+        const aiMsgEl = document.getElementById('ai-msg');
+        if (aiTimerEl) aiTimerEl.innerText = count;
+        if (aiMsgEl) aiMsgEl.innerText = '連線至 活動Boss...';
+        window.aiTeleportCancelled = false;
+
+        window.aiTimerInterval = setInterval(async () => {
+          count--;
+          if (aiTimerEl) aiTimerEl.innerText = count;
+          if (count > 0) return;
+        
+          clearInterval(window.aiTimerInterval);
+          window.aiTimerInterval = null;
+        
+          if (window.aiTeleportCancelled) return;
+        
+          if (aiMsgEl) aiMsgEl.innerText = '🚀 傳送中...';
+
+          try {
+            if (!window.TappieAPI || !TappieAPI.createAiBattleRoom) throw new Error('TappieAPI.createAiBattleRoom 尚未載入');
+            const data = await TappieAPI.createAiBattleRoom({
+              uid: STUDENT_ID,
+              classCode: eventClassCode,
+              level: '活動Boss',
+              battleType: 'boss',
+              eventAvatar: eventAvatarId || '',
+              eventUnitId: eventUnitId || ''
+            });
+            if (!data?.success) throw new Error(data?.message || data?.error || 'create-ai-battle-room failed');
+            jumpToAiBattle(data.room?.roomCode, '活動Boss', `isEvent=true&eventAvatar=${encodeURIComponent(eventAvatarId || '')}`);
+          } catch (err) {
+            console.error('Supabase 活動 Boss 建立失敗:', err);
+            alert('活動載入失敗：' + String(err.message || err));
+            if (typeof cancelAiChallenge === 'function') cancelAiChallenge();
+            else if (overlay) overlay.style.display = 'none';
+            if (eventBanner) eventBanner.style.pointerEvents = 'auto';
+          }
+        }, 1000);
+      };
+
+    })();
+    
+
+  // 🔊 精修：第一次觸控時解除 iOS/Chrome 音訊鎖。不主動播放，只負責 unlock/resume，避免干擾既有流程。
+  (function setupTappieAudioUnlock(){
+    if (window.__tappieAudioUnlockInstalled) return;
+    window.__tappieAudioUnlockInstalled = true;
+    const unlock = async () => {
+      try {
+        if (window.GlobalAudio) {
+          if (typeof GlobalAudio.unlock === 'function') await GlobalAudio.unlock();
+          if (typeof GlobalAudio.resume === 'function') await GlobalAudio.resume();
+          if (typeof GlobalAudio.ensureReady === 'function') await GlobalAudio.ensureReady();
+        }
+        if (window.sysAudioCtx && typeof window.sysAudioCtx.resume === 'function') {
+          await window.sysAudioCtx.resume();
+        }
+      } catch (e) {
+        console.warn('Audio unlock skipped:', e);
+      }
+    };
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('touchstart', unlock, { once: true, passive: true });
+  })();
+
+</script>
+
 </body>
 </html>

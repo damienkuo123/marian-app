@@ -31,24 +31,40 @@
     <h2>讀取卡片中...</h2>
   </div>
 
+  <script src="./tappie-api.js"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const uid = urlParams.get('uid'); 
-
-    // 🚀 核心大絕招：去系統記憶區檢查，這台手機有沒有登入過管理員？
+    const uid = urlParams.get('uid') || urlParams.get('id');
+    const cardId = urlParams.get('cardId') || urlParams.get('cardid');
     const adminAuth = localStorage.getItem('tappie_admin_key');
 
-    if (uid) {
-      if (adminAuth) {
-          // 👨‍🏫 如果有鑰匙，代表是老師的手機感應的，瞬間帶回中控台加扣分！
-          window.location.replace(`/admin.html?id=${uid}`);
-      } else {
-          // 🧑‍🎓 如果沒鑰匙，代表是家長/學生的手機感應的，帶去前台主頁！
-          window.location.replace(`/dashboard.html?id=${uid}`);
-      }
-    } else {
-      document.body.innerHTML = "<h2>❌ 無效的卡片，請洽詢櫃檯老師。</h2>";
+    function go(uidValue) {
+      if (adminAuth) window.location.replace(`/admin.html?id=${encodeURIComponent(uidValue)}`);
+      else window.location.replace(`/dashboard.html?id=${encodeURIComponent(uidValue)}`);
     }
+
+    async function initTap() {
+      try {
+        if (uid) {
+          const result = await TappieAPI.resolveStudentByUid(uid);
+          go(result.uid || uid);
+          return;
+        }
+
+        if (cardId) {
+          const result = await TappieAPI.resolveStudentByCard(cardId);
+          go(result.uid);
+          return;
+        }
+
+        document.body.innerHTML = "<h2>❌ 無效的卡片，請洽詢櫃檯老師。</h2>";
+      } catch (err) {
+        console.error(err);
+        document.body.innerHTML = `<h2>❌ ${err.message || '查無此卡片'}</h2>`;
+      }
+    }
+
+    initTap();
   </script>
 </body>
 </html>

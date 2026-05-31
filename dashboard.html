@@ -17,6 +17,7 @@
   <script src="global-audio.js"></script>
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
+  <script src="./tappie-api.js?v=20260522-micro-polish-v2"></script>
 
   <style>
     :root { 
@@ -726,17 +727,77 @@
         window.location.replace(`admin.html?id=${STUDENT_ID}`);
     }
 
+
+    // =======================================================
+    // 🎮 Supabase Gamification / Dashboard Overlay Helper
+    // - 不取代 get-dashboard 主流程，只覆寫與 gami 相關的顯示資料
+    // =======================================================
+    function normalizeTappieGamiConfig(raw) {
+      const cfg = raw || {};
+      const daily = cfg.dailyChallenge || {};
+      const tiers = Array.isArray(daily.tiers) ? daily.tiers : [];
+      const normalizedTiers = tiers
+        .map(t => ({
+          min: Number(t.min ?? t.score ?? 0),
+          pts: Number(t.pts ?? t.points ?? 0)
+        }))
+        .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts))
+        .sort((a, b) => b.min - a.min);
+
+      return {
+        ...cfg,
+        dailyChallenge: {
+          ...daily,
+          passScore: Number(daily.passScore ?? daily.pass_score ?? 60),
+          tiers: normalizedTiers.length ? normalizedTiers : [
+            { min: 80, pts: 30 },
+            { min: 70, pts: 20 },
+            { min: 60, pts: 10 }
+          ]
+        },
+        leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30]
+      };
+    }
+
+    async function fetchDashboardGamiOverlay(uid) {
+      try {
+        const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+          ? TappieAPI.supabaseBaseUrl
+          : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+        const res = await fetch(`${base}/get-dashboard-gami-overlay?uid=${encodeURIComponent(uid)}&t=${Date.now()}`);
+        const data = await res.json();
+        if (!data || !data.success) throw new Error(data?.message || data?.error || 'get-dashboard-gami-overlay failed');
+        return data;
+      } catch (err) {
+        console.warn('Dashboard gami overlay 載入失敗，沿用原本資料：', err);
+        return null;
+      }
+    }
+
     window.onload = () => {
       if (!STUDENT_ID) { alert("找不到學生 ID，請重新刷卡！"); logoutToPortal(); return; }
 
-      fetch(`${GAS_URL}?action=get_dashboard_data&id=${STUDENT_ID}`)
-        .then(res => res.json())
-        .then(data => {
+      TappieAPI.getDashboard(STUDENT_ID)
+        .then(async rawData => {
+          const data = TappieAPI.toLegacyDashboard(rawData);
           // 🚀 關鍵修復：檢查後端是否回報錯誤（例如：沒這間校區、沒這個學號）
           if (data.success === false || data.error) {
               alert("⚠️ 查無此帳號！請確認學生代號或校區代碼是否正確。");
               logoutToPortal(); // 強制踢回首頁
               return; // 終止後續的錯誤渲染
+          }
+
+          // ✅ 精修：從 Supabase 即時覆寫 gami、今日最高分、任務次數與排行榜
+          const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
+          if (overlay) {
+              if (overlay.gamification) data.gamification = normalizeTappieGamiConfig(overlay.gamification);
+              if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
+              if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
+              if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
+              if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
+              if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
+              if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
+              if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
           }
 
           renderDashboard(data);
@@ -749,6 +810,24 @@
         })
         .catch(err => { alert("連線失敗，請檢查網路狀態！"); console.error(err); });
     };
+
+
+    function formatLogTimestamp(value) {
+      if (!value) return '';
+      const raw = String(value).trim();
+      // 已經是後端格式好的中文時間時，直接沿用，避免重複轉換。
+      if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw;
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) return raw;
+      return date.toLocaleString('zh-TW', {
+        timeZone: 'Asia/Taipei',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    }
 
     function maskEmail(email) {
       if (!email) return "";
@@ -780,11 +859,12 @@
       let email = emailInput.value.trim();
       const msgEl = document.getElementById('email-msg');
       const btn = document.getElementById('email-submit-btn');
-      
+      const unsubscribe = email === "" && currentParentEmail !== "";
+
       if (email === "") {
          if (currentParentEmail !== "") {
              if (!confirm("⚠️ 確定要取消訂閱 專屬學習週報 嗎？\n取消後您將不會再收到。")) {
-                 emailInput.value = currentParentEmail; 
+                 emailInput.value = currentParentEmail;
                  return;
              }
          } else {
@@ -802,15 +882,27 @@
       msgEl.innerText = "⏳ 系統設定中...";
       btn.style.pointerEvents = "none";
 
-      fetch(`${GAS_URL}?action=subscribe_email&id=${STUDENT_ID}&email=${encodeURIComponent(email)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            currentParentEmail = email;
-            if (email === "") {
+      (async () => {
+        try {
+          if (!window.TappieAPI || typeof TappieAPI.updateWeeklyReport !== 'function') {
+            throw new Error('updateWeeklyReport 尚未載入');
+          }
+
+          const data = await TappieAPI.updateWeeklyReport({
+            uid: STUDENT_ID,
+            parentEmail: unsubscribe ? "" : email,
+            subscribed: !unsubscribe
+          });
+
+          if (data && data.success) {
+            currentParentEmail = unsubscribe ? "" : email;
+            if (unsubscribe) {
                 msgEl.style.color = '#7f8c8d';
                 msgEl.innerText = "ℹ️ 已成功取消訂閱。";
                 btn.innerText = "訂閱";
+                emailInput.value = "";
+                document.getElementById('email-display-zone').style.display = 'none';
+                document.getElementById('email-edit-zone').style.display = 'flex';
             } else {
                 msgEl.style.color = '#2ecc71';
                 msgEl.innerText = "✅ 綁定成功！每週五見囉！";
@@ -818,16 +910,16 @@
             }
           } else {
             msgEl.style.color = '#e74c3c';
-            msgEl.innerText = "❌ 設定失敗，請稍後再試。";
+            msgEl.innerText = data?.message || "❌ 設定失敗，請稍後再試。";
           }
-        })
-        .catch(err => {
+        } catch (err) {
+          console.error('update-weekly-report failed:', err);
           msgEl.style.color = '#e74c3c';
           msgEl.innerText = "⚠️ 網路錯誤，請檢查連線。";
-        })
-        .finally(() => {
+        } finally {
           btn.style.pointerEvents = "auto";
-        });
+        }
+      })();
     }
     
     function renderDashboard(data) {
@@ -932,7 +1024,7 @@
       // 這樣當一般生偷偷用開發者工具把 .locked 拿掉時，看到的也是正確的數據，而不是空版。
 
       // 🚀 關鍵第一步：先把 Admin 的遊戲設定抓出來！
-      const gami = data.gamification;
+      const gami = normalizeTappieGamiConfig(data.gamification || {});
 
       // ==========================================
       // 🎯 今日挑戰 Box 渲染 (動態計算得分版)
@@ -973,7 +1065,9 @@
         
         if (gami && gami.dailyChallenge && gami.dailyChallenge.tiers) {
             // 將階梯依照分數由高到低排序，避免邏輯錯誤
-            const sortedTiers = [...gami.dailyChallenge.tiers].sort((a, b) => b.min - a.min);
+            const sortedTiers = [...gami.dailyChallenge.tiers]
+              .map(t => ({ min: Number(t.min ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
+              .sort((a, b) => b.min - a.min);
             calculatedPoints = 0; // 預設 0 點
             for (let t of sortedTiers) {
                 if (bestScore >= t.min) {
@@ -991,7 +1085,7 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`arena.html?id=${STUDENT_ID}`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
         
       } else {
@@ -1007,7 +1101,7 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`arena.html?id=${STUDENT_ID}`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
       }
 
@@ -1115,31 +1209,52 @@
         lbContainer.innerHTML = lbHtml;
       }
 
-      // 自由練習區渲染
-      if (data.reviewUnits && data.reviewUnits.length > 0) {
-        document.getElementById('review-grid').innerHTML = data.reviewUnits.map(u => 
-          `<a href="#" onclick="event.preventDefault(); checkVoiceLimitAndGo('arena.html?id=${STUDENT_ID}&unit=${encodeURIComponent(u)}&mode=review', this)" class="btn-review">📖 ${u}</a>`
-        ).join('');
+      // 自由練習區渲染：顯示學生所屬班級底下「全部 active 非活動單元」
+      const reviewGrid = document.getElementById('review-grid');
+      const reviewUnits = Array.isArray(data.reviewUnits) ? data.reviewUnits : [];
+      if (reviewUnits.length > 0) {
+        reviewGrid.innerHTML = reviewUnits.map(u => {
+          const unitName = (typeof u === 'string') ? u : (u.unitName || u.name || '未命名單元');
+          const wordCount = (typeof u === 'object' && u.wordCount) ? ` <span style="font-size:11px;color:var(--text-sub);">(${u.wordCount})</span>` : "";
+          const targetUrl = `./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=review&unit=${encodeURIComponent(unitName)}`;
+          return `<button type="button" onclick="checkVoiceLimitAndGo('${targetUrl}', this, '今日練習已達上限')" class="btn-review">📖 ${escapeHtml(unitName)}${wordCount}</button>`;
+        }).join('');
+      } else {
+        reviewGrid.innerHTML = `<div style="color:var(--text-sub);font-weight:900;text-align:center;padding:18px;">目前班級尚未建立自由練習單元</div>`;
       }
 
-      // 點數明細 (這原本就在最外面，保持不變)
+      // 點數與角色明細：點數、角色解鎖依時間排序混合顯示
       const logContainer = document.getElementById('log-container');
-      if (!data.recentLogs || data.recentLogs.length === 0) {
+      const logs = Array.isArray(data.recentLogs) ? data.recentLogs : [];
+      if (logs.length === 0) {
         logContainer.innerHTML = `<p style="text-align:center; color:var(--text-sub); font-weight:bold;">尚無紀錄</p>`;
       } else {
-        logContainer.innerHTML = data.recentLogs.map(log => {
-          let valClass = log.val >= 0 ? "log-plus" : "log-minus";
-          let valText = log.val >= 0 ? `+${log.val}` : log.val;
+        logContainer.innerHTML = logs.map(log => {
+          const type = log.type || 'points';
+          const isAvatar = type === 'avatar';
+          const amount = Number(log.val ?? log.amount ?? 0);
+          const valClass = amount >= 0 ? "log-plus" : "log-minus";
+          const valText = isAvatar ? "角色" : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
+          const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
+          const rawTime = log.time || log.createdAt || log.created_at || log.timestamp || '';
+          const time = escapeHtml(formatLogTimestamp(rawTime));
+          const icon = log.icon || (isAvatar ? '🎴' : (amount >= 0 ? '✨' : '⚠️'));
           return `
-            <div class="log-row">
-              <span><span style="color:var(--text-sub); font-size:13px; margin-right:12px; font-weight:normal;">${log.time}</span> ${log.reason || '系統變更'}</span>
-              <span class="${valClass}">${valText} 點</span>
+            <div class="log-row" style="align-items:flex-start; gap:12px;">
+              <span style="display:flex; gap:10px; align-items:flex-start; flex:1; min-width:0;">
+                <span style="font-size:20px; line-height:1.2;">${icon}</span>
+                <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+                  <span>${title}</span>
+                  ${time ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${time}</span>` : ''}
+                </span>
+              </span>
+              <span class="${valClass}" style="white-space:nowrap;">${valText}</span>
             </div>`;
         }).join('');
       }
     }
 
-    function goToLobby() { window.location.href = `lobby.html?id=${STUDENT_ID}`; }
+    function goToLobby() { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }
     function logoutToPortal() {
       if (confirm("確定要登出並回到刷卡頁面嗎？")) {
         window.location.href = "index.html"; 
@@ -1151,9 +1266,13 @@
         btnElement.innerText = "✨ 傳送中...";
         btnElement.style.pointerEvents = "none";
 
-        fetch(`${GAS_URL}?action=get_user_status&id=${STUDENT_ID}`)
-            .then(res => res.json())
-            .then(status => {
+        TappieAPI.getDashboard(STUDENT_ID)
+            .then(dash => {
+                const usage = dash.usage || dash.data?.usage || {};
+                const count = Number(usage.voiceCount ?? usage.voice_count ?? 0);
+                const limit = Number(usage.voiceLimit ?? usage.voice_limit ?? usage.speechLimit ?? usage.speech_limit ?? 80);
+                const canPlay = usage.canPracticeVoice ?? usage.can_practice_voice ?? (count < limit);
+                const status = { canPlay, count, limit };
                 btnElement.innerText = originalText;
                 btnElement.style.pointerEvents = "auto";
                 if (!status.canPlay) { 
@@ -1247,66 +1366,79 @@
         }
     };
 
-    function loadDiagnosticReport() {
-      const filter = document.getElementById('diag-time-filter').value;
+    async function loadDiagnosticReport() {
+      const filterEl = document.getElementById('diag-time-filter');
+      const filter = filterEl ? (filterEl.value || 'unit') : 'unit';
       const loadingZone = document.getElementById('diag-loading');
       const contentZone = document.getElementById('diag-content');
 
+      if (!loadingZone || !contentZone) {
+        console.error('診斷報告區塊缺少 diag-loading 或 diag-content');
+        return;
+      }
+
       loadingZone.style.display = 'flex';
       contentZone.style.display = 'none';
+      loadingZone.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+          <div class="spinner"></div>
+          <div style="font-weight:900; color:var(--text-sub);">診斷報告載入中...</div>
+        </div>
+      `;
 
-      fetch(`${GAS_URL}?action=get_diagnostic_report&id=${STUDENT_ID}&filter=${filter}`)
-        .then(res => res.json())
-        .then(data => {
-          if (!data.success) {
-            loadingZone.innerHTML = `<div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px;">⚠️ ${data.msg}</div>`;
-            return;
-          }
+      try {
+        if (!window.TappieAPI || typeof TappieAPI.getDiagnosticReport !== 'function') {
+          throw new Error('TappieAPI 尚未載入，請確認 tappie-api.js 已放在 dashboard.html 的主程式前面。');
+        }
 
-          // 🚀 0. 渲染頂部三大指標 (精熟度、PR、進步)
-          const stats = data.stats;
-          document.getElementById('diag-mastery-val').innerText = stats.mastery;
-          document.getElementById('diag-mastery-bar').style.width = `${stats.mastery}%`;
-          
-          // ... 原本的程式碼 ...
-          document.getElementById('diag-pr-val').innerText = stats.prValue;
-          
-          const progEl = document.getElementById('diag-progress-val');
-          
-          // 🚀 修復：把 === 0 的情況也顯示出來，並加上「首次練習」的判斷
-          if (stats.progress > 0) {
-             progEl.innerText = `+${stats.progress}`;
-             progEl.style.color = 'var(--marian-green)';
-          } else if (stats.progress < 0) {
-             progEl.innerText = stats.progress;
-             progEl.style.color = 'var(--marian-red)';
-          } else if (stats.progress === 0 && data.stats.overall > 0) {
-             // 分數一樣，沒進步也沒退步
-             progEl.innerText = "+0";
-             progEl.style.color = 'var(--text-main)';
+        const data = await TappieAPI.getDiagnosticReport(STUDENT_ID, filter);
+
+        if (!data || data.success === false) {
+          loadingZone.innerHTML = `
+            <div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px; line-height:1.6;">
+              ⚠️ ${data?.message || data?.msg || data?.error || '尚無學習紀錄'}
+            </div>
+          `;
+          return;
+        }
+
+        const stats = data.stats || {};
+        const radar = data.radar || {};
+        const strongPhonemes = normalizePhonemes(data.strongPhonemes || []);
+        const weakPhonemes = normalizePhonemes(data.weakPhonemes || []);
+        const weakWords = normalizeWeakWords(data.weakWords || []);
+
+        // 🚀 0. 頂部三大指標：精熟度、PR、進步
+        setText('diag-mastery-val', stats.mastery ?? 0);
+        const masteryBar = document.getElementById('diag-mastery-bar');
+        if (masteryBar) masteryBar.style.width = `${stats.mastery ?? 0}%`;
+        setText('diag-pr-val', stats.prValue ?? 0);
+
+        const progEl = document.getElementById('diag-progress-val');
+        const progress = Number(stats.progress ?? 0);
+        if (progEl) {
+          if (progress > 0) {
+            progEl.innerText = `+${progress}`;
+            progEl.style.color = 'var(--marian-green)';
+          } else if (progress < 0) {
+            progEl.innerText = String(progress);
+            progEl.style.color = 'var(--marian-red)';
+          } else if ((Number(stats.overall ?? 0)) > 0) {
+            progEl.innerText = '+0';
+            progEl.style.color = 'var(--text-main)';
           } else {
-             // 連一次練習都沒有，或是真的算不出來
-             progEl.innerText = "-";
-             progEl.style.color = 'var(--text-sub)';
-          } // (這是進步幅度 else 條件的結尾括號)
+            progEl.innerText = '-';
+            progEl.style.color = 'var(--text-sub)';
+          }
+        }
 
-          // ==========================================
-          // 🚀 新增：渲染 Chart.js 動態雷達圖 (瑪麗安五大核心)
-          // ==========================================
-          // 🚀 1. 精準計算「發音穩定度」
-          const totalPCount = stats.totalPhonemesCount || 1; // 避免除以 0
-          // 從 data.weakPhonemes 陣列中還原出總弱音素數量 (因為前端只收到 top3，但每個 top3 裡面有 examples 的長度代表出現次數)
-          // 但最精準的做法是直接拿總計，這裡我們用估算或是你在 GAS 如果有傳完整的數量更好。
-          // 這裡我們暫用原本的算法改進：
-          let weakCountEst = 0;
-          data.weakPhonemes.forEach(wp => weakCountEst += wp.examples.length);
-          const stabilityScore = Math.max(0, Math.round(((totalPCount - weakCountEst) / totalPCount) * 100)); 
-          
-          const ctx = document.getElementById('radarChart').getContext('2d');
-          
-          if(window.myRadarChart) { window.myRadarChart.destroy(); }
+        // 🚀 1. 雷達圖：支援 Supabase 新格式，也兼容舊 stats 格式
+        const stabilityScore = radar.pronunciationStability ?? stats.accuracy ?? calculateStabilityFromPhonemes(weakPhonemes, stats.totalPhonemesCount, stats.accuracy ?? 0);
+        const radarCanvas = document.getElementById('radarChart');
+        if (radarCanvas && window.Chart) {
+          const ctx = radarCanvas.getContext('2d');
+          if (window.myRadarChart) window.myRadarChart.destroy();
 
-          // 🚀 2. 建立白話文辭典
           const tooltipsDict = {
             '發音準確': '系統運用聲學技術，精準比對寶貝每個發音與母語人士的相似度。',
             '語句流暢': '評估寶貝開口時的語速、停頓與自然度，分數越高代表開口越有自信。',
@@ -1315,24 +1447,28 @@
             '發音穩定': '分析口腔肌肉的控制力。失誤越少、發音越穩，此項分數就越高。'
           };
 
-          // 繪製華麗雷達圖
           window.myRadarChart = new Chart(ctx, {
             type: 'radar',
             data: {
               labels: ['發音準確', '語句流暢', '拼音完整', '單元精熟', '發音穩定'],
               datasets: [{
                 label: '能力指標',
-                data: [stats.overall, stats.fluency, stats.completeness, stats.mastery, stabilityScore],
-                backgroundColor: 'rgba(0, 102, 204, 0.15)', 
+                data: [
+                  radar.pronunciationAccuracy ?? stats.pronunciation ?? stats.overall ?? 0,
+                  radar.sentenceFluency ?? stats.fluency ?? 0,
+                  radar.spellingCompleteness ?? stats.completeness ?? 0,
+                  radar.unitMastery ?? stats.mastery ?? 0,
+                  stabilityScore
+                ],
+                backgroundColor: 'rgba(0, 102, 204, 0.15)',
                 borderColor: '#0066cc',
-                pointBackgroundColor: '#f1c40f', 
+                pointBackgroundColor: '#f1c40f',
                 pointBorderColor: '#fff',
                 pointHoverBackgroundColor: '#fff',
                 pointHoverBorderColor: '#f1c40f',
                 borderWidth: 2,
-                // 🚀 觸控升級：視覺上黃點稍微放大，但觸控感應區放大 8 倍！
                 pointRadius: 5,
-                pointHitRadius: 30, 
+                pointHitRadius: 30,
                 pointHoverRadius: 8
               }]
             },
@@ -1347,7 +1483,6 @@
                     font: { size: 12, family: "'PingFang TC', sans-serif", weight: 'bold' },
                     color: '#7f8c8d'
                   },
-                  // 🚀 關鍵修復：強制釘死原點為 0，最高 100，解決 76 分看起來不到一半的問題！
                   min: 0,
                   max: 100,
                   beginAtZero: true,
@@ -1355,116 +1490,182 @@
                 }
               },
               plugins: {
-                legend: { display: false }, 
-                tooltip: { 
-                  backgroundColor: 'rgba(15, 23, 42, 0.95)', // 更深邃的高級黑
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: 'rgba(15, 23, 42, 0.95)',
                   titleFont: { size: 16, family: "'PingFang TC', sans-serif", weight: '900' },
-                  titleColor: '#f1c40f', // 標題變金色
+                  titleColor: '#f1c40f',
                   bodyFont: { size: 13, weight: 'bold', lineHeight: 1.5 },
                   bodyColor: '#e2e8f0',
                   padding: 15,
                   cornerRadius: 12,
                   displayColors: false,
-                  // 🚀 攔截預設 Tooltip，替換成我們的白話文
                   callbacks: {
                     title: function(context) {
-                       const label = context[0].label;
-                       const score = context[0].raw;
-                       return `${label}：${score} 分`;
+                      const label = context[0].label;
+                      const score = context[0].raw;
+                      return `${label}：${score} 分`;
                     },
                     label: function(context) {
-                       // 將超過一定字數的字串折行，讓 tooltip 不要太長
-                       const text = tooltipsDict[context.label];
-                       if (text.length > 20) {
-                           return [text.substring(0, 18), text.substring(18)];
-                       }
-                       return text;
+                      const text = tooltipsDict[context.label] || '';
+                      if (text.length > 20) return [text.substring(0, 18), text.substring(18)];
+                      return text;
                     }
                   }
                 }
               }
             }
           });
-          // ==========================================
+        }
 
-          // 🌟 1. 流暢度大圓環與 AI 短評
-          const fluency = data.stats.fluency || 0;
-          document.getElementById('diag-fluency-score').innerText = fluency;
-          contentZone.style.setProperty('--fluency', fluency);
+        // 🌟 2. 流暢度大圓環與短評
+        const fluency = Number(stats.fluency || 0);
+        setText('diag-fluency-score', fluency);
+        contentZone.style.setProperty('--fluency', fluency);
 
-          let summary = "";
-          if (fluency >= 90) summary = "寶貝充滿自信，開口極其流暢！接下來我們專注在『字尾子音』的細節，就能達到母語水準喔！";
-          else if (fluency >= 70) summary = "開口表現很不錯！如果遇到長句子可以稍微放慢語速，字字唸清楚會更好喔。";
-          else summary = "寶貝還在適應英文的節奏，家長可以多用「自由練習」區陪孩子大聲朗讀，建立開口自信！";
-          document.getElementById('diag-summary-text').innerText = summary;
+        let summary = '';
+        if (fluency >= 90) summary = '寶貝充滿自信，開口極其流暢！接下來我們專注在「字尾子音」的細節，就能達到母語水準喔！';
+        else if (fluency >= 70) summary = '開口表現很不錯！如果遇到長句子可以稍微放慢語速，字字唸清楚會更好喔。';
+        else if (fluency > 0) summary = '寶貝還在適應英文的節奏，家長可以多用「自由練習」區陪孩子大聲朗讀，建立開口自信！';
+        else summary = '目前資料還在累積中，完成幾次口說練習後，這裡會出現更完整的分析。';
+        setText('diag-summary-text', summary);
 
-          // 🌟 2. 音素 X 光機渲染器
-          const strongContainer = document.getElementById('diag-strong-phonemes');
-          const topStrong = data.strongPhonemes.slice(0, 3);
+        // 🌟 3. 強音素
+        const strongContainer = document.getElementById('diag-strong-phonemes');
+        const topStrong = strongPhonemes.slice(0, 3);
+        if (strongContainer) {
           if (topStrong.length === 0) {
             strongContainer.innerHTML = `<span style="color:#7f8c8d; font-size:13px; font-weight:bold;">持續收集中...</span>`;
           } else {
-            strongContainer.innerHTML = topStrong.map(item => {
-              return `<span style="background: rgba(46, 204, 113, 0.2); color: #27ae60; padding: 6px 12px; border-radius: 10px; font-weight: 900; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display:inline-flex; align-items:center; gap:4px;">
-                        /${item.p}/ 
-                        <span style="font-size:11px; opacity:0.8; font-weight:bold;">${item.examples.join(', ')}</span>
-                      </span>`;
-            }).join('');
+            strongContainer.innerHTML = topStrong.map(item => `
+              <span style="background: rgba(46, 204, 113, 0.2); color: #27ae60; padding: 6px 12px; border-radius: 10px; font-weight: 900; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display:inline-flex; align-items:center; gap:4px; margin:3px;">
+                /${escapeHtml(item.phoneme)}/
+                <span style="font-size:11px; opacity:0.8; font-weight:bold;">${escapeHtml((item.examples || []).join(', '))}</span>
+              </span>
+            `).join('');
           }
+        }
 
-          const weakContainer = document.getElementById('diag-weak-phonemes');
-          const topWeak = data.weakPhonemes.slice(0, 3);
+        // 🌟 4. 弱音素
+        const weakContainer = document.getElementById('diag-weak-phonemes');
+        const topWeak = weakPhonemes.slice(0, 3);
+        if (weakContainer) {
           if (topWeak.length === 0) {
             weakContainer.innerHTML = `<div style="text-align:center; color:#2ecc71; font-size:13px; font-weight:900; padding:10px;">太棒了！目前沒有相對弱點 🎉</div>`;
           } else {
             weakContainer.innerHTML = topWeak.map(item => {
-              const tip = typeof getPhonemeTip === 'function' ? getPhonemeTip(item.p) : "請多聽標準發音練習！";
+              const tip = getPhonemeTipSafe(item.phoneme);
               return `
-                <div style="background: white; border-radius: 12px; border: 1px solid rgba(231,76,60,0.2); overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                <div style="background: white; border-radius: 12px; border: 1px solid rgba(231,76,60,0.2); overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03); margin-bottom:10px;">
                   <div onclick="togglePhonemeTip(this)" style="display:flex; justify-content:space-between; align-items:center; padding: 12px 15px; cursor:pointer;">
-                    <div style="display:flex; align-items:center; gap: 10px;">
-                      <span style="font-size: 18px; font-weight: 900; color: #c0392b;">/${item.p}/</span>
-                      <button onclick="playPhonemeAudio(event, '${item.p}')" style="background:rgba(231,76,60,0.1); border:none; border-radius:50%; width:28px; height:28px; font-size:14px; display:flex; justify-content:center; align-items:center; color:#c0392b; cursor:pointer;">🔊</button>
-                      <span style="font-size: 12px; color: var(--text-sub); font-weight: bold;">如: ${item.examples.join(', ')}</span>
+                    <div style="display:flex; align-items:center; gap: 10px; flex-wrap:wrap;">
+                      <span style="font-size: 18px; font-weight: 900; color: #c0392b;">/${escapeHtml(item.phoneme)}/</span>
+                      <button onclick="playPhonemeAudio(event, '${escapeAttr(item.phoneme)}')" style="background:rgba(231,76,60,0.1); border:none; border-radius:50%; width:28px; height:28px; font-size:14px; display:flex; justify-content:center; align-items:center; color:#c0392b; cursor:pointer;">🔊</button>
+                      <span style="font-size: 12px; color: var(--text-sub); font-weight: bold;">如: ${escapeHtml((item.examples || []).join(', ') || '-')}</span>
                     </div>
                     <div class="toggle-icon" style="color: #c0392b; transition: 0.3s; font-size: 12px;">▼</div>
                   </div>
                   <div style="display:none; padding: 0 15px 15px 15px; background: rgba(231,76,60,0.02);">
                     <div style="border-top: 1px dashed rgba(231,76,60,0.2); padding-top: 10px; font-size: 13px; color: #d35400; font-weight: bold; line-height: 1.6;">
-                      💡 <b>家長陪練秘訣：</b><br>${tip}
+                      💡 <b>家長陪練秘訣：</b><br>${escapeHtml(tip)}
                     </div>
                   </div>
                 </div>
               `;
             }).join('');
           }
+        }
 
-          // 🌟 3. 單字擊破清單 
-          const weakWordsContainer = document.getElementById('diag-weak-words-list');
-          if (data.weakWords.length === 0) {
+        // 🌟 5. 弱點單字
+        const weakWordsContainer = document.getElementById('diag-weak-words-list');
+        if (weakWordsContainer) {
+          if (weakWords.length === 0) {
             weakWordsContainer.innerHTML = `<div style="text-align:center; color:#2ecc71; font-size:14px; font-weight:900; padding:15px; background:rgba(46,204,113,0.1); border-radius:12px;">太厲害了！本單元發音都很棒 🎉</div>`;
           } else {
-            weakWordsContainer.innerHTML = data.weakWords.map(w => `
-              <div style="background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; padding: 16px; text-align: left; box-shadow: 0 8px 20px rgba(0,0,0,0.04);">
+            weakWordsContainer.innerHTML = weakWords.map(w => `
+              <div style="background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; padding: 16px; text-align: left; box-shadow: 0 8px 20px rgba(0,0,0,0.04); margin-bottom:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <span style="font-size:18px; font-weight:900; color:var(--text-main);">${w.word}</span>
+                  <span style="font-size:18px; font-weight:900; color:var(--text-main);">${escapeHtml(w.word)}</span>
                   <span style="font-size:14px; font-weight:900; color:var(--marian-red); background:rgba(231,76,60,0.1); padding:4px 10px; border-radius:12px; border: 1px solid rgba(231,76,60,0.3);">${w.score} 分</span>
                 </div>
-                <div style="font-size:14px; color:var(--text-sub); line-height:1.6; font-weight:bold;">${w.feedback}</div>
+                <div style="font-size:14px; color:var(--text-sub); line-height:1.6; font-weight:bold;">${escapeHtml(w.feedback)}</div>
               </div>
             `).join('');
           }
+        }
 
-          loadingZone.style.display = 'none';
-          contentZone.style.display = 'flex';
-          isDiagLoaded = true;
+        loadingZone.style.display = 'none';
+        contentZone.style.display = 'flex';
+        isDiagLoaded = true;
 
-        })
-        .catch(err => {
-          loadingZone.innerHTML = `<div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px;">⚠️ 網路異常，無法載入報告</div>`;
-        });
+      } catch (err) {
+        console.error('診斷報告載入失敗：', err);
+        loadingZone.innerHTML = `
+          <div style="color:#e74c3c; font-weight:900; text-align:center; font-size:16px; line-height:1.6; padding:20px;">
+            ⚠️ 診斷報告載入失敗<br>
+            <span style="font-size:12px; color:#7f8c8d; word-break:break-all;">${escapeHtml(String(err.message || err))}</span>
+          </div>
+        `;
+      }
     }
-    
+
+    function normalizePhonemes(items) {
+      return (items || []).map(item => ({
+        phoneme: String(item.phoneme || item.p || '').trim(),
+        score: Number(item.score || 0),
+        examples: Array.isArray(item.examples) ? item.examples : []
+      })).filter(item => item.phoneme);
+    }
+
+    function normalizeWeakWords(words) {
+      return (words || []).map(w => {
+        const score = w.score ?? w.avgScore ?? w.lastScore ?? w.maxScore ?? 0;
+        let feedback = w.feedback ?? w.lastFeedback ?? '';
+        if (typeof feedback === 'object' && feedback !== null) {
+          feedback = feedback.text || feedback.feedback || feedback.message || JSON.stringify(feedback);
+        }
+        if (!feedback) feedback = '建議放慢速度，重新聽一次示範，注意開頭音與結尾音。';
+        return {
+          word: String(w.word || ''),
+          score: Number(score || 0),
+          feedback: String(feedback)
+        };
+      }).filter(w => w.word);
+    }
+
+    function calculateStabilityFromPhonemes(weakPhonemes, totalPhonemesCount, fallback) {
+      const total = Number(totalPhonemesCount || 0);
+      if (!total) return Number(fallback || 0);
+      const weakCount = weakPhonemes.reduce((sum, item) => sum + Math.max(1, (item.examples || []).length), 0);
+      return Math.max(0, Math.min(100, Math.round(((total - weakCount) / total) * 100)));
+    }
+
+    function getPhonemeTipSafe(phoneme) {
+      try {
+        if (typeof getPhonemeTip === 'function') return getPhonemeTip(phoneme);
+        if (window.PHONEME_TIPS && window.PHONEME_TIPS[phoneme]) return window.PHONEME_TIPS[phoneme];
+      } catch(e) {}
+      return '可以先聽示範音，再用慢速跟讀，讓嘴型與舌位更穩定。';
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = value;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, '&#096;');
+    }
+
     // 🚀 補回這兩行：靜置自動登出
     let idleTimer;
     const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = "index.html"; }, 180000); };
@@ -1512,7 +1713,7 @@
 
           if (extractedUid) {
               if (adminAuth) window.location.replace(`admin.html?id=${extractedUid}`);
-              else window.location.href = `dashboard.html?id=${extractedUid}`;
+              else window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
           } else {
               const loader = document.createElement('div');
               loader.style = "position:fixed;inset:0; width:100vw; height:100dvh;background:radial-gradient(circle at center, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); font-family:sans-serif; transition:opacity 0.3s;";
@@ -1527,12 +1728,11 @@
               `;
               document.body.appendChild(loader);
 
-              fetch(`${GAS_URL}?action=verify_card&cardId=${encodeURIComponent(inputStr)}`)
-                .then(res => res.json())
+              TappieAPI.resolveStudentByCard(inputStr)
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) window.location.replace(`admin.html?id=${data.uid}`);
-                      else window.location.href = `dashboard.html?id=${data.uid}`;
+                      else window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
                   } else { 
                       alert("❌ 查無此卡！請確認是否拿錯卡片。"); 
                       document.body.removeChild(loader); 

@@ -1,5 +1,5 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
-// Micro Polish v2 - school_id avatar purchase fix + safe weekly report
+// Micro Polish v3 - unit_id first learning progress + safe weekly report
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -13,6 +13,7 @@ const TappieAPI = {
     claimPracticeChallenge: "/claim-practice-challenge",
     getDiagnosticReport: "/get-diagnostic-report",
     adminGetData: "/admin-get-data",
+    adminGetProgress: "/admin-get-progress",
     adminSaveStudents: "/admin-save-students",
     adminSaveTasks: "/admin-save-tasks",
     getLobbyData: "/get-lobby-data",
@@ -32,7 +33,30 @@ const TappieAPI = {
     claimGacha: "/claim-gacha",
     purchaseAvatar: "/purchase-avatar",
     getStudentActivity: "/get-student-activity",
-    updateWeeklyReport: "/update-weekly-report"
+    updateWeeklyReport: "/update-weekly-report",
+    adminGetBranding: "/admin-get-branding",
+    adminUploadBrandingAsset: "/admin-upload-branding-asset",
+    adminDeleteBrandingAsset: "/admin-delete-branding-asset",
+    adminNewsletters: "/admin-newsletters",
+    adminWeeklyReports: "/admin-weekly-reports",
+    consoleAuth: "/console-auth",
+    consoleGetSchools: "/console-get-schools",
+    consoleGetData: "/console-get-data",
+    consoleGetProgress: "/console-get-progress",
+    consoleGetBranding: "/console-get-branding",
+    consoleUploadBrandingAsset: "/console-upload-branding-asset",
+    consoleDeleteBrandingAsset: "/console-delete-branding-asset",
+    consoleGetGamification: "/console-get-gamification",
+    consoleSaveTasks: "/console-save-tasks",
+    consoleWeeklyReports: "/console-weekly-reports",
+    consoleNewsletters: "/console-newsletters",
+    consoleSaveGamification: "/console-save-gamification",
+    consoleSaveAvatarSettings: "/console-save-avatar-settings",
+    consoleGetHealth: "/console-get-health",
+    consoleGetOverview: "/console-get-overview",
+    consoleGetStudents: "/console-get-students",
+    consoleSaveStudents: "/console-save-students",
+    consoleSaveSchool: "/console-save-school"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -45,6 +69,32 @@ const TappieAPI = {
       body: JSON.stringify(body),
       signal: options.signal
     });
+    return await res.json();
+  },
+
+  async _consoleGet(path, token = "") {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(this.supabaseBaseUrl + path, {
+      method: "GET",
+      headers
+    });
+
+    return await res.json();
+  },
+
+  async _consolePost(path, body = {}, token = "", options = {}) {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(this.supabaseBaseUrl + path, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body || {}),
+      signal: options.signal
+    });
+
     return await res.json();
   },
   async resolveStudentByUid(uid) { return await this._get(`${this.endpoints.resolveStudent}?uid=${encodeURIComponent(uid)}`); },
@@ -87,9 +137,47 @@ const TappieAPI = {
   },
   async getAzureToken() { return await this._get(this.endpoints.getAzureToken); },
   async submitPractice(payload, options = {}) { return await this._post(this.endpoints.submitPractice, payload, options); },
-  async claimPracticeChallenge(payload = {}) { return await this._post(this.endpoints.claimPracticeChallenge, payload); },
-  async getDiagnosticReport(uid, filter = "unit") { return await this._get(`${this.endpoints.getDiagnosticReport}?uid=${encodeURIComponent(uid)}&filter=${encodeURIComponent(filter)}`); },
+  async claimPracticeChallenge(payload = {}) {
+    // Normalize unit identifiers so the backend can resolve by stable unit_id first.
+    // Keep legacy names for older pages that still send unitName/currentUnit.
+    const normalized = {
+      ...payload,
+      uid: payload.uid || payload.studentUid || payload.student_id || payload.id || "",
+      unitId: payload.unitId || payload.unit_id || payload.currentUnitId || payload.current_unit_id || "",
+      unitName: payload.unitName || payload.unit_name || payload.currentUnit || payload.current_unit || payload.unit || "",
+      averageScore: payload.averageScore ?? payload.average_score ?? payload.avg ?? payload.score ?? 0,
+      details: payload.details ?? payload.detail_json ?? payload.detailJson ?? [],
+    };
+
+    // Also provide snake_case aliases for Edge Functions that read either format.
+    if (normalized.unitId && !normalized.unit_id) normalized.unit_id = normalized.unitId;
+    if (normalized.unitName && !normalized.unit_name) normalized.unit_name = normalized.unitName;
+    if (normalized.averageScore !== undefined && normalized.average_score === undefined) {
+      normalized.average_score = normalized.averageScore;
+    }
+
+    return await this._post(this.endpoints.claimPracticeChallenge, normalized);
+  },
+  async getDiagnosticReport(uid, filter = "unit", options = {}) {
+    const qs = new URLSearchParams({
+      uid: String(uid || ""),
+      filter: String(filter || "unit")
+    });
+
+    const unitId = options.unitId || options.unit_id || "";
+    const unitName = options.unitName || options.unit_name || "";
+    const startDate = options.startDate || options.start_date || "";
+    const endDate = options.endDate || options.end_date || "";
+
+    if (unitId) qs.set("unitId", unitId);
+    if (unitName) qs.set("unitName", unitName);
+    if (startDate) qs.set("startDate", startDate);
+    if (endDate) qs.set("endDate", endDate);
+
+    return await this._get(`${this.endpoints.getDiagnosticReport}?${qs.toString()}`);
+  },
   async adminGetData(schoolCode = "TEST01", mode = "all") { return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`); },
+  async adminGetProgress(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetProgress}?schoolCode=${encodeURIComponent(schoolCode)}`); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
   async adminSaveTasks(payload) { return await this._post(this.endpoints.adminSaveTasks, payload); },
   async getLobbyData(uid, classCode = "") { const qs = new URLSearchParams({ uid }); if (classCode) qs.set("classCode", classCode); return await this._get(`${this.endpoints.getLobbyData}?${qs.toString()}`); },
@@ -124,6 +212,201 @@ const TappieAPI = {
   async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
   async updateWeeklyReport(payload = {}) { return await this._post(this.endpoints.updateWeeklyReport, payload); },
+  async adminGetBranding(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetBranding}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminUploadBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminUploadBrandingAsset, payload); },
+  async adminDeleteBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminDeleteBrandingAsset, payload); },
+  async adminGetNewsletters(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminNewsletters}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminAddNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "add" }); },
+  async adminUpdateNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "update" }); },
+  async adminDeleteNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "delete" }); },
+  async adminReorderNewsletters(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "reorder" }); },
+
+
+  async adminGetWeeklyReports(schoolCode = "TEST01") {
+    return await this._get(`${this.endpoints.adminWeeklyReports}?schoolCode=${encodeURIComponent(schoolCode)}`);
+  },
+  async adminWeeklyReportAction(payload = {}) {
+    return await this._post(this.endpoints.adminWeeklyReports, payload);
+  },
+  async adminSaveWeeklyReportConfig(schoolCode = "TEST01", config = {}) {
+    return await this.adminWeeklyReportAction({ action: "save_config", schoolCode, config });
+  },
+  async adminPreviewWeeklyReport(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "preview" });
+  },
+  async adminSendWeeklyReportTest(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "send_test" });
+  },
+  async adminSendWeeklyReportNow(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "send_now" });
+  },
+  async adminForceResendWeeklyReport(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "force_resend" });
+  },
+
+  async consoleAuth(payload = {}) {
+    return await this._post(this.endpoints.consoleAuth, payload);
+  },
+
+  async consoleGetSchools(token = "") {
+    return await this._consoleGet(this.endpoints.consoleGetSchools, token);
+  },
+
+  async consoleSaveSchool(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveSchool, body, token);
+  },
+
+  async consoleGetHealth({ token } = {}) {
+    const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetHealth, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({})
+    });
+    return await res.json();
+  },
+
+  async consoleGetOverview({ token } = {}) {
+    const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetOverview, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({})
+    });
+    return await res.json();
+  },
+
+  async consoleGetStudents({ token } = {}) {
+    const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetStudents, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({})
+    });
+    return await res.json();
+  },
+
+  async consoleSaveStudents(payload = {}) {
+    const token = payload.token || undefined;
+    const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleSaveStudents, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload || {})
+    });
+    return await res.json();
+  },
+
+  _extractConsolePayload(payload = {}) {
+    const token = payload && payload.token ? payload.token : "";
+    const body = { ...(payload || {}) };
+    delete body.token;
+    return { token, body };
+  },
+
+  async consoleGetData({ token = "", schoolCode = "", mode = "all", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetData, { schoolCode, mode, scopeMode }, token);
+  },
+
+  async consoleGetProgress({ token = "", schoolCode = "", date = "", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetProgress, { schoolCode, date, scopeMode }, token);
+  },
+
+  async consoleGetBranding({ token = "", schoolCode = "", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetBranding, { schoolCode, scopeMode }, token);
+  },
+
+  async consoleGetGamification({ token = "", schoolCode = "", scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetGamification, { schoolCode, scopeMode }, token);
+  },
+
+  async consoleSaveTasks(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveTasks, body, token);
+  },
+
+  async consoleWeeklyReportAction(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleWeeklyReports, body, token);
+  },
+
+  async consoleGetWeeklyReports({ token = "", schoolCode = "", scopeMode = "" } = {}) {
+    return await this.consoleWeeklyReportAction({ token, action: "get", schoolCode, scopeMode });
+  },
+
+  async consoleSaveWeeklyReportConfig(schoolCode = "", config = {}, token = "") {
+    return await this.consoleWeeklyReportAction({ token, action: "save_config", schoolCode, config });
+  },
+
+  async consolePreviewWeeklyReport(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "preview" });
+  },
+
+  async consoleSendWeeklyReportTest(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "send_test" });
+  },
+
+  async consoleSendWeeklyReportNow(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "send_now" });
+  },
+
+  async consoleForceResendWeeklyReport(payload = {}) {
+    return await this.consoleWeeklyReportAction({ ...payload, action: "force_resend" });
+  },
+
+  async consoleNewsletterAction(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleNewsletters, body, token);
+  },
+
+  async consoleGetNewsletters({ token = "", schoolCode = "", scopeMode = "", includeArchived = false } = {}) {
+    return await this.consoleNewsletterAction({ token, action: "list", schoolCode, scopeMode, includeArchived });
+  },
+
+  async consoleAddNewsletter(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "add" });
+  },
+
+  async consoleUpdateNewsletter(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "update" });
+  },
+
+  async consoleDeleteNewsletter(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "delete" });
+  },
+
+  async consoleReorderNewsletters(payload = {}) {
+    return await this.consoleNewsletterAction({ ...payload, action: "reorder" });
+  },
+
+  async consoleUploadBrandingAsset(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleUploadBrandingAsset, body, token);
+  },
+
+  async consoleDeleteBrandingAsset(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleDeleteBrandingAsset, body, token);
+  },
+
+  async consoleSaveGamification(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveGamification, body, token);
+  },
+
+  async consoleSaveAvatarSettings(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveAvatarSettings, body, token);
+  },
 
   toLegacyDashboard(data) {
     if (!data || !data.success) return data || { success: false };
