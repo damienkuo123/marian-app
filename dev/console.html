@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=console-owner-students-fix-v3"></script>
+  <script src="./tappie-api.js?v=owner-all-dashboard-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3378,59 +3378,103 @@
         `;
       }
 
+      const enriched = schools.map(normalizeOwnerSchoolRow);
+      const totalActive = enriched.reduce((n, s) => n + Number(s.activeStudents || 0), 0);
+      const totalLimit = enriched.reduce((n, s) => n + Number(s.studentLimit || 0), 0);
+      const avgHealth = enriched.length
+        ? Math.round(enriched.reduce((n, s) => n + Number(s.healthScore ?? 100), 0) / enriched.length)
+        : 100;
+      const riskySchools = enriched.filter(s => Number(s.highCount || 0) > 0 || Number(s.healthScore ?? 100) < 80).length;
+      const noSchedule = enriched.filter(s => Number(s.activeSchedules || 0) <= 0).length;
+      const noNewsletter = enriched.filter(s => Number(s.weeklyEnabled || 0) > 0 && Number(s.nextNewsletterCount || 0) <= 0).length;
+
       return `
-        <div class="toolbar">
-          <div>
-            <h2 style="margin:0;">Owner 校區總覽</h2>
-            <p class="muted-text" style="margin:6px 0 0;">選擇單一校區後，可進入學生、課程、週報、專欄、品牌與遊戲化設定。</p>
+        <div class="overview-hero-v3">
+          <div class="overview-hero-main">
+            <div class="overview-kicker">Schools Operations</div>
+            <h2>全校區狀態與快速切換</h2>
+            <p>這裡不是單校設定頁，而是 Owner 用來判斷哪個校區健康、哪個校區快滿、哪個校區缺排程或週報內容的營運總表。</p>
           </div>
-          <button class="btn-compact" onclick="changeConsoleScope('all')">回到全部校區</button>
+          <div class="overview-hero-side">
+            <button class="btn-compact primary" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入校區</button>
+            <button class="btn-compact" onclick="changeConsoleScope('all')">全部校區模式</button>
+          </div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>校區</th>
-                <th>學生席位</th>
-                <th>課程資料</th>
-                <th>週報</th>
-                <th>品牌/角色</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${schools.map(s => {
-                const code = s.schoolCode || s.school_code || "";
-                const name = s.schoolName || s.name || code;
-                const counts = s.counts || {};
-                const limits = s.limits || {};
-                const activeStudents = counts.activeStudents ?? s.active_students ?? 0;
-                const studentLimit = limits.studentLimit ?? s.student_limit ?? 0;
-                const weekly = counts.weeklyReportEnabledStudents ?? s.weekly_report_enabled_students ?? 0;
-                const activeClasses = counts.activeClasses ?? s.active_classes ?? 0;
-                const activeUnits = counts.activeUnits ?? s.active_units ?? 0;
-                const activeSchedules = counts.activeSchedules ?? s.active_schedules ?? 0;
-                const activeNewsletters = counts.activeNewsletters ?? s.active_newsletters ?? 0;
-                const schoolAvatars = counts.schoolAvatars ?? s.school_avatars ?? 0;
-                const selected = consoleScope.mode === "single" && consoleScope.selectedSchoolCode === code;
-                return `
-                  <tr>
-                    <td><strong>${escapeHtml(code)}</strong><div class="small-note">${escapeHtml(name)}</div></td>
-                    <td>${Number(activeStudents)} / ${Number(studentLimit || 0) || "∞"}<div class="small-note">剩餘 ${limits.remainingStudentSlots ?? "—"}</div></td>
-                    <td>${Number(activeClasses)} 班｜${Number(activeUnits)} 單元<div class="small-note">${Number(activeSchedules)} 筆排程</div></td>
-                    <td>${Number(weekly)} 人啟用<div class="small-note">${Number(activeNewsletters)} 篇待發/可用專欄</div></td>
-                    <td>${Number(schoolAvatars)} 個校區角色<div class="small-note">Global ${counts.globalAvatarsVisible ?? "—"}</div></td>
-                    <td><button class="btn-compact ${selected ? "ok" : "primary"}" onclick="changeConsoleScope('${escapeHtml(code)}')">${selected ? "目前校區" : "管理此校區"}</button></td>
-                  </tr>
-                `;
-              }).join("")}
-            </tbody>
-          </table>
+
+        <div class="overview-top-grid">
+          <div class="overview-stat-card emphasis">
+            <div class="metric-label">啟用校區</div>
+            <div class="metric-value">${numFmt(enriched.length)}</div>
+            <div class="metric-note">Owner 管理範圍內校區</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">啟用學生</div>
+            <div class="metric-value">${numFmt(totalActive)}</div>
+            <div class="metric-note">${totalLimit ? `總席位 ${numFmt(totalLimit)}，使用率 ${pctFmt(totalActive / Math.max(totalLimit, 1) * 100)}` : "尚未設定總席位上限"}</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">平均健康分</div>
+            <div class="metric-value">${numFmt(avgHealth)}</div>
+            <div class="metric-note">${riskySchools ? `${riskySchools} 校需要檢查` : "所有校區資料狀態穩定"}</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">營運提醒</div>
+            <div class="metric-value">${numFmt(noSchedule + noNewsletter)}</div>
+            <div class="metric-note">${noSchedule} 校缺排程｜${noNewsletter} 校缺待發專欄</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px;">
+          <div class="panel-title">
+            <h2>校區管理總表</h2>
+            <span class="badge ${riskySchools ? "warn" : "ok"}">${riskySchools ? "有校區需檢查" : "整體穩定"}</span>
+          </div>
+          <div class="toolbar">
+            <div class="muted-text">點「管理此校區」會切到 Owner 單一校區模式，並沿用 Super Admin 的學生、課程、週報、專欄、品牌與遊戲化功能。</div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>校區</th>
+                  <th>健康</th>
+                  <th>學生席位</th>
+                  <th>課程準備</th>
+                  <th>週報觸達</th>
+                  <th>品牌 / 角色</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${enriched.map(s => {
+                  const selected = consoleScope.mode === "single" && consoleScope.selectedSchoolCode === s.code;
+                  const healthCls = Number(s.highCount || 0) > 0 || Number(s.healthScore || 100) < 70 ? "danger" : Number(s.healthScore || 100) < 90 ? "warn" : "ok";
+                  const seatNote = s.studentLimit > 0 ? `${pctFmt(s.activeStudents / Math.max(s.studentLimit, 1) * 100)} 使用率｜剩餘 ${s.remainingSlots ?? "—"}` : "未設定上限";
+                  const weeklyBase = Math.max(Number(s.parentEmailStudents || 0), 1);
+                  const weeklyRate = Number(s.weeklyEnabled || 0) / weeklyBase * 100;
+                  const weeklyCls = s.weeklyEnabled > 0 && s.nextNewsletterCount <= 0 ? "warn" : "ok";
+                  return `
+                    <tr>
+                      <td><strong>${escapeHtml(s.code)}</strong><div class="small-note">${escapeHtml(s.name)}</div></td>
+                      <td><span class="badge ${healthCls}">${numFmt(s.healthScore ?? 100)} 分</span><div class="small-note">High ${numFmt(s.highCount || 0)}｜總問題 ${numFmt(s.totalIssueCount || 0)}</div></td>
+                      <td>${numFmt(s.activeStudents)} / ${s.studentLimit ? numFmt(s.studentLimit) : "∞"}<div class="small-note">${escapeHtml(seatNote)}</div></td>
+                      <td>${numFmt(s.activeClasses)} 班｜${numFmt(s.activeUnits)} 單元<div class="small-note">${numFmt(s.activeSchedules)} 個啟用排程</div></td>
+                      <td><span class="badge ${weeklyCls}">${pctFmt(weeklyRate)}</span><div class="small-note">${numFmt(s.weeklyEnabled)} 位啟用｜待發專欄 ${numFmt(s.nextNewsletterCount)}</div></td>
+                      <td>${numFmt(s.schoolAvatars)} 個校區角色<div class="small-note">Global ${numFmt(s.globalAvatarsVisible || 0)}｜專欄 ${numFmt(s.activeNewsletters)}</div></td>
+                      <td><button class="btn-compact ${selected ? "ok" : "primary"}" onclick="changeConsoleScope('${escapeHtml(s.code)}')">${selected ? "目前校區" : "管理此校區"}</button></td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
         </div>
       `;
     }
 
     function renderOverview() {
+      if (isOwnerAllMode()) return renderOwnerAllOverview();
+
       const isOwner = session.role === "owner";
       return `
         <div class="overview-hero-v3">
@@ -3522,6 +3566,74 @@
               <div class="status-row"><span><strong>最近週報</strong><br><span id="ovWeeklyStatusNote" class="small-note">weekly_report_jobs</span></span><span id="ovWeeklyStatus" class="badge ok">—</span></div>
               <div class="status-row"><span><strong>健康提醒</strong><br><span id="ovIssueNote" class="small-note">Critical / High</span></span><span id="ovIssueCount" class="badge ok">—</span></div>
             </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderOwnerAllOverview() {
+      return `
+        <div class="overview-hero-v3">
+          <div class="overview-hero-main">
+            <div class="overview-kicker">Owner Command Center</div>
+            <h2 id="ownerAllHeroTitle">正在彙整全校區營運狀態...</h2>
+            <p id="ownerAllHeroSub">這裡只顯示跨校區經營訊號：校區健康、席位使用、週報觸達、排程完整度與需要介入的校區。</p>
+            <div id="ownerAllActionList" class="overview-todo-list"><div class="overview-todo muted">正在分析需要處理的事項...</div></div>
+          </div>
+          <div class="overview-hero-side">
+            <button class="btn-compact primary" onclick="refreshOverviewAll()">重新整理</button>
+            <button class="btn-compact" onclick="showPage('schools')">校區列表</button>
+            <button class="btn-compact" onclick="showPage('health')">資料健康</button>
+            <button class="btn-compact" onclick="showPage('weekly')">週報營運</button>
+          </div>
+        </div>
+
+        <div id="ownerOverviewGrid" class="overview-top-grid">
+          <div class="overview-stat-card emphasis">
+            <div class="metric-label">啟用校區</div>
+            <div id="ownerSchoolCount" class="metric-value">—</div>
+            <div id="ownerSchoolNote" class="metric-note">目前營運校區</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">啟用學生</div>
+            <div id="ownerStudentCount" class="metric-value">—</div>
+            <div id="ownerStudentNote" class="metric-note">跨校區學生席位</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">平均健康分</div>
+            <div id="ownerHealthScore" class="metric-value">—</div>
+            <div id="ownerHealthNote" class="metric-note">資料健康狀態</div>
+          </div>
+          <div class="overview-stat-card">
+            <div class="metric-label">週報觸達率</div>
+            <div id="ownerWeeklyCoverage" class="metric-value">—</div>
+            <div id="ownerWeeklyNote" class="metric-note">週報啟用 / 家長 Email</div>
+          </div>
+        </div>
+
+        <div class="overview-status-grid">
+          <div class="card">
+            <div class="panel-title"><h2>校區經營雷達</h2><span id="ownerGeneratedAt" class="badge ok">—</span></div>
+            <div id="ownerOpsSignals" class="overview-ratio-grid"><div class="empty-state">正在計算跨校區指標...</div></div>
+          </div>
+          <div class="card">
+            <div class="panel-title"><h2>需要 Owner 介入</h2><button class="btn-compact" onclick="showPage('health')">查看健康問題</button></div>
+            <div id="ownerActionPanel" class="status-list"><div class="empty-state">正在整理待辦事項...</div></div>
+          </div>
+        </div>
+
+        <div class="overview-chart-grid secondary">
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>校區健康排行</h3><p>依資料健康分由低到高，優先處理分數最低的校區。</p></div></div>
+            <div id="ownerHealthRank" class="usage-list"><div class="empty-state">正在讀取健康排行...</div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>週報營運狀態</h3><p>看哪個校區已具備家長觸達條件，哪個校區還缺資料或專欄。</p></div></div>
+            <div id="ownerWeeklyOps" class="usage-list"><div class="empty-state">正在讀取週報狀態...</div></div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-card-head"><div><h3>校區容量與課程準備</h3><p>快速看席位壓力、啟用排程與內容準備度。</p></div></div>
+            <div id="ownerCapacityOps" class="usage-list"><div class="empty-state">正在讀取校區容量...</div></div>
           </div>
         </div>
       `;
@@ -3759,6 +3871,143 @@
       </div>`;
     }
 
+    function normalizeOwnerSchoolRow(raw) {
+      const counts = raw?.counts || {};
+      const limits = raw?.limits || {};
+      const health = raw?.health || {};
+      const weekly = raw?.weekly || {};
+      const code = raw?.schoolCode || raw?.school_code || raw?.raw?.school_code || "";
+      const name = raw?.schoolName || raw?.name || raw?.school_name || raw?.raw?.school_name || code;
+      return {
+        code,
+        name,
+        schoolId: raw?.schoolId || raw?.school_id || raw?.raw?.school_id || "",
+        activeStudents: Number(counts.activeStudents ?? raw?.active_students ?? raw?.raw?.active_students ?? 0),
+        totalStudents: Number(counts.totalStudents ?? raw?.total_students ?? raw?.raw?.total_students ?? 0),
+        parentEmailStudents: Number(counts.studentsWithParentEmail ?? raw?.students_with_parent_email ?? raw?.raw?.students_with_parent_email ?? 0),
+        weeklyEnabled: Number(counts.weeklyReportEnabledStudents ?? raw?.weekly_report_enabled_students ?? raw?.raw?.weekly_report_enabled_students ?? 0),
+        activeClasses: Number(counts.activeClasses ?? raw?.active_classes ?? raw?.raw?.active_classes ?? 0),
+        activeUnits: Number(counts.activeUnits ?? raw?.active_units ?? raw?.raw?.active_units ?? 0),
+        activeSchedules: Number(counts.activeSchedules ?? raw?.active_schedules ?? raw?.raw?.active_schedules ?? 0),
+        schoolAvatars: Number(counts.schoolAvatars ?? raw?.school_avatars ?? raw?.raw?.school_avatars ?? 0),
+        globalAvatarsVisible: Number(counts.globalAvatarsVisible ?? raw?.global_avatars_visible ?? raw?.raw?.global_avatars_visible ?? 0),
+        activeNewsletters: Number(counts.activeNewsletters ?? raw?.active_newsletters ?? raw?.raw?.active_newsletters ?? 0),
+        nextNewsletterCount: Number(counts.nextNewsletterCount ?? raw?.next_newsletter_count ?? raw?.raw?.next_newsletter_count ?? 0),
+        studentLimit: Number(limits.studentLimit ?? raw?.student_limit ?? raw?.raw?.student_limit ?? 0),
+        remainingSlots: limits.remainingStudentSlots ?? raw?.remaining_student_slots ?? raw?.raw?.remaining_student_slots ?? null,
+        healthScore: Number(health.healthScore ?? raw?.health_score ?? raw?.raw?.health_score ?? 100),
+        highCount: Number(health.highCount ?? raw?.high_count ?? raw?.raw?.high_count ?? 0),
+        mediumCount: Number(health.mediumCount ?? raw?.medium_count ?? raw?.raw?.medium_count ?? 0),
+        lowCount: Number(health.lowCount ?? raw?.low_count ?? raw?.raw?.low_count ?? 0),
+        totalIssueCount: Number(health.totalIssueCount ?? raw?.total_issue_count ?? raw?.raw?.total_issue_count ?? 0),
+        latestWeeklyStatus: weekly.latestStatus || raw?.latestWeeklyStatus || null,
+        latestWeeklyAt: weekly.latestAt || raw?.latestWeeklyAt || null
+      };
+    }
+
+    function updateOwnerAllOverviewUI() {
+      if (!overviewCache || !document.getElementById("ownerOverviewGrid")) return;
+
+      const summary = overviewCache.summary || {};
+      const overviewSchools = Array.isArray(overviewCache.schools) ? overviewCache.schools : [];
+      const sourceSchools = (consoleScope.schools && consoleScope.schools.length) ? consoleScope.schools : overviewSchools;
+      const schools = sourceSchools.map(normalizeOwnerSchoolRow);
+
+      const activeStudents = Number(summary.activeStudents ?? schools.reduce((n, s) => n + s.activeStudents, 0));
+      const totalStudents = Number(summary.totalStudents ?? schools.reduce((n, s) => n + s.totalStudents, 0));
+      const parentEmails = Number(summary.studentsWithParentEmail ?? schools.reduce((n, s) => n + s.parentEmailStudents, 0));
+      const weeklyEnabled = Number(summary.weeklyReportEnabledStudents ?? schools.reduce((n, s) => n + s.weeklyEnabled, 0));
+      const avgHealth = Number(summary.avgHealthScore ?? (schools.length ? schools.reduce((n, s) => n + Number(s.healthScore || 100), 0) / schools.length : 100));
+      const highPriority = Number(summary.criticalIssues || 0) + Number(summary.highIssues || 0);
+      const schoolCount = Number(summary.schoolCount || schools.length || 0);
+      const weeklyCoverage = parentEmails > 0 ? (weeklyEnabled / parentEmails * 100) : 0;
+      const scheduleReadySchools = schools.filter(s => Number(s.activeSchedules || 0) > 0).length;
+      const newsletterReadySchools = schools.filter(s => Number(s.weeklyEnabled || 0) <= 0 || Number(s.nextNewsletterCount || 0) > 0).length;
+      const seatLimit = schools.reduce((n, s) => n + Number(s.studentLimit || 0), 0);
+
+      const title = document.getElementById("ownerAllHeroTitle");
+      const sub = document.getElementById("ownerAllHeroSub");
+      if (title) {
+        if (highPriority > 0) title.textContent = `目前有 ${highPriority} 項高優先級資料問題，需要 Owner 關注。`;
+        else if (Number(summary.weeklyEnabledSchoolsWithoutNewsletter || 0) > 0) title.textContent = `${summary.weeklyEnabledSchoolsWithoutNewsletter} 個校區週報啟用但缺少待發專欄。`;
+        else title.textContent = `${schoolCount} 個校區正在穩定運作，平均健康分 ${Math.round(avgHealth)}。`;
+      }
+      if (sub) sub.textContent = `共 ${numFmt(activeStudents)} 位啟用學生；週報觸達率 ${pctFmt(weeklyCoverage)}；${scheduleReadySchools}/${schoolCount} 校已有啟用排程。`;
+
+      document.getElementById("ownerSchoolCount") && (document.getElementById("ownerSchoolCount").textContent = numFmt(schoolCount));
+      document.getElementById("ownerSchoolNote") && (document.getElementById("ownerSchoolNote").textContent = `${scheduleReadySchools} 校有啟用排程`);
+      document.getElementById("ownerStudentCount") && (document.getElementById("ownerStudentCount").textContent = numFmt(activeStudents));
+      document.getElementById("ownerStudentNote") && (document.getElementById("ownerStudentNote").textContent = seatLimit ? `總席位 ${numFmt(seatLimit)}，使用率 ${pctFmt(activeStudents / Math.max(seatLimit, 1) * 100)}` : `資料總筆數 ${numFmt(totalStudents)}`);
+      document.getElementById("ownerHealthScore") && (document.getElementById("ownerHealthScore").textContent = numFmt(Math.round(avgHealth)));
+      document.getElementById("ownerHealthNote") && (document.getElementById("ownerHealthNote").textContent = highPriority ? `High / Critical ${highPriority} 項` : "目前無 High / Critical");
+      document.getElementById("ownerWeeklyCoverage") && (document.getElementById("ownerWeeklyCoverage").textContent = pctFmt(weeklyCoverage));
+      document.getElementById("ownerWeeklyNote") && (document.getElementById("ownerWeeklyNote").textContent = `${numFmt(weeklyEnabled)} 位啟用週報 / ${numFmt(parentEmails)} 位有 Email`);
+      document.getElementById("ownerGeneratedAt") && (document.getElementById("ownerGeneratedAt").textContent = formatDateTime(overviewCache.generatedAt));
+
+      const signals = document.getElementById("ownerOpsSignals");
+      if (signals) {
+        signals.innerHTML = [
+          renderOverviewRatioCard("學生席位使用", activeStudents, seatLimit || activeStudents, seatLimit ? `剩餘 ${numFmt(Math.max(0, seatLimit - activeStudents))} 個席位` : "尚未設定總席位", { warnBelow: 0 }),
+          renderOverviewRatioCard("排程準備度", scheduleReadySchools, schoolCount || 1, `${scheduleReadySchools} / ${schoolCount} 校有啟用排程`, { warnBelow: 80 }),
+          renderOverviewRatioCard("週報觸達率", weeklyEnabled, parentEmails || weeklyEnabled || 1, `${numFmt(weeklyEnabled)} 位週報啟用`, { warnBelow: 70 }),
+          renderOverviewRatioCard("待發專欄準備", newsletterReadySchools, schoolCount || 1, `${Number(summary.weeklyEnabledSchoolsWithoutNewsletter || 0)} 校缺 display_order=1`, { warnBelow: 80 }),
+          renderOverviewRatioCard("平均資料健康", Math.round(avgHealth), 100, highPriority ? `High / Critical ${highPriority} 項` : "資料信心值正常", { pct: avgHealth, percentOnly: true, health: true, warnBelow: 80 })
+        ].join("");
+      }
+
+      const actionPanel = document.getElementById("ownerActionPanel");
+      if (actionPanel) {
+        const actions = [];
+        if (highPriority > 0) actions.push(["danger", "高優先級資料問題", `${highPriority} 項 High / Critical，建議先看資料健康`, "health"]);
+        if (Number(summary.weeklyEnabledSchoolsWithoutNewsletter || 0) > 0) actions.push(["warn", "週報專欄未準備", `${summary.weeklyEnabledSchoolsWithoutNewsletter} 校缺少 display_order=1 專欄`, "weekly"]);
+        if (Number(summary.schoolsWithoutActiveSchedules || 0) > 0) actions.push(["warn", "校區缺少啟用排程", `${summary.schoolsWithoutActiveSchedules} 校目前沒有 active schedule`, "schools"]);
+        if (weeklyCoverage < 70 && parentEmails > 0) actions.push(["warn", "週報觸達率偏低", `目前只有 ${pctFmt(weeklyCoverage)} 的 Email 學生啟用週報`, "weekly"]);
+        if (!actions.length) actions.push(["ok", "目前沒有 Owner 必須介入的事項", "校區、週報與資料健康狀態都在安全範圍", "schools"]);
+        actionPanel.innerHTML = actions.map(([cls, title, note, page]) => `
+          <button class="overview-todo ${cls}" onclick="showPage('${page}')"><strong>${escapeHtml(title)}</strong>｜${escapeHtml(note)}</button>
+        `).join("");
+      }
+
+      const byHealth = [...schools].sort((a, b) => Number(a.healthScore || 100) - Number(b.healthScore || 100)).slice(0, 6);
+      const healthRank = document.getElementById("ownerHealthRank");
+      if (healthRank) {
+        healthRank.innerHTML = byHealth.map(s => {
+          const cls = Number(s.healthScore || 100) < 70 || Number(s.highCount || 0) > 0 ? "danger" : Number(s.healthScore || 100) < 90 ? "warn" : "ok";
+          return `<button class="weekly-row" onclick="changeConsoleScope('${escapeHtml(s.code)}')"><span><div class="weekly-row-title">${escapeHtml(s.code)}｜${escapeHtml(s.name)}</div><div class="weekly-row-sub">High ${numFmt(s.highCount)}｜總問題 ${numFmt(s.totalIssueCount)}</div></span><span class="badge ${cls}">${numFmt(s.healthScore)} 分</span></button>`;
+        }).join("") || `<div class="empty-state">尚無校區資料</div>`;
+      }
+
+      const weeklyOps = document.getElementById("ownerWeeklyOps");
+      if (weeklyOps) {
+        const weeklyRows = [...schools]
+          .sort((a, b) => (Number(b.weeklyEnabled || 0) - Number(a.weeklyEnabled || 0)))
+          .slice(0, 6);
+        weeklyOps.innerHTML = weeklyRows.map(s => {
+          const base = Math.max(Number(s.parentEmailStudents || 0), 1);
+          const rate = Number(s.weeklyEnabled || 0) / base * 100;
+          const cls = s.weeklyEnabled > 0 && s.nextNewsletterCount <= 0 ? "warn" : "ok";
+          return `<button class="weekly-row" onclick="changeConsoleScope('${escapeHtml(s.code)}')"><span><div class="weekly-row-title">${escapeHtml(s.code)}｜週報 ${pctFmt(rate)}</div><div class="weekly-row-sub">${numFmt(s.weeklyEnabled)} 位啟用 / ${numFmt(s.parentEmailStudents)} 位有 Email｜待發專欄 ${numFmt(s.nextNewsletterCount)}</div></span><span class="badge ${cls}">${s.nextNewsletterCount > 0 ? "Ready" : "Check"}</span></button>`;
+        }).join("") || `<div class="empty-state">尚無週報資料</div>`;
+      }
+
+      const capacityOps = document.getElementById("ownerCapacityOps");
+      if (capacityOps) {
+        const capacityRows = [...schools]
+          .sort((a, b) => {
+            const ar = a.studentLimit > 0 ? a.activeStudents / a.studentLimit : 0;
+            const br = b.studentLimit > 0 ? b.activeStudents / b.studentLimit : 0;
+            return br - ar;
+          })
+          .slice(0, 6);
+        capacityOps.innerHTML = capacityRows.map(s => {
+          const ratio = s.studentLimit > 0 ? s.activeStudents / Math.max(s.studentLimit, 1) * 100 : 0;
+          const cls = ratio >= 90 ? "danger" : ratio >= 75 ? "warn" : "ok";
+          return `<button class="weekly-row" onclick="changeConsoleScope('${escapeHtml(s.code)}')"><span><div class="weekly-row-title">${escapeHtml(s.code)}｜${numFmt(s.activeStudents)} / ${s.studentLimit ? numFmt(s.studentLimit) : "∞"} 位</div><div class="weekly-row-sub">${numFmt(s.activeSchedules)} 個啟用排程｜${numFmt(s.activeUnits)} 個單元</div></span><span class="badge ${cls}">${s.studentLimit ? pctFmt(ratio) : "∞"}</span></button>`;
+        }).join("") || `<div class="empty-state">尚無容量資料</div>`;
+      }
+    }
+
+
     function renderOverviewStatusRatios() {
       const el = document.getElementById("overviewSchoolList");
       if (!el || !overviewCache) return;
@@ -3792,6 +4041,7 @@
     }
 
     function updateOverviewUI() {
+      if (isOwnerAllMode() && document.getElementById("ownerOverviewGrid")) { updateOwnerAllOverviewUI(); return; }
       if (!overviewCache || !document.getElementById("overviewSchoolList")) return;
       const summary = overviewCache.summary || {};
       const schools = overviewCache.schools || [];
