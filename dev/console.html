@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=owner-school-modal-mobile-fix-v2c"></script>
+  <script src="./tappie-api.js?v=owner-school-modal-mobile-fix-v2d"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -2649,50 +2649,67 @@
   
 
     /* =======================================================
-       Owner School Editor Mobile Modal Scroll Fix
+       Owner School Editor Mobile Modal Scroll Fix v2d
        - Scope only: Owner all-school 編輯校區 / 新增校區 modal
-       - Keep existing Super Admin / single-school modals untouched
+       - Make the middle form area the only scroll container on iOS Safari.
+       - Keep existing Super Admin / single-school modals untouched.
        ======================================================= */
+    #schoolEditorModal {
+      overflow: hidden;
+    }
     #schoolEditorModal .console-modal {
       min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     #schoolEditorModal .modal-head,
     #schoolEditorModal .modal-actions {
-      flex-shrink: 0;
+      flex: 0 0 auto;
+      position: relative;
+      z-index: 2;
     }
     #schoolEditorModal .form-grid {
+      flex: 1 1 0;
       min-height: 0;
-      overflow-y: auto;
+      overflow-y: scroll !important;
+      overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
+      overscroll-behavior-y: contain;
       touch-action: pan-y;
+      scrollbar-gutter: stable;
     }
     @media (max-width: 720px) {
       #schoolEditorModal {
         align-items: flex-end;
+        justify-content: flex-end;
         padding: 0;
+        touch-action: none;
       }
       #schoolEditorModal .console-modal {
         width: 100%;
-        max-height: 92vh;
-        height: 92vh;
+        height: calc(var(--tappie-vh, 1vh) * 92);
+        max-height: calc(var(--tappie-vh, 1vh) * 92);
         border-radius: 26px 26px 0 0;
         border-left: 0;
         border-right: 0;
         border-bottom: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
       }
       #schoolEditorModal .modal-head {
         padding: 20px 20px 16px;
       }
       #schoolEditorModal .form-grid {
-        flex: 1 1 auto;
-        grid-template-columns: 1fr;
-        padding: 18px 20px;
-        gap: 14px;
-        overflow-y: auto;
+        display: block;
+        padding: 18px 20px 28px;
+        overflow-y: scroll !important;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
+      #schoolEditorModal .form-grid .form-field {
+        margin-bottom: 14px;
+      }
+      #schoolEditorModal .form-grid .form-field:last-child {
+        margin-bottom: 0;
       }
       #schoolEditorModal .modal-actions {
         padding: 16px 20px max(20px, env(safe-area-inset-bottom));
@@ -3641,6 +3658,42 @@
       return (consoleScope.schools || []).find(s => String(s.schoolCode || s.school_code || s.raw?.school_code || "").trim().toUpperCase() === target) || null;
     }
 
+    function syncSchoolEditorMobileViewport() {
+      const vh = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 0) * 0.01;
+      document.documentElement.style.setProperty("--tappie-vh", `${vh}px`);
+    }
+
+    function prepareSchoolEditorMobileScroll() {
+      syncSchoolEditorMobileViewport();
+      const modal = document.getElementById("schoolEditorModal");
+      const scroller = modal?.querySelector(".form-grid");
+      if (!modal || !scroller || modal.dataset.scrollPrepared === "true") return;
+      modal.dataset.scrollPrepared = "true";
+
+      let startY = 0;
+      scroller.addEventListener("touchstart", (e) => {
+        startY = e.touches && e.touches.length ? e.touches[0].clientY : 0;
+      }, { passive: true });
+
+      scroller.addEventListener("touchmove", (e) => {
+        // Keep touch scrolling inside the school editor form on iOS Safari.
+        e.stopPropagation();
+
+        const currentY = e.touches && e.touches.length ? e.touches[0].clientY : startY;
+        const deltaY = currentY - startY;
+        const atTop = scroller.scrollTop <= 0;
+        const atBottom = Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight;
+
+        // Prevent rubber-banding from transferring the gesture to the page/backdrop.
+        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      window.addEventListener("resize", syncSchoolEditorMobileViewport, { passive: true });
+      window.addEventListener("orientationchange", () => setTimeout(syncSchoolEditorMobileViewport, 120), { passive: true });
+    }
+
     function openSchoolEditor(code = "") {
       if (!isOwner() || !isOwnerAllMode()) {
         alert("只有 Owner 全部校區模式可以管理校區基本資料。");
@@ -3668,6 +3721,9 @@
       document.getElementById("schoolEditorIsActive").value = isEdit && s.isActive === false ? "false" : "true";
       modal.classList.add("show");
       document.body.classList.add("console-modal-open");
+      prepareSchoolEditorMobileScroll();
+      const schoolFormScroller = modal.querySelector(".form-grid");
+      if (schoolFormScroller) schoolFormScroller.scrollTop = 0;
       setTimeout(() => (isEdit ? document.getElementById("schoolEditorName") : codeInput)?.focus(), 0);
     }
 
