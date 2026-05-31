@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=owner-school-management-v2b"></script>
+  <script src="./tappie-api.js?v=owner-school-modal-mobile-fix-v2c"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -2646,6 +2646,72 @@
       }
     }
 
+  
+
+    /* =======================================================
+       Owner School Editor Mobile Modal Scroll Fix
+       - Scope only: Owner all-school 編輯校區 / 新增校區 modal
+       - Keep existing Super Admin / single-school modals untouched
+       ======================================================= */
+    #schoolEditorModal .console-modal {
+      min-height: 0;
+    }
+    #schoolEditorModal .modal-head,
+    #schoolEditorModal .modal-actions {
+      flex-shrink: 0;
+    }
+    #schoolEditorModal .form-grid {
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+    @media (max-width: 720px) {
+      #schoolEditorModal {
+        align-items: flex-end;
+        padding: 0;
+      }
+      #schoolEditorModal .console-modal {
+        width: 100%;
+        max-height: 92vh;
+        height: 92vh;
+        border-radius: 26px 26px 0 0;
+        border-left: 0;
+        border-right: 0;
+        border-bottom: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #schoolEditorModal .modal-head {
+        padding: 20px 20px 16px;
+      }
+      #schoolEditorModal .form-grid {
+        flex: 1 1 auto;
+        grid-template-columns: 1fr;
+        padding: 18px 20px;
+        gap: 14px;
+        overflow-y: auto;
+      }
+      #schoolEditorModal .modal-actions {
+        padding: 16px 20px max(20px, env(safe-area-inset-bottom));
+        margin-top: 0;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #schoolEditorModal .modal-actions .right {
+        width: 100%;
+        margin-left: 0;
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      #schoolEditorModal .modal-actions .btn-compact,
+      #schoolEditorModal .modal-actions > .btn-compact {
+        width: 100%;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -3505,7 +3571,7 @@
     function renderSchoolEditorModal() {
       return `
         <div id="schoolEditorModal" class="modal-backdrop">
-          <div class="console-modal">
+          <div class="console-modal" onclick="event.stopPropagation()">
             <div class="modal-head">
               <div>
                 <h2 id="schoolEditorTitle">新增校區</h2>
