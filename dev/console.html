@@ -5145,9 +5145,92 @@
       if (note) note.textContent = `目前顯示 ${totalVisible} 位學生`;
     }
 
+    function renderOwnerAllWeeklyOperations() {
+      return `
+        <div class="weekly-insight-strip">
+          <div class="weekly-insight">
+            <div class="label">全校應寄對象</div>
+            <div id="ownerWkEligible" class="value">—</div>
+            <div id="ownerWkEligibleNote" class="note">已啟用週報且有家長 Email</div>
+            <div class="weekly-progress"><div id="ownerWkEligibleBar"></div></div>
+          </div>
+          <div class="weekly-insight">
+            <div class="label">本週已寄出</div>
+            <div id="ownerWkSent" class="value">—</div>
+            <div id="ownerWkSentNote" class="note">最近週報 job 統計</div>
+          </div>
+          <div class="weekly-insight">
+            <div class="label">失敗 / 略過</div>
+            <div id="ownerWkIssues" class="value">—</div>
+            <div id="ownerWkIssuesNote" class="note">需要追蹤的寄送結果</div>
+          </div>
+          <div class="weekly-insight">
+            <div class="label">專欄準備</div>
+            <div id="ownerWkNewsletterReady" class="value">—</div>
+            <div id="ownerWkNewsletterNote" class="note">display_order = 1 的校區數</div>
+          </div>
+        </div>
+
+        <div class="weekly-console-grid">
+          <div class="weekly-panel wide">
+            <div class="weekly-panel-head">
+              <div>
+                <h3>全校區週報營運中心</h3>
+                <p>這裡只做跨校區監控，不直接修改單校週報設定。需要處理時，請切入單一校區。</p>
+              </div>
+              <button class="weekly-btn" onclick="loadWeeklyData(true)">重新整理</button>
+            </div>
+            <div id="ownerWkSummaryBox" class="weekly-status-card">正在讀取全校區週報狀態...</div>
+          </div>
+
+          <div class="weekly-panel wide">
+            <div class="weekly-panel-head">
+              <div>
+                <h3>各校區週報狀態</h3>
+                <p>快速檢查週報啟用率、家長 Email 完整度、最近寄送結果與專欄準備狀態。</p>
+              </div>
+              <span id="ownerWkSchoolCount" class="badge warn">讀取中</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>校區</th>
+                    <th>啟用 / 可寄送</th>
+                    <th>Email 完整度</th>
+                    <th>週報設定</th>
+                    <th>最近寄送</th>
+                    <th>專欄</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="ownerWkSchoolsTable">
+                  <tr><td colspan="7">正在讀取...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head">
+              <div><h3>需要 Owner 介入</h3><p>優先處理寄送失敗、Email 不完整、設定未啟用或缺少專欄的校區。</p></div>
+            </div>
+            <div id="ownerWkActionList" class="weekly-mini-list">正在讀取...</div>
+          </div>
+
+          <div class="weekly-panel">
+            <div class="weekly-panel-head">
+              <div><h3>最近週報 Jobs</h3><p>顯示全校區最近的週報執行紀錄。</p></div>
+            </div>
+            <div id="ownerWkJobList" class="weekly-mini-list">正在讀取...</div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderWeekly() {
       if (isOwnerAllMode()) {
-        return renderSingleSchoolGuard("週報中心", "Owner 全部校區模式目前只提供週報狀態總覽。請先選擇單一校區，再管理週報設定、測試寄送與專欄內容。");
+        return renderOwnerAllWeeklyOperations();
       }
       return `
         <div class="weekly-insight-strip">
@@ -5251,9 +5334,23 @@
     }
 
     async function loadWeeklyData(force=false) {
-      if (isOwnerAllMode()) return;
-      if (!getConsoleSchoolCode()) return;
       if (weeklyLoading) return;
+      if (isOwnerAllMode()) {
+        if (weeklyCache && !force) { renderOwnerAllWeeklyData(weeklyCache); return; }
+        weeklyLoading = true;
+        try {
+          const data = await TappieAPI.consoleGetWeeklyReports({ token: session?.token || "", scopeMode: "all" });
+          if (!data || !data.success) throw new Error(data?.message || data?.error || "讀取全校區週報資料失敗");
+          weeklyCache = data;
+          renderOwnerAllWeeklyData(data);
+        } catch (err) {
+          console.error(err);
+          const box = document.getElementById("ownerWkSummaryBox");
+          if (box) box.innerHTML = `<div class="weekly-status-title"><span class="badge danger">讀取失敗</span></div><div class="weekly-status-sub">${escapeHtml(err.message || String(err))}</div>`;
+        } finally { weeklyLoading = false; }
+        return;
+      }
+      if (!getConsoleSchoolCode()) return;
       if (weeklyCache && !force) { renderWeeklyData(weeklyCache); return; }
       weeklyLoading = true;
       try {
@@ -5279,6 +5376,123 @@
         if (box) { box.classList.remove("hidden"); box.textContent = "週報資料讀取失敗：" + (err.message || err); }
       } finally { weeklyLoading = false; }
     }
+
+    function percentText(n, d) {
+      const den = Number(d || 0);
+      if (!den) return "0%";
+      return Math.round((Number(n || 0) / den) * 100) + "%";
+    }
+
+    function ownerWeeklyStatusBadge(status) {
+      const s = String(status || "").toLowerCase();
+      if (["completed", "sent", "success"].includes(s)) return `<span class="badge ok">完成</span>`;
+      if (["completed_with_errors", "failed", "error"].includes(s)) return `<span class="badge danger">${escapeHtml(statusText(s))}</span>`;
+      if (["running", "pending"].includes(s)) return `<span class="badge warn">${escapeHtml(statusText(s))}</span>`;
+      return `<span class="badge warn">尚無</span>`;
+    }
+
+    function renderOwnerAllWeeklyData(data) {
+      const aggregate = data.aggregate || {};
+      const schools = Array.isArray(data.schools) ? data.schools : [];
+      const jobs = Array.isArray(data.latestJobs) ? data.latestJobs : [];
+      const activeSchools = Number(aggregate.activeSchools || schools.length || 0);
+      const enabled = Number(aggregate.enabledStudents || 0);
+      const eligible = Number(aggregate.eligibleStudents || 0);
+      const missing = Number(aggregate.missingEmail || 0);
+      const sent = Number(aggregate.sentCount || 0);
+      const failed = Number(aggregate.failedCount || 0);
+      const skipped = Number(aggregate.skippedCount || 0);
+      const newsletterReady = Number(aggregate.newsletterReadySchools || 0);
+      const configEnabled = Number(aggregate.configEnabledSchools || 0);
+      const coveragePct = enabled ? Math.round((eligible / enabled) * 100) : 0;
+
+      const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+      setText("ownerWkEligible", String(eligible));
+      setText("ownerWkEligibleNote", `啟用週報 ${enabled}｜缺 Email ${missing}`);
+      const bar = document.getElementById("ownerWkEligibleBar");
+      if (bar) bar.style.width = Math.max(0, Math.min(100, coveragePct)) + "%";
+      setText("ownerWkSent", String(sent));
+      setText("ownerWkSentNote", `最近 ${jobs.length} 筆 job 加總`);
+      setText("ownerWkIssues", `${failed}/${skipped}`);
+      setText("ownerWkIssuesNote", `失敗 ${failed}｜略過 ${skipped}`);
+      setText("ownerWkNewsletterReady", `${newsletterReady}/${activeSchools}`);
+      setText("ownerWkNewsletterNote", `有第 1 順位專欄的校區`);
+      const schoolCountBadge = document.getElementById("ownerWkSchoolCount");
+      if (schoolCountBadge) {
+        schoolCountBadge.textContent = `${activeSchools} 校區`;
+        schoolCountBadge.className = "badge " + (activeSchools ? "ok" : "warn");
+      }
+
+      const summaryBox = document.getElementById("ownerWkSummaryBox");
+      if (summaryBox) {
+        const issueCount = schools.filter(s => Number(s.riskScore || 0) > 0).length;
+        summaryBox.innerHTML = `
+          <div class="weekly-status-title"><span class="badge ${issueCount ? "warn" : "ok"}">${issueCount ? "需要檢查" : "狀態良好"}</span></div>
+          <div class="weekly-status-sub">
+            全校區週報設定啟用 ${configEnabled}/${activeSchools} 校，家長 Email 完整度 ${coveragePct}%。<br>
+            最近週報 job 加總：已寄出 ${sent}、失敗 ${failed}、略過 ${skipped}。<br>
+            專欄準備：${newsletterReady}/${activeSchools} 校區目前有 display_order = 1 的待發專欄。
+          </div>`;
+      }
+
+      const rows = schools.slice().sort((a,b)=>Number(b.riskScore||0)-Number(a.riskScore||0)).map(s => {
+        const code = escapeHtml(s.schoolCode || "");
+        const name = escapeHtml(s.schoolName || s.name || code);
+        const enabledStudents = Number(s.enabledStudents || 0);
+        const eligibleStudents = Number(s.eligibleStudents || 0);
+        const schoolMissing = Number(s.missingEmail || 0);
+        const schoolCoverage = enabledStudents ? Math.round((eligibleStudents / enabledStudents) * 100) : 0;
+        const latest = s.latestJob || {};
+        const latestText = latest.report_key ? `${escapeHtml(statusText(latest.status))}<br><span class="weekly-row-sub">${escapeHtml(latest.report_key || "")}</span>` : "尚無";
+        const newsletterText = Number(s.nextNewsletterCount || 0) > 0 ? `<span class="badge ok">已準備</span>` : `<span class="badge warn">缺專欄</span>`;
+        const configText = s.configEnabled ? `<span class="badge ok">已啟用</span>` : `<span class="badge warn">未啟用</span>`;
+        return `
+          <tr>
+            <td><strong>${name}</strong><br><span class="small-note">${code}</span></td>
+            <td>${enabledStudents} / ${eligibleStudents}<br><span class="small-note">缺 Email ${schoolMissing}</span></td>
+            <td>${schoolCoverage}%<div class="weekly-progress"><div style="width:${Math.max(0, Math.min(100, schoolCoverage))}%"></div></div></td>
+            <td>${configText}</td>
+            <td>${latestText}</td>
+            <td>${newsletterText}</td>
+            <td><button class="btn-compact primary" onclick="changeConsoleScope('${code}'); showPage('weekly');">管理此校區</button></td>
+          </tr>`;
+      }).join("");
+      const table = document.getElementById("ownerWkSchoolsTable");
+      if (table) table.innerHTML = rows || `<tr><td colspan="7">目前沒有校區資料。</td></tr>`;
+
+      const actions = [];
+      schools.forEach(s => {
+        const code = escapeHtml(s.schoolCode || "");
+        const name = escapeHtml(s.schoolName || s.name || code);
+        if (!s.configEnabled) actions.push({ level:"warn", text:`${name} 週報設定未啟用`, code });
+        if (Number(s.missingEmail || 0) > 0) actions.push({ level:"warn", text:`${name} 有 ${Number(s.missingEmail || 0)} 位啟用週報學生缺家長 Email`, code });
+        if (Number(s.nextNewsletterCount || 0) <= 0) actions.push({ level:"warn", text:`${name} 缺少待發專欄`, code });
+        if ((s.latestJob && Number(s.latestJob.failed_count || 0) > 0)) actions.push({ level:"danger", text:`${name} 最近寄送失敗 ${Number(s.latestJob.failed_count || 0)} 封`, code });
+      });
+      const actionList = document.getElementById("ownerWkActionList");
+      if (actionList) {
+        actionList.innerHTML = actions.slice(0, 10).map(a => `
+          <div class="weekly-row">
+            <div><div class="weekly-row-title">${a.level === "danger" ? "🚨" : "⚠️"} ${escapeHtml(a.text)}</div><div class="weekly-row-sub">建議切入單校週報或學生頁處理</div></div>
+            <button class="btn-compact" onclick="changeConsoleScope('${a.code}'); showPage('weekly');">前往</button>
+          </div>`).join("") || `<div class="empty-state">目前沒有需要 Owner 介入的週報問題。</div>`;
+      }
+
+      const jobList = document.getElementById("ownerWkJobList");
+      if (jobList) {
+        jobList.innerHTML = jobs.slice(0, 10).map(j => `
+          <div class="weekly-row">
+            <div>
+              <div class="weekly-row-title">${escapeHtml(j.schoolName || j.schoolCode || "未知校區")}｜${escapeHtml(statusText(j.status))}</div>
+              <div class="weekly-row-sub">${escapeHtml(j.report_key || "無 report_key")}｜${formatDateTime(j.updated_at || j.created_at)}</div>
+            </div>
+            <div style="text-align:right;" class="weekly-row-sub">
+              成功 ${Number(j.sent_count || 0)}<br>失敗 ${Number(j.failed_count || 0)}｜略過 ${Number(j.skipped_count || 0)}
+            </div>
+          </div>`).join("") || `<div class="empty-state">尚無全校區週報 job 紀錄。</div>`;
+      }
+    }
+
     function renderWeeklyData(data) {
       initWeeklyHourOptions();
       const cfg = data.config || {};
