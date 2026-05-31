@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=owner-school-management-v2"></script>
+  <script src="./tappie-api.js?v=owner-school-management-v2b"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3547,8 +3547,16 @@
                 <label>Legacy Sheet ID（選填）</label>
                 <input id="schoolEditorLegacySheetId" placeholder="GAS / Google Sheet 遷移時可暫存，沒有就留空" autocomplete="off" />
               </div>
+              <div class="form-field">
+                <label>Super Admin 密碼（Owner Only）</label>
+                <input id="schoolEditorSuperAdminPassword" type="password" placeholder="設定 Super Admin 登入密碼" autocomplete="new-password" />
+              </div>
+              <div class="form-field">
+                <label>Normal Admin 密碼（Owner Only）</label>
+                <input id="schoolEditorAdminPassword" type="password" placeholder="設定一般 Admin 登入密碼" autocomplete="new-password" />
+              </div>
               <div class="form-field full">
-                <div class="form-note">提醒：這裡只管理 schools 基本資料。Admin 密碼、週報設定、遊戲化設定、品牌與學生資料仍在單校模式處理。</div>
+                <div class="form-note">提醒：Admin_Password / Super_Admin_Password 只允許 Owner 在全校區模式調整。Super Admin 不能修改，避免影響 NFC 實體卡與後台權限流程。</div>
               </div>
             </div>
             <div class="modal-actions">
@@ -3589,6 +3597,8 @@
       document.getElementById("schoolEditorSpeechLimit").value = isEdit ? Number(s.speechLimit || 80) : 80;
       document.getElementById("schoolEditorBattleLimit").value = isEdit ? Number(s.battleLimit || 2) : 2;
       document.getElementById("schoolEditorLegacySheetId").value = isEdit ? String(raw?.legacySheetId || raw?.legacy_sheet_id || raw?.raw?.legacy_sheet_id || "") : "";
+      document.getElementById("schoolEditorSuperAdminPassword").value = isEdit ? String(raw?.settings?.superAdminPassword || raw?.superAdminPassword || raw?.raw?.super_admin_password || "") : "";
+      document.getElementById("schoolEditorAdminPassword").value = isEdit ? String(raw?.settings?.adminPassword || raw?.adminPassword || raw?.raw?.admin_password || "") : "";
       document.getElementById("schoolEditorIsActive").value = isEdit && s.isActive === false ? "false" : "true";
       modal.classList.add("show");
       document.body.classList.add("console-modal-open");
@@ -3609,8 +3619,10 @@
       const speechLimit = Math.max(0, Math.floor(Number(document.getElementById("schoolEditorSpeechLimit")?.value || 0)));
       const battleLimit = Math.max(0, Math.floor(Number(document.getElementById("schoolEditorBattleLimit")?.value || 0)));
       const legacySheetId = String(document.getElementById("schoolEditorLegacySheetId")?.value || "").trim();
+      const superAdminPassword = String(document.getElementById("schoolEditorSuperAdminPassword")?.value || "").trim();
+      const adminPassword = String(document.getElementById("schoolEditorAdminPassword")?.value || "").trim();
       const isActive = String(document.getElementById("schoolEditorIsActive")?.value || "true") === "true";
-      return { mode, originalCode, schoolCode, name, studentLimit, speechLimit, battleLimit, legacySheetId, isActive };
+      return { mode, originalCode, schoolCode, name, studentLimit, speechLimit, battleLimit, legacySheetId, superAdminPassword, adminPassword, isActive };
     }
 
     async function submitSchoolEditor() {
@@ -3634,6 +3646,8 @@
             speechLimit: payload.speechLimit,
             battleLimit: payload.battleLimit,
             legacySheetId: payload.legacySheetId,
+            superAdminPassword: payload.superAdminPassword,
+            adminPassword: payload.adminPassword,
             isActive: payload.isActive
           }
         });
@@ -4118,7 +4132,12 @@
         activeNewsletters: Number(counts.activeNewsletters ?? raw?.active_newsletters ?? raw?.raw?.active_newsletters ?? 0),
         nextNewsletterCount: Number(counts.nextNewsletterCount ?? raw?.next_newsletter_count ?? raw?.raw?.next_newsletter_count ?? 0),
         studentLimit: Number(limits.studentLimit ?? raw?.student_limit ?? raw?.raw?.student_limit ?? 0),
+        speechLimit: Number(limits.speechLimit ?? raw?.speechLimit ?? raw?.speech_limit ?? raw?.raw?.speech_limit ?? 0),
+        battleLimit: Number(limits.battleLimit ?? raw?.battleLimit ?? raw?.battle_limit ?? raw?.raw?.battle_limit ?? 0),
         remainingSlots: limits.remainingStudentSlots ?? raw?.remaining_student_slots ?? raw?.raw?.remaining_student_slots ?? null,
+        isActive: (raw?.isActive ?? raw?.is_active ?? raw?.raw?.is_active) === false ? false : true,
+        adminPassword: String(raw?.settings?.adminPassword || raw?.adminPassword || raw?.raw?.admin_password || ""),
+        superAdminPassword: String(raw?.settings?.superAdminPassword || raw?.superAdminPassword || raw?.raw?.super_admin_password || ""),
         healthScore: Number(health.healthScore ?? raw?.health_score ?? raw?.raw?.health_score ?? 100),
         highCount: Number(health.highCount ?? raw?.high_count ?? raw?.raw?.high_count ?? 0),
         mediumCount: Number(health.mediumCount ?? raw?.medium_count ?? raw?.raw?.medium_count ?? 0),
