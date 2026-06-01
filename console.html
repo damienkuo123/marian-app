@@ -4505,8 +4505,11 @@
       const daily = Array.isArray(data.dailyUsage) ? data.dailyUsage : [];
       const pointTrend = Array.isArray(data.pointTrend) ? data.pointTrend : [];
       const mode = data.modeBreakdown || {};
-      document.getElementById('anaTodayTotal') && (document.getElementById('anaTodayTotal').textContent = numFmt(today.total));
-      document.getElementById('anaTodayNote') && (document.getElementById('anaTodayNote').textContent = `今日一般練習 ${numFmt(today.practice)}｜挑戰 ${numFmt(today.challenge)}｜對戰 ${numFmt((today.battle1v1||0)+(today.battleAi||0)+(today.eventBattle||0))}`);
+      const todayInteractionTotal = chartEventTotal(today);
+      const todayBattleTotal = chartBattleTotal(today);
+      const rangeInteractionTotal = chartEventTotal(totals);
+      document.getElementById('anaTodayTotal') && (document.getElementById('anaTodayTotal').textContent = numFmt(todayInteractionTotal));
+      document.getElementById('anaTodayNote') && (document.getElementById('anaTodayNote').textContent = `今日一般練習 ${numFmt(today.practice)}｜挑戰 ${numFmt(today.challenge)}｜對戰合計 ${numFmt(todayBattleTotal)}`);
       document.getElementById('anaActiveRate') && (document.getElementById('anaActiveRate').textContent = pctFmt(active.rate));
       document.getElementById('anaActiveNote') && (document.getElementById('anaActiveNote').textContent = `${numFmt(active.activeStudents)} / ${numFmt(active.totalStudents)} 位學生在區間內有互動`);
       document.getElementById('anaChallengeTotal') && (document.getElementById('anaChallengeTotal').textContent = numFmt(today.challenge));
@@ -4517,15 +4520,15 @@
       const heroTitle = document.getElementById('ovHeroTitle');
       const heroSub = document.getElementById('ovHeroSub');
       if (heroTitle) {
-        if (Number(today.total||0) > 0) heroTitle.textContent = `今天已有 ${numFmt(today.total)} 次學生互動，校區正在運轉中。`;
+        if (Number(todayInteractionTotal||0) > 0) heroTitle.textContent = `今天已有 ${numFmt(todayInteractionTotal)} 次學生互動，校區正在運轉中。`;
         else if (Number(active.rate||0) > 0) heroTitle.textContent = `本區間活躍率 ${pctFmt(active.rate)}，但今天尚未出現新互動。`;
         else heroTitle.textContent = `目前尚未偵測到學生互動，建議確認課程排程與入口使用。`;
       }
-      if (heroSub) heroSub.textContent = `近 ${data.rangeDays || overviewAnalyticsRange} 天累計 ${numFmt(totals.total)} 次互動，包含練習、挑戰、對戰與抽卡。`;
+      if (heroSub) heroSub.textContent = `近 ${data.rangeDays || overviewAnalyticsRange} 天累計 ${numFmt(rangeInteractionTotal)} 次互動，包含練習、挑戰、對戰與抽卡。`;
       renderOverviewStatusRatios();
 
-      const peak = daily.reduce((best,x)=>Number(x.total||0)>Number(best.total||0)?x:best,{total:0,date:null});
-      document.getElementById('anaUsagePeak') && (document.getElementById('anaUsagePeak').textContent = peak.date ? `高峰 ${dateShort(peak.date)}：${numFmt(peak.total)}` : '尚無高峰');
+      const peak = daily.reduce((best,x)=>chartEventTotal(x)>chartEventTotal(best)?x:best,{total:0,date:null});
+      document.getElementById('anaUsagePeak') && (document.getElementById('anaUsagePeak').textContent = peak.date ? `高峰 ${dateShort(peak.date)}：${numFmt(chartEventTotal(peak))}` : '尚無高峰');
       renderUsageLineChart(daily);
       renderModeDonut(mode);
       renderPointTrend(pointTrend);
@@ -4535,6 +4538,7 @@
 
     function chartSafeNumber(n){ return Number.isFinite(Number(n)) ? Number(n) : 0; }
     function chartEventTotal(r){ return chartSafeNumber(r.practice)+chartSafeNumber(r.challenge)+chartSafeNumber(r.battle1v1)+chartSafeNumber(r.battleAi)+chartSafeNumber(r.eventBattle)+chartSafeNumber(r.gacha); }
+    function chartBattleTotal(r){ return chartSafeNumber(r.battle1v1)+chartSafeNumber(r.battleAi)+chartSafeNumber(r.eventBattle)+chartSafeNumber(r.gacha); }
     function ensureChartTooltip(){
       let tip=document.getElementById('analyticsHoverTooltip');
       if(!tip){
@@ -4566,11 +4570,11 @@
     function updateUsageDetail(row){
       const box=document.getElementById('anaUsageDetail');
       if(!box || !row) return;
-      const battle=chartSafeNumber(row.battle1v1)+chartSafeNumber(row.battleAi)+chartSafeNumber(row.eventBattle);
+      const battle=chartBattleTotal(row);
       box.innerHTML=`
         <div class="analytics-detail-title">${escapeHtml(row.date || '')} 完整互動明細</div>
         <div class="analytics-detail-grid">
-          <div><span>總互動</span><strong>${numFmt(row.total ?? chartEventTotal(row))}</strong></div>
+          <div><span>總互動</span><strong>${numFmt(chartEventTotal(row))}</strong></div>
           <div><span>一般練習</span><strong>${numFmt(row.practice)}</strong></div>
           <div><span>今日挑戰</span><strong>${numFmt(row.challenge)}</strong></div>
           <div><span>1v1 對戰</span><strong>${numFmt(row.battle1v1)}</strong></div>
@@ -4584,7 +4588,7 @@
       const row=(window.__overviewUsageRows||[])[index];
       if(!row) return;
       updateUsageDetail(row);
-      showChartTooltip(`<strong>${escapeHtml(row.date || '')}</strong><br>總互動：${numFmt(row.total ?? chartEventTotal(row))}<br>一般練習：${numFmt(row.practice)}｜今日挑戰：${numFmt(row.challenge)}<br>1v1：${numFmt(row.battle1v1)}｜AI：${numFmt(row.battleAi)}｜活動：${numFmt(row.eventBattle)}<br>抽卡：${numFmt(row.gacha)}`, evt);
+      showChartTooltip(`<strong>${escapeHtml(row.date || '')}</strong><br>總互動：${numFmt(chartEventTotal(row))}<br>一般練習：${numFmt(row.practice)}｜今日挑戰：${numFmt(row.challenge)}<br>1v1：${numFmt(row.battle1v1)}｜AI：${numFmt(row.battleAi)}｜活動：${numFmt(row.eventBattle)}<br>抽卡：${numFmt(row.gacha)}`, evt);
     }
     function renderUsageLineChart(rows){
       const el=document.getElementById('anaUsageChart'); if(!el) return;
@@ -4597,7 +4601,7 @@
         {key:'challenge',label:'今日挑戰',color:'#22c55e',width:2.5},
         {key:'battle',label:'對戰合計',color:'#f59e0b',width:2.5}
       ];
-      const normalized=rows.map(r=>({...r,total:chartSafeNumber(r.total ?? chartEventTotal(r)),battle:chartSafeNumber(r.battle1v1)+chartSafeNumber(r.battleAi)+chartSafeNumber(r.eventBattle)}));
+      const normalized=rows.map(r=>({...r,total:chartEventTotal(r),battle:chartBattleTotal(r)}));
       const max=Math.max(1,...normalized.flatMap(r=>[r.total,r.practice,r.challenge,r.battle]));
       const niceMax=Math.ceil(max/10)*10 || 10;
       const x=(i)=>padL+(rows.length===1?0:(i*(W-padL-padR)/(rows.length-1)));
