@@ -4689,7 +4689,7 @@
       }
       healthLoading = true;
       try {
-        const data = await TappieAPI.consoleGetHealth({ token: session.token });
+        const data = await TappieAPI.consoleGetHealth({ token: session.token, ...getActiveScopePayload() });
         if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_health_failed");
         healthCache = data;
         updateHealthUI();
@@ -4810,11 +4810,11 @@
       studentsLoading = true;
       try {
         const data = (TappieAPI && typeof TappieAPI.consoleGetStudents === "function")
-          ? await TappieAPI.consoleGetStudents({ token: session.token })
+          ? await TappieAPI.consoleGetStudents({ token: session.token, ...getActiveScopePayload() })
           : await fetch(`${TappieAPI.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1"}/console-get-students`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.token}` },
-              body: JSON.stringify({ token: session.token })
+              body: JSON.stringify({ token: session.token, ...getActiveScopePayload() })
             }).then(r => r.json());
         if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_students_failed");
         studentsCache = data;
