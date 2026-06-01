@@ -3347,7 +3347,7 @@
       page = currentConsolePage;
       if (page === "overview") {
         loadOverviewData(false);
-        loadOverviewAnalyticsData(false);
+        loadOverviewAnalyticsData(true);
       }
       if (page === "health") {
         loadHealthData(false);
@@ -4476,9 +4476,10 @@
       overviewAnalyticsLoading = true;
       try{
         const base = getFunctionBaseForConsole();
-        const res = await fetch(`${base}/console-get-analytics`, {
+        const res = await fetch(`${base}/console-get-analytics?ts=${Date.now()}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}`, 'Cache-Control': 'no-cache' },
           body: JSON.stringify({ rangeDays: overviewAnalyticsRange, schoolCode: getActiveSchoolCode() || null, scopeMode: isOwnerAllMode() ? 'all' : 'single' })
         });
         const data = await res.json().catch(()=>({ success:false, message:'invalid_json' }));
