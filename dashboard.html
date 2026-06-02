@@ -988,22 +988,34 @@
           document.getElementById('email-submit-btn').innerText = "訂閱";
       }
       
-      if (data.leaderboard && data.leaderboard.length > 0) {
-        let myRank = -1;
-        for (let i = 0; i < Math.min(3, data.leaderboard.length); i++) {
-            if (data.leaderboard[i].uid === STUDENT_ID) {
-                myRank = i;
-                break;
-            }
+      const badge = document.getElementById('honor-title');
+      if (badge) {
+        badge.innerText = "";
+        badge.classList.add('hidden');
+
+        let honorTitle = data.honorTitle || data.title || data.studentTitle || data.student?.title || "";
+
+        // 後端 title 為權威來源；若舊版 API 尚未回傳，保留原本前端排行榜 fallback。
+        if (!honorTitle && data.leaderboard && data.leaderboard.length > 0) {
+          let myRank = -1;
+          for (let i = 0; i < Math.min(3, data.leaderboard.length); i++) {
+              if (data.leaderboard[i].uid === STUDENT_ID) {
+                  myRank = i;
+                  break;
+              }
+          }
+
+          if (myRank !== -1) {
+              const currentUnitName = data.currentUnit?.unitName || data.currentUnit?.unit_name || data.currentUnit || "";
+              if (myRank === 0) honorTitle = `🏆 ${currentUnitName} 第一名`;
+              else if (myRank === 1) honorTitle = `🌟 ${currentUnitName} 第二名`;
+              else if (myRank === 2) honorTitle = `🔥 ${currentUnitName} 第三名`;
+          }
         }
-        
-        if (myRank !== -1) {
-            const badge = document.getElementById('honor-title');
-            if (myRank === 0) badge.innerText = `🏆 ${data.currentUnit} 第一名`;
-            else if (myRank === 1) badge.innerText = `🌟 ${data.currentUnit} 第二名`;
-            else if (myRank === 2) badge.innerText = `🔥 ${data.currentUnit} 第三名`;
-            
-            badge.classList.remove('hidden');
+
+        if (honorTitle) {
+          badge.innerText = honorTitle;
+          badge.classList.remove('hidden');
         }
       }
 
