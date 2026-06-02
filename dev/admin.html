@@ -427,6 +427,769 @@
         
         .sm-batch-bar { display: none; background: rgba(241, 196, 15, 0.2); border: 1px solid #f1c40f; padding: 10px 15px; border-radius: 12px; margin: 0 20px 10px 20px; justify-content: space-between; align-items: center; }
         .batch-mode-active ~ .sm-batch-bar { display: flex; animation: fadeIn 0.3s; }
+
+        /* =======================================================
+           Admin v2 Shell｜Console mobile + QQ floating bottom nav
+           - UI shell only; keeps existing scan / add-deduct / logs logic
+           ======================================================= */
+        :root {
+            --admin-bg: #f5f7fb;
+            --admin-surface: rgba(255,255,255,.92);
+            --admin-soft: #eef3fb;
+            --admin-text: #101828;
+            --admin-muted: #667085;
+            --admin-border: #e4e7ec;
+            --admin-blue: #1677ff;
+            --admin-blue-2: #0b63f6;
+            --admin-green: #22c55e;
+            --admin-red: #ef4444;
+            --admin-shadow: 0 18px 44px rgba(16,24,40,.08);
+        }
+
+        html, body {
+            width: 100%;
+            min-height: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            display: block !important;
+            color: var(--admin-text) !important;
+            background:
+                radial-gradient(circle at 12% 8%, rgba(22,119,255,.10), transparent 28%),
+                radial-gradient(circle at 86% 10%, rgba(34,197,94,.08), transparent 28%),
+                linear-gradient(180deg, #ffffff 0%, var(--admin-bg) 52%, #f8fafc 100%) !important;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif !important;
+        }
+
+        .admin-v2-topbar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            height: calc(84px + env(safe-area-inset-top));
+            padding: calc(14px + env(safe-area-inset-top)) 18px 12px !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,.78);
+            border-bottom: 1px solid rgba(228,231,236,.76);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            box-shadow: 0 8px 28px rgba(16,24,40,.04);
+        }
+
+        .admin-v2-school {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .admin-v2-school-icon {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: #fff;
+            border: 1px solid var(--admin-border);
+            box-shadow: 0 10px 24px rgba(16,24,40,.07);
+            font-size: 20px;
+        }
+
+        .admin-v2-school-name {
+            max-width: 46vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 18px;
+            line-height: 1.2;
+            font-weight: 900;
+            letter-spacing: -.03em;
+            color: var(--admin-text);
+        }
+
+        .admin-v2-role {
+            margin-top: 2px;
+            color: var(--admin-muted);
+            font-size: 12px;
+            font-weight: 750;
+            letter-spacing: 0;
+        }
+
+        .admin-v2-top-actions {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .admin-v2-utility,
+        .admin-v2-icon-btn {
+            border: 1px solid var(--admin-border);
+            background: rgba(255,255,255,.88);
+            color: var(--admin-text);
+            border-radius: 999px;
+            min-height: 42px;
+            padding: 0 14px;
+            font-size: 13px;
+            font-weight: 900;
+            box-shadow: 0 10px 22px rgba(16,24,40,.07);
+            cursor: pointer;
+        }
+
+        .admin-v2-icon-btn {
+            width: 42px;
+            padding: 0;
+            display: grid;
+            place-items: center;
+            font-size: 22px;
+            color: var(--admin-muted);
+        }
+
+        .admin-main.container {
+            position: fixed !important;
+            inset: calc(84px + env(safe-area-inset-top)) 0 calc(98px + env(safe-area-inset-bottom)) 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 18px 18px 24px !important;
+            overflow-y: auto !important;
+            text-align: left !important;
+            box-sizing: border-box !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: var(--admin-text) !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-main::-webkit-scrollbar { display: none; }
+
+        .admin-v2-view {
+            width: min(100%, 560px);
+            margin: 0 auto;
+            animation: fadeIn .22s ease;
+        }
+
+        .admin-v2-mode-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 34px;
+            padding: 0 13px;
+            border-radius: 999px;
+            background: rgba(22,119,255,.09);
+            color: var(--admin-blue);
+            font-size: 13px;
+            font-weight: 900;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            background: var(--admin-blue);
+            box-shadow: 0 0 0 5px rgba(22,119,255,.10);
+        }
+
+        .admin-v2-scan-view {
+            text-align: center;
+        }
+
+        .admin-v2-nfc-hero {
+            background: var(--admin-surface);
+            border: 1px solid rgba(255,255,255,.85);
+            border-radius: 34px;
+            padding: 34px 20px;
+            box-shadow: var(--admin-shadow);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .admin-v2-nfc-circle {
+            position: relative;
+            width: 230px;
+            height: 230px;
+            border-radius: 50%;
+            margin: 0 auto;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle, rgba(22,119,255,.12), rgba(22,119,255,.04) 62%, transparent 63%);
+        }
+
+        .admin-v2-phone-outline {
+            width: 112px;
+            height: 168px;
+            border-radius: 28px;
+            border: 3px solid rgba(22,119,255,.26);
+            display: grid;
+            place-items: center;
+            color: rgba(22,119,255,.58);
+            font-size: 24px;
+            font-weight: 950;
+            background: rgba(255,255,255,.52);
+        }
+
+        .admin-v2-card-chip {
+            position: absolute;
+            left: 92px;
+            bottom: 46px;
+            width: 118px;
+            height: 68px;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            transform: rotate(-8deg);
+            color: #fff;
+            font-weight: 950;
+            background: linear-gradient(135deg, #1677ff, #38bdf8);
+            box-shadow: 0 18px 32px rgba(22,119,255,.24);
+        }
+
+        .admin-main h1 {
+            margin: 24px 0 8px !important;
+            color: var(--admin-text) !important;
+            background: none !important;
+            -webkit-text-fill-color: currentColor !important;
+            font-size: 34px !important;
+            line-height: 1.15;
+            letter-spacing: -.05em !important;
+            font-weight: 950;
+        }
+
+        .subtitle {
+            margin: 0 auto 20px !important;
+            max-width: 320px;
+            color: var(--admin-muted) !important;
+            font-size: 15px !important;
+            line-height: 1.7;
+            font-weight: 680 !important;
+            letter-spacing: 0 !important;
+        }
+
+        .status-badge {
+            min-height: 48px;
+            padding: 0 18px !important;
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            border-radius: 999px !important;
+            border: 1px solid var(--admin-border) !important;
+            background: rgba(255,255,255,.84) !important;
+            box-shadow: 0 10px 26px rgba(16,24,40,.06) !important;
+            color: var(--admin-text) !important;
+        }
+
+        .status-dot {
+            width: 9px !important;
+            height: 9px !important;
+            margin-right: 0 !important;
+            background: var(--admin-green) !important;
+            box-shadow: 0 0 0 5px rgba(34,197,94,.12) !important;
+        }
+
+        #msg {
+            color: var(--admin-text) !important;
+            font-size: 14px !important;
+            font-weight: 850 !important;
+            letter-spacing: 0 !important;
+        }
+
+        .admin-v2-tip {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin: 18px auto 0;
+            padding: 15px 16px;
+            border-radius: 20px;
+            max-width: 420px;
+            background: rgba(22,119,255,.07);
+            border: 1px solid rgba(22,119,255,.11);
+            color: var(--admin-muted);
+            font-size: 13px;
+            line-height: 1.55;
+            font-weight: 650;
+            text-align: left;
+        }
+
+        .admin-v2-tip strong {
+            color: var(--admin-blue);
+            white-space: nowrap;
+        }
+
+        #action-ui.admin-v2-student-view {
+            display: none;
+        }
+
+        .admin-v2-rescan {
+            border: 0;
+            background: transparent;
+            color: var(--admin-blue);
+            font-size: 14px;
+            font-weight: 900;
+            display: block;
+            margin: 0 0 12px auto;
+            cursor: pointer;
+        }
+
+        .admin-v2-student-card,
+        .admin-v2-points-card,
+        .admin-v2-status-card,
+        .admin-v2-query-card,
+        .admin-v2-custom-row {
+            background: var(--admin-surface);
+            border: 1px solid rgba(255,255,255,.84);
+            box-shadow: var(--admin-shadow);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .admin-v2-student-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-radius: 30px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        .admin-v2-avatar {
+            width: 78px;
+            height: 78px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(22,119,255,.13), rgba(34,197,94,.10));
+            font-size: 42px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.72);
+        }
+
+        .stu-name {
+            margin: 0 !important;
+            color: var(--admin-text) !important;
+            font-size: 26px !important;
+            font-weight: 950 !important;
+            letter-spacing: -.04em !important;
+        }
+
+        .admin-v2-student-meta {
+            margin-top: 6px;
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: rgba(22,119,255,.10);
+            color: var(--admin-blue);
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .admin-v2-points-card {
+            border-radius: 30px;
+            padding: 22px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .admin-v2-card-label {
+            color: var(--admin-muted);
+            font-size: 14px;
+            font-weight: 850;
+            margin-bottom: 8px;
+        }
+
+        .stu-points {
+            margin: 0 !important;
+            color: var(--admin-blue) !important;
+            text-shadow: none !important;
+            font-size: 56px !important;
+            line-height: 1 !important;
+            font-weight: 950 !important;
+            letter-spacing: -.06em !important;
+        }
+
+        .history-btn {
+            margin: 16px auto 0 !important;
+            display: inline-flex !important;
+            color: var(--admin-blue) !important;
+            text-decoration: none !important;
+            background: rgba(22,119,255,.08);
+            border-radius: 999px;
+            padding: 9px 14px !important;
+            font-size: 14px !important;
+            font-weight: 900;
+        }
+
+        .admin-v2-segment {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            padding: 5px;
+            margin-bottom: 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,.72);
+            border: 1px solid var(--admin-border);
+            box-shadow: 0 10px 24px rgba(16,24,40,.04);
+        }
+
+        .admin-v2-segment button {
+            border: 0;
+            min-height: 50px;
+            border-radius: 16px;
+            background: transparent;
+            color: var(--admin-muted);
+            font-size: 16px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-segment button.active {
+            background: linear-gradient(135deg, #22c55e, #39d98a);
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(34,197,94,.22);
+        }
+
+        .admin-v2-segment button[data-point-action="minus"].active {
+            background: linear-gradient(135deg, #ef4444, #fb7185);
+            box-shadow: 0 12px 24px rgba(239,68,68,.18);
+        }
+
+        .admin-v2-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-quick-btn {
+            border: 0;
+            min-height: 68px;
+            border-radius: 22px;
+            background: #fff;
+            box-shadow: 0 12px 28px rgba(16,24,40,.07);
+            font-size: 24px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-quick-btn.add { color: var(--admin-green); }
+        .admin-v2-quick-btn.minus { color: var(--admin-red); }
+
+        .admin-v2-custom-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 10px;
+            border-radius: 22px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-custom-row label {
+            color: var(--admin-muted);
+            font-size: 14px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .custom-input {
+            min-width: 0;
+            height: 48px;
+            padding: 0 12px !important;
+            border-radius: 15px !important;
+            border: 1px solid var(--admin-border) !important;
+            background: #fff !important;
+            color: var(--admin-text) !important;
+            font-size: 16px !important;
+            font-weight: 800;
+            text-align: left !important;
+            outline: none;
+        }
+
+        .custom-input::placeholder { color: #98a2b3 !important; }
+
+        .admin-v2-confirm {
+            border: 0;
+            height: 48px;
+            border-radius: 16px;
+            padding: 0 16px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-confirm.add { background: var(--admin-green); }
+        .admin-v2-confirm.minus { background: var(--admin-red); }
+
+        .admin-v2-primary-link,
+        .admin-v2-action-disabled {
+            width: 100%;
+            min-height: 58px;
+            border: 0;
+            border-radius: 18px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--admin-blue), var(--admin-blue-2));
+            box-shadow: 0 16px 30px rgba(22,119,255,.22);
+            font-size: 17px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-action-disabled {
+            background: #cbd5e1;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .admin-v2-status-card {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            border-radius: 28px;
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-status-icon {
+            width: 58px;
+            height: 58px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 20px;
+            background: rgba(34,197,94,.12);
+            font-size: 28px;
+        }
+
+        .admin-v2-big-status {
+            color: var(--admin-red);
+            font-size: 24px;
+            font-weight: 950;
+            letter-spacing: -.03em;
+        }
+
+        .admin-v2-muted {
+            margin-top: 5px;
+            color: var(--admin-muted);
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        .admin-v2-segment.attendance button.active {
+            background: linear-gradient(135deg, var(--admin-blue), #38bdf8);
+            box-shadow: 0 12px 24px rgba(22,119,255,.20);
+        }
+
+        .admin-v2-query-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .admin-v2-query-card {
+            min-height: 118px;
+            border: 0;
+            border-radius: 28px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            align-items: center;
+            column-gap: 14px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .admin-v2-query-card span {
+            grid-row: span 2;
+            width: 56px;
+            height: 56px;
+            display: grid;
+            place-items: center;
+            border-radius: 20px;
+            background: rgba(22,119,255,.10);
+            font-size: 26px;
+        }
+
+        .admin-v2-query-card strong {
+            color: var(--admin-text);
+            font-size: 20px;
+            font-weight: 950;
+        }
+
+        .admin-v2-query-card small {
+            color: var(--admin-muted);
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        .admin-v2-query-card.disabled {
+            opacity: .62;
+            cursor: not-allowed;
+        }
+
+        #scanner {
+            opacity: 0 !important;
+            position: fixed !important;
+            top: -100px !important;
+            left: -100px !important;
+            width: 1px !important;
+            height: 1px !important;
+        }
+
+        .admin-v2-bottom-nav {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: calc(14px + env(safe-area-inset-bottom));
+            z-index: 1200;
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr) 64px 64px;
+            gap: 10px;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .admin-v2-nav-circle,
+        .admin-v2-bottom-pill {
+            pointer-events: auto;
+            min-height: 64px;
+            border-radius: 999px;
+            border: 1px solid rgba(228,231,236,.94);
+            background: rgba(255,255,255,.88);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            box-shadow: 0 18px 36px rgba(16,24,40,.13);
+        }
+
+        .admin-v2-nav-circle {
+            width: 64px;
+            height: 64px;
+            display: grid;
+            place-items: center;
+            color: #667085;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .admin-v2-nav-circle.active {
+            color: #fff;
+            background: linear-gradient(135deg, var(--admin-blue), #38bdf8);
+            border-color: transparent;
+            box-shadow: 0 18px 34px rgba(22,119,255,.26);
+        }
+
+        .admin-v2-bottom-pill {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 18px;
+            color: #667085;
+            font-size: 18px;
+            font-weight: 900;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .admin-v2-bottom-pill span:last-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .admin-v2-search-icon {
+            color: var(--admin-blue);
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .modal-overlay {
+            background: rgba(16,24,40,.38) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+        }
+
+        .modal-content {
+            background: rgba(255,255,255,.96) !important;
+            color: var(--admin-text) !important;
+            border: 1px solid rgba(255,255,255,.9) !important;
+            box-shadow: 0 30px 90px rgba(16,24,40,.24) !important;
+        }
+
+        .modal-title {
+            color: var(--admin-text) !important;
+            letter-spacing: -.03em !important;
+        }
+
+        .log-row,
+        .accordion-header,
+        .progress-student-head,
+        .progress-detail-value,
+        .weekly-status-title,
+        .weekly-recipient-name {
+            color: var(--admin-text) !important;
+        }
+
+        .accordion-group,
+        .progress-student-card,
+        .weekly-card,
+        .weekly-status-box {
+            background: #fff !important;
+            border-color: var(--admin-border) !important;
+        }
+
+        .accordion-body,
+        .progress-student-detail {
+            background: #f8fafc !important;
+        }
+
+        .hidden { display: none !important; }
+
+        @media (min-width: 720px) {
+            .admin-main.container {
+                padding-top: 28px !important;
+            }
+            .admin-v2-view {
+                max-width: 600px;
+            }
+            .admin-v2-bottom-nav {
+                left: 50%;
+                right: auto;
+                width: min(560px, calc(100vw - 32px));
+                transform: translateX(-50%);
+            }
+        }
+
+        @media (max-width: 380px) {
+            .admin-v2-bottom-nav {
+                left: 10px;
+                right: 10px;
+                grid-template-columns: 58px minmax(0, 1fr) 58px 58px;
+                gap: 8px;
+            }
+            .admin-v2-nav-circle,
+            .admin-v2-bottom-pill {
+                min-height: 58px;
+            }
+            .admin-v2-nav-circle {
+                width: 58px;
+                height: 58px;
+            }
+            .admin-v2-bottom-pill {
+                font-size: 15px;
+                padding: 0 12px;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -437,71 +1200,154 @@
         <p style="color:#7f8c8d;">請使用教師專用 NFC 卡感應進入</p>
     </div>
 
-    <div class="top-nav" id="top-nav">
-        <div class="nav-btn" onclick="toggleMenu()">
-            ⚙️ 功能清單 ▾
-            <div class="dropdown-menu" id="menu-dropdown">
-                <div class="dropdown-item" onclick="openProgressModal()">📊 學習進度</div>
-                <div class="dropdown-item super-only" onclick="openNewsletterModal()">📝 專欄編輯</div>
-                <div class="dropdown-item super-only" onclick="openWeeklyAutomationModal()">📬 自動通知與週報</div>
-                <div class="dropdown-item super-only" onclick="openTaskManager()">📅 學習任務排定</div>
-                <div class="dropdown-item super-only" onclick="openStudentManager()">🧑‍🎓 編輯學生資料</div>
-                <div class="dropdown-item super-only" onclick="openAvatarPricingModal()">🃏 角色定價與類型</div>
-                <div class="dropdown-item super-only" onclick="openBrandingModal()">🎨 校區視覺設定</div>
-                <div class="dropdown-item super-only" onclick="openGamiModal()">🕹️ 進階點數設定</div>
+    <div class="top-nav admin-v2-topbar" id="top-nav">
+        <div class="admin-v2-school">
+            <div class="admin-v2-school-icon">🏫</div>
+            <div>
+                <div class="admin-v2-school-name" id="admin-v2-school-name">Tappie 教師工作台</div>
+                <div class="admin-v2-role" id="role-text">專屬管理員權限</div>
             </div>
         </div>
-        <div class="nav-btn" onclick="adminLogout()">🔒 登出</div>
+        <div class="admin-v2-top-actions">
+            <button class="admin-v2-utility super-only" type="button" onclick="openConsoleFromAdmin()">Console</button>
+            <button class="admin-v2-icon-btn" type="button" onclick="adminLogout()" aria-label="登出">⎋</button>
+        </div>
     </div>
 
-    <div class="container" id="mainCard">
-        <div id="scan-ui">
-            <div class="logo-wrapper">
-                <div class="pulse-ring" id="ring"></div>
-                <img src="/assets/logo.webp" style="width:80px; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3));">
+    <main class="container admin-main" id="mainCard">
+        <section id="scan-ui" class="admin-v2-view admin-v2-scan-view">
+            <div class="admin-v2-mode-kicker">
+                <span class="admin-v2-dot"></span>
+                <span id="admin-v2-current-mode-label">加扣點模式</span>
             </div>
-            <h1>教師中控台</h1>
-            <p class="subtitle" id="role-text">專屬管理員權限</p>
+
+            <div class="admin-v2-nfc-hero">
+                <div class="admin-v2-nfc-circle">
+                    <div class="admin-v2-phone-outline">NFC</div>
+                    <div class="admin-v2-card-chip">學生卡</div>
+                </div>
+            </div>
+
+            <h1>請感應學生卡</h1>
+            <p class="subtitle">將學生卡靠近手機背面 NFC 感應區域</p>
+
             <div class="status-badge" id="statusBadge">
                 <div class="status-dot"></div>
                 <p id="msg">系統就緒，請感應學生卡</p>
             </div>
-        </div>
 
-        <div id="action-ui">
-            <h2 class="stu-name" id="stu-name">-</h2>
-            <div class="stu-points" id="stu-points">0 PTS</div>
-            <span class="history-btn" onclick="toggleLogs(true)">點數明細 ⓘ</span>
-            <div class="control-panel">
-                <p class="panel-title" style="color:#2ecc71;">▲ 獎勵加分</p>
-                <div class="btn-flex-row">
-                    <button class="btn-action btn-green" onclick="send(10, this)">+ 10</button>
-                    <button class="btn-action btn-green" onclick="send(50, this)">+ 50</button>
-                    <button class="btn-action btn-green" onclick="send(100, this)">+ 100</button>
-                </div>
-                <div class="custom-input-group">
-                    <input type="number" id="customAdd" class="custom-input" placeholder="數值">
-                    <button class="btn-action btn-green" style="flex:0.6; padding:10px;" onclick="handleAdd(this)">執行</button>
-                </div>
-                <hr style="border: 0.5px dashed rgba(255,255,255,0.1); margin: 25px 0;">
-                <p class="panel-title" style="color:#e74c3c;">▼ 扣分懲罰</p>
-                <div class="btn-flex-row">
-                    <button class="btn-action btn-gray" onclick="send(-10, this)">- 10</button>
-                    <button class="btn-action btn-gray" onclick="send(-50, this)">- 50</button>
-                    <button class="btn-action btn-gray" onclick="send(-100, this)">- 100</button>
-                </div>
-                <div class="custom-input-group">
-                    <input type="number" id="customMinus" class="custom-input" placeholder="數值">
-                    <button class="btn-action btn-red" style="flex:0.6; padding:10px;" onclick="handleMinus(this)">執行</button>
+            <div class="admin-v2-tip">
+                <strong>小提醒</strong>
+                <span>掃到學生後，會依照目前底部分頁進入對應操作。</span>
+            </div>
+        </section>
+
+        <section id="action-ui" class="admin-v2-view admin-v2-student-view">
+            <button class="admin-v2-rescan" type="button" onclick="resetScanner()">↻ 重新掃卡</button>
+
+            <div class="admin-v2-student-card">
+                <div class="admin-v2-avatar" id="admin-v2-avatar">👧</div>
+                <div class="admin-v2-student-info">
+                    <h2 class="stu-name" id="stu-name">-</h2>
+                    <div class="admin-v2-student-meta" id="admin-v2-student-meta">已掃描學生卡</div>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-return" style="flex:1;" onclick="resetScanner()">🔙 繼續掃描</button>
-                <button class="btn-return" style="flex:1; border-color:#3498db; color:#3498db;" onclick="window.location.href='dashboard.html?id=' + currentStudentId + '&view=true'">👀 學生主頁</button>
+
+            <div class="admin-v2-mode-panel admin-v2-panel-points" data-mode-panel="points">
+                <div class="admin-v2-points-card">
+                    <div>
+                        <div class="admin-v2-card-label">目前點數</div>
+                        <div class="stu-points" id="stu-points">0 PTS</div>
+                    </div>
+                    <span class="history-btn" onclick="toggleLogs(true)">點數明細</span>
+                </div>
+
+                <div class="admin-v2-segment">
+                    <button type="button" class="active" data-point-action="add" onclick="setPointAction('add')">＋ 加分</button>
+                    <button type="button" data-point-action="minus" onclick="setPointAction('minus')">－ 扣分</button>
+                </div>
+
+                <div class="admin-v2-point-panel" id="point-add-panel">
+                    <div class="admin-v2-quick-grid">
+                        <button class="admin-v2-quick-btn add" onclick="send(10, this)">+10</button>
+                        <button class="admin-v2-quick-btn add" onclick="send(50, this)">+50</button>
+                        <button class="admin-v2-quick-btn add" onclick="send(100, this)">+100</button>
+                    </div>
+                    <div class="admin-v2-custom-row">
+                        <label>自訂點數</label>
+                        <input type="number" id="customAdd" class="custom-input" placeholder="輸入點數">
+                        <button class="admin-v2-confirm add" onclick="handleAdd(this)">確認</button>
+                    </div>
+                </div>
+
+                <div class="admin-v2-point-panel hidden" id="point-minus-panel">
+                    <div class="admin-v2-quick-grid">
+                        <button class="admin-v2-quick-btn minus" onclick="send(-10, this)">-10</button>
+                        <button class="admin-v2-quick-btn minus" onclick="send(-50, this)">-50</button>
+                        <button class="admin-v2-quick-btn minus" onclick="send(-100, this)">-100</button>
+                    </div>
+                    <div class="admin-v2-custom-row">
+                        <label>自訂扣點</label>
+                        <input type="number" id="customMinus" class="custom-input" placeholder="輸入點數">
+                        <button class="admin-v2-confirm minus" onclick="handleMinus(this)">確認</button>
+                    </div>
+                </div>
+
+                <button class="admin-v2-primary-link" onclick="window.location.href='dashboard.html?id=' + currentStudentId + '&view=true'">進入學生主頁</button>
             </div>
+
+            <div class="admin-v2-mode-panel admin-v2-panel-attendance hidden" data-mode-panel="attendance">
+                <div class="admin-v2-status-card">
+                    <div class="admin-v2-status-icon">🔔</div>
+                    <div>
+                        <div class="admin-v2-card-label">今日打卡狀態</div>
+                        <div class="admin-v2-big-status" id="admin-v2-attendance-status">尚未接入</div>
+                        <div class="admin-v2-muted">Web Push 上放學通知將在下一階段啟用。</div>
+                    </div>
+                </div>
+
+                <div class="admin-v2-segment attendance">
+                    <button type="button" class="active">到校</button>
+                    <button type="button">離校</button>
+                </div>
+
+                <button class="admin-v2-action-disabled" type="button" disabled>確認到校並通知（下一階段）</button>
+            </div>
+
+            <div class="admin-v2-mode-panel admin-v2-panel-query hidden" data-mode-panel="query">
+                <div class="admin-v2-query-grid">
+                    <button class="admin-v2-query-card" onclick="openProgressModal()">
+                        <span>📊</span>
+                        <strong>學習進度</strong>
+                        <small>查看各班口說練習進度</small>
+                    </button>
+                    <button class="admin-v2-query-card disabled" type="button">
+                        <span>🛎️</span>
+                        <strong>今日打卡狀態</strong>
+                        <small>Web Push 打卡功能啟用後開放</small>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <input type="text" id="scanner" inputmode="none" autofocus>
+    </main>
+
+    <nav class="admin-v2-bottom-nav" aria-label="教師工作台分頁">
+        <button class="admin-v2-nav-circle active" data-admin-mode="points" onclick="setAdminMode('points')" aria-label="加扣點">
+            <span>⊕</span>
+        </button>
+        <div class="admin-v2-bottom-pill" id="admin-v2-bottom-status">
+            <span class="admin-v2-search-icon">⌕</span>
+            <span>請感應學生卡</span>
         </div>
-        <input type="text" id="scanner" inputmode="none" autofocus style="opacity: 0; position: absolute; top: -100px;">
-    </div>
+        <button class="admin-v2-nav-circle" data-admin-mode="attendance" onclick="setAdminMode('attendance')" aria-label="打卡通知">
+            <span>◴</span>
+        </button>
+        <button class="admin-v2-nav-circle" data-admin-mode="query" onclick="setAdminMode('query')" aria-label="狀態查詢">
+            <span>▤</span>
+        </button>
+    </nav>
 
     <div id="progressModal" class="modal-overlay" onclick="closeModal('progressModal')">
         <div class="modal-content wide-modal" onclick="event.stopPropagation()">
@@ -1273,7 +2119,7 @@
         if (TARGET_ID) {
             currentStudentId = TARGET_ID;
             window.history.replaceState(null, null, 'admin.html');
-            card.className = 'container loading';
+            card.className = 'container admin-main loading';
             msg.innerText = "⏳ 讀取學生資料中...";
             msg.style.color = "#ffd700";
             loadStudentData(currentStudentId);
@@ -1741,7 +2587,7 @@
                 return;
             }
 
-            card.className = 'container loading';
+            card.className = 'container admin-main loading';
             msg.innerText = "⏳ 讀取學生資料中...";
             msg.style.color = "#ffd700";
 
@@ -1811,10 +2657,10 @@
         }
 
         function renderAdminUI(data) {
-            card.className = 'container';
+            card.className = 'container admin-main';
             scanUI.style.display = 'none';
             actionUI.style.display = 'block';
-            document.getElementById('top-nav').style.display = 'none'; 
+            document.getElementById('top-nav').style.display = 'flex'; 
             
             document.getElementById('stu-name').innerText = data.studentName;
             
@@ -1822,6 +2668,7 @@
             document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
 
             renderPointLogs(data.recentLogs || []);
+            renderV2StudentSnapshot(data);
         }
 
         function normalizePointLog(log) {
@@ -1940,20 +2787,21 @@
             actionUI.style.display = 'none'; 
             scanUI.style.display = 'block'; 
             document.getElementById('top-nav').style.display = 'flex'; 
-            card.className = 'container'; 
+            card.className = 'container admin-main'; 
             msg.innerText = "🟢 系統就緒，請感應學生卡"; 
             msg.style.color = "white"; 
             window.history.replaceState(null, null, 'admin.html'); 
+            updateAdminBottomStatus(`${getAdminV2ModeText()}・等待掃卡`);
             scanner.focus(); 
         }
 
         function showError(errorText) { 
-            card.className = 'container error'; 
+            card.className = 'container admin-main error'; 
             msg.innerText = errorText; 
             msg.style.color = "#e74c3c"; 
             setTimeout(() => { 
                 if (actionUI.style.display !== 'block') { 
-                    card.className = 'container'; 
+                    card.className = 'container admin-main'; 
                     msg.innerText = "🟢 系統就緒，請感應學生卡"; 
                     msg.style.color = "white"; 
                 } 
@@ -4282,6 +5130,85 @@
             } catch (err) { alert('⚠️ ' + (err.message || err)); }
             finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
         }
+
+        // =======================================================
+        // Admin v2 shell helpers｜QQ bottom nav + visual-only modes
+        // =======================================================
+        let ADMIN_V2_ACTIVE_MODE = 'points';
+
+        function getAdminV2ModeText(mode = ADMIN_V2_ACTIVE_MODE) {
+            if (mode === 'attendance') return '打卡通知';
+            if (mode === 'query') return '狀態查詢';
+            return '加扣點';
+        }
+
+        function updateAdminBottomStatus(text) {
+            const el = document.getElementById('admin-v2-bottom-status');
+            if (!el) return;
+            const label = text || `${getAdminV2ModeText()}・等待掃卡`;
+            el.innerHTML = `<span class="admin-v2-search-icon">⌕</span><span>${label}</span>`;
+        }
+
+        function setAdminMode(mode) {
+            ADMIN_V2_ACTIVE_MODE = mode || 'points';
+
+            document.querySelectorAll('[data-admin-mode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.adminMode === ADMIN_V2_ACTIVE_MODE);
+            });
+
+            document.querySelectorAll('[data-mode-panel]').forEach(panel => {
+                panel.classList.toggle('hidden', panel.dataset.modePanel !== ADMIN_V2_ACTIVE_MODE);
+            });
+
+            const modeLabel = document.getElementById('admin-v2-current-mode-label');
+            if (modeLabel) modeLabel.innerText = `${getAdminV2ModeText()}模式`;
+
+            if (currentStudentId) {
+                const name = document.getElementById('stu-name')?.innerText || '已掃描學生';
+                if (ADMIN_V2_ACTIVE_MODE === 'points') updateAdminBottomStatus(`${name}｜${currentPointsValue || 0} PTS`);
+                else if (ADMIN_V2_ACTIVE_MODE === 'attendance') updateAdminBottomStatus(`${name}｜打卡通知`);
+                else updateAdminBottomStatus(`${name}｜狀態查詢`);
+            } else {
+                updateAdminBottomStatus(`${getAdminV2ModeText()}・等待掃卡`);
+            }
+
+            try { scanner && scanner.focus(); } catch(e) {}
+        }
+
+        function setPointAction(type) {
+            const isMinus = type === 'minus';
+            document.querySelectorAll('[data-point-action]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.pointAction === (isMinus ? 'minus' : 'add'));
+            });
+            const addPanel = document.getElementById('point-add-panel');
+            const minusPanel = document.getElementById('point-minus-panel');
+            if (addPanel) addPanel.classList.toggle('hidden', isMinus);
+            if (minusPanel) minusPanel.classList.toggle('hidden', !isMinus);
+            try { scanner && scanner.focus(); } catch(e) {}
+        }
+
+        function renderV2StudentSnapshot(data = {}) {
+            const name = data.studentName || data.name || document.getElementById('stu-name')?.innerText || '已掃描學生';
+            const meta = document.getElementById('admin-v2-student-meta');
+            if (meta) {
+                const classCode = data.classCode || data.class_code || data.unitName || '';
+                meta.innerText = classCode ? `已掃描｜${classCode}` : '已掃描學生卡';
+            }
+            const avatar = document.getElementById('admin-v2-avatar');
+            if (avatar) avatar.innerText = '👧';
+            if (ADMIN_V2_ACTIVE_MODE === 'points') updateAdminBottomStatus(`${name}｜${Number(data.currentPoints ?? currentPointsValue ?? 0)} PTS`);
+            else updateAdminBottomStatus(`${name}｜${getAdminV2ModeText()}`);
+        }
+
+        function openConsoleFromAdmin() {
+            const target = `console.html?schoolCode=${encodeURIComponent(CURRENT_SCHOOL || '')}`;
+            window.location.href = target;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setAdminMode('points');
+        });
+
 
     </script>
 </body>
