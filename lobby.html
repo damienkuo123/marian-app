@@ -2275,7 +2275,8 @@
           if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
 
           const dashboard = await TappieAPI.getDashboard(STUDENT_ID);
-          const lobby = await TappieAPI.getLobbyData(STUDENT_ID);
+          const selectedClassCode = getSelectedBattleClassCode();
+          const lobby = await TappieAPI.getLobbyData(STUDENT_ID, selectedClassCode);
 
           if (!dashboard?.success) throw new Error(dashboard?.message || dashboard?.error || 'dashboard failed');
           if (!lobby?.success) throw new Error(lobby?.message || lobby?.error || 'lobby failed');
@@ -2317,9 +2318,18 @@
 
         const classCode = getSelectedBattleClassCode();
 
+        if (!classCode) {
+          container.innerHTML = `
+            <div class="radar-container">
+              <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">請先選擇戰場級數</p>
+            </div>`;
+          if (signal) signal.innerText = '0 個信號';
+          return;
+        }
+
         try {
           if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
-          const data = await TappieAPI.getLobbyData(STUDENT_ID);
+          const data = await TappieAPI.getLobbyData(STUDENT_ID, classCode);
           if (!data?.success) throw new Error(data?.message || data?.error || 'get-lobby-data failed');
 
           // 同步更新體力狀態，避免建房前用舊資料判斷
@@ -2338,7 +2348,7 @@
               <div class="radar-container">
                 <div class="radar-beam"></div>
                 <div class="radar-beam" style="animation-delay:1s;"></div>
-                <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">正在掃描全部戰場...</p>
+                <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">正在掃描 ${classCode} 戰場...</p>
               </div>`;
             return;
           }
@@ -2633,8 +2643,7 @@
     <script>
     (function installSupabaseAiBattlePatch(){
       function getSelectedClassCodeForAi(){
-        if (window.globalUserStatus?.rawDashboard?.student?.classCode) return window.globalUserStatus.rawDashboard.student.classCode;
-        return '';
+        return String(window.globalUserStatus?.rawDashboard?.student?.classCode || '').trim();
       }
 
       function clearOwnPvpRoomIfAny(){
@@ -2689,12 +2698,8 @@
 
           try {
             if (!window.TappieAPI || !TappieAPI.createAiBattleRoom) throw new Error('TappieAPI.createAiBattleRoom 尚未載入');
-            const classCode = getSelectedClassCodeForAi();
-            if (!classCode) throw new Error('請先選擇級數，例如 A1');
-
             const data = await TappieAPI.createAiBattleRoom({
               uid: STUDENT_ID,
-              classCode,
               level,
               battleType: 'ai'
             });
