@@ -2275,8 +2275,7 @@
           if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
 
           const dashboard = await TappieAPI.getDashboard(STUDENT_ID);
-          const selectedClassCode = getSelectedBattleClassCode();
-          const lobby = await TappieAPI.getLobbyData(STUDENT_ID, selectedClassCode);
+          const lobby = await TappieAPI.getLobbyData(STUDENT_ID);
 
           if (!dashboard?.success) throw new Error(dashboard?.message || dashboard?.error || 'dashboard failed');
           if (!lobby?.success) throw new Error(lobby?.message || lobby?.error || 'lobby failed');
@@ -2318,18 +2317,9 @@
 
         const classCode = getSelectedBattleClassCode();
 
-        if (!classCode) {
-          container.innerHTML = `
-            <div class="radar-container">
-              <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">請先選擇戰場級數</p>
-            </div>`;
-          if (signal) signal.innerText = '0 個信號';
-          return;
-        }
-
         try {
           if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
-          const data = await TappieAPI.getLobbyData(STUDENT_ID, classCode);
+          const data = await TappieAPI.getLobbyData(STUDENT_ID);
           if (!data?.success) throw new Error(data?.message || data?.error || 'get-lobby-data failed');
 
           // 同步更新體力狀態，避免建房前用舊資料判斷
@@ -2348,7 +2338,7 @@
               <div class="radar-container">
                 <div class="radar-beam"></div>
                 <div class="radar-beam" style="animation-delay:1s;"></div>
-                <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">正在掃描 ${classCode} 戰場...</p>
+                <p style="font-size:15px;margin-top:25px;color:rgba(255,215,0,0.8);font-weight:900;letter-spacing:3px;">正在掃描全部戰場...</p>
               </div>`;
             return;
           }
@@ -2643,8 +2633,6 @@
     <script>
     (function installSupabaseAiBattlePatch(){
       function getSelectedClassCodeForAi(){
-        const levelInput = document.getElementById('pvp-level');
-        if (levelInput && levelInput.value) return levelInput.value.trim();
         if (window.globalUserStatus?.rawDashboard?.student?.classCode) return window.globalUserStatus.rawDashboard.student.classCode;
         return '';
       }
