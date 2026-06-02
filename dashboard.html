@@ -217,7 +217,7 @@
 
     .hidden { display: none !important; }
     
-    /* 🔒 未解鎖 Tab 的樣式 (一般生) */
+    /* 🔒 未解鎖 Tab 的樣式 (無班級學生) */
     .nav-item.locked {
       opacity: 0.5;
       cursor: not-allowed;
@@ -669,7 +669,7 @@
       // 🔒 檢查是否被鎖定
       if (navElement.classList.contains('locked')) {
         if (window.GlobalAudio) GlobalAudio.play('click'); // 播放一下拒絕的聲音也可以用 click
-        alert("🔒 此功能為【美語資優生】專屬！\n請聯繫老師了解升級方案喔。");
+        alert("🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。");
         return; // 終止執行，不切換分頁
       }
 
@@ -1020,20 +1020,20 @@
       }
 
       // 👑 權限判定：拔除鎖頭與顯示專屬功能
-      if (data.studentType === "美語資優生") {
+      if (["有班級", "美語資優生", "elite"].includes(String(data.studentType || "").trim())) {
         // 🔓 拔掉底部導航的鎖頭，允許切換！
         document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.remove('locked'));
         // 顯示專屬的 Email 訂閱區塊
         document.getElementById('newsletter-zone').classList.remove('hidden'); 
       } else {
-        // 🔒 一般生：確保鎖頭存在 (HTML裡已經預設有加了，這裡只是保險)
+        // 🔒 無班級學生：確保鎖頭存在 (HTML裡已經預設有加了，這裡只是保險)
         document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.add('locked'));
         // 隱藏專屬的 Email 訂閱區塊
         document.getElementById('newsletter-zone').classList.add('hidden');
       }
 
       // 📊 以下的數據渲染，不管是不是資優生都照常執行！
-      // 這樣當一般生偷偷用開發者工具把 .locked 拿掉時，看到的也是正確的數據，而不是空版。
+      // 這樣當無班級學生偷偷用開發者工具把 .locked 拿掉時，看到的也是正確的數據，而不是空版。
 
       // 🚀 關鍵第一步：先把 Admin 的遊戲設定抓出來！
       const gami = normalizeTappieGamiConfig(data.gamification || {});
