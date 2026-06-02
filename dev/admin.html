@@ -2203,6 +2203,13 @@
             localStorage.removeItem('tappie_admin_key');
             localStorage.removeItem('tappie_admin_key_time');
             localStorage.removeItem('tappie_admin_role');
+            localStorage.removeItem('tappie_attendance_mode');
+            localStorage.removeItem('tappie_attendance_expires_at');
+            localStorage.removeItem('tappie_admin_last_mode');
+            sessionStorage.removeItem('tappie_attendance_mode');
+            sessionStorage.removeItem('tappie_attendance_action');
+            sessionStorage.removeItem('tappie_manual_attendance_action');
+            sessionStorage.removeItem('tappie_admin_mode');
             ADMIN_SECRET = null;
             ADMIN_ROLE = null;
         }
@@ -2889,7 +2896,7 @@
 
         // --- 1. 掃描卡片時的 API 呼叫 ---
         function fetchStudent(cardId) {
-            if (actionUI.style.display === 'block') return;
+            if (actionUI.style.display === 'block' && !(ADMIN_V2_ACTIVE_MODE === 'attendance' && (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout'))) return;
 
             const rawId = String(cardId).trim();
             const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
@@ -3123,6 +3130,13 @@
             if (confirm("確定要登出嗎？")) { 
                 localStorage.removeItem('tappie_admin_key');
                 localStorage.removeItem('tappie_admin_key_time');
+                localStorage.removeItem('tappie_attendance_mode');
+                localStorage.removeItem('tappie_attendance_expires_at');
+                localStorage.removeItem('tappie_admin_last_mode');
+                sessionStorage.removeItem('tappie_admin_mode');
+                sessionStorage.removeItem('tappie_attendance_mode');
+                sessionStorage.removeItem('tappie_attendance_action');
+                sessionStorage.removeItem('tappie_manual_attendance_action');
                 localStorage.removeItem('tappie_admin_role');
                 window.location.reload(); 
             } 
@@ -5445,17 +5459,81 @@
         // =======================================================
         // Admin v2 shell helpers｜Dashboard glass UI + QQ bottom nav
         // =======================================================
-        let ADMIN_V2_ACTIVE_MODE = sessionStorage.getItem('tappie_admin_mode') || 'points';
-        const ADMIN_V2_ATTENDANCE_MODES = new Set(['manual', 'auto_checkin', 'auto_checkout']);
-        function normalizeAttendanceMode(mode) {
-            return ADMIN_V2_ATTENDANCE_MODES.has(mode) ? mode : 'manual';
+        const ADMIN_V2_FROM_TAP = params.get('from') === 'tap';
+        const ADMIN_V2_ATTENDANCE_MODE_KEY = 'tappie_attendance_mode';
+        const ADMIN_V2_ATTENDANCE_EXPIRES_KEY = 'tappie_attendance_expires_at';
+        const ADMIN_V2_MANUAL_ACTION_KEY = 'tappie_manual_attendance_action';
+        const ADMIN_V2_LAST_MODE_KEY = 'tappie_admin_last_mode';
+        const ADMIN_V2_AUTO_TTL_MS = 10 * 60 * 1000;
+
+        function normalizeAdminV2AttendanceMode(mode) {
+            return ['manual', 'auto_checkin', 'auto_checkout'].includes(mode) ? mode : 'manual';
         }
-        function normalizeAttendanceAction(action) {
-            return action === 'checkout' ? 'checkout' : 'checkin';
+
+        function clearAdminV2AutoAttendance() {
+            try {
+                localStorage.removeItem(ADMIN_V2_ATTENDANCE_MODE_KEY);
+                localStorage.removeItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY);
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, 'manual');
+                sessionStorage.removeItem('tappie_attendance_action');
+            } catch(e) {}
         }
-        let ADMIN_V2_ATTENDANCE_MODE = normalizeAttendanceMode(sessionStorage.getItem('tappie_attendance_mode') || 'manual');
-        let ADMIN_V2_MANUAL_ATTENDANCE_ACTION = normalizeAttendanceAction(sessionStorage.getItem('tappie_manual_attendance_action') || sessionStorage.getItem('tappie_attendance_action') || 'checkin');
-        try { sessionStorage.removeItem('tappie_attendance_action'); } catch(e) {}
+
+        function readAdminV2AttendanceMode({ allowAuto = false } = {}) {
+            let mode = 'manual';
+            try {
+                const rawMode = normalizeAdminV2AttendanceMode(localStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY) || sessionStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY) || 'manual');
+                const expiresAt = Number(localStorage.getItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY) || 0);
+
+                if (rawMode === 'auto_checkin' || rawMode === 'auto_checkout') {
+                    const isFresh = expiresAt && Date.now() <= expiresAt;
+                    if (allowAuto && isFresh) mode = rawMode;
+                    else clearAdminV2AutoAttendance();
+                } else {
+                    mode = 'manual';
+                }
+            } catch(e) {
+                mode = 'manual';
+            }
+            return mode;
+        }
+
+        function writeAdminV2AttendanceMode(mode) {
+            const normalized = normalizeAdminV2AttendanceMode(mode);
+            ADMIN_V2_ATTENDANCE_MODE = normalized;
+            try {
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
+                sessionStorage.removeItem('tappie_attendance_action');
+                if (normalized === 'auto_checkin' || normalized === 'auto_checkout') {
+                    localStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
+                    localStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(Date.now() + ADMIN_V2_AUTO_TTL_MS));
+                } else {
+                    clearAdminV2AutoAttendance();
+                }
+            } catch(e) {}
+        }
+
+        function adminV2DebugAttendance(label) {
+            try {
+                console.log('[ADMIN ATTENDANCE]', label, {
+                    activeMode: ADMIN_V2_ACTIVE_MODE,
+                    attendanceMode: ADMIN_V2_ATTENDANCE_MODE,
+                    localMode: localStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY),
+                    localExpiresAt: localStorage.getItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY),
+                    sessionMode: sessionStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY),
+                    manualAction: sessionStorage.getItem(ADMIN_V2_MANUAL_ACTION_KEY),
+                    fromTap: ADMIN_V2_FROM_TAP,
+                    url: location.href
+                });
+            } catch(e) {}
+        }
+
+        const ADMIN_V2_INITIAL_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: ADMIN_V2_FROM_TAP });
+        let ADMIN_V2_ACTIVE_MODE = (ADMIN_V2_FROM_TAP && ADMIN_V2_INITIAL_ATTENDANCE_MODE !== 'manual')
+            ? 'attendance'
+            : (sessionStorage.getItem('tappie_admin_mode') || localStorage.getItem(ADMIN_V2_LAST_MODE_KEY) || 'points');
+        let ADMIN_V2_ATTENDANCE_MODE = ADMIN_V2_INITIAL_ATTENDANCE_MODE;
+        let ADMIN_V2_ATTENDANCE_ACTION = sessionStorage.getItem(ADMIN_V2_MANUAL_ACTION_KEY) || 'checkin';
         let ADMIN_V2_QUERY_LOADED = false;
         let ADMIN_V2_QUERY_STATE = null;
 
@@ -5493,30 +5571,23 @@
 
         function persistAdminV2State() {
             try {
-                ADMIN_V2_ATTENDANCE_MODE = normalizeAttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
-                ADMIN_V2_MANUAL_ATTENDANCE_ACTION = normalizeAttendanceAction(ADMIN_V2_MANUAL_ATTENDANCE_ACTION);
                 sessionStorage.setItem('tappie_admin_mode', ADMIN_V2_ACTIVE_MODE || 'points');
-                sessionStorage.setItem('tappie_attendance_mode', ADMIN_V2_ATTENDANCE_MODE);
-                sessionStorage.setItem('tappie_manual_attendance_action', ADMIN_V2_MANUAL_ATTENDANCE_ACTION);
+                localStorage.setItem(ADMIN_V2_LAST_MODE_KEY, ADMIN_V2_ACTIVE_MODE || 'points');
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, ADMIN_V2_ATTENDANCE_MODE || 'manual');
+                sessionStorage.setItem(ADMIN_V2_MANUAL_ACTION_KEY, ADMIN_V2_ATTENDANCE_ACTION || 'checkin');
                 sessionStorage.removeItem('tappie_attendance_action');
             } catch(e) {}
-        }
-
-        function syncAttendanceModeFromStorage() {
-            try {
-                ADMIN_V2_ATTENDANCE_MODE = normalizeAttendanceMode(sessionStorage.getItem('tappie_attendance_mode') || ADMIN_V2_ATTENDANCE_MODE || 'manual');
-                ADMIN_V2_MANUAL_ATTENDANCE_ACTION = normalizeAttendanceAction(sessionStorage.getItem('tappie_manual_attendance_action') || ADMIN_V2_MANUAL_ATTENDANCE_ACTION || 'checkin');
-            } catch(e) {}
-            return ADMIN_V2_ATTENDANCE_MODE;
         }
 
         function setAdminMode(mode) {
             ADMIN_V2_ACTIVE_MODE = mode || 'points';
             if (ADMIN_V2_ACTIVE_MODE !== 'attendance') {
-                ADMIN_V2_ATTENDANCE_MODE = 'manual';
-                ADMIN_V2_MANUAL_ATTENDANCE_ACTION = 'checkin';
+                writeAdminV2AttendanceMode('manual');
+            } else {
+                ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
             }
             persistAdminV2State();
+            adminV2DebugAttendance('setAdminMode:' + ADMIN_V2_ACTIVE_MODE);
 
             document.body.classList.toggle('admin-mode-attendance', ADMIN_V2_ACTIVE_MODE === 'attendance');
 
@@ -5537,39 +5608,40 @@
         }
 
         function setAttendanceMode(mode) {
-            const nextMode = normalizeAttendanceMode(mode || 'manual');
+            const nextMode = normalizeAdminV2AttendanceMode(mode);
             ADMIN_V2_ACTIVE_MODE = 'attendance';
+            const previousMode = readAdminV2AttendanceMode({ allowAuto: true });
 
-            if (nextMode === 'auto_checkin' && ADMIN_V2_ATTENDANCE_MODE !== 'auto_checkin') {
+            if (nextMode === 'auto_checkin' && previousMode !== 'auto_checkin') {
                 const ok = confirm('啟用「自動到校」後，掃描學生卡會直接執行到校登記。\n\n請確認你正在進行大量到校點名。');
                 if (!ok) return;
-            }
-            if (nextMode === 'auto_checkout' && ADMIN_V2_ATTENDANCE_MODE !== 'auto_checkout') {
+            } else if (nextMode === 'auto_checkout' && previousMode !== 'auto_checkout') {
                 const ok = confirm('啟用「自動離校」後，掃描學生卡會直接執行離校登記。\n\n請確認你正在進行大量離校點名。');
                 if (!ok) return;
             }
 
-            ADMIN_V2_ATTENDANCE_MODE = nextMode;
-            if (nextMode === 'manual') ADMIN_V2_MANUAL_ATTENDANCE_ACTION = 'checkin';
+            writeAdminV2AttendanceMode(nextMode);
             persistAdminV2State();
+            adminV2DebugAttendance('setAttendanceMode:' + nextMode);
             setAdminMode('attendance');
         }
 
         function setManualAttendanceAction(action) {
-            ADMIN_V2_ATTENDANCE_MODE = 'manual';
-            ADMIN_V2_MANUAL_ATTENDANCE_ACTION = normalizeAttendanceAction(action);
+            ADMIN_V2_ATTENDANCE_ACTION = action === 'checkout' ? 'checkout' : 'checkin';
+            try { sessionStorage.setItem(ADMIN_V2_MANUAL_ACTION_KEY, ADMIN_V2_ATTENDANCE_ACTION); } catch(e) {}
             persistAdminV2State();
             updateAttendanceModeUI();
+            adminV2DebugAttendance('setManualAttendanceAction:' + ADMIN_V2_ATTENDANCE_ACTION);
             try { scanner && scanner.focus(); } catch(e) {}
         }
 
         function updateAttendanceModeUI() {
-            syncAttendanceModeFromStorage();
+            ADMIN_V2_ATTENDANCE_MODE = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
             document.querySelectorAll('[data-att-mode]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.attMode === ADMIN_V2_ATTENDANCE_MODE);
             });
             document.querySelectorAll('[data-att-action]').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.attAction === ADMIN_V2_MANUAL_ATTENDANCE_ACTION);
+                btn.classList.toggle('active', btn.dataset.attAction === ADMIN_V2_ATTENDANCE_ACTION);
             });
             const manualBox = document.getElementById('admin-v2-manual-attendance');
             const autoBox = document.getElementById('admin-v2-auto-attendance');
@@ -5586,23 +5658,28 @@
                 if (banner) banner.innerText = '自動離校模式已啟用。掃描學生卡後會直接登記離校。';
             } else {
                 if (status) status.innerText = currentStudentId ? '請選擇到校或離校' : '手動打卡模式';
-                if (confirmBtn) confirmBtn.innerText = ADMIN_V2_MANUAL_ATTENDANCE_ACTION === 'checkout' ? '確認離校並通知（下一階段）' : '確認到校並通知（下一階段）';
+                if (confirmBtn) confirmBtn.innerText = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? '確認離校並通知（下一階段）' : '確認到校並通知（下一階段）';
             }
         }
 
         function handleAttendanceConfirm() {
-            const action = normalizeAttendanceAction(ADMIN_V2_MANUAL_ATTENDANCE_ACTION);
-            const label = action === 'checkout' ? '離校' : '到校';
+            const label = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? '離校' : '到校';
             alert(`下一階段會在這裡登記「${label}」並發送通知。`);
             try { scanner && scanner.focus(); } catch(e) {}
         }
 
         function handleAttendanceScanResolved() {
             if (ADMIN_V2_ACTIVE_MODE !== 'attendance') return;
-            const mode = syncAttendanceModeFromStorage();
+
+            // NFC 從 tap.html 回來時，localStorage 比 sessionStorage 更穩；執行前一定重讀一次。
+            ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
             updateAttendanceModeUI();
-            if (mode === 'auto_checkin' || mode === 'auto_checkout') {
-                const actionText = mode === 'auto_checkout' ? '離校' : '到校';
+            adminV2DebugAttendance('handleAttendanceScanResolved');
+
+            if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
+                // 每次成功回流都續 10 分鐘，避免大量點名中途過期。
+                writeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
+                const actionText = ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout' ? '離校' : '到校';
                 const status = document.getElementById('admin-v2-attendance-status');
                 if (status) status.innerText = `已準備自動${actionText}`;
                 const banner = document.getElementById('admin-v2-auto-banner');
