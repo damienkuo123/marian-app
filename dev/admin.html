@@ -3017,6 +3017,15 @@
         // ==========================================
         
         setInterval(() => {
+            // 查詢頁是純點選/捲動操作，不應該讓隱藏的讀卡 input 重新取得焦點。
+            // 否則手機瀏覽器會在列表展開或高度變化時，把畫面捲回焦點元素附近，造成跳頂。
+            try {
+                if (ADMIN_V2_ACTIVE_MODE === 'query') {
+                    if (document.activeElement === scanner) scanner.blur();
+                    return;
+                }
+            } catch(e) {}
+
             const active = document.activeElement;
             // 🚀 關鍵修復：把 SELECT 也加入白名單，讀卡機就不會去搶下拉選單的焦點了！
             if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA' && active.tagName !== 'SELECT') {
