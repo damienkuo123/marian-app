@@ -937,18 +937,19 @@
 
     async function refreshAttendancePushStatus() {
       try {
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-          setAttendancePushStatus("此瀏覽器尚不支援通知", "bad");
+        // 瀏覽器模式先引導加入主畫面，不用顯示「不支援」避免家長卻步。
+        if (!isTappieStandaloneMode()) {
+          setAttendancePushStatus("加入主畫面獲得通知", "warn");
           return;
         }
 
-        if (!isTappieStandaloneMode()) {
-          setAttendancePushStatus("請先加入主畫面後啟用", "warn");
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+          setAttendancePushStatus("此裝置暫不支援通知", "warn");
           return;
         }
 
         if (Notification.permission === "denied") {
-          setAttendancePushStatus("通知權限已封鎖", "bad");
+          setAttendancePushStatus("通知尚未開啟", "warn");
           return;
         }
 
@@ -971,21 +972,24 @@
     async function handleAttendancePushSubscribeClick() {
       if (window.GlobalAudio) GlobalAudio.play('click');
 
-      if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-        alert("⚠️ 此瀏覽器目前不支援 Web Push 通知，請改用 Safari 或 Chrome 並更新到較新的版本。");
-        setAttendancePushStatus("此瀏覽器尚不支援通知", "bad");
+      // 先判斷是否從主畫面開啟；瀏覽器模式一律走加入主畫面教學。
+      if (!isTappieStandaloneMode()) {
+        togglePwaRequiredModal(true);
+        setAttendancePushStatus("加入主畫面獲得通知", "warn");
         return;
       }
 
-      if (!isTappieStandaloneMode()) {
-        togglePwaRequiredModal(true);
-        setAttendancePushStatus("請先加入主畫面後啟用", "warn");
+      if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert("⚠️ 這台裝置目前暫不支援上放學通知。
+請確認系統與瀏覽器已更新，或改用支援通知的裝置再試一次。");
+        setAttendancePushStatus("此裝置暫不支援通知", "warn");
         return;
       }
 
       if (Notification.permission === "denied") {
-        alert("⚠️ 通知權限已被封鎖。\n請到瀏覽器或系統設定中允許 Tappie 通知後再試一次。");
-        setAttendancePushStatus("通知權限已封鎖", "bad");
+        alert("ℹ️ 目前尚未開啟 Tappie 通知。
+如果之前選擇了不允許，系統可能不會再次跳出授權視窗；請到手機的通知設定中允許 Tappie 通知後再試一次。");
+        setAttendancePushStatus("通知尚未開啟", "warn");
         return;
       }
 
@@ -994,7 +998,7 @@
         : await Notification.requestPermission();
 
       if (permission !== "granted") {
-        setAttendancePushStatus("尚未允許通知權限", "warn");
+        setAttendancePushStatus("通知尚未開啟，可之後再試", "warn");
         return;
       }
 
@@ -1010,7 +1014,8 @@
 
         if (!TAPPIE_VAPID_PUBLIC_KEY) {
           setAttendancePushStatus("已允許通知，等待系統完成訂閱", "warn");
-          alert("✅ 通知權限已開啟。\n下一步接上推播訂閱資料庫後，就能正式啟用上放學通知。");
+          alert("✅ 通知權限已開啟。
+下一步接上推播訂閱資料庫後，就能正式啟用上放學通知。");
           return;
         }
 
