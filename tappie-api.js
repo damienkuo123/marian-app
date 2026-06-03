@@ -39,6 +39,9 @@ const TappieAPI = {
     adminDeleteBrandingAsset: "/admin-delete-branding-asset",
     adminNewsletters: "/admin-newsletters",
     adminWeeklyReports: "/admin-weekly-reports",
+    adminRecordAttendance: "/admin-record-attendance",
+    savePushSubscription: "/save-push-subscription",
+    sendTestPush: "/send-test-push",
     consoleAuth: "/console-auth",
     consoleGetSchools: "/console-get-schools",
     consoleGetData: "/console-get-data",
@@ -180,6 +183,10 @@ const TappieAPI = {
   async adminGetProgress(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetProgress}?schoolCode=${encodeURIComponent(schoolCode)}`); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
   async adminSaveTasks(payload) { return await this._post(this.endpoints.adminSaveTasks, payload); },
+  async adminRecordAttendance(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, payload); },
+  async adminGetAttendanceToday(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, { ...payload, action: "get_today" }); },
+  async savePushSubscription(payload = {}) { return await this._post(this.endpoints.savePushSubscription, payload); },
+  async sendTestPush(payload = {}) { return await this._post(this.endpoints.sendTestPush, payload); },
   async getLobbyData(uid, classCode = "") { const qs = new URLSearchParams({ uid }); if (classCode) qs.set("classCode", classCode); return await this._get(`${this.endpoints.getLobbyData}?${qs.toString()}`); },
   async createBattleRoom(payload) { return await this._post(this.endpoints.createBattleRoom, payload); },
   async joinBattleRoom(payload) { return await this._post(this.endpoints.joinBattleRoom, payload); },
@@ -257,14 +264,14 @@ const TappieAPI = {
     return await this._consolePost(this.endpoints.consoleSaveSchool, body, token);
   },
 
-  async consoleGetHealth({ token, schoolCode = "", scopeMode = "" } = {}) {
+  async consoleGetHealth({ token } = {}) {
     const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetHealth, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { "Authorization": `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ schoolCode, scopeMode })
+      body: JSON.stringify({})
     });
     return await res.json();
   },
@@ -281,14 +288,14 @@ const TappieAPI = {
     return await res.json();
   },
 
-  async consoleGetStudents({ token, schoolCode = "", scopeMode = "" } = {}) {
+  async consoleGetStudents({ token } = {}) {
     const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetStudents, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { "Authorization": `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ schoolCode, scopeMode })
+      body: JSON.stringify({})
     });
     return await res.json();
   },
