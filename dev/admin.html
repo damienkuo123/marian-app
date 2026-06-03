@@ -1636,7 +1636,33 @@
             }
         }
 
-    </style>
+  
+        /* Admin query API v1｜Super Admin visibility + no-card attendance */
+        .admin-v2-utility.super-only,
+        .admin-v2-icon-btn.super-only,
+        button.super-only {
+            display: none !important;
+        }
+        .admin-v2-utility.super-visible,
+        .admin-v2-icon-btn.super-visible,
+        button.super-visible {
+            display: inline-flex !important;
+        }
+        .admin-v2-nocard-btn {
+            border: 0;
+            border-radius: 999px;
+            background: rgba(46, 204, 113, .14);
+            color: var(--admin-green);
+            font-size: 12px;
+            font-weight: 950;
+            padding: 7px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            margin-left: 6px;
+        }
+        .admin-v2-nocard-btn:active { transform: scale(.96); }
+
+  </style>
 </head>
 <body>
     <div class="admin-v2-orb admin-v2-orb-1"></div>
@@ -2403,13 +2429,15 @@
             const mask = document.getElementById('unauth-mask');
             if (mask) mask.style.display = 'none';
 
-            if (role === "super") {
-                document.getElementById('role-text').innerText = "⭐ 超級管理員權限";
-                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
-            } else {
-                document.getElementById('role-text').innerText = "專屬管理員權限";
-                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'none');
-            }
+            const isSuper = role === "super";
+            const roleText = document.getElementById('role-text');
+            if (roleText) roleText.innerText = isSuper ? "⭐ 超級管理員權限" : "專屬管理員權限";
+
+            document.querySelectorAll('.super-only').forEach(el => {
+                el.classList.toggle('super-visible', isSuper);
+                if (isSuper) el.style.setProperty('display', 'inline-flex', 'important');
+                else el.style.setProperty('display', 'none', 'important');
+            });
         }
 
         async function verifySupabaseAdminAuth(secret) {
@@ -5723,6 +5751,34 @@
         let ADMIN_V2_QUERY_ATTENDANCE_STATE = null;
         let ADMIN_V2_ATTENDANCE_TODAY_CACHE = null;
 
+        let ADMIN_V2_QUERY_ALL_STUDENTS = [];
+
+        function isAdminV2Super() {
+            return (ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '') === 'super';
+        }
+
+        async function fetchAdminQueryData(mode, extra = {}) {
+            const payload = {
+                schoolCode: CURRENT_SCHOOL,
+                mode,
+                rangeDays: 7,
+                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                ...extra
+            };
+            const api = window.TappieAPI;
+            if (api && typeof api.adminGetQueryData === 'function') {
+                return await api.adminGetQueryData(payload);
+            }
+            const res = await fetch(`${getAdminQueryBaseUrl()}/admin-get-query-data`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            return await res.json().catch(() => ({}));
+        }
+
+
         function getAdminV2ModeText(mode = ADMIN_V2_ACTIVE_MODE) {
             if (mode === 'attendance') return '打卡通知';
             if (mode === 'query') return '狀態查詢';
@@ -6191,12 +6247,38 @@
             valueSelect.value = '';
         }
 
-        function getAdminQueryClassOptions() {
+        
+        function normalizeAdminQueryClassCode(value) {
+            const raw = String(value || '').trim();
+            if (!raw || raw === '-' || raw === 'null' || raw === 'undefined' || raw === '未分班') return '無班級';
+            return raw;
+        }
+
+function getAdminQueryClassOptions() {
             const classSet = new Set();
+
             flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE).forEach(s => {
-                if (s.classCode) classSet.add(s.classCode);
+                classSet.add(normalizeAdminQueryClassCode(s.classCode));
             });
-            return Array.from(classSet).sort((a,b) => String(a).localeCompare(String(b), 'zh-Hant'));
+
+            (Array.isArray(ADMIN_V2_QUERY_POINTS_STATE) ? ADMIN_V2_QUERY_POINTS_STATE : []).forEach(log => {
+                classSet.add(normalizeAdminQueryClassCode(log.classCode));
+            });
+
+            const attendanceStudents = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
+                ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students
+                : [];
+            attendanceStudents.forEach(s => classSet.add(normalizeAdminQueryClassCode(s.classCode || s.class_code)));
+
+            ADMIN_V2_QUERY_ALL_STUDENTS.forEach(s => classSet.add(normalizeAdminQueryClassCode(s.classCode || s.class_code)));
+
+            return Array.from(classSet)
+                .filter(Boolean)
+                .sort((a,b) => {
+                    if (a === '無班級') return 1;
+                    if (b === '無班級') return -1;
+                    return String(a).localeCompare(String(b), 'zh-Hant');
+                });
         }
 
         function flattenAdminProgressStudents(data) {
@@ -6208,7 +6290,7 @@
                 students.forEach((s, idx) => {
                     list.push({
                         ...s,
-                        classCode: s.classCode || s.class_code || cls.classCode || cls.class_code || '未分班',
+                        classCode: normalizeAdminQueryClassCode(s.classCode || s.class_code || cls.classCode || cls.class_code),
                         unitName: s.unitName || s.unit_name || schedule.unitName || cls.unitName || '未排定',
                         unitId: s.unitId || s.unit_id || schedule.unitId || cls.unitId || '',
                         schedule,
@@ -6350,11 +6432,11 @@
             }
             box.innerHTML = '<div class="admin-v2-empty glass-panel">⏳ 正在載入全校區學習進度...</div>';
             try {
-                const res = await fetch(`${getAdminQueryBaseUrl()}/admin-get-progress?schoolCode=${encodeURIComponent(CURRENT_SCHOOL)}`);
-                const data = await res.json().catch(() => ({}));
+                let data = await fetchAdminQueryData('learning');
                 if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取失敗');
                 ADMIN_V2_QUERY_STATE = data;
                 ADMIN_V2_QUERY_LOADED = true;
+                ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
                 setupAdminQueryFilters();
                 renderAdminQueryProgress(data);
             } catch (err) {
@@ -6363,6 +6445,7 @@
             }
         }
 
+        
         function renderAdminQueryProgress(data) {
             const box = document.getElementById('admin-v2-query-results');
             const input = document.getElementById('admin-v2-query-search');
@@ -6455,38 +6538,16 @@
             const box = document.getElementById('admin-v2-query-results');
             if (!box) return;
             if (ADMIN_V2_QUERY_POINTS_LOADED && !force) {
+                setupAdminQueryFilters();
                 renderAdminQueryPoints();
                 return;
             }
-            if (!ADMIN_V2_QUERY_LOADED || !ADMIN_V2_QUERY_STATE || force) {
-                await loadAdminQueryProgress(force);
-            }
-            box.innerHTML = '<div class="admin-v2-empty glass-panel">⏳ 正在載入全校區加扣點紀錄...</div>';
+            box.innerHTML = '<div class="admin-v2-empty glass-panel">⏳ 正在載入最近 7 天加扣點紀錄...</div>';
             try {
-                const students = flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE);
-                const results = [];
-                const api = window.TappieAPI;
-                if (!api || typeof api.getStudentActivity !== 'function') throw new Error('缺少 getStudentActivity API');
-                for (const s of students) {
-                    try {
-                        const data = await api.getStudentActivity(s.uid);
-                        const logs = data?.items || data?.recentLogs || data?.logs || [];
-                        logs.forEach(log => {
-                            const normalized = normalizePointLog(log);
-                            results.push({
-                                ...normalized,
-                                raw: log,
-                                uid: s.uid,
-                                name: s.name || '未命名學生',
-                                classCode: s.classCode || '未分班',
-                                timeRaw: log?.createdAt || log?.created_at || log?.time || log?.date || ''
-                            });
-                        });
-                    } catch (err) {
-                        console.warn('[ADMIN QUERY POINTS] load failed for', s.uid, err);
-                    }
-                }
-                ADMIN_V2_QUERY_POINTS_STATE = results.sort((a,b) => new Date(b.timeRaw || b.time || 0).getTime() - new Date(a.timeRaw || a.time || 0).getTime());
+                const data = await fetchAdminQueryData('points', { rangeDays: 7 });
+                if (!data || !data.success) throw new Error(data?.message || data?.error || '加扣點紀錄讀取失敗');
+                ADMIN_V2_QUERY_POINTS_STATE = Array.isArray(data.items) ? data.items : [];
+                ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
                 ADMIN_V2_QUERY_POINTS_LOADED = true;
                 setupAdminQueryFilters();
                 renderAdminQueryPoints();
@@ -6496,6 +6557,7 @@
             }
         }
 
+        
         function renderAdminQueryPoints() {
             const box = document.getElementById('admin-v2-query-results');
             const q = String(document.getElementById('admin-v2-query-search')?.value || '').trim().toLowerCase();
@@ -6551,23 +6613,16 @@
             const box = document.getElementById('admin-v2-query-results');
             if (!box) return;
             if (ADMIN_V2_QUERY_ATTENDANCE_LOADED && !force) {
+                setupAdminQueryFilters();
                 renderAdminQueryAttendance();
                 return;
             }
-            if (!ADMIN_V2_QUERY_LOADED || !ADMIN_V2_QUERY_STATE || force) {
-                await loadAdminQueryProgress(force);
-            }
             box.innerHTML = '<div class="admin-v2-empty glass-panel">⏳ 正在載入今日打卡紀錄...</div>';
             try {
-                const api = window.TappieAPI;
-                if (!api || typeof api.adminGetAttendanceToday !== 'function') throw new Error('缺少 adminGetAttendanceToday API');
-                const data = await api.adminGetAttendanceToday({
-                    schoolCode: CURRENT_SCHOOL,
-                    adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
-                    role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || ''
-                });
+                const data = await fetchAdminQueryData('attendance');
                 if (!data || !data.success) throw new Error(data?.message || data?.error || '打卡紀錄讀取失敗');
                 ADMIN_V2_QUERY_ATTENDANCE_STATE = data;
+                ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
                 ADMIN_V2_QUERY_ATTENDANCE_LOADED = true;
                 setupAdminQueryFilters();
                 renderAdminQueryAttendance();
@@ -6577,6 +6632,7 @@
             }
         }
 
+        
         function renderAdminQueryAttendance() {
             const box = document.getElementById('admin-v2-query-results');
             const q = String(document.getElementById('admin-v2-query-search')?.value || '').trim().toLowerCase();
@@ -6584,7 +6640,9 @@
             const statusFilter = document.getElementById('admin-v2-query-status-filter')?.value || '';
             if (!box) return;
 
-            const students = flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE);
+            const students = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
+                ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students
+                : flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE);
             const events = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.events) ? ADMIN_V2_QUERY_ATTENDANCE_STATE.events : [];
             const byUid = new Map();
             events.forEach(ev => {
@@ -6597,15 +6655,16 @@
 
             const grouped = new Map();
             students.forEach(s => {
-                const classCode = s.classCode || '未分班';
+                const classCode = normalizeAdminQueryClassCode(s.classCode || s.class_code);
                 if (classFilter && classCode !== classFilter) return;
-                const evs = byUid.get(s.uid) || [];
+                const uid = s.uid || s.studentUid || '';
+                const evs = byUid.get(uid) || [];
                 const latest = evs[0] || null;
                 const latestType = latest ? (latest.event_type || latest.eventType) : 'none';
                 if (statusFilter && latestType !== statusFilter) return;
-                if (q && ![s.name, s.uid, classCode].some(v => String(v || '').toLowerCase().includes(q))) return;
+                if (q && ![s.name, uid, classCode].some(v => String(v || '').toLowerCase().includes(q))) return;
                 if (!grouped.has(classCode)) grouped.set(classCode, []);
-                grouped.get(classCode).push({ student: s, events: evs, latest, latestType });
+                grouped.get(classCode).push({ student: { ...s, uid, classCode }, events: evs, latest, latestType });
             });
 
             if (!grouped.size) {
@@ -6613,14 +6672,21 @@
                 return;
             }
 
-            const html = Array.from(grouped.entries()).sort((a,b) => a[0].localeCompare(b[0], 'zh-Hant')).map(([classCode, rows]) => {
+            const sortedGroups = Array.from(grouped.entries()).sort((a,b) => {
+                if (a[0] === '無班級') return 1;
+                if (b[0] === '無班級') return -1;
+                return a[0].localeCompare(b[0], 'zh-Hant');
+            });
+
+            const canNoCardCheckin = isAdminV2Super();
+
+            const html = sortedGroups.map(([classCode, rows]) => {
                 return `<div class="admin-v2-class-block glass-panel">
                     <div class="admin-v2-class-head">
                         <div><strong>${escapeAdminV2(classCode)}</strong><small>今日打卡紀錄</small></div>
                         <span class="admin-v2-count-badge">${rows.length} 人</span>
                     </div>
                     ${rows.map(({ student, events, latest, latestType }) => {
-                        const actionText = latestType === 'checkout' ? '離校' : latestType === 'checkin' ? '到校' : '尚無';
                         const timeText = latest ? getAdminQueryShortTimeText(latest.event_time || latest.eventTime || latest.created_at) : '';
                         const badge = latestType === 'checkout' ? `🔴 已離校 ${timeText}` : latestType === 'checkin' ? `🟢 已到校 ${timeText}` : '⚪ 尚無打卡';
                         const eventHtml = events.length
@@ -6630,13 +6696,16 @@
                                 return `<div class="admin-v2-record-row"><span>${escapeAdminV2(t)}</span><strong>${type === 'checkout' ? '離校' : '到校'}</strong></div>`;
                               }).join('')
                             : `<div class="admin-v2-record-row"><span>今日尚無打卡紀錄</span><strong></strong></div>`;
+                        const noCardBtn = canNoCardCheckin && latestType === 'none'
+                            ? `<button class="admin-v2-nocard-btn super-only super-visible" type="button" onclick="return adminV2NoCardCheckin(event, '${escapeAdminV2(student.uid || '')}', '${escapeAdminV2(student.name || '學生')}')">打卡</button>`
+                            : '';
                         return `
                             <div class="admin-v2-student-row" onclick="return toggleAdminQueryRow(this)">
                                 <div>
                                     <strong>${escapeAdminV2(student.name || '未命名學生')}</strong>
                                     <small>${escapeAdminV2(student.uid || '')}</small>
                                 </div>
-                                <span class="admin-v2-count-badge">${escapeAdminV2(badge)}　▾</span>
+                                <span class="admin-v2-count-badge">${escapeAdminV2(badge)}${noCardBtn}　▾</span>
                                 <div class="admin-v2-row-detail">
                                     <div class="admin-v2-record-title">${escapeAdminV2(student.name || '學生')} 今日全部打卡紀錄</div>
                                     ${eventHtml}
@@ -6647,6 +6716,49 @@
             }).join('');
 
             box.innerHTML = html;
+        }
+
+        async function adminV2NoCardCheckin(event, uid, studentName) {
+            try {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+            } catch(e) {}
+
+            if (!isAdminV2Super()) {
+                alert('只有 Super Admin 可以使用無卡打卡。');
+                return false;
+            }
+            const safeName = studentName || uid || '學生';
+            if (!confirm(`確定要為「${safeName}」登記到校嗎？\n\n此功能為 Super Admin 專用無卡打卡。`)) return false;
+
+            try {
+                const api = window.TappieAPI;
+                if (!api || typeof api.adminRecordAttendance !== 'function') throw new Error('缺少 adminRecordAttendance API');
+
+                const data = await api.adminRecordAttendance({
+                    schoolCode: CURRENT_SCHOOL,
+                    uid,
+                    eventType: 'checkin',
+                    source: 'admin_no_card',
+                    adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                    role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                    metadata: {
+                        from: 'admin_query',
+                        adminMode: 'query',
+                        noCard: true
+                    }
+                });
+
+                if (!data || !data.success) throw new Error(data?.message || data?.error || '無卡打卡失敗');
+
+                ADMIN_V2_QUERY_ATTENDANCE_LOADED = false;
+                await loadAdminQueryAttendance(true);
+                alert(`已為「${safeName}」登記到校。`);
+            } catch (err) {
+                console.error('[ADMIN NO CARD CHECKIN] failed', err);
+                alert('無卡打卡失敗：' + (err.message || err));
+            }
+            return false;
         }
 
         async function initAdminV2Branding() {
