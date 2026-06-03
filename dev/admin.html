@@ -5784,7 +5784,10 @@
             if (ADMIN_V2_ACTIVE_MODE === 'attendance' && currentStudentId) {
                 setTimeout(() => refreshAttendanceTodayStatus(), 0);
             }
-            try { scanner && scanner.focus(); } catch(e) {}
+            try {
+                if (ADMIN_V2_ACTIVE_MODE === 'query') scanner && scanner.blur();
+                else scanner && scanner.focus();
+            } catch(e) {}
         }
 
         function setAttendanceMode(mode) {
@@ -6119,7 +6122,7 @@
             });
             setupAdminQueryFilters();
             reloadAdminQueryCurrentView(false);
-            try { scanner && scanner.focus(); } catch(e) {}
+            try { scanner && scanner.blur(); } catch(e) {}
         }
 
         function reloadAdminQueryCurrentView(force = false) {
@@ -6285,6 +6288,12 @@
                 const evt = window.event;
                 evt?.preventDefault?.();
                 evt?.stopPropagation?.();
+            } catch(e) {}
+
+            // 查詢頁不需要讀卡輸入框保持焦點；手機瀏覽器在 hidden input 保持 focus 時，
+            // DOM 高度一變容易自動把畫面捲回頂部。
+            try {
+                if (document.activeElement && document.activeElement.id === 'scanner') document.activeElement.blur();
             } catch(e) {}
 
             const row = el?.closest?.('.admin-v2-student-row');
