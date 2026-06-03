@@ -427,9 +427,1261 @@
         
         .sm-batch-bar { display: none; background: rgba(241, 196, 15, 0.2); border: 1px solid #f1c40f; padding: 10px 15px; border-radius: 12px; margin: 0 20px 10px 20px; justify-content: space-between; align-items: center; }
         .batch-mode-active ~ .sm-batch-bar { display: flex; animation: fadeIn 0.3s; }
-    </style>
+
+        /* =======================================================
+           Admin v2 Shell｜Console mobile + QQ floating bottom nav
+           - UI shell only; keeps existing scan / add-deduct / logs logic
+           ======================================================= */
+        :root {
+            --admin-bg: #f5f7fb;
+            --admin-surface: rgba(255,255,255,.92);
+            --admin-soft: #eef3fb;
+            --admin-text: #101828;
+            --admin-muted: #667085;
+            --admin-border: #e4e7ec;
+            --admin-blue: #1677ff;
+            --admin-blue-2: #0b63f6;
+            --admin-green: #22c55e;
+            --admin-red: #ef4444;
+            --admin-shadow: 0 18px 44px rgba(16,24,40,.08);
+        }
+
+        html, body {
+            width: 100%;
+            min-height: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            display: block !important;
+            color: var(--admin-text) !important;
+            background:
+                radial-gradient(circle at 12% 8%, rgba(22,119,255,.10), transparent 28%),
+                radial-gradient(circle at 86% 10%, rgba(34,197,94,.08), transparent 28%),
+                linear-gradient(180deg, #ffffff 0%, var(--admin-bg) 52%, #f8fafc 100%) !important;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif !important;
+        }
+
+        .admin-v2-topbar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            height: calc(84px + env(safe-area-inset-top));
+            padding: calc(14px + env(safe-area-inset-top)) 18px 12px !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,.78);
+            border-bottom: 1px solid rgba(228,231,236,.76);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            box-shadow: 0 8px 28px rgba(16,24,40,.04);
+        }
+
+        .admin-v2-school {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .admin-v2-school-icon {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: #fff;
+            border: 1px solid var(--admin-border);
+            box-shadow: 0 10px 24px rgba(16,24,40,.07);
+            font-size: 20px;
+        }
+
+        .admin-v2-school-name {
+            max-width: 46vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 18px;
+            line-height: 1.2;
+            font-weight: 900;
+            letter-spacing: -.03em;
+            color: var(--admin-text);
+        }
+
+        .admin-v2-role {
+            margin-top: 2px;
+            color: var(--admin-muted);
+            font-size: 12px;
+            font-weight: 750;
+            letter-spacing: 0;
+        }
+
+        .admin-v2-top-actions {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .admin-v2-utility,
+        .admin-v2-icon-btn {
+            border: 1px solid var(--admin-border);
+            background: rgba(255,255,255,.88);
+            color: var(--admin-text);
+            border-radius: 999px;
+            min-height: 42px;
+            padding: 0 14px;
+            font-size: 13px;
+            font-weight: 900;
+            box-shadow: 0 10px 22px rgba(16,24,40,.07);
+            cursor: pointer;
+        }
+
+        .admin-v2-icon-btn {
+            width: 42px;
+            padding: 0;
+            display: grid;
+            place-items: center;
+            font-size: 22px;
+            color: var(--admin-muted);
+        }
+
+        .admin-main.container {
+            position: fixed !important;
+            inset: calc(84px + env(safe-area-inset-top)) 0 calc(98px + env(safe-area-inset-bottom)) 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 18px 18px 24px !important;
+            overflow-y: auto !important;
+            text-align: left !important;
+            box-sizing: border-box !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: var(--admin-text) !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-main::-webkit-scrollbar { display: none; }
+
+        .admin-v2-view {
+            width: min(100%, 560px);
+            margin: 0 auto;
+            animation: fadeIn .22s ease;
+        }
+
+        .admin-v2-mode-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 34px;
+            padding: 0 13px;
+            border-radius: 999px;
+            background: rgba(22,119,255,.09);
+            color: var(--admin-blue);
+            font-size: 13px;
+            font-weight: 900;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            background: var(--admin-blue);
+            box-shadow: 0 0 0 5px rgba(22,119,255,.10);
+        }
+
+        .admin-v2-scan-view {
+            text-align: center;
+        }
+
+        .admin-v2-nfc-hero {
+            background: var(--admin-surface);
+            border: 1px solid rgba(255,255,255,.85);
+            border-radius: 34px;
+            padding: 34px 20px;
+            box-shadow: var(--admin-shadow);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .admin-v2-nfc-circle {
+            position: relative;
+            width: 230px;
+            height: 230px;
+            border-radius: 50%;
+            margin: 0 auto;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle, rgba(22,119,255,.12), rgba(22,119,255,.04) 62%, transparent 63%);
+        }
+
+        .admin-v2-phone-outline {
+            width: 112px;
+            height: 168px;
+            border-radius: 28px;
+            border: 3px solid rgba(22,119,255,.26);
+            display: grid;
+            place-items: center;
+            color: rgba(22,119,255,.58);
+            font-size: 24px;
+            font-weight: 950;
+            background: rgba(255,255,255,.52);
+        }
+
+        .admin-v2-card-chip {
+            position: absolute;
+            left: 92px;
+            bottom: 46px;
+            width: 118px;
+            height: 68px;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            transform: rotate(-8deg);
+            color: #fff;
+            font-weight: 950;
+            background: linear-gradient(135deg, #1677ff, #38bdf8);
+            box-shadow: 0 18px 32px rgba(22,119,255,.24);
+        }
+
+        .admin-main h1 {
+            margin: 24px 0 8px !important;
+            color: var(--admin-text) !important;
+            background: none !important;
+            -webkit-text-fill-color: currentColor !important;
+            font-size: 34px !important;
+            line-height: 1.15;
+            letter-spacing: -.05em !important;
+            font-weight: 950;
+        }
+
+        .subtitle {
+            margin: 0 auto 20px !important;
+            max-width: 320px;
+            color: var(--admin-muted) !important;
+            font-size: 15px !important;
+            line-height: 1.7;
+            font-weight: 680 !important;
+            letter-spacing: 0 !important;
+        }
+
+        .status-badge {
+            min-height: 48px;
+            padding: 0 18px !important;
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            border-radius: 999px !important;
+            border: 1px solid var(--admin-border) !important;
+            background: rgba(255,255,255,.84) !important;
+            box-shadow: 0 10px 26px rgba(16,24,40,.06) !important;
+            color: var(--admin-text) !important;
+        }
+
+        .status-dot {
+            width: 9px !important;
+            height: 9px !important;
+            margin-right: 0 !important;
+            background: var(--admin-green) !important;
+            box-shadow: 0 0 0 5px rgba(34,197,94,.12) !important;
+        }
+
+        #msg {
+            color: var(--admin-text) !important;
+            font-size: 14px !important;
+            font-weight: 850 !important;
+            letter-spacing: 0 !important;
+        }
+
+        .admin-v2-tip {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin: 18px auto 0;
+            padding: 15px 16px;
+            border-radius: 20px;
+            max-width: 420px;
+            background: rgba(22,119,255,.07);
+            border: 1px solid rgba(22,119,255,.11);
+            color: var(--admin-muted);
+            font-size: 13px;
+            line-height: 1.55;
+            font-weight: 650;
+            text-align: left;
+        }
+
+        .admin-v2-tip strong {
+            color: var(--admin-blue);
+            white-space: nowrap;
+        }
+
+        #action-ui.admin-v2-student-view {
+            display: none;
+        }
+
+        .admin-v2-rescan {
+            border: 0;
+            background: transparent;
+            color: var(--admin-blue);
+            font-size: 14px;
+            font-weight: 900;
+            display: block;
+            margin: 0 0 12px auto;
+            cursor: pointer;
+        }
+
+        .admin-v2-student-card,
+        .admin-v2-points-card,
+        .admin-v2-status-card,
+        .admin-v2-query-card,
+        .admin-v2-custom-row {
+            background: var(--admin-surface);
+            border: 1px solid rgba(255,255,255,.84);
+            box-shadow: var(--admin-shadow);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .admin-v2-student-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-radius: 30px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        .admin-v2-avatar {
+            width: 78px;
+            height: 78px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(22,119,255,.13), rgba(34,197,94,.10));
+            font-size: 42px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.72);
+        }
+
+        .stu-name {
+            margin: 0 !important;
+            color: var(--admin-text) !important;
+            font-size: 26px !important;
+            font-weight: 950 !important;
+            letter-spacing: -.04em !important;
+        }
+
+        .admin-v2-student-meta {
+            margin-top: 6px;
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: rgba(22,119,255,.10);
+            color: var(--admin-blue);
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .admin-v2-points-card {
+            border-radius: 30px;
+            padding: 22px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .admin-v2-card-label {
+            color: var(--admin-muted);
+            font-size: 14px;
+            font-weight: 850;
+            margin-bottom: 8px;
+        }
+
+        .stu-points {
+            margin: 0 !important;
+            color: var(--admin-blue) !important;
+            text-shadow: none !important;
+            font-size: 56px !important;
+            line-height: 1 !important;
+            font-weight: 950 !important;
+            letter-spacing: -.06em !important;
+        }
+
+        .history-btn {
+            margin: 16px auto 0 !important;
+            display: inline-flex !important;
+            color: var(--admin-blue) !important;
+            text-decoration: none !important;
+            background: rgba(22,119,255,.08);
+            border-radius: 999px;
+            padding: 9px 14px !important;
+            font-size: 14px !important;
+            font-weight: 900;
+        }
+
+        .admin-v2-segment {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            padding: 5px;
+            margin-bottom: 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,.72);
+            border: 1px solid var(--admin-border);
+            box-shadow: 0 10px 24px rgba(16,24,40,.04);
+        }
+
+        .admin-v2-segment button {
+            border: 0;
+            min-height: 50px;
+            border-radius: 16px;
+            background: transparent;
+            color: var(--admin-muted);
+            font-size: 16px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-segment button.active {
+            background: linear-gradient(135deg, #22c55e, #39d98a);
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(34,197,94,.22);
+        }
+
+        .admin-v2-segment button[data-point-action="minus"].active {
+            background: linear-gradient(135deg, #ef4444, #fb7185);
+            box-shadow: 0 12px 24px rgba(239,68,68,.18);
+        }
+
+        .admin-v2-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-quick-btn {
+            border: 0;
+            min-height: 68px;
+            border-radius: 22px;
+            background: #fff;
+            box-shadow: 0 12px 28px rgba(16,24,40,.07);
+            font-size: 24px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-quick-btn.add { color: var(--admin-green); }
+        .admin-v2-quick-btn.minus { color: var(--admin-red); }
+
+        .admin-v2-custom-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 10px;
+            border-radius: 22px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-custom-row label {
+            color: var(--admin-muted);
+            font-size: 14px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .custom-input {
+            min-width: 0;
+            height: 48px;
+            padding: 0 12px !important;
+            border-radius: 15px !important;
+            border: 1px solid var(--admin-border) !important;
+            background: #fff !important;
+            color: var(--admin-text) !important;
+            font-size: 16px !important;
+            font-weight: 800;
+            text-align: left !important;
+            outline: none;
+        }
+
+        .custom-input::placeholder { color: #98a2b3 !important; }
+
+        .admin-v2-confirm {
+            border: 0;
+            height: 48px;
+            border-radius: 16px;
+            padding: 0 16px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-confirm.add { background: var(--admin-green); }
+        .admin-v2-confirm.minus { background: var(--admin-red); }
+
+        .admin-v2-primary-link,
+        .admin-v2-action-disabled {
+            width: 100%;
+            min-height: 58px;
+            border: 0;
+            border-radius: 18px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--admin-blue), var(--admin-blue-2));
+            box-shadow: 0 16px 30px rgba(22,119,255,.22);
+            font-size: 17px;
+            font-weight: 950;
+            cursor: pointer;
+        }
+
+        .admin-v2-action-disabled {
+            background: #cbd5e1;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .admin-v2-status-card {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            border-radius: 28px;
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-status-icon {
+            width: 58px;
+            height: 58px;
+            flex: 0 0 auto;
+            display: grid;
+            place-items: center;
+            border-radius: 20px;
+            background: rgba(34,197,94,.12);
+            font-size: 28px;
+        }
+
+        .admin-v2-big-status {
+            color: var(--admin-red);
+            font-size: 24px;
+            font-weight: 950;
+            letter-spacing: -.03em;
+        }
+
+        .admin-v2-muted {
+            margin-top: 5px;
+            color: var(--admin-muted);
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        .admin-v2-segment.attendance button.active {
+            background: linear-gradient(135deg, var(--admin-blue), #38bdf8);
+            box-shadow: 0 12px 24px rgba(22,119,255,.20);
+        }
+
+        .admin-v2-query-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .admin-v2-query-card {
+            min-height: 118px;
+            border: 0;
+            border-radius: 28px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            align-items: center;
+            column-gap: 14px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .admin-v2-query-card span {
+            grid-row: span 2;
+            width: 56px;
+            height: 56px;
+            display: grid;
+            place-items: center;
+            border-radius: 20px;
+            background: rgba(22,119,255,.10);
+            font-size: 26px;
+        }
+
+        .admin-v2-query-card strong {
+            color: var(--admin-text);
+            font-size: 20px;
+            font-weight: 950;
+        }
+
+        .admin-v2-query-card small {
+            color: var(--admin-muted);
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        .admin-v2-query-card.disabled {
+            opacity: .62;
+            cursor: not-allowed;
+        }
+
+        #scanner {
+            opacity: 0 !important;
+            position: fixed !important;
+            top: -100px !important;
+            left: -100px !important;
+            width: 1px !important;
+            height: 1px !important;
+        }
+
+        .admin-v2-bottom-nav {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: calc(14px + env(safe-area-inset-bottom));
+            z-index: 1200;
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr) 64px 64px;
+            gap: 10px;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .admin-v2-nav-circle,
+        .admin-v2-bottom-pill {
+            pointer-events: auto;
+            min-height: 64px;
+            border-radius: 999px;
+            border: 1px solid rgba(228,231,236,.94);
+            background: rgba(255,255,255,.88);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            box-shadow: 0 18px 36px rgba(16,24,40,.13);
+        }
+
+        .admin-v2-nav-circle {
+            width: 64px;
+            height: 64px;
+            display: grid;
+            place-items: center;
+            color: #667085;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .admin-v2-nav-circle.active {
+            color: #fff;
+            background: linear-gradient(135deg, var(--admin-blue), #38bdf8);
+            border-color: transparent;
+            box-shadow: 0 18px 34px rgba(22,119,255,.26);
+        }
+
+        .admin-v2-bottom-pill {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 18px;
+            color: #667085;
+            font-size: 18px;
+            font-weight: 900;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .admin-v2-bottom-pill span:last-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .admin-v2-search-icon {
+            color: var(--admin-blue);
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .modal-overlay {
+            background: rgba(16,24,40,.38) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+        }
+
+        .modal-content {
+            background: rgba(255,255,255,.96) !important;
+            color: var(--admin-text) !important;
+            border: 1px solid rgba(255,255,255,.9) !important;
+            box-shadow: 0 30px 90px rgba(16,24,40,.24) !important;
+        }
+
+        .modal-title {
+            color: var(--admin-text) !important;
+            letter-spacing: -.03em !important;
+        }
+
+        .log-row,
+        .accordion-header,
+        .progress-student-head,
+        .progress-detail-value,
+        .weekly-status-title,
+        .weekly-recipient-name {
+            color: var(--admin-text) !important;
+        }
+
+        .accordion-group,
+        .progress-student-card,
+        .weekly-card,
+        .weekly-status-box {
+            background: #fff !important;
+            border-color: var(--admin-border) !important;
+        }
+
+        .accordion-body,
+        .progress-student-detail {
+            background: #f8fafc !important;
+        }
+
+        .hidden { display: none !important; }
+
+        @media (min-width: 720px) {
+            .admin-main.container {
+                padding-top: 28px !important;
+            }
+            .admin-v2-view {
+                max-width: 600px;
+            }
+            .admin-v2-bottom-nav {
+                left: 50%;
+                right: auto;
+                width: min(560px, calc(100vw - 32px));
+                transform: translateX(-50%);
+            }
+        }
+
+        @media (max-width: 380px) {
+            .admin-v2-bottom-nav {
+                left: 10px;
+                right: 10px;
+                grid-template-columns: 58px minmax(0, 1fr) 58px 58px;
+                gap: 8px;
+            }
+            .admin-v2-nav-circle,
+            .admin-v2-bottom-pill {
+                min-height: 58px;
+            }
+            .admin-v2-nav-circle {
+                width: 58px;
+                height: 58px;
+            }
+            .admin-v2-bottom-pill {
+                font-size: 15px;
+                padding: 0 12px;
+            }
+        }
+
+    
+
+        /* =======================================================
+           Admin v2.1｜Dashboard glass refresh + QQ bottom only
+           - aligns admin with dashboard glass UI
+           - removes blue primary from content area
+           - keeps three colored active bottom buttons only
+           ======================================================= */
+        :root {
+            --admin-bg: #f0f4f8;
+            --admin-surface: rgba(255, 255, 255, 0.65);
+            --admin-surface-strong: rgba(255, 255, 255, 0.78);
+            --admin-soft: rgba(255,255,255,.48);
+            --admin-text: #1a252f;
+            --admin-muted: #7f8c8d;
+            --admin-border: rgba(255, 255, 255, 0.9);
+            --admin-line: rgba(26,37,47,.08);
+            --admin-green: #2ecc71;
+            --admin-orange: #f39c12;
+            --admin-red: #e74c3c;
+            --admin-purple: #8e44ad;
+            --admin-shadow: 0 15px 35px rgba(0,0,0,.05), inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 1px rgba(255,255,255,.3);
+        }
+
+        body {
+            background-color: #f0f4f8 !important;
+            background-image: none !important;
+            color: var(--admin-text) !important;
+            font-family: 'PingFang TC', -apple-system, BlinkMacSystemFont, "Noto Sans TC", "Microsoft JhengHei", sans-serif !important;
+            letter-spacing: 0;
+        }
+
+        .admin-v2-orb { position: fixed; border-radius: 50%; filter: blur(60px); z-index: -1; opacity: .55; pointer-events: none; animation: adminFloatOrb 15s infinite alternate ease-in-out; }
+        .admin-v2-orb-1 { width: 340px; height: 340px; background: rgba(0,102,204,.18); top: -12%; left: -22%; }
+        .admin-v2-orb-2 { width: 380px; height: 380px; background: rgba(243,156,18,.16); bottom: 8%; right: -24%; animation-delay: -5s; }
+        .admin-v2-orb-3 { width: 250px; height: 250px; background: rgba(46,204,113,.12); top: 38%; left: 30%; animation-duration: 20s; }
+        @keyframes adminFloatOrb { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(38px,-38px) scale(1.18); } }
+
+        .glass-panel,
+        .admin-v2-nfc-hero,
+        .admin-v2-student-card,
+        .admin-v2-points-card,
+        .admin-v2-segment,
+        .admin-v2-custom-row,
+        .admin-v2-status-card,
+        .admin-v2-query-card,
+        .admin-v2-query-search,
+        .admin-v2-query-header,
+        .admin-v2-empty,
+        .admin-v2-class-block,
+        .admin-v2-student-row {
+            background: var(--admin-surface) !important;
+            backdrop-filter: blur(35px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(35px) saturate(180%) !important;
+            border: 1px solid var(--admin-border) !important;
+            box-shadow: var(--admin-shadow) !important;
+        }
+
+        .admin-v2-topbar {
+            height: calc(76px + env(safe-area-inset-top)) !important;
+            padding: calc(12px + env(safe-area-inset-top)) 18px 10px !important;
+            background: rgba(255,255,255,.42) !important;
+            border-bottom: 1px solid rgba(255,255,255,.62) !important;
+            box-shadow: none !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+        }
+
+        .admin-v2-school-icon { width: 44px !important; height: 44px !important; overflow: hidden; border: 1px solid rgba(255,255,255,.95) !important; background: rgba(255,255,255,.64) !important; box-shadow: 0 6px 16px rgba(0,0,0,.05) !important; }
+        .admin-v2-school-icon img { width: 100%; height: 100%; object-fit: contain; padding: 5px; box-sizing: border-box; }
+        .admin-v2-school-name { font-size: 20px !important; font-weight: 900 !important; letter-spacing: .5px !important; color: var(--admin-text) !important; }
+        .admin-v2-role { font-size: 12px !important; color: var(--admin-muted) !important; font-weight: 800 !important; }
+        .admin-v2-utility, .admin-v2-icon-btn { color: var(--admin-text) !important; min-height: 44px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important; background: rgba(255,255,255,.64) !important; border-color: rgba(255,255,255,.95) !important; box-shadow: 0 6px 16px rgba(0,0,0,.05) !important; }
+        .admin-v2-utility { padding: 0 16px !important; }
+        .admin-v2-icon-btn { font-size: 20px !important; }
+
+        .admin-main.container { inset: calc(76px + env(safe-area-inset-top)) 0 calc(92px + env(safe-area-inset-bottom)) 0 !important; padding: 16px 18px 28px !important; }
+        .admin-v2-view { width: min(100%, 430px) !important; }
+
+        .admin-v2-mode-kicker { background: rgba(255,255,255,.6) !important; color: var(--admin-text) !important; border: 1px solid rgba(255,255,255,.95); box-shadow: 0 4px 14px rgba(0,0,0,.035); }
+        .admin-v2-dot { background: var(--admin-green) !important; box-shadow: 0 0 0 5px rgba(46,204,113,.13) !important; }
+
+        .admin-v2-nfc-hero { border-radius: 36px !important; padding: 34px 20px 28px !important; }
+        .admin-v2-phone-outline { color: rgba(26,37,47,.28) !important; border-color: rgba(26,37,47,.12) !important; background: rgba(255,255,255,.5) !important; }
+        .admin-v2-card-chip { background: linear-gradient(135deg, #2ecc71, #55efc4) !important; box-shadow: 0 16px 30px rgba(46,204,113,.20) !important; }
+        .admin-main h1 { font-size: 32px !important; color: var(--admin-text) !important; letter-spacing: 1px !important; -webkit-text-fill-color: currentColor !important; font-weight: 900 !important; }
+        .subtitle { color: var(--admin-muted) !important; font-weight: 700 !important; }
+        .status-badge { background: rgba(255,255,255,.56) !important; border-color: rgba(255,255,255,.95) !important; box-shadow: 0 4px 14px rgba(0,0,0,.035) !important; }
+        #msg { color: var(--admin-text) !important; }
+        .admin-v2-tip { background: rgba(255,255,255,.52) !important; border-color: rgba(255,255,255,.9) !important; color: var(--admin-muted) !important; }
+        .admin-v2-tip strong { color: var(--admin-text) !important; }
+
+        .admin-v2-rescan { position: sticky; top: 0; z-index: 5; margin: 0 0 12px auto !important; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,.7); color: var(--admin-text) !important; border: 1px solid rgba(255,255,255,.92); box-shadow: 0 4px 14px rgba(0,0,0,.04); }
+        .admin-v2-student-card { border-radius: 32px !important; padding: 26px 24px !important; display: block !important; text-align: center !important; }
+        .admin-v2-avatar { display: none !important; }
+        .admin-v2-student-info { width: 100%; }
+        .stu-name { color: var(--admin-text) !important; font-size: 32px !important; font-weight: 900 !important; letter-spacing: 2px !important; margin: 0 0 8px !important; text-align: center !important; }
+        .admin-v2-student-meta { color: var(--admin-muted) !important; font-weight: 800 !important; }
+        .admin-v2-card-label { color: var(--admin-muted) !important; font-weight: 900 !important; }
+        .admin-v2-points-card { border-radius: 30px !important; padding: 28px 24px !important; display: flex !important; flex-direction: column !important; align-items: center !important; gap: 12px !important; text-align: center !important; }
+        .stu-points { color: var(--admin-text) !important; text-shadow: none !important; font-size: 72px !important; line-height: .95 !important; font-weight: 900 !important; letter-spacing: -2px !important; }
+        .history-btn { color: var(--admin-text) !important; text-decoration: none !important; background: rgba(255,255,255,.66) !important; border: 1px solid rgba(255,255,255,1) !important; box-shadow: 0 4px 15px rgba(0,0,0,.04) !important; border-radius: 20px !important; padding: 13px 24px !important; font-weight: 900 !important; margin-bottom: 0 !important; }
+
+        .admin-v2-segment { border-radius: 24px !important; padding: 7px !important; background: rgba(255,255,255,.54) !important; }
+        .admin-v2-segment button { min-height: 54px !important; display:flex !important; align-items:center !important; justify-content:center !important; color: var(--admin-muted) !important; }
+        .admin-v2-segment button.active { background: linear-gradient(135deg,#2ecc71,#27ae60) !important; color:#fff !important; box-shadow: 0 10px 24px rgba(46,204,113,.28) !important; }
+        .admin-v2-segment button[data-point-action="minus"].active { background: linear-gradient(135deg,#e74c3c,#ff7675) !important; box-shadow: 0 10px 24px rgba(231,76,60,.22) !important; }
+        .admin-v2-quick-btn { background: rgba(255,255,255,.72) !important; border: 1px solid rgba(255,255,255,.95) !important; box-shadow: 0 5px 15px rgba(0,0,0,.04) !important; border-radius: 22px !important; display:flex !important; align-items:center !important; justify-content:center !important; }
+        .admin-v2-quick-btn.add { color: var(--admin-green) !important; }
+        .admin-v2-quick-btn.minus { color: var(--admin-red) !important; }
+        .admin-v2-custom-row { background: rgba(255,255,255,.56) !important; }
+        .custom-input { background: rgba(255,255,255,.70) !important; border-color: rgba(255,255,255,1) !important; color: var(--admin-text) !important; }
+        .admin-v2-confirm { display:flex !important; align-items:center !important; justify-content:center !important; }
+        .admin-v2-primary-link { background: rgba(255,255,255,.76) !important; color: var(--admin-text) !important; border: 1px solid rgba(255,255,255,1) !important; box-shadow: 0 5px 15px rgba(0,0,0,.04) !important; display:flex !important; align-items:center !important; justify-content:center !important; }
+
+        .admin-v2-status-card { background: rgba(255,255,255,.62) !important; }
+        .admin-v2-status-icon { background: rgba(243,156,18,.12) !important; }
+        .admin-v2-big-status { color: var(--admin-orange) !important; }
+        .admin-v2-segment.attendance button.active { background: linear-gradient(135deg,#f39c12,#f1c40f) !important; color:#fff !important; box-shadow: 0 10px 24px rgba(243,156,18,.22) !important; }
+
+        .admin-v2-query-view.hidden { display: none !important; }
+        .admin-v2-query-view { display: flex; flex-direction: column; gap: 14px; }
+        .admin-v2-query-header { border-radius: 30px; padding: 22px; display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+        .admin-v2-query-header h1 { margin: 6px 0 6px !important; font-size: 30px !important; }
+        .admin-v2-refresh-btn { border:0; border-radius:999px; background:rgba(255,255,255,.76); color:var(--admin-text); border:1px solid rgba(255,255,255,1); box-shadow:0 5px 15px rgba(0,0,0,.04); min-height:42px; padding:0 14px; font-weight:900; white-space:nowrap; display:flex; align-items:center; justify-content:center; }
+        .admin-v2-query-search { height: 58px; border-radius: 24px; padding:0 18px; display:flex; align-items:center; gap:10px; }
+        .admin-v2-query-search span { color: var(--admin-muted); font-size: 28px; }
+        .admin-v2-query-search input { flex:1; min-width:0; border:0; outline:0; background:transparent; font-size:17px; font-weight:800; color:var(--admin-text); }
+        .admin-v2-query-search input::placeholder { color: rgba(127,140,141,.82); }
+        .admin-v2-query-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:6px; border-radius:999px; background:rgba(255,255,255,.46); border:1px solid rgba(255,255,255,.86); box-shadow:0 5px 15px rgba(0,0,0,.035); }
+        .admin-v2-query-tabs button { min-height:46px; border:0; border-radius:999px; background:transparent; color:var(--admin-muted); font-weight:900; }
+        .admin-v2-query-tabs button.active { background:rgba(255,255,255,.82); color:var(--admin-text); box-shadow:0 5px 14px rgba(0,0,0,.04); }
+        .admin-v2-query-tabs button:disabled { opacity:.5; }
+        .admin-v2-query-results { display:flex; flex-direction:column; gap:14px; }
+        .admin-v2-empty { border-radius:26px; padding:24px; text-align:center; color:var(--admin-muted); font-weight:800; }
+        .admin-v2-class-block { border-radius:28px; overflow:hidden; }
+        .admin-v2-class-head { padding:18px 20px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; border-bottom:1px solid rgba(26,37,47,.06); }
+        .admin-v2-class-head strong { font-size:20px; color:var(--admin-text); }
+        .admin-v2-class-head small { display:block; margin-top:4px; color:var(--admin-muted); font-weight:750; line-height:1.45; }
+        .admin-v2-student-row { border-radius:0 !important; box-shadow:none !important; border-width:0 0 1px 0 !important; border-color:rgba(26,37,47,.06) !important; padding:14px 18px; display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; background:rgba(255,255,255,.36) !important; }
+        .admin-v2-student-row:last-child { border-bottom:0 !important; }
+        .admin-v2-student-row strong { color:var(--admin-text); font-size:15px; }
+        .admin-v2-student-row small { display:block; color:var(--admin-muted); margin-top:3px; font-weight:700; }
+        .admin-v2-count-badge { border-radius:999px; padding:7px 10px; font-size:12px; font-weight:900; color:var(--admin-text); background:rgba(255,255,255,.74); border:1px solid rgba(255,255,255,1); }
+
+        .admin-v2-bottom-nav { left: 50% !important; right: auto !important; width: min(340px, calc(100vw - 48px)) !important; transform: translateX(-50%) !important; grid-template-columns: repeat(3, 1fr) !important; gap: 14px !important; bottom: calc(14px + env(safe-area-inset-bottom)) !important; pointer-events: auto !important; }
+        .admin-v2-bottom-pill { display: none !important; }
+        .admin-v2-nav-circle { width: 76px !important; height: 76px !important; min-height:76px !important; justify-self:center; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:3px; font-size:26px !important; line-height:1 !important; border: 1px solid rgba(255,255,255,.95) !important; background: rgba(255,255,255,.78) !important; color:#7f8c8d !important; box-shadow:0 14px 26px rgba(0,0,0,.10) !important; }
+        .admin-v2-nav-circle small { display:block; font-size:11px; line-height:1; font-weight:900; letter-spacing:.5px; }
+        .admin-v2-nav-circle.active[data-admin-mode="points"] { background:linear-gradient(135deg,#2ecc71,#27ae60) !important; color:#fff !important; border-color:transparent !important; box-shadow:0 16px 30px rgba(46,204,113,.28) !important; }
+        .admin-v2-nav-circle.active[data-admin-mode="attendance"] { background:linear-gradient(135deg,#f39c12,#f1c40f) !important; color:#fff !important; border-color:transparent !important; box-shadow:0 16px 30px rgba(243,156,18,.28) !important; }
+        .admin-v2-nav-circle.active[data-admin-mode="query"] { background:linear-gradient(135deg,#8e44ad,#a29bfe) !important; color:#fff !important; border-color:transparent !important; box-shadow:0 16px 30px rgba(142,68,173,.25) !important; }
+
+        .modal-content { background:rgba(255,255,255,.84) !important; backdrop-filter:blur(35px) saturate(180%) !important; -webkit-backdrop-filter:blur(35px) saturate(180%) !important; border:1px solid rgba(255,255,255,.9) !important; color:var(--admin-text) !important; }
+        .modal-title { color:var(--admin-text) !important; }
+        .log-row { color:var(--admin-text) !important; border-color:rgba(26,37,47,.08) !important; }
+        .log-time { color:var(--admin-muted) !important; }
+        .accordion-header, .progress-student-head { color:var(--admin-text) !important; background:rgba(255,255,255,.42) !important; }
+        .accordion-group, .progress-student-card, .weekly-card, .weekly-status-box { background:rgba(255,255,255,.50) !important; border-color:rgba(255,255,255,.86) !important; }
+        .accordion-body, .progress-student-detail { background:rgba(255,255,255,.32) !important; }
+        .progress-detail-value, .weekly-status-title, .weekly-recipient-name { color:var(--admin-text) !important; }
+
+        @media (max-width: 380px) {
+            .admin-v2-bottom-nav { width: min(310px, calc(100vw - 30px)) !important; gap:10px !important; }
+            .admin-v2-nav-circle { width:68px !important; height:68px !important; min-height:68px !important; font-size:23px !important; }
+            .admin-v2-nav-circle small { font-size:10px; }
+            .stu-points { font-size:62px !important; }
+        }
+
+    
+
+        /* =======================================================
+           Admin v2.2｜Attendance UX + breathing card polish
+           ======================================================= */
+        .admin-v2-mode-kicker { display:none !important; }
+        .admin-main.container {
+            inset: calc(88px + env(safe-area-inset-top)) 0 calc(98px + env(safe-area-inset-bottom)) 0 !important;
+            padding: 20px 18px 28px !important;
+        }
+        .admin-v2-nfc-hero {
+            padding: 28px 20px !important;
+            border-radius: 34px !important;
+            margin-top: 2px;
+        }
+        .admin-v2-nfc-circle { width: 188px !important; height: 188px !important; }
+        .admin-v2-phone-outline { width: 92px !important; height: 138px !important; border-radius: 24px !important; }
+        .admin-v2-card-chip { left: 76px !important; bottom: 36px !important; width: 104px !important; height: 58px !important; border-radius: 16px !important; }
+        .admin-main h1 { font-size: 29px !important; margin: 20px 0 8px !important; letter-spacing: -0.04em !important; }
+        .subtitle { font-size: 14px !important; line-height: 1.65 !important; margin-bottom: 16px !important; }
+        .admin-v2-tip { display:none !important; }
+
+        .admin-v2-student-card {
+            align-items: flex-start !important;
+            gap: 0 !important;
+            border-radius: 32px !important;
+            padding: 26px 24px !important;
+            margin-bottom: 18px !important;
+        }
+        .admin-v2-student-info { width:100%; min-width:0; }
+        .admin-v2-avatar { display:none !important; }
+        .stu-name {
+            font-size: 23px !important;
+            line-height: 1.28 !important;
+            letter-spacing: -0.03em !important;
+            margin-bottom: 10px !important;
+        }
+        .admin-v2-student-meta { margin-top: 0 !important; padding: 6px 12px !important; font-size: 12px !important; }
+        .admin-v2-points-card {
+            border-radius: 32px !important;
+            padding: 26px 24px !important;
+            margin-bottom: 18px !important;
+            text-align: left !important;
+        }
+        .admin-v2-points-card > div { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; }
+        .admin-v2-card-label { font-size: 13px !important; margin-bottom: 7px !important; }
+        .stu-points { font-size: 43px !important; line-height: 1.04 !important; letter-spacing: -0.045em !important; }
+        .history-btn { margin: 18px 0 0 !important; padding: 9px 14px !important; font-size: 13px !important; }
+        .admin-v2-quick-btn { min-height: 58px !important; border-radius: 20px !important; font-size: 21px !important; }
+        .admin-v2-custom-row { border-radius: 22px !important; padding: 12px !important; }
+        .admin-v2-rescan { margin-bottom: 14px !important; }
+
+        .admin-v2-attendance-modebar {
+            display:none;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            padding: 6px;
+            margin: 16px auto 0;
+            width: min(100%, 420px);
+            border-radius: 22px;
+            background: rgba(255,255,255,.62);
+            border: 1px solid rgba(255,255,255,.92);
+            box-shadow: 0 12px 28px rgba(0,0,0,.045), inset 0 1px 0 rgba(255,255,255,.9);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+        }
+        body.admin-mode-attendance .admin-v2-attendance-modebar { display:grid; }
+        .admin-v2-attendance-modebar.in-card { display:grid; margin:0 0 16px; width:100%; }
+        .admin-v2-attendance-modebar button {
+            border:0;
+            min-height:46px;
+            border-radius:17px;
+            background:transparent;
+            color:var(--admin-muted);
+            font-size:14px;
+            font-weight:950;
+            cursor:pointer;
+            letter-spacing:-0.01em;
+        }
+        .admin-v2-attendance-modebar button.active {
+            color:#fff;
+            background:linear-gradient(135deg,#f39c12,#f1c40f);
+            box-shadow:0 10px 22px rgba(243,156,18,.22);
+        }
+        .admin-v2-attendance-modebar button[data-att-mode="auto_checkin"].active { background:linear-gradient(135deg,#22c55e,#39d98a); box-shadow:0 10px 22px rgba(34,197,94,.22); }
+        .admin-v2-attendance-modebar button[data-att-mode="auto_checkout"].active { background:linear-gradient(135deg,#ef4444,#fb7185); box-shadow:0 10px 22px rgba(239,68,68,.18); }
+        .admin-v2-status-card { align-items:flex-start !important; padding:24px !important; border-radius:32px !important; }
+        .admin-v2-status-icon { display:none !important; }
+        .admin-v2-big-status { font-size:22px !important; line-height:1.25 !important; color:var(--admin-text) !important; }
+        .admin-v2-manual-attendance.hidden, .admin-v2-auto-attendance.hidden { display:none !important; }
+        .admin-v2-auto-banner {
+            padding:16px 18px;
+            border-radius:22px;
+            background:rgba(255,255,255,.68);
+            border:1px solid rgba(255,255,255,.92);
+            color:var(--admin-text);
+            font-size:15px;
+            font-weight:900;
+            line-height:1.5;
+            margin-bottom:12px;
+            box-shadow:0 10px 24px rgba(0,0,0,.045);
+        }
+        .admin-v2-auto-close {
+            width:100%;
+            min-height:54px;
+            border:0;
+            border-radius:20px;
+            background:rgba(16,24,40,.08);
+            color:var(--admin-text);
+            font-size:16px;
+            font-weight:950;
+            cursor:pointer;
+        }
+
+
+        /* =======================================================
+           Admin v2.2｜Query refinement + bottom attendance modebar
+           ======================================================= */
+        .admin-v2-attendance-modebar-fixed {
+            position: fixed !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            bottom: calc(98px + env(safe-area-inset-bottom)) !important;
+            z-index: 1190 !important;
+            width: min(430px, calc(100vw - 36px)) !important;
+            margin: 0 !important;
+            pointer-events: auto;
+        }
+
+        body.admin-mode-attendance .admin-main.container {
+            padding-bottom: 112px !important;
+        }
+
+        .admin-v2-query-topline {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .admin-v2-query-topline .admin-v2-query-search {
+            margin: 0 !important;
+            min-width: 0;
+        }
+
+        .admin-v2-refresh-btn {
+            border: 1px solid rgba(255,255,255,.92);
+            border-radius: 20px;
+            min-height: 52px;
+            padding: 0 16px;
+            background: rgba(255,255,255,.74);
+            color: var(--admin-text);
+            box-shadow: 0 10px 24px rgba(0,0,0,.045), inset 0 1px 0 rgba(255,255,255,.9);
+            font-size: 14px;
+            font-weight: 950;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .admin-v2-query-tabs {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            margin-bottom: 10px;
+        }
+
+        .admin-v2-query-filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .admin-v2-query-filters.has-three {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .admin-v2-query-filters select {
+            width: 100%;
+            min-width: 0;
+            min-height: 46px;
+            border: 1px solid rgba(255,255,255,.9);
+            border-radius: 18px;
+            padding: 0 12px;
+            background: rgba(255,255,255,.72);
+            color: var(--admin-text);
+            font-size: 13px;
+            font-weight: 900;
+            outline: none;
+            box-shadow: 0 7px 18px rgba(0,0,0,.035);
+        }
+
+        .admin-v2-student-row {
+            cursor: pointer;
+        }
+
+        .admin-v2-row-detail {
+            display: none;
+            grid-column: 1 / -1;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 16px;
+            background: rgba(255,255,255,.58);
+            border: 1px solid rgba(255,255,255,.84);
+        }
+
+        .admin-v2-student-row.expanded .admin-v2-row-detail {
+            display: block;
+            animation: fadeIn .18s ease;
+        }
+
+        .admin-v2-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .admin-v2-detail-box {
+            padding: 10px;
+            border-radius: 14px;
+            background: rgba(255,255,255,.72);
+            border: 1px solid rgba(255,255,255,.84);
+        }
+
+        .admin-v2-detail-label {
+            color: var(--admin-muted);
+            font-size: 11px;
+            font-weight: 900;
+            margin-bottom: 4px;
+        }
+
+        .admin-v2-detail-value {
+            color: var(--admin-text);
+            font-size: 13px;
+            font-weight: 950;
+            word-break: break-word;
+        }
+
+        .admin-v2-record-title {
+            color: var(--admin-text);
+            font-size: 12px;
+            font-weight: 950;
+            margin: 8px 0 6px;
+        }
+
+        .admin-v2-record-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 7px 0;
+            border-top: 1px dashed rgba(26,37,47,.10);
+            color: var(--admin-muted);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .admin-v2-log-row-main {
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            align-items:center;
+            width:100%;
+        }
+
+        .admin-v2-delta-plus { color: var(--admin-green); font-weight: 950; }
+        .admin-v2-delta-minus { color: var(--admin-red); font-weight: 950; }
+
+        @media (max-width: 380px) {
+            .admin-v2-query-filters,
+            .admin-v2-query-filters.has-three {
+                grid-template-columns: 1fr;
+            }
+            .admin-v2-query-topline {
+                grid-template-columns: 1fr;
+            }
+        }
+
+  
+        /* Admin query API v1｜Super Admin visibility + no-card attendance */
+        .admin-v2-utility.super-only,
+        .admin-v2-icon-btn.super-only,
+        button.super-only {
+            display: none !important;
+        }
+        .admin-v2-utility.super-visible,
+        .admin-v2-icon-btn.super-visible,
+        button.super-visible {
+            display: inline-flex !important;
+        }
+        .admin-v2-nocard-btn {
+            border: 0;
+            border-radius: 999px;
+            background: rgba(46, 204, 113, .14);
+            color: var(--admin-green);
+            font-size: 12px;
+            font-weight: 950;
+            padding: 7px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            margin-left: 6px;
+        }
+        .admin-v2-nocard-btn:active { transform: scale(.96); }
+
+        .admin-v2-nocard-actions {
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:10px;
+            margin:0 0 12px 0;
+        }
+        .admin-v2-nocard-actions .admin-v2-nocard-btn {
+            width:100%;
+            min-height:42px;
+        }
+        .admin-v2-nocard-btn.checkin { background:linear-gradient(135deg,#22c55e,#39d98a); color:#fff !important; }
+        .admin-v2-nocard-btn.checkout { background:linear-gradient(135deg,#ef4444,#fb7185); color:#fff !important; }
+
+
+  </style>
 </head>
 <body>
+    <div class="admin-v2-orb admin-v2-orb-1"></div>
+    <div class="admin-v2-orb admin-v2-orb-2"></div>
+    <div class="admin-v2-orb admin-v2-orb-3"></div>
 
     <div id="unauth-mask" style="position:fixed; inset:0; background:#050000; z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; color:#e74c3c;">
         <h1 style="font-size:60px; margin:0; background:none; -webkit-text-fill-color: #e74c3c;">⛔</h1>
@@ -437,71 +1689,187 @@
         <p style="color:#7f8c8d;">請使用教師專用 NFC 卡感應進入</p>
     </div>
 
-    <div class="top-nav" id="top-nav">
-        <div class="nav-btn" onclick="toggleMenu()">
-            ⚙️ 功能清單 ▾
-            <div class="dropdown-menu" id="menu-dropdown">
-                <div class="dropdown-item" onclick="openProgressModal()">📊 學習進度</div>
-                <div class="dropdown-item super-only" onclick="openNewsletterModal()">📝 專欄編輯</div>
-                <div class="dropdown-item super-only" onclick="openWeeklyAutomationModal()">📬 自動通知與週報</div>
-                <div class="dropdown-item super-only" onclick="openTaskManager()">📅 學習任務排定</div>
-                <div class="dropdown-item super-only" onclick="openStudentManager()">🧑‍🎓 編輯學生資料</div>
-                <div class="dropdown-item super-only" onclick="openAvatarPricingModal()">🃏 角色定價與類型</div>
-                <div class="dropdown-item super-only" onclick="openBrandingModal()">🎨 校區視覺設定</div>
-                <div class="dropdown-item super-only" onclick="openGamiModal()">🕹️ 進階點數設定</div>
+    <div class="top-nav admin-v2-topbar" id="top-nav">
+        <div class="admin-v2-school">
+            <div class="admin-v2-school-icon"><img id="admin-v2-school-logo" src="/assets/logo.webp" alt="校區 Logo"></div>
+            <div>
+                <div class="admin-v2-school-name" id="admin-v2-school-name">校區工作台</div>
+                <div class="admin-v2-role" id="role-text">專屬管理員權限</div>
             </div>
         </div>
-        <div class="nav-btn" onclick="adminLogout()">🔒 登出</div>
+        <div class="admin-v2-top-actions">
+            <button class="admin-v2-utility super-only" type="button" onclick="openConsoleFromAdmin()">校區後台</button>
+            <button class="admin-v2-icon-btn" type="button" onclick="adminLogout()" aria-label="登出">⎋</button>
+        </div>
     </div>
 
-    <div class="container" id="mainCard">
-        <div id="scan-ui">
-            <div class="logo-wrapper">
-                <div class="pulse-ring" id="ring"></div>
-                <img src="/assets/logo.webp" style="width:80px; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3));">
+    <main class="container admin-main" id="mainCard">
+        <section id="scan-ui" class="admin-v2-view admin-v2-scan-view">
+            <div class="admin-v2-mode-kicker">
+                <span class="admin-v2-dot"></span>
+                <span id="admin-v2-current-mode-label">加扣點模式</span>
             </div>
-            <h1>教師中控台</h1>
-            <p class="subtitle" id="role-text">專屬管理員權限</p>
+
+            <div class="admin-v2-nfc-hero">
+                <div class="admin-v2-nfc-circle">
+                    <div class="admin-v2-phone-outline">NFC</div>
+                    <div class="admin-v2-card-chip">學生卡</div>
+                </div>
+            </div>
+
+            <h1>請感應學生卡</h1>
+            <p class="subtitle">將學生卡靠近手機背面 NFC 感應區域</p>
+
             <div class="status-badge" id="statusBadge">
                 <div class="status-dot"></div>
                 <p id="msg">系統就緒，請感應學生卡</p>
             </div>
-        </div>
 
-        <div id="action-ui">
-            <h2 class="stu-name" id="stu-name">-</h2>
-            <div class="stu-points" id="stu-points">0 PTS</div>
-            <span class="history-btn" onclick="toggleLogs(true)">點數明細 ⓘ</span>
-            <div class="control-panel">
-                <p class="panel-title" style="color:#2ecc71;">▲ 獎勵加分</p>
-                <div class="btn-flex-row">
-                    <button class="btn-action btn-green" onclick="send(10, this)">+ 10</button>
-                    <button class="btn-action btn-green" onclick="send(50, this)">+ 50</button>
-                    <button class="btn-action btn-green" onclick="send(100, this)">+ 100</button>
-                </div>
-                <div class="custom-input-group">
-                    <input type="number" id="customAdd" class="custom-input" placeholder="數值">
-                    <button class="btn-action btn-green" style="flex:0.6; padding:10px;" onclick="handleAdd(this)">執行</button>
-                </div>
-                <hr style="border: 0.5px dashed rgba(255,255,255,0.1); margin: 25px 0;">
-                <p class="panel-title" style="color:#e74c3c;">▼ 扣分懲罰</p>
-                <div class="btn-flex-row">
-                    <button class="btn-action btn-gray" onclick="send(-10, this)">- 10</button>
-                    <button class="btn-action btn-gray" onclick="send(-50, this)">- 50</button>
-                    <button class="btn-action btn-gray" onclick="send(-100, this)">- 100</button>
-                </div>
-                <div class="custom-input-group">
-                    <input type="number" id="customMinus" class="custom-input" placeholder="數值">
-                    <button class="btn-action btn-red" style="flex:0.6; padding:10px;" onclick="handleMinus(this)">執行</button>
+            <!-- attendance modebar moved above bottom nav -->
+
+            <div class="admin-v2-tip">
+                <strong>小提醒</strong>
+                <span>掃到學生後，會依照目前底部分頁進入對應操作。</span>
+            </div>
+        </section>
+
+        <section id="action-ui" class="admin-v2-view admin-v2-student-view">
+            <button class="admin-v2-rescan" type="button" onclick="resetScanner()">↻ 重新掃卡</button>
+
+            <div class="admin-v2-student-card">
+                <div class="admin-v2-avatar" id="admin-v2-avatar">👧</div>
+                <div class="admin-v2-student-info">
+                    <h2 class="stu-name" id="stu-name">-</h2>
+                    <div class="admin-v2-student-meta" id="admin-v2-student-meta">已掃描學生卡</div>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-return" style="flex:1;" onclick="resetScanner()">🔙 繼續掃描</button>
-                <button class="btn-return" style="flex:1; border-color:#3498db; color:#3498db;" onclick="window.location.href='dashboard.html?id=' + currentStudentId + '&view=true'">👀 學生主頁</button>
+
+            <div class="admin-v2-mode-panel admin-v2-panel-points" data-mode-panel="points">
+                <div class="admin-v2-points-card">
+                    <div>
+                        <div class="admin-v2-card-label">目前點數</div>
+                        <div class="stu-points" id="stu-points">0 PTS</div>
+                    </div>
+                    <span class="history-btn" onclick="toggleLogs(true)">點數明細</span>
+                </div>
+
+                <div class="admin-v2-segment">
+                    <button type="button" class="active" data-point-action="add" onclick="setPointAction('add')">＋ 加分</button>
+                    <button type="button" data-point-action="minus" onclick="setPointAction('minus')">－ 扣分</button>
+                </div>
+
+                <div class="admin-v2-point-panel" id="point-add-panel">
+                    <div class="admin-v2-quick-grid">
+                        <button class="admin-v2-quick-btn add" onclick="send(10, this)">+10</button>
+                        <button class="admin-v2-quick-btn add" onclick="send(50, this)">+50</button>
+                        <button class="admin-v2-quick-btn add" onclick="send(100, this)">+100</button>
+                    </div>
+                    <div class="admin-v2-custom-row">
+                        <label>自訂點數</label>
+                        <input type="number" id="customAdd" class="custom-input" placeholder="輸入點數">
+                        <button class="admin-v2-confirm add" onclick="handleAdd(this)">確認</button>
+                    </div>
+                </div>
+
+                <div class="admin-v2-point-panel hidden" id="point-minus-panel">
+                    <div class="admin-v2-quick-grid">
+                        <button class="admin-v2-quick-btn minus" onclick="send(-10, this)">-10</button>
+                        <button class="admin-v2-quick-btn minus" onclick="send(-50, this)">-50</button>
+                        <button class="admin-v2-quick-btn minus" onclick="send(-100, this)">-100</button>
+                    </div>
+                    <div class="admin-v2-custom-row">
+                        <label>自訂扣點</label>
+                        <input type="number" id="customMinus" class="custom-input" placeholder="輸入點數">
+                        <button class="admin-v2-confirm minus" onclick="handleMinus(this)">確認</button>
+                    </div>
+                </div>
+
+                <button class="admin-v2-primary-link" onclick="window.location.href='dashboard.html?id=' + currentStudentId + '&view=true'">進入學生主頁</button>
             </div>
-        </div>
-        <input type="text" id="scanner" inputmode="none" autofocus style="opacity: 0; position: absolute; top: -100px;">
+
+            <div class="admin-v2-mode-panel admin-v2-panel-attendance hidden" data-mode-panel="attendance">
+                <div class="admin-v2-status-card">
+                    <div class="admin-v2-status-icon">🔔</div>
+                    <div>
+                        <div class="admin-v2-card-label">今日打卡狀態</div>
+                        <div class="admin-v2-big-status" id="admin-v2-attendance-status">尚未接入</div>
+                        <div class="admin-v2-muted">已接入打卡紀錄；Web Push 通知將在下一階段啟用。</div>
+                    </div>
+                </div>
+
+                <!-- attendance modebar moved above bottom nav -->
+
+                <div class="admin-v2-manual-attendance" id="admin-v2-manual-attendance">
+                    <div class="admin-v2-segment attendance">
+                        <button type="button" class="active" data-att-action="checkin" onclick="setManualAttendanceAction('checkin')">到校</button>
+                        <button type="button" data-att-action="checkout" onclick="setManualAttendanceAction('checkout')">離校</button>
+                    </div>
+                    <button class="admin-v2-action-disabled" type="button" onclick="handleAttendanceConfirm()">確認到校</button>
+                </div>
+
+                <div class="admin-v2-auto-attendance hidden" id="admin-v2-auto-attendance">
+                    <div class="admin-v2-auto-banner" id="admin-v2-auto-banner">自動到校模式已啟用</div>
+                    <button class="admin-v2-auto-close" type="button" onclick="setAttendanceMode('manual')">關閉自動模式</button>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="query-ui" class="admin-v2-view admin-v2-query-view hidden">
+            <div class="admin-v2-query-topline">
+                <div class="admin-v2-query-search">
+                    <span>⌕</span>
+                    <input id="admin-v2-query-search" type="search" placeholder="搜尋姓名、班級或 UID" oninput="filterAdminQueryProgress()">
+                </div>
+                <button class="admin-v2-refresh-btn" type="button" onclick="reloadAdminQueryCurrentView(true)">重新整理</button>
+            </div>
+
+            <div class="admin-v2-query-tabs">
+                <button class="active" type="button" data-query-tab="learning" onclick="setAdminQueryTab('learning')">學習</button>
+                <button type="button" data-query-tab="points" onclick="setAdminQueryTab('points')">加扣點</button>
+                <button type="button" data-query-tab="attendance" onclick="setAdminQueryTab('attendance')">打卡</button>
+            </div>
+
+            <div class="admin-v2-query-filters">
+                <select id="admin-v2-query-class-filter" onchange="filterAdminQueryProgress()">
+                    <option value="">全部學生</option>
+                </select>
+                <select id="admin-v2-query-status-filter" onchange="filterAdminQueryProgress()">
+                    <option value="">全部狀態</option>
+                </select>
+                <select id="admin-v2-query-value-filter" class="hidden" onchange="filterAdminQueryProgress()">
+                    <option value="">全部數值</option>
+                    <option value="lt100">一百分以下</option>
+                    <option value="gte100">一百分以上</option>
+                    <option value="gte1000">一千分以上</option>
+                </select>
+            </div>
+
+            <div id="admin-v2-query-results" class="admin-v2-query-results">
+                <div class="admin-v2-empty glass-panel">點選「狀態查詢」後會自動載入全校區資料。</div>
+            </div>
+        </section>
+
+        <input type="text" id="scanner" inputmode="none" autofocus>
+    </main>
+
+    <div class="admin-v2-attendance-modebar admin-v2-attendance-modebar-fixed" id="admin-v2-attendance-modebar">
+        <button type="button" data-att-mode="manual" onclick="setAttendanceMode('manual')">手動</button>
+        <button type="button" data-att-mode="auto_checkin" onclick="setAttendanceMode('auto_checkin')">自動到校</button>
+        <button type="button" data-att-mode="auto_checkout" onclick="setAttendanceMode('auto_checkout')">自動離校</button>
     </div>
+
+    <nav class="admin-v2-bottom-nav" aria-label="教師工作台分頁">
+        <button class="admin-v2-nav-circle active" data-admin-mode="points" onclick="setAdminMode('points')" aria-label="加扣點">
+            <span>⊕</span><small>加扣點</small>
+        </button>
+        <button class="admin-v2-nav-circle" data-admin-mode="attendance" onclick="setAdminMode('attendance')" aria-label="打卡通知">
+            <span>◴</span><small>打卡</small>
+        </button>
+        <button class="admin-v2-nav-circle" data-admin-mode="query" onclick="setAdminMode('query')" aria-label="狀態查詢">
+            <span>▤</span><small>查詢</small>
+        </button>
+    </nav>
 
     <div id="progressModal" class="modal-overlay" onclick="closeModal('progressModal')">
         <div class="modal-content wide-modal" onclick="event.stopPropagation()">
@@ -1046,6 +2414,13 @@
             localStorage.removeItem('tappie_admin_key');
             localStorage.removeItem('tappie_admin_key_time');
             localStorage.removeItem('tappie_admin_role');
+            localStorage.removeItem('tappie_attendance_mode');
+            localStorage.removeItem('tappie_attendance_expires_at');
+            localStorage.removeItem('tappie_admin_last_mode');
+            sessionStorage.removeItem('tappie_attendance_mode');
+            sessionStorage.removeItem('tappie_attendance_action');
+            sessionStorage.removeItem('tappie_manual_attendance_action');
+            sessionStorage.removeItem('tappie_admin_mode');
             ADMIN_SECRET = null;
             ADMIN_ROLE = null;
         }
@@ -1068,13 +2443,15 @@
             const mask = document.getElementById('unauth-mask');
             if (mask) mask.style.display = 'none';
 
-            if (role === "super") {
-                document.getElementById('role-text').innerText = "⭐ 超級管理員權限";
-                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'flex');
-            } else {
-                document.getElementById('role-text').innerText = "專屬管理員權限";
-                document.querySelectorAll('.super-only').forEach(el => el.style.display = 'none');
-            }
+            const isSuper = role === "super";
+            const roleText = document.getElementById('role-text');
+            if (roleText) roleText.innerText = isSuper ? "⭐ 超級管理員權限" : "專屬管理員權限";
+
+            document.querySelectorAll('.super-only').forEach(el => {
+                el.classList.toggle('super-visible', isSuper);
+                if (isSuper) el.style.setProperty('display', 'inline-flex', 'important');
+                else el.style.setProperty('display', 'none', 'important');
+            });
         }
 
         async function verifySupabaseAdminAuth(secret) {
@@ -1246,6 +2623,7 @@
                 studentName: s.name || s.studentName || '-',
                 currentPoints: Number(s.points || s.currentPoints || 0),
                 uid: s.uid,
+                classCode: s.class_code || s.classCode || '',
                 recentLogs: s.recentLogs || s.pointLogs || s.logs || []
             };
         }
@@ -1273,7 +2651,7 @@
         if (TARGET_ID) {
             currentStudentId = TARGET_ID;
             window.history.replaceState(null, null, 'admin.html');
-            card.className = 'container loading';
+            card.className = 'container admin-main loading';
             msg.innerText = "⏳ 讀取學生資料中...";
             msg.style.color = "#ffd700";
             loadStudentData(currentStudentId);
@@ -1681,6 +3059,15 @@
         // ==========================================
         
         setInterval(() => {
+            // 查詢頁是純點選/捲動操作，不應該讓隱藏的讀卡 input 重新取得焦點。
+            // 否則手機瀏覽器會在列表展開或高度變化時，把畫面捲回焦點元素附近，造成跳頂。
+            try {
+                if (ADMIN_V2_ACTIVE_MODE === 'query') {
+                    if (document.activeElement === scanner) scanner.blur();
+                    return;
+                }
+            } catch(e) {}
+
             const active = document.activeElement;
             // 🚀 關鍵修復：把 SELECT 也加入白名單，讀卡機就不會去搶下拉選單的焦點了！
             if (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA' && active.tagName !== 'SELECT') {
@@ -1731,7 +3118,7 @@
 
         // --- 1. 掃描卡片時的 API 呼叫 ---
         function fetchStudent(cardId) {
-            if (actionUI.style.display === 'block') return;
+            if (actionUI.style.display === 'block' && !(ADMIN_V2_ACTIVE_MODE === 'attendance' && (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout'))) return;
 
             const rawId = String(cardId).trim();
             const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
@@ -1741,7 +3128,7 @@
                 return;
             }
 
-            card.className = 'container loading';
+            card.className = 'container admin-main loading';
             msg.innerText = "⏳ 讀取學生資料中...";
             msg.style.color = "#ffd700";
 
@@ -1811,10 +3198,8 @@
         }
 
         function renderAdminUI(data) {
-            card.className = 'container';
-            scanUI.style.display = 'none';
-            actionUI.style.display = 'block';
-            document.getElementById('top-nav').style.display = 'none'; 
+            card.className = 'container admin-main';
+            document.getElementById('top-nav').style.display = 'flex'; 
             
             document.getElementById('stu-name').innerText = data.studentName;
             
@@ -1822,6 +3207,9 @@
             document.getElementById('stu-points').innerText = `${currentPointsValue} PTS`;
 
             renderPointLogs(data.recentLogs || []);
+            renderV2StudentSnapshot(data);
+            showAdminModeScreen();
+            handleAttendanceScanResolved();
         }
 
         function normalizePointLog(log) {
@@ -1937,25 +3325,25 @@
 
         function resetScanner() { 
             currentStudentId = null; 
-            actionUI.style.display = 'none'; 
-            scanUI.style.display = 'block'; 
             document.getElementById('top-nav').style.display = 'flex'; 
-            card.className = 'container'; 
+            card.className = 'container admin-main'; 
             msg.innerText = "🟢 系統就緒，請感應學生卡"; 
-            msg.style.color = "white"; 
+            msg.style.color = ""; 
             window.history.replaceState(null, null, 'admin.html'); 
+            updateAttendanceModeUI();
+            showAdminModeScreen();
             scanner.focus(); 
         }
 
         function showError(errorText) { 
-            card.className = 'container error'; 
+            card.className = 'container admin-main error'; 
             msg.innerText = errorText; 
             msg.style.color = "#e74c3c"; 
             setTimeout(() => { 
                 if (actionUI.style.display !== 'block') { 
-                    card.className = 'container'; 
+                    card.className = 'container admin-main'; 
                     msg.innerText = "🟢 系統就緒，請感應學生卡"; 
-                    msg.style.color = "white"; 
+                    msg.style.color = ""; 
                 } 
             }, 2500); 
         }
@@ -1964,6 +3352,13 @@
             if (confirm("確定要登出嗎？")) { 
                 localStorage.removeItem('tappie_admin_key');
                 localStorage.removeItem('tappie_admin_key_time');
+                localStorage.removeItem('tappie_attendance_mode');
+                localStorage.removeItem('tappie_attendance_expires_at');
+                localStorage.removeItem('tappie_admin_last_mode');
+                sessionStorage.removeItem('tappie_admin_mode');
+                sessionStorage.removeItem('tappie_attendance_mode');
+                sessionStorage.removeItem('tappie_attendance_action');
+                sessionStorage.removeItem('tappie_manual_attendance_action');
                 localStorage.removeItem('tappie_admin_role');
                 window.location.reload(); 
             } 
@@ -4282,6 +5677,1209 @@
             } catch (err) { alert('⚠️ ' + (err.message || err)); }
             finally { btn.innerText = old; btn.style.pointerEvents = 'auto'; }
         }
+
+        // =======================================================
+        // Admin v2 shell helpers｜Dashboard glass UI + QQ bottom nav
+        // =======================================================
+        const ADMIN_V2_FROM_TAP = params.get('from') === 'tap';
+        const ADMIN_V2_ATTENDANCE_MODE_KEY = 'tappie_attendance_mode';
+        const ADMIN_V2_ATTENDANCE_EXPIRES_KEY = 'tappie_attendance_expires_at';
+        const ADMIN_V2_MANUAL_ACTION_KEY = 'tappie_manual_attendance_action';
+        const ADMIN_V2_LAST_MODE_KEY = 'tappie_admin_last_mode';
+        const ADMIN_V2_AUTO_TTL_MS = 10 * 60 * 1000;
+
+        function normalizeAdminV2AttendanceMode(mode) {
+            return ['manual', 'auto_checkin', 'auto_checkout'].includes(mode) ? mode : 'manual';
+        }
+
+        function clearAdminV2AutoAttendance() {
+            try {
+                localStorage.removeItem(ADMIN_V2_ATTENDANCE_MODE_KEY);
+                localStorage.removeItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY);
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, 'manual');
+                sessionStorage.removeItem('tappie_attendance_action');
+            } catch(e) {}
+        }
+
+        function readAdminV2AttendanceMode({ allowAuto = false } = {}) {
+            let mode = 'manual';
+            try {
+                const rawMode = normalizeAdminV2AttendanceMode(localStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY) || sessionStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY) || 'manual');
+                const expiresAt = Number(localStorage.getItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY) || 0);
+
+                if (rawMode === 'auto_checkin' || rawMode === 'auto_checkout') {
+                    const isFresh = expiresAt && Date.now() <= expiresAt;
+                    if (allowAuto && isFresh) mode = rawMode;
+                    else clearAdminV2AutoAttendance();
+                } else {
+                    mode = 'manual';
+                }
+            } catch(e) {
+                mode = 'manual';
+            }
+            return mode;
+        }
+
+        function writeAdminV2AttendanceMode(mode) {
+            const normalized = normalizeAdminV2AttendanceMode(mode);
+            ADMIN_V2_ATTENDANCE_MODE = normalized;
+            try {
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
+                sessionStorage.removeItem('tappie_attendance_action');
+                if (normalized === 'auto_checkin' || normalized === 'auto_checkout') {
+                    localStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
+                    localStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(Date.now() + ADMIN_V2_AUTO_TTL_MS));
+                } else {
+                    clearAdminV2AutoAttendance();
+                }
+            } catch(e) {}
+        }
+
+        function adminV2DebugAttendance(label) {
+            try {
+                console.log('[ADMIN ATTENDANCE]', label, {
+                    activeMode: ADMIN_V2_ACTIVE_MODE,
+                    attendanceMode: ADMIN_V2_ATTENDANCE_MODE,
+                    localMode: localStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY),
+                    localExpiresAt: localStorage.getItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY),
+                    sessionMode: sessionStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY),
+                    manualAction: sessionStorage.getItem(ADMIN_V2_MANUAL_ACTION_KEY),
+                    fromTap: ADMIN_V2_FROM_TAP,
+                    url: location.href
+                });
+            } catch(e) {}
+        }
+
+        const ADMIN_V2_INITIAL_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: ADMIN_V2_FROM_TAP });
+        let ADMIN_V2_ACTIVE_MODE = (ADMIN_V2_FROM_TAP && ADMIN_V2_INITIAL_ATTENDANCE_MODE !== 'manual')
+            ? 'attendance'
+            : (sessionStorage.getItem('tappie_admin_mode') || localStorage.getItem(ADMIN_V2_LAST_MODE_KEY) || 'points');
+        let ADMIN_V2_ATTENDANCE_MODE = ADMIN_V2_INITIAL_ATTENDANCE_MODE;
+        let ADMIN_V2_ATTENDANCE_ACTION = sessionStorage.getItem(ADMIN_V2_MANUAL_ACTION_KEY) || 'checkin';
+        let ADMIN_V2_QUERY_LOADED = false;
+        let ADMIN_V2_QUERY_STATE = null;
+        let ADMIN_V2_QUERY_TAB = 'learning';
+        let ADMIN_V2_QUERY_POINTS_LOADED = false;
+        let ADMIN_V2_QUERY_POINTS_STATE = [];
+        let ADMIN_V2_QUERY_ATTENDANCE_LOADED = false;
+        let ADMIN_V2_QUERY_ATTENDANCE_STATE = null;
+        let ADMIN_V2_ATTENDANCE_TODAY_CACHE = null;
+
+        let ADMIN_V2_QUERY_ALL_STUDENTS = [];
+
+        function isAdminV2Super() {
+            return (ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '') === 'super';
+        }
+
+        async function fetchAdminQueryData(mode, extra = {}) {
+            const payload = {
+                schoolCode: CURRENT_SCHOOL,
+                mode,
+                rangeDays: 7,
+                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                ...extra
+            };
+            const api = window.TappieAPI;
+            if (api && typeof api.adminGetQueryData === 'function') {
+                return await api.adminGetQueryData(payload);
+            }
+            const res = await fetch(`${getAdminQueryBaseUrl()}/admin-get-query-data`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            return await res.json().catch(() => ({}));
+        }
+
+
+        function getAdminV2ModeText(mode = ADMIN_V2_ACTIVE_MODE) {
+            if (mode === 'attendance') return '打卡通知';
+            if (mode === 'query') return '狀態查詢';
+            return '加扣點';
+        }
+
+        function updateAdminBottomStatus() {
+            // v2.1：底部膠囊已移除，保留空函式相容舊呼叫。
+        }
+
+        function showAdminModeScreen() {
+            const queryUI = document.getElementById('query-ui');
+            const hasStudent = !!currentStudentId;
+
+            if (ADMIN_V2_ACTIVE_MODE === 'query') {
+                if (scanUI) scanUI.style.display = 'none';
+                if (actionUI) actionUI.style.display = 'none';
+                if (queryUI) queryUI.classList.remove('hidden');
+                reloadAdminQueryCurrentView(false);
+                return;
+            }
+
+            if (queryUI) queryUI.classList.add('hidden');
+            if (hasStudent) {
+                if (scanUI) scanUI.style.display = 'none';
+                if (actionUI) actionUI.style.display = 'block';
+            } else {
+                if (actionUI) actionUI.style.display = 'none';
+                if (scanUI) scanUI.style.display = 'block';
+            }
+        }
+
+        function persistAdminV2State() {
+            try {
+                sessionStorage.setItem('tappie_admin_mode', ADMIN_V2_ACTIVE_MODE || 'points');
+                localStorage.setItem(ADMIN_V2_LAST_MODE_KEY, ADMIN_V2_ACTIVE_MODE || 'points');
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, ADMIN_V2_ATTENDANCE_MODE || 'manual');
+                sessionStorage.setItem(ADMIN_V2_MANUAL_ACTION_KEY, ADMIN_V2_ATTENDANCE_ACTION || 'checkin');
+                sessionStorage.removeItem('tappie_attendance_action');
+            } catch(e) {}
+        }
+
+        function setAdminMode(mode) {
+            ADMIN_V2_ACTIVE_MODE = mode || 'points';
+            if (ADMIN_V2_ACTIVE_MODE !== 'attendance') {
+                writeAdminV2AttendanceMode('manual');
+            } else {
+                ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
+            }
+            persistAdminV2State();
+            adminV2DebugAttendance('setAdminMode:' + ADMIN_V2_ACTIVE_MODE);
+
+            document.body.classList.toggle('admin-mode-attendance', ADMIN_V2_ACTIVE_MODE === 'attendance');
+
+            document.querySelectorAll('[data-admin-mode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.adminMode === ADMIN_V2_ACTIVE_MODE);
+            });
+
+            document.querySelectorAll('[data-mode-panel]').forEach(panel => {
+                panel.classList.toggle('hidden', panel.dataset.modePanel !== ADMIN_V2_ACTIVE_MODE);
+            });
+
+            const modeLabel = document.getElementById('admin-v2-current-mode-label');
+            if (modeLabel) modeLabel.innerText = `${getAdminV2ModeText()}模式`;
+
+            updateAttendanceModeUI();
+            showAdminModeScreen();
+            if (ADMIN_V2_ACTIVE_MODE === 'attendance' && currentStudentId) {
+                setTimeout(() => refreshAttendanceTodayStatus(), 0);
+            }
+            try {
+                if (ADMIN_V2_ACTIVE_MODE === 'query') scanner && scanner.blur();
+                else scanner && scanner.focus();
+            } catch(e) {}
+        }
+
+        function setAttendanceMode(mode) {
+            const nextMode = normalizeAdminV2AttendanceMode(mode);
+            ADMIN_V2_ACTIVE_MODE = 'attendance';
+            const previousMode = readAdminV2AttendanceMode({ allowAuto: true });
+
+            if (nextMode === 'auto_checkin' && previousMode !== 'auto_checkin') {
+                const ok = confirm('啟用「自動到校」後，掃描學生卡會直接執行到校登記。\n\n請確認你正在進行大量到校點名。');
+                if (!ok) return;
+            } else if (nextMode === 'auto_checkout' && previousMode !== 'auto_checkout') {
+                const ok = confirm('啟用「自動離校」後，掃描學生卡會直接執行離校登記。\n\n請確認你正在進行大量離校點名。');
+                if (!ok) return;
+            }
+
+            writeAdminV2AttendanceMode(nextMode);
+            persistAdminV2State();
+            adminV2DebugAttendance('setAttendanceMode:' + nextMode);
+            setAdminMode('attendance');
+        }
+
+        function setManualAttendanceAction(action) {
+            ADMIN_V2_ATTENDANCE_ACTION = action === 'checkout' ? 'checkout' : 'checkin';
+            try { sessionStorage.setItem(ADMIN_V2_MANUAL_ACTION_KEY, ADMIN_V2_ATTENDANCE_ACTION); } catch(e) {}
+            persistAdminV2State();
+            updateAttendanceModeUI();
+            if (currentStudentId && ADMIN_V2_ACTIVE_MODE === 'attendance' && ADMIN_V2_ATTENDANCE_MODE === 'manual') {
+                if (ADMIN_V2_ATTENDANCE_TODAY_CACHE) renderAttendanceTodayStatus(ADMIN_V2_ATTENDANCE_TODAY_CACHE);
+                refreshAttendanceTodayStatus();
+            }
+            adminV2DebugAttendance('setManualAttendanceAction:' + ADMIN_V2_ATTENDANCE_ACTION);
+            try { scanner && scanner.focus(); } catch(e) {}
+        }
+
+        function updateAttendanceModeUI() {
+            ADMIN_V2_ATTENDANCE_MODE = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
+            document.querySelectorAll('[data-att-mode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.attMode === ADMIN_V2_ATTENDANCE_MODE);
+            });
+            document.querySelectorAll('[data-att-action]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.attAction === ADMIN_V2_ATTENDANCE_ACTION);
+            });
+            const manualBox = document.getElementById('admin-v2-manual-attendance');
+            const autoBox = document.getElementById('admin-v2-auto-attendance');
+            if (manualBox) manualBox.classList.toggle('hidden', ADMIN_V2_ATTENDANCE_MODE !== 'manual');
+            if (autoBox) autoBox.classList.toggle('hidden', ADMIN_V2_ATTENDANCE_MODE === 'manual');
+            const status = document.getElementById('admin-v2-attendance-status');
+            const banner = document.getElementById('admin-v2-auto-banner');
+            const confirmBtn = document.querySelector('#admin-v2-manual-attendance .admin-v2-action-disabled');
+            if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin') {
+                if (status) status.innerText = currentStudentId ? '自動到校已準備執行' : '自動到校模式';
+                if (banner) banner.innerText = '自動到校模式已啟用。掃描學生卡後會直接登記到校。';
+            } else if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
+                if (status) status.innerText = currentStudentId ? '自動離校已準備執行' : '自動離校模式';
+                if (banner) banner.innerText = '自動離校模式已啟用。掃描學生卡後會直接登記離校。';
+            } else {
+                if (status) {
+                    if (currentStudentId && ADMIN_V2_ATTENDANCE_TODAY_CACHE) {
+                        renderAttendanceTodayStatus(ADMIN_V2_ATTENDANCE_TODAY_CACHE);
+                    } else {
+                        status.innerText = currentStudentId ? '請選擇到校或離校' : '手動打卡模式';
+                    }
+                }
+                if (confirmBtn) confirmBtn.innerText = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? '確認離校' : '確認到校';
+            }
+        }
+
+        function getAttendanceStudentName() {
+            return document.getElementById('stu-name')?.innerText || '學生';
+        }
+
+        function getAttendanceTimeText(value) {
+            const d = value ? new Date(value) : new Date();
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        function getAttendanceActionText(eventType) {
+            return eventType === 'checkout' ? '離校' : '到校';
+        }
+
+        function getLatestAttendanceEvent(todayData) {
+            if (todayData?.latestEvent) return todayData.latestEvent;
+            const events = Array.isArray(todayData?.events) ? todayData.events : [];
+            return events.length ? events[0] : null;
+        }
+
+        function countTodayAttendanceType(todayData, eventType) {
+            const counts = todayData?.counts || todayData?.countByType || {};
+            if (typeof counts?.[eventType] === 'number') return counts[eventType];
+            const events = Array.isArray(todayData?.events) ? todayData.events : [];
+            return events.filter(ev => ev?.event_type === eventType || ev?.eventType === eventType).length;
+        }
+
+        async function fetchAttendanceTodayStatus(uid = currentStudentId) {
+            if (!uid) return null;
+            if (!window.TappieAPI || typeof TappieAPI.adminGetAttendanceToday !== 'function') return null;
+            const data = await TappieAPI.adminGetAttendanceToday({
+                schoolCode: CURRENT_SCHOOL,
+                uid,
+                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || ''
+            });
+            if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取今日打卡狀態失敗');
+            return data;
+        }
+
+        function renderAttendanceTodayStatus(todayData) {
+            ADMIN_V2_ATTENDANCE_TODAY_CACHE = todayData || null;
+            const status = document.getElementById('admin-v2-attendance-status');
+            if (!status) return;
+            const latest = getLatestAttendanceEvent(todayData);
+            if (!latest) {
+                status.innerHTML = '<span style="color:#7f8c8d;">今日尚無打卡紀錄</span>';
+                return;
+            }
+            const type = latest.event_type || latest.eventType;
+            const actionText = getAttendanceActionText(type);
+            const timeText = getAttendanceTimeText(latest.event_time || latest.eventTime || latest.created_at || latest.createdAt);
+            const color = type === 'checkout' ? '#e74c3c' : '#2ecc71';
+            status.innerHTML = `<span style="color:${color};">已${actionText}${timeText ? ' ' + timeText : ''}</span>`;
+        }
+
+        async function refreshAttendanceTodayStatus() {
+            try {
+                const data = await fetchAttendanceTodayStatus(currentStudentId);
+                renderAttendanceTodayStatus(data);
+                return data;
+            } catch (err) {
+                console.warn('[ADMIN ATTENDANCE] refresh today status failed', err);
+                return null;
+            }
+        }
+
+        async function confirmRepeatAttendanceIfNeeded(eventType) {
+            const todayData = await fetchAttendanceTodayStatus(currentStudentId);
+            renderAttendanceTodayStatus(todayData);
+            const count = countTodayAttendanceType(todayData, eventType);
+            if (count <= 0) return true;
+
+            const actionText = getAttendanceActionText(eventType);
+            const events = Array.isArray(todayData?.events) ? todayData.events : [];
+            const latestSame = events.find(ev => (ev?.event_type || ev?.eventType) === eventType);
+            const timeText = getAttendanceTimeText(latestSame?.event_time || latestSame?.eventTime || latestSame?.created_at || latestSame?.createdAt);
+            return confirm(`今日已經${actionText}${timeText ? '（' + timeText + '）' : ''}，請確認是否再次登記${actionText}？`);
+        }
+
+        function makeCancelledAttendanceError() {
+            const err = new Error('已取消本次打卡');
+            err.cancelled = true;
+            return err;
+        }
+
+        async function recordAttendanceEvent(eventType, source = 'admin_manual', options = {}) {
+            if (!currentStudentId) throw new Error('請先感應學生卡');
+            if (!window.TappieAPI || typeof TappieAPI.adminRecordAttendance !== 'function') {
+                throw new Error('TappieAPI.adminRecordAttendance 尚未載入');
+            }
+
+            if (!options.skipRepeatConfirm) {
+                const confirmed = await confirmRepeatAttendanceIfNeeded(eventType);
+                if (!confirmed) throw makeCancelledAttendanceError();
+            }
+
+            const data = await TappieAPI.adminRecordAttendance({
+                schoolCode: CURRENT_SCHOOL,
+                uid: currentStudentId,
+                eventType,
+                source,
+                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                metadata: {
+                    from: ADMIN_V2_FROM_TAP ? 'tap' : 'admin',
+                    adminMode: ADMIN_V2_ACTIVE_MODE,
+                    attendanceMode: ADMIN_V2_ATTENDANCE_MODE
+                }
+            });
+
+            if (!data || !data.success) {
+                throw new Error(data?.message || data?.error || '打卡登記失敗');
+            }
+
+            try {
+                data.todayStatus = await fetchAttendanceTodayStatus(currentStudentId);
+            } catch (err) {
+                console.warn('[ADMIN ATTENDANCE] fetch after record failed', err);
+            }
+            return data;
+        }
+
+        function getAttendanceNotificationText(data) {
+            const n = data?.notification || {};
+            if (data?.duplicateRecent || n.status === 'duplicate_skipped') return '，未重複發送通知';
+            if (n.status === 'sent') return '，通知已送出';
+            if (n.status === 'partial_failed') return `，通知部分送出（${n.sent || 0}/${n.total || 0}）`;
+            if (n.status === 'no_subscription') return '，家長尚未訂閱通知';
+            if (n.status === 'push_not_configured') return '，通知尚未設定完成';
+            if (n.status === 'failed') return '，通知發送失敗';
+            return '';
+        }
+
+        function renderAttendanceResult(data, eventType) {
+            const actionText = getAttendanceActionText(eventType);
+            const status = document.getElementById('admin-v2-attendance-status');
+            const banner = document.getElementById('admin-v2-auto-banner');
+            const timeText = getAttendanceTimeText(data?.event?.event_time || data?.event?.eventTime || data?.eventTime);
+            const duplicateText = data?.duplicateRecent ? '（30 秒內重複，已略過新增）' : '';
+            const notificationText = getAttendanceNotificationText(data);
+            const text = `已登記${actionText}${timeText ? ' ' + timeText : ''}${duplicateText}${notificationText}`;
+
+            if (data?.todayStatus) renderAttendanceTodayStatus(data.todayStatus);
+            else if (status) status.innerText = text;
+
+            if (banner && ADMIN_V2_ATTENDANCE_MODE !== 'manual') {
+                banner.innerText = `${getAttendanceStudentName()}：${text}`;
+            }
+            const msgEl = document.getElementById('msg');
+            if (msgEl) msgEl.innerText = `✅ ${getAttendanceStudentName()} ${text}`;
+        }
+
+        async function handleAttendanceConfirm() {
+            const eventType = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? 'checkout' : 'checkin';
+            const actionText = eventType === 'checkout' ? '離校' : '到校';
+            const btn = document.querySelector('#admin-v2-manual-attendance .admin-v2-action-disabled');
+            const oldText = btn ? btn.innerText : '';
+
+            try {
+                if (!currentStudentId) return alert('請先感應學生卡');
+                if (btn) { btn.innerText = '登記中...'; btn.style.pointerEvents = 'none'; }
+                const data = await recordAttendanceEvent(eventType, 'admin_manual');
+                renderAttendanceResult(data, eventType);
+                alert(`✅ 已登記${actionText}` + (data?.duplicateRecent ? '（短時間重複掃卡，未新增第二筆）' : '') + getAttendanceNotificationText(data));
+            } catch (err) {
+                if (err?.cancelled) {
+                    const msgEl = document.getElementById('msg');
+                    if (msgEl) msgEl.innerText = '已取消本次打卡';
+                    return;
+                }
+                alert('⚠️ ' + (err.message || err));
+            } finally {
+                if (btn) { btn.innerText = oldText || (eventType === 'checkout' ? '確認離校' : '確認到校'); btn.style.pointerEvents = 'auto'; }
+                try { scanner && scanner.focus(); } catch(e) {}
+            }
+        }
+
+        async function handleAttendanceScanResolved() {
+            if (ADMIN_V2_ACTIVE_MODE !== 'attendance') return;
+
+            // NFC 從 tap.html 回來時，localStorage 比 sessionStorage 更穩；執行前一定重讀一次。
+            ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
+            updateAttendanceModeUI();
+            await refreshAttendanceTodayStatus();
+            adminV2DebugAttendance('handleAttendanceScanResolved');
+
+            if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
+                // 每次成功回流都續 10 分鐘，避免大量點名中途過期。
+                writeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
+                const eventType = ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout' ? 'checkout' : 'checkin';
+                const actionText = eventType === 'checkout' ? '離校' : '到校';
+                const status = document.getElementById('admin-v2-attendance-status');
+                const banner = document.getElementById('admin-v2-auto-banner');
+                if (status) status.innerText = `自動${actionText}登記中...`;
+                if (banner) banner.innerText = `正在登記 ${getAttendanceStudentName()} ${actionText}...`;
+
+                try {
+                    const data = await recordAttendanceEvent(eventType, 'admin_auto');
+                    renderAttendanceResult(data, eventType);
+                } catch (err) {
+                    if (err?.cancelled) {
+                        if (status) status.innerText = `已取消自動${actionText}`;
+                        if (banner) banner.innerText = `${getAttendanceStudentName()}：已取消本次自動${actionText}`;
+                        return;
+                    }
+                    if (status) status.innerText = `自動${actionText}失敗`;
+                    if (banner) banner.innerText = `⚠️ ${getAttendanceStudentName()} 自動${actionText}失敗：${err.message || err}`;
+                    alert('⚠️ ' + (err.message || err));
+                } finally {
+                    try { scanner && scanner.focus(); } catch(e) {}
+                }
+            }
+        }
+
+        function setPointAction(type) {
+            const isMinus = type === 'minus';
+            document.querySelectorAll('[data-point-action]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.pointAction === (isMinus ? 'minus' : 'add'));
+            });
+            const addPanel = document.getElementById('point-add-panel');
+            const minusPanel = document.getElementById('point-minus-panel');
+            if (addPanel) addPanel.classList.toggle('hidden', isMinus);
+            if (minusPanel) minusPanel.classList.toggle('hidden', !isMinus);
+            try { scanner && scanner.focus(); } catch(e) {}
+        }
+
+        function renderV2StudentSnapshot(data = {}) {
+            const meta = document.getElementById('admin-v2-student-meta');
+            if (meta) {
+                const classCode = data.classCode || data.class_code || data.unitName || '';
+                meta.innerText = classCode ? `${classCode}` : '已掃描學生卡';
+            }
+            // v2.1：學生資訊不顯示頭像。
+        }
+
+        function escapeAdminV2(v) {
+            return String(v ?? '').replace(/[&<>"']/g, ch => ({
+                '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+            }[ch]));
+        }
+
+        function getAdminQueryCountVisual(count, gami) {
+            const c = Number(count || 0);
+            const mission = gami?.mission || {};
+            const fail = Number(mission.failThreshold ?? 5);
+            const good = Number(mission.goodThreshold ?? 10);
+            const perfect = Number(mission.perfectThreshold ?? 15);
+            if (c >= perfect) return { icon:'🌟', text:`${c} 次`, tone:'excellent' };
+            if (c >= good) return { icon:'🔥', text:`${c} 次`, tone:'good' };
+            if (c < fail) return { icon:'⚠️', text:`${c} 次`, tone:'warn' };
+            return { icon:'✅', text:`${c} 次`, tone:'ok' };
+        }
+
+        function getAdminQueryBaseUrl() {
+            return (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+                ? TappieAPI.supabaseBaseUrl
+                : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+        }
+
+        function setAdminQueryTab(tab) {
+            ADMIN_V2_QUERY_TAB = ['learning', 'points', 'attendance'].includes(tab) ? tab : 'learning';
+            document.querySelectorAll('[data-query-tab]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.queryTab === ADMIN_V2_QUERY_TAB);
+            });
+            setupAdminQueryFilters();
+            reloadAdminQueryCurrentView(false);
+            try { scanner && scanner.blur(); } catch(e) {}
+        }
+
+        function reloadAdminQueryCurrentView(force = false) {
+            if (ADMIN_V2_QUERY_TAB === 'points') return loadAdminQueryPoints(force);
+            if (ADMIN_V2_QUERY_TAB === 'attendance') return loadAdminQueryAttendance(force);
+            return loadAdminQueryProgress(force);
+        }
+
+        function filterAdminQueryProgress() {
+            if (ADMIN_V2_QUERY_TAB === 'points') return renderAdminQueryPoints();
+            if (ADMIN_V2_QUERY_TAB === 'attendance') return renderAdminQueryAttendance();
+            if (!ADMIN_V2_QUERY_STATE) return;
+            renderAdminQueryProgress(ADMIN_V2_QUERY_STATE);
+        }
+
+        function setupAdminQueryFilters() {
+            const classSelect = document.getElementById('admin-v2-query-class-filter');
+            const statusSelect = document.getElementById('admin-v2-query-status-filter');
+            const valueSelect = document.getElementById('admin-v2-query-value-filter');
+            const wrap = document.querySelector('.admin-v2-query-filters');
+            if (!classSelect || !statusSelect || !valueSelect) return;
+
+            const prevClass = classSelect.value || '';
+            const classes = getAdminQueryClassOptions();
+            classSelect.innerHTML = '<option value="">全部學生</option>' + classes.map(cls => `<option value="${escapeAdminV2(cls)}">${escapeAdminV2(cls)}</option>`).join('');
+            classSelect.value = classes.includes(prevClass) ? prevClass : '';
+
+            if (ADMIN_V2_QUERY_TAB === 'learning') {
+                statusSelect.innerHTML = `
+                    <option value="">全部狀態</option>
+                    <option value="danger">危險</option>
+                    <option value="good">良好</option>
+                    <option value="perfect">卓越</option>
+                    <option value="top3">排行前三</option>
+                `;
+                valueSelect.classList.add('hidden');
+                wrap?.classList.remove('has-three');
+            } else if (ADMIN_V2_QUERY_TAB === 'points') {
+                statusSelect.innerHTML = `
+                    <option value="">全部狀態</option>
+                    <option value="plus">加分</option>
+                    <option value="minus">扣分</option>
+                `;
+                valueSelect.classList.remove('hidden');
+                wrap?.classList.add('has-three');
+            } else {
+                statusSelect.innerHTML = `
+                    <option value="">全部狀態</option>
+                    <option value="checkin">已到校</option>
+                    <option value="checkout">已離校</option>
+                    <option value="none">尚無打卡</option>
+                `;
+                valueSelect.classList.add('hidden');
+                wrap?.classList.remove('has-three');
+            }
+            statusSelect.value = '';
+            valueSelect.value = '';
+        }
+
+        
+        function normalizeAdminQueryClassCode(value) {
+            const raw = String(value || '').trim();
+            if (!raw || raw === '-' || raw === 'null' || raw === 'undefined' || raw === '未分班') return '無班級';
+            return raw;
+        }
+
+function getAdminQueryClassOptions() {
+            const classSet = new Set();
+
+            flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE).forEach(s => {
+                classSet.add(normalizeAdminQueryClassCode(s.classCode));
+            });
+
+            (Array.isArray(ADMIN_V2_QUERY_POINTS_STATE) ? ADMIN_V2_QUERY_POINTS_STATE : []).forEach(log => {
+                classSet.add(normalizeAdminQueryClassCode(log.classCode));
+            });
+
+            const attendanceStudents = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
+                ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students
+                : [];
+            attendanceStudents.forEach(s => classSet.add(normalizeAdminQueryClassCode(s.classCode || s.class_code)));
+
+            ADMIN_V2_QUERY_ALL_STUDENTS.forEach(s => classSet.add(normalizeAdminQueryClassCode(s.classCode || s.class_code)));
+
+            return Array.from(classSet)
+                .filter(Boolean)
+                .sort((a,b) => {
+                    if (a === '無班級') return 1;
+                    if (b === '無班級') return -1;
+                    return String(a).localeCompare(String(b), 'zh-Hant');
+                });
+        }
+
+        function flattenAdminProgressStudents(data) {
+            const classes = Array.isArray(data?.classes) ? data.classes : [];
+            const list = [];
+            classes.forEach(cls => {
+                const students = Array.isArray(cls.students) ? cls.students : [];
+                const schedule = cls.schedule || {};
+                students.forEach((s, idx) => {
+                    list.push({
+                        ...s,
+                        classCode: normalizeAdminQueryClassCode(s.classCode || s.class_code || cls.classCode || cls.class_code),
+                        unitName: s.unitName || s.unit_name || schedule.unitName || cls.unitName || '未排定',
+                        unitId: s.unitId || s.unit_id || schedule.unitId || cls.unitId || '',
+                        schedule,
+                        rankInClass: idx + 1
+                    });
+                });
+            });
+            return list;
+        }
+
+        function getAdminProgressThresholds(gami = {}) {
+            const mission = gami?.mission || {};
+            return {
+                fail: Number(mission.failThreshold ?? 5),
+                good: Number(mission.goodThreshold ?? 10),
+                perfect: Number(mission.perfectThreshold ?? 15)
+            };
+        }
+
+        function getAdminLearningStatus(student, gami = {}) {
+            const c = Number(student?.count || 0);
+            const t = getAdminProgressThresholds(gami);
+            if (c >= t.perfect) return 'perfect';
+            if (c >= t.good) return 'good';
+            if (c < t.fail) return 'danger';
+            return 'normal';
+        }
+
+        function getAdminQueryTimeText(value) {
+            if (!value) return '';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return String(value || '');
+            return d.toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        function getAdminQueryShortTimeText(value) {
+            if (!value) return '';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return String(value || '');
+            return d.toLocaleTimeString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        function formatAdminQueryDisplayTime(value, fallback = '') {
+            if (!value) return fallback;
+            const raw = String(value || '').trim();
+            if (!raw) return fallback;
+            const d = new Date(raw);
+            if (Number.isNaN(d.getTime())) return raw;
+            return d.toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        function getAdminStudentBestTime(student) {
+            return student.bestCompletedAt || student.best_completed_at || student.bestTime || student.best_time || student.latestAt || student.latest_at || student.lastCompletedAt || student.last_completed_at || '';
+        }
+
+        function getAdminStudentRecords(student) {
+            const candidates = [student.records, student.completions, student.completedRecords, student.attempts, student.recentRecords, student.history];
+            for (const item of candidates) {
+                if (Array.isArray(item)) return item;
+            }
+            return [];
+        }
+
+        function getAdminStudentBestScore(student) {
+            return Number(student?.bestScore ?? student?.best_score ?? student?.score ?? student?.highestScore ?? student?.highest_score ?? 0);
+        }
+
+        function getAdminRecordTimeValue(record) {
+            return record?.completedAt || record?.completed_at || record?.createdAt || record?.created_at || record?.time || record?.date || '';
+        }
+
+        function isAdminTodayTaipei(value) {
+            if (!value) return false;
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return false;
+            const today = new Date();
+            const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' });
+            return fmt.format(d) === fmt.format(today);
+        }
+
+        function toggleAdminQueryRow(el) {
+            try {
+                const evt = window.event;
+                evt?.preventDefault?.();
+                evt?.stopPropagation?.();
+            } catch(e) {}
+
+            // 查詢頁不需要讀卡輸入框保持焦點；手機瀏覽器在 hidden input 保持 focus 時，
+            // DOM 高度一變容易自動把畫面捲回頂部。
+            try {
+                if (document.activeElement && document.activeElement.id === 'scanner') document.activeElement.blur();
+            } catch(e) {}
+
+            const row = el?.closest?.('.admin-v2-student-row');
+            if (!row) return false;
+
+            const scrollBox = document.getElementById('mainCard');
+            const scrollingElement = document.scrollingElement || document.documentElement || document.body;
+            const queryTop = document.getElementById('query-ui')?.scrollTop || 0;
+            const before = {
+                main: scrollBox ? scrollBox.scrollTop : 0,
+                windowY: window.scrollY || 0,
+                doc: scrollingElement ? scrollingElement.scrollTop : 0,
+                query: queryTop
+            };
+
+            row.classList.toggle('expanded');
+
+            const restore = () => {
+                if (scrollBox) scrollBox.scrollTop = before.main;
+                if (scrollingElement) scrollingElement.scrollTop = before.doc;
+                const queryUI = document.getElementById('query-ui');
+                if (queryUI) queryUI.scrollTop = before.query;
+                if (before.windowY) window.scrollTo(0, before.windowY);
+            };
+
+            requestAnimationFrame(restore);
+            setTimeout(restore, 0);
+            setTimeout(restore, 80);
+            return false;
+        }
+
+        function toggleAdminQueryClass(el) {
+            const block = el?.closest?.('.admin-v2-class-block');
+            if (!block) return;
+            block.classList.toggle('collapsed');
+        }
+
+        async function loadAdminQueryProgress(force = false) {
+            const box = document.getElementById('admin-v2-query-results');
+            if (!box) return;
+            if (ADMIN_V2_QUERY_LOADED && ADMIN_V2_QUERY_STATE && !force) {
+                setupAdminQueryFilters();
+                renderAdminQueryProgress(ADMIN_V2_QUERY_STATE);
+                return;
+            }
+            box.innerHTML = '<div class="admin-v2-empty glass-panel">⏳ 正在載入全校區學習進度...</div>';
+            try {
+                let data = await fetchAdminQueryData('learning');
+                if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取失敗');
+                ADMIN_V2_QUERY_STATE = data;
+                ADMIN_V2_QUERY_LOADED = true;
+                ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
+                setupAdminQueryFilters();
+                renderAdminQueryProgress(data);
+            } catch (err) {
+                console.error(err);
+                box.innerHTML = `<div class="admin-v2-empty glass-panel">⚠️ 學習進度讀取失敗：${escapeAdminV2(err.message || err)}</div>`;
+            }
+        }
+
+        
+        function renderAdminQueryProgress(data) {
+            const box = document.getElementById('admin-v2-query-results');
+            const input = document.getElementById('admin-v2-query-search');
+            const classFilter = document.getElementById('admin-v2-query-class-filter')?.value || '';
+            const statusFilter = document.getElementById('admin-v2-query-status-filter')?.value || '';
+            if (!box) return;
+            const q = String(input?.value || '').trim().toLowerCase();
+            const gami = data?.gamification || {};
+            const classes = Array.isArray(data?.classes) ? data.classes.slice() : [];
+            if (!classes.length) {
+                box.innerHTML = '<div class="admin-v2-empty glass-panel">目前尚無班級資料</div>';
+                return;
+            }
+
+            classes.sort((a,b) => String(a.classCode || '').localeCompare(String(b.classCode || ''), 'zh-Hant'));
+            const html = classes.map(cls => {
+                const classCode = cls.classCode || cls.class_code || '未分班';
+                if (classFilter && classCode !== classFilter) return '';
+
+                const studentsRaw = Array.isArray(cls.students) ? cls.students : [];
+                const top3Uids = studentsRaw.slice()
+                    .sort((a,b) => {
+                        const scoreDiff = getAdminStudentBestScore(b) - getAdminStudentBestScore(a);
+                        if (scoreDiff) return scoreDiff;
+                        return Number(b.count || 0) - Number(a.count || 0);
+                    })
+                    .filter(s => getAdminStudentBestScore(s) > 0)
+                    .slice(0, 3)
+                    .map(s => s.uid);
+
+                const students = studentsRaw.filter(s => {
+                    const merged = { ...s, classCode };
+                    if (q && ![classCode, cls.unitName, s.name, s.uid].some(v => String(v || '').toLowerCase().includes(q))) return false;
+                    if (statusFilter === 'top3') return top3Uids.includes(s.uid);
+                    if (statusFilter) return getAdminLearningStatus(merged, gami) === statusFilter;
+                    return true;
+                });
+
+                if (!students.length && (q || classFilter || statusFilter)) return '';
+                const schedule = cls.schedule || null;
+                const unitName = schedule?.unitName || cls.unitName || '未排定';
+                const rangeText = schedule?.startDate && schedule?.endDate ? `${schedule.startDate} ～ ${schedule.endDate}` : '尚未排程';
+                const rows = students.map((s, idx) => {
+                    const visual = getAdminQueryCountVisual(s.count, gami);
+                    const bestNum = getAdminStudentBestScore(s);
+                    const best = bestNum ? `${bestNum} 分` : '尚無';
+                    const bestTime = getAdminStudentBestTime(s);
+                    const bestTimeText = getAdminQueryTimeText(bestTime) || '尚無';
+                    const records = getAdminStudentRecords(s);
+                    const scheduleRecords = records;
+                    const recordHtml = scheduleRecords.length
+                        ? scheduleRecords.slice(0, 12).map(r => {
+                            const score = Number(r.score ?? r.bestScore ?? r.average_score ?? r.averageScore ?? 0);
+                            const time = getAdminQueryTimeText(getAdminRecordTimeValue(r));
+                            return `<div class="admin-v2-record-row"><span>${escapeAdminV2(time || '未記錄時間')}</span><strong>${score ? score + ' 分' : '完成'}</strong></div>`;
+                          }).join('')
+                        : `<div class="admin-v2-record-row"><span>此排程期間尚無挑戰完成紀錄</span><strong></strong></div>`;
+
+                    const medal = top3Uids.includes(s.uid) ? (top3Uids.indexOf(s.uid) === 0 ? '🥇' : top3Uids.indexOf(s.uid) === 1 ? '🥈' : '🥉') : '';
+                    return `
+                        <div class="admin-v2-student-row" data-tone="${visual.tone}" onclick="return toggleAdminQueryRow(this)">
+                            <div>
+                                <strong>${medal ? medal + ' ' : ''}${escapeAdminV2(s.name || '未命名學生')}</strong>
+                                <small>${escapeAdminV2(s.uid || '')}</small>
+                            </div>
+                            <span class="admin-v2-count-badge">${visual.icon} ${visual.text}　${escapeAdminV2(best)}${bestTimeText !== '尚無' ? '　' + escapeAdminV2(bestTimeText) : ''}　▾</span>
+                            <div class="admin-v2-row-detail">
+                                <div class="admin-v2-record-title">本單元排程練習紀錄</div>
+                                ${recordHtml}
+                            </div>
+                        </div>`;
+                }).join('') || '<div class="admin-v2-student-row"><div><strong>沒有符合搜尋的學生</strong><small>請更換條件</small></div></div>';
+
+                return `
+                    <div class="admin-v2-class-block glass-panel">
+                        <div class="admin-v2-class-head">
+                            <div>
+                                <strong>${escapeAdminV2(classCode)}</strong>
+                                <small>${escapeAdminV2(unitName)}｜${escapeAdminV2(rangeText)}</small>
+                            </div>
+                            <span class="admin-v2-count-badge">${students.length} 人</span>
+                        </div>
+                        ${rows}
+                    </div>`;
+            }).filter(Boolean).join('');
+            box.innerHTML = html || '<div class="admin-v2-empty glass-panel">沒有符合搜尋條件的學生</div>';
+        }
+
+        async function loadAdminQueryPoints(force = false) {
+            const box = document.getElementById('admin-v2-query-results');
+            if (!box) return;
+            if (ADMIN_V2_QUERY_POINTS_LOADED && !force) {
+                setupAdminQueryFilters();
+                renderAdminQueryPoints();
+                return;
+            }
+            box.innerHTML = '<div class="admin-v2-empty glass-panel">⏳ 正在載入最近 7 天加扣點紀錄...</div>';
+            try {
+                const data = await fetchAdminQueryData('points', { rangeDays: 7 });
+                if (!data || !data.success) throw new Error(data?.message || data?.error || '加扣點紀錄讀取失敗');
+                ADMIN_V2_QUERY_POINTS_STATE = Array.isArray(data.items) ? data.items : [];
+                ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
+                ADMIN_V2_QUERY_POINTS_LOADED = true;
+                setupAdminQueryFilters();
+                renderAdminQueryPoints();
+            } catch (err) {
+                console.error(err);
+                box.innerHTML = `<div class="admin-v2-empty glass-panel">⚠️ 加扣點紀錄讀取失敗：${escapeAdminV2(err.message || err)}</div>`;
+            }
+        }
+
+        
+        function renderAdminQueryPoints() {
+            const box = document.getElementById('admin-v2-query-results');
+            const q = String(document.getElementById('admin-v2-query-search')?.value || '').trim().toLowerCase();
+            const classFilter = document.getElementById('admin-v2-query-class-filter')?.value || '';
+            const statusFilter = document.getElementById('admin-v2-query-status-filter')?.value || '';
+            const valueFilter = document.getElementById('admin-v2-query-value-filter')?.value || '';
+            if (!box) return;
+
+            let rows = Array.isArray(ADMIN_V2_QUERY_POINTS_STATE) ? ADMIN_V2_QUERY_POINTS_STATE.slice() : [];
+            rows = rows.filter(log => {
+                const abs = Math.abs(Number(log.points || 0));
+                if (q && ![log.name, log.uid, log.classCode, log.title, log.note].some(v => String(v || '').toLowerCase().includes(q))) return false;
+                if (classFilter && log.classCode !== classFilter) return false;
+                if (statusFilter === 'plus' && Number(log.points || 0) < 0) return false;
+                if (statusFilter === 'minus' && Number(log.points || 0) >= 0) return false;
+                if (valueFilter === 'lt100' && !(abs < 100)) return false;
+                if (valueFilter === 'gte100' && !(abs >= 100)) return false;
+                if (valueFilter === 'gte1000' && !(abs >= 1000)) return false;
+                return true;
+            });
+
+            if (!rows.length) {
+                box.innerHTML = '<div class="admin-v2-empty glass-panel">沒有符合條件的加扣點紀錄</div>';
+                return;
+            }
+
+            box.innerHTML = `<div class="admin-v2-class-block glass-panel">
+                ${rows.map(log => {
+                    const delta = Number(log.points || 0);
+                    const deltaClass = delta >= 0 ? 'admin-v2-delta-plus' : 'admin-v2-delta-minus';
+                    const deltaText = delta >= 0 ? `+${delta}` : String(delta);
+                    return `
+                        <div class="admin-v2-student-row" onclick="return toggleAdminQueryRow(this)">
+                            <div class="admin-v2-log-row-main">
+                                <div>
+                                    <strong>${escapeAdminV2(log.name || '未命名學生')}</strong>
+                                    <small>${escapeAdminV2(formatAdminQueryDisplayTime(log.time || log.createdAt || log.created_at || log.created_at_tz || ''))}</small>
+                                </div>
+                                <span class="${deltaClass}">${escapeAdminV2(deltaText)} 點　▾</span>
+                            </div>
+                            <div class="admin-v2-row-detail">
+                                <div class="admin-v2-detail-grid">
+                                    <div class="admin-v2-detail-box"><div class="admin-v2-detail-label">班級</div><div class="admin-v2-detail-value">${escapeAdminV2(log.classCode || '未分班')}</div></div>
+                                    <div class="admin-v2-detail-box"><div class="admin-v2-detail-label">原因</div><div class="admin-v2-detail-value">${escapeAdminV2(log.title || log.note || '系統變更')}</div></div>
+                                </div>
+                            </div>
+                        </div>`;
+                }).join('')}
+            </div>`;
+        }
+
+        async function loadAdminQueryAttendance(force = false) {
+            const box = document.getElementById('admin-v2-query-results');
+            if (!box) return;
+            if (ADMIN_V2_QUERY_ATTENDANCE_LOADED && !force) {
+                setupAdminQueryFilters();
+                renderAdminQueryAttendance();
+                return;
+            }
+            box.innerHTML = '<div class="admin-v2-empty glass-panel">⏳ 正在載入今日打卡紀錄...</div>';
+            try {
+                const data = await fetchAdminQueryData('attendance');
+                if (!data || !data.success) throw new Error(data?.message || data?.error || '打卡紀錄讀取失敗');
+                ADMIN_V2_QUERY_ATTENDANCE_STATE = data;
+                ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
+                ADMIN_V2_QUERY_ATTENDANCE_LOADED = true;
+                setupAdminQueryFilters();
+                renderAdminQueryAttendance();
+            } catch (err) {
+                console.error(err);
+                box.innerHTML = `<div class="admin-v2-empty glass-panel">⚠️ 打卡紀錄讀取失敗：${escapeAdminV2(err.message || err)}</div>`;
+            }
+        }
+
+        
+        function renderAdminQueryAttendance() {
+            const box = document.getElementById('admin-v2-query-results');
+            const q = String(document.getElementById('admin-v2-query-search')?.value || '').trim().toLowerCase();
+            const classFilter = document.getElementById('admin-v2-query-class-filter')?.value || '';
+            const statusFilter = document.getElementById('admin-v2-query-status-filter')?.value || '';
+            if (!box) return;
+
+            const students = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
+                ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students
+                : flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE);
+            const events = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.events) ? ADMIN_V2_QUERY_ATTENDANCE_STATE.events : [];
+            const byUid = new Map();
+            events.forEach(ev => {
+                const uid = ev.uid || ev.student?.uid || '';
+                if (!uid) return;
+                if (!byUid.has(uid)) byUid.set(uid, []);
+                byUid.get(uid).push(ev);
+            });
+            byUid.forEach(list => list.sort((a,b) => new Date(b.event_time || b.eventTime || b.created_at || 0).getTime() - new Date(a.event_time || a.eventTime || a.created_at || 0).getTime()));
+
+            const grouped = new Map();
+            students.forEach(s => {
+                const classCode = normalizeAdminQueryClassCode(s.classCode || s.class_code);
+                if (classFilter && classCode !== classFilter) return;
+                const uid = s.uid || s.studentUid || '';
+                const evs = byUid.get(uid) || [];
+                const latest = evs[0] || null;
+                const latestType = latest ? (latest.event_type || latest.eventType) : 'none';
+                if (statusFilter && latestType !== statusFilter) return;
+                if (q && ![s.name, uid, classCode].some(v => String(v || '').toLowerCase().includes(q))) return;
+                if (!grouped.has(classCode)) grouped.set(classCode, []);
+                grouped.get(classCode).push({ student: { ...s, uid, classCode }, events: evs, latest, latestType });
+            });
+
+            if (!grouped.size) {
+                box.innerHTML = '<div class="admin-v2-empty glass-panel">沒有符合條件的打卡資料</div>';
+                return;
+            }
+
+            const sortedGroups = Array.from(grouped.entries()).sort((a,b) => {
+                if (a[0] === '無班級') return 1;
+                if (b[0] === '無班級') return -1;
+                return a[0].localeCompare(b[0], 'zh-Hant');
+            });
+
+            const canNoCardCheckin = isAdminV2Super();
+
+            const html = sortedGroups.map(([classCode, rows]) => {
+                return `<div class="admin-v2-class-block glass-panel">
+                    <div class="admin-v2-class-head">
+                        <div><strong>${escapeAdminV2(classCode)}</strong><small>今日打卡紀錄</small></div>
+                        <span class="admin-v2-count-badge">${rows.length} 人</span>
+                    </div>
+                    ${rows.map(({ student, events, latest, latestType }) => {
+                        const timeText = latest ? getAdminQueryShortTimeText(latest.event_time || latest.eventTime || latest.created_at) : '';
+                        const badge = latestType === 'checkout' ? `🔴 已離校 ${timeText}` : latestType === 'checkin' ? `🟢 已到校 ${timeText}` : '⚪ 尚無打卡';
+                        const eventHtml = events.length
+                            ? events.map(ev => {
+                                const type = ev.event_type || ev.eventType;
+                                const t = getAdminQueryTimeText(ev.event_time || ev.eventTime || ev.created_at);
+                                return `<div class="admin-v2-record-row"><span>${escapeAdminV2(t)}</span><strong>${type === 'checkout' ? '離校' : '到校'}</strong></div>`;
+                              }).join('')
+                            : `<div class="admin-v2-record-row"><span>今日尚無打卡紀錄</span><strong></strong></div>`;
+                        const noCardActions = canNoCardCheckin
+                            ? `<div class="admin-v2-nocard-actions super-only super-visible">
+                                <button class="admin-v2-nocard-btn checkin" type="button" onclick="return adminV2NoCardAttendance(event, '${escapeAdminV2(student.uid || '')}', '${escapeAdminV2(student.name || '學生')}', 'checkin')">到校</button>
+                                <button class="admin-v2-nocard-btn checkout" type="button" onclick="return adminV2NoCardAttendance(event, '${escapeAdminV2(student.uid || '')}', '${escapeAdminV2(student.name || '學生')}', 'checkout')">離校</button>
+                              </div>`
+                            : '';
+                        return `
+                            <div class="admin-v2-student-row" onclick="return toggleAdminQueryRow(this)">
+                                <div>
+                                    <strong>${escapeAdminV2(student.name || '未命名學生')}</strong>
+                                    <small>${escapeAdminV2(student.uid || '')}</small>
+                                </div>
+                                <span class="admin-v2-count-badge">${escapeAdminV2(badge)}　▾</span>
+                                <div class="admin-v2-row-detail">
+                                    ${noCardActions}
+                                    <div class="admin-v2-record-title">${escapeAdminV2(student.name || '學生')} 今日全部打卡紀錄</div>
+                                    ${eventHtml}
+                                </div>
+                            </div>`;
+                    }).join('')}
+                </div>`;
+            }).join('');
+
+            box.innerHTML = html;
+        }
+
+        async function adminV2NoCardAttendance(event, uid, studentName, eventType = 'checkin') {
+            try {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+            } catch(e) {}
+
+            if (!isAdminV2Super()) {
+                alert('只有 Super Admin 可以使用無卡打卡。');
+                return false;
+            }
+
+            const action = eventType === 'checkout' ? 'checkout' : 'checkin';
+            const actionText = action === 'checkout' ? '離校' : '到校';
+            const safeName = studentName || uid || '學生';
+            if (!confirm(`確定要為「${safeName}」登記${actionText}嗎？
+
+此功能為 Super Admin 專用無卡打卡。`)) return false;
+
+            try {
+                const api = window.TappieAPI;
+                if (!api || typeof api.adminRecordAttendance !== 'function') throw new Error('缺少 adminRecordAttendance API');
+
+                const data = await api.adminRecordAttendance({
+                    schoolCode: CURRENT_SCHOOL,
+                    uid,
+                    eventType: action,
+                    source: 'admin_no_card',
+                    adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                    role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                    metadata: {
+                        from: 'admin_query',
+                        adminMode: 'query',
+                        noCard: true,
+                        noCardAction: action
+                    }
+                });
+
+                if (!data || !data.success) throw new Error(data?.message || data?.error || `無卡${actionText}失敗`);
+
+                ADMIN_V2_QUERY_ATTENDANCE_LOADED = false;
+                await loadAdminQueryAttendance(true);
+                alert(`已為「${safeName}」登記${actionText}。`);
+            } catch (err) {
+                console.error('[ADMIN NO CARD ATTENDANCE] failed', err);
+                alert(`無卡${actionText}失敗：` + (err.message || err));
+            }
+            return false;
+        }
+
+        async function adminV2NoCardCheckin(event, uid, studentName) {
+            return await adminV2NoCardAttendance(event, uid, studentName, 'checkin');
+        }
+
+        async function initAdminV2Branding() {
+            const nameEl = document.getElementById('admin-v2-school-name');
+            const logoEl = document.getElementById('admin-v2-school-logo');
+            if (nameEl) nameEl.innerText = CURRENT_SCHOOL || '校區工作台';
+            if (logoEl) logoEl.src = '/assets/logo.webp';
+            if (!window.TappieAPI || typeof TappieAPI.adminGetBranding !== 'function') return;
+            try {
+                const config = await TappieAPI.adminGetBranding(CURRENT_SCHOOL);
+                if (!config || !config.success) return;
+                const schoolName = config.schoolName || config.school_name || config.name || config.school?.name || config.settings?.schoolName || CURRENT_SCHOOL;
+                const logoUrl = config.logoUrl || config.logo_url || config.logo || config.assets?.logoUrl || '/assets/logo.webp';
+                if (nameEl && schoolName) nameEl.innerText = schoolName;
+                if (logoEl && logoUrl) logoEl.src = logoUrl;
+            } catch (err) {
+                console.warn('[admin v2 branding] load failed', err);
+            }
+        }
+
+        async function openConsoleFromAdmin() {
+            if (!isAdminV2Super()) {
+                alert('只有 Super Admin 可以進入校區後台。');
+                return;
+            }
+
+            const btn = document.querySelector('.admin-v2-utility.super-only');
+            const oldText = btn ? btn.innerText : '';
+            if (btn) {
+                btn.innerText = '登入中...';
+                btn.disabled = true;
+            }
+
+            try {
+                const schoolCode = CURRENT_SCHOOL || '';
+                const password = ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '';
+                if (!schoolCode || !password) throw new Error('缺少校區或 Super Admin 授權資料');
+
+                let result = null;
+                if (window.TappieAPI && typeof TappieAPI.consoleAuth === 'function') {
+                    result = await TappieAPI.consoleAuth({
+                        mode: 'super_admin',
+                        schoolCode,
+                        password
+                    });
+                } else {
+                    const res = await fetch(`${getAdminQueryBaseUrl()}/console-auth`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'super_admin', schoolCode, password })
+                    });
+                    result = await res.json().catch(() => ({}));
+                }
+
+                if (!result || !result.success || !result.token) {
+                    throw new Error(result?.message || result?.error || '校區後台自動登入失敗');
+                }
+
+                localStorage.setItem('tappie_console_session', JSON.stringify(result));
+                const target = `console.html?schoolCode=${encodeURIComponent(schoolCode)}`;
+                window.location.href = target;
+            } catch (err) {
+                console.error('[open console from admin] failed', err);
+                alert('校區後台登入失敗：' + (err.message || err));
+            } finally {
+                if (btn) {
+                    btn.innerText = oldText || '校區後台';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initAdminV2Branding();
+            setAdminMode(ADMIN_V2_ACTIVE_MODE || 'points');
+        });
+
 
     </script>
 </body>
