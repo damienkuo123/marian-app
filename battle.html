@@ -4131,6 +4131,7 @@ const payload = isUuidLike(room)
   let gachaCardsData = [];
   let gachaWonItems = [];
   let isGachaResolving = false;
+  let currentGachaSessionKey = ""; // v1 local lock: 同一場勝利固定 6 張盲盒與翻開狀態
   let gachaAwaitingRevealAll = false; // 最後一抽收合後，等待玩家點擊揭曉剩餘盲盒
   let gachaRevealAllDone = false;     // 防止剩餘盲盒重複翻開 / 重複結算
   let focusedCardIndex = -1; // 目前放大等待聲控的卡片
@@ -4229,6 +4230,71 @@ const payload = isUuidLike(room)
       };
   }
 
+  // =======================================================
+  // 🛡️ battle-gacha-lock-local-v1
+  // 同一場勝利固定 6 張盲盒、剩餘次數與已翻狀態，避免刷新重抽。
+  // 注意：這是前端快速止血版；正式防作弊仍應改為後端 reward session。
+  // =======================================================
+  function getGachaSessionKey(opponentName = "") {
+      const params = new URLSearchParams(window.location.search);
+      const rawRoom = String(ROOM_ID || params.get('roomCode') || params.get('roomId') || params.get('code') || '').trim();
+      const safeRoom = rawRoom || `no_room_${String(opponentName || 'unknown').replace(/\s+/g, '_')}`;
+      const eventFlag = params.get('isEvent') === 'true' ? 'event' : 'normal';
+      return `tappie_gacha_lock_v1:${STUDENT_ID}:${safeRoom}:${eventFlag}`;
+  }
+
+  function loadGachaSession(key) {
+      if (!key) return null;
+      try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          const session = JSON.parse(raw);
+          if (!session || !Array.isArray(session.cards) || session.cards.length !== 6) return null;
+          return session;
+      } catch (err) {
+          console.warn("讀取抽獎鎖定資料失敗，將重新建立", err);
+          return null;
+      }
+  }
+
+  function saveGachaSession(patch = {}) {
+      if (!currentGachaSessionKey) return;
+      try {
+          const existing = loadGachaSession(currentGachaSessionKey) || {};
+          const session = {
+              ...existing,
+              ...patch,
+              key: currentGachaSessionKey,
+              uid: STUDENT_ID,
+              roomCode: ROOM_ID || '',
+              cards: Array.isArray(gachaCardsData) ? gachaCardsData : (patch.cards || []),
+              picksLeft: Number(gachaPicksLeft || 0),
+              wonItems: Array.isArray(gachaWonItems) ? gachaWonItems : [],
+              wonPoints: Number(window.wonPoints || 0),
+              wonAvatars: Array.isArray(window.wonAvatars) ? window.wonAvatars : [],
+              updatedAt: new Date().toISOString()
+          };
+          localStorage.setItem(currentGachaSessionKey, JSON.stringify(session));
+      } catch (err) {
+          console.warn("儲存抽獎鎖定資料失敗", err);
+      }
+  }
+
+  function restoreGachaSession(session) {
+      gachaCardsData = Array.isArray(session.cards) ? session.cards : [];
+      gachaPicksLeft = Math.max(0, Math.min(6, Number(session.picksLeft ?? session.picksTotal ?? 0)));
+      gachaWonItems = Array.isArray(session.wonItems) ? session.wonItems : [];
+      window.wonPoints = Number(session.wonPoints || 0);
+      window.wonAvatars = Array.isArray(session.wonAvatars) ? session.wonAvatars : [];
+      isGachaResolving = gachaPicksLeft <= 0;
+      gachaAwaitingRevealAll = false;
+      gachaRevealAllDone = !!session.revealAllDone;
+  }
+
+  function markGachaSessionClaimed() {
+      saveGachaSession({ claimed: true, claimedAt: new Date().toISOString() });
+  }
+
   function initGacha(opponentName) {
     window.wonPoints = 0;   
     window.wonAvatars = []; 
@@ -4272,50 +4338,70 @@ const payload = isUuidLike(room)
 
     console.log("🎁 Gacha picks resolved:", { opponentName, isEventMode, picksConf, gachaPicksLeft, gamiConfig: window.gamiConfig });
 
-    picksSpan.innerText = gachaPicksLeft;
-    gachaWonItems = [];
-    isGachaResolving = false;
-    gachaAwaitingRevealAll = false;
-    gachaRevealAllDone = false;
-    focusedCardIndex = -1;
-    board.innerHTML = ""; 
+    currentGachaSessionKey = getGachaSessionKey(opponentName);
+    const existingSession = loadGachaSession(currentGachaSessionKey);
+    const shouldRestoreSession = !!existingSession;
 
-    // 🚀 2. 盲盒畫面永遠固定顯示 6 張；gachaPicksLeft 只代表可以翻幾張。
-    const cardCount = 6;
-    gachaCardsData = [];
-    
-    for(let i = 0; i < cardCount; i++) {
-        let randomWord = battleQuizArr.length > 0 ? battleQuizArr[Math.floor(Math.random() * battleQuizArr.length)].en : "OPEN";
-        let boxRarity, prize;
+    if (shouldRestoreSession) {
+        console.log("🛡️ 已載入同場抽獎鎖定資料，不重新抽 6 張卡", existingSession);
+        restoreGachaSession(existingSession);
+    } else {
+        window.wonPoints = 0;
+        window.wonAvatars = [];
+        gachaWonItems = [];
+        isGachaResolving = false;
+        gachaAwaitingRevealAll = false;
+        gachaRevealAllDone = false;
 
-        // 🚀 3. 獎池分流：活動用專屬獎池，一般用常規獎池
-        if (isEventMode) {
-            // (活動 Boss 邏輯不變)
-            let bossRarity = 'SSR';
-            let prizeClass = 'prize-SSR';
-            let prizeGlow = 'crack-gold';
-
-            if (EVENT_AVATAR && window.characterAssets && window.characterAssets[EVENT_AVATAR]) {
-                bossRarity = window.characterAssets[EVENT_AVATAR].rarity || 'SSR';
-                if (bossRarity === 'SR') { prizeClass = 'prize-SR'; prizeGlow = 'crack-purple'; }
-                else if (bossRarity === 'R') { prizeClass = 'prize-R'; prizeGlow = 'crack-white'; }
-                else if (bossRarity === 'N') { prizeClass = 'prize-N'; prizeGlow = 'crack-white'; }
-            }
-
-            boxRarity = bossRarity; 
-            if (Math.random() < 0.3) {
-                prize = { type: 'avatar', value: EVENT_AVATAR, label: '活動限定', class: prizeClass, glow: prizeGlow };
-            } else {
-                prize = { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white' };
-            }
-        } else {
-            // 🚀 一般模式：一鍵抽出卡片與對應外盒！
-            prize = drawSinglePrize();
-            boxRarity = prize.boxRarity; // 盲盒的外觀直接跟隨抽中的獎品
-        }
+        // 🚀 2. 盲盒畫面永遠固定顯示 6 張；gachaPicksLeft 只代表可以翻幾張。
+        const cardCount = 6;
+        gachaCardsData = [];
         
-        gachaCardsData.push({ id: i, word: randomWord, boxRarity: boxRarity, prize: prize, flipped: false });
+        for(let i = 0; i < cardCount; i++) {
+            let randomWord = battleQuizArr.length > 0 ? battleQuizArr[Math.floor(Math.random() * battleQuizArr.length)].en : "OPEN";
+            let boxRarity, prize;
+
+            // 🚀 3. 獎池分流：活動用專屬獎池，一般用常規獎池
+            if (isEventMode) {
+                // (活動 Boss 邏輯不變)
+                let bossRarity = 'SSR';
+                let prizeClass = 'prize-SSR';
+                let prizeGlow = 'crack-gold';
+
+                if (EVENT_AVATAR && window.characterAssets && window.characterAssets[EVENT_AVATAR]) {
+                    bossRarity = window.characterAssets[EVENT_AVATAR].rarity || 'SSR';
+                    if (bossRarity === 'SR') { prizeClass = 'prize-SR'; prizeGlow = 'crack-purple'; }
+                    else if (bossRarity === 'R') { prizeClass = 'prize-R'; prizeGlow = 'crack-white'; }
+                    else if (bossRarity === 'N') { prizeClass = 'prize-N'; prizeGlow = 'crack-white'; }
+                }
+
+                boxRarity = bossRarity;
+                if (Math.random() < 0.3) {
+                    prize = { type: 'avatar', value: EVENT_AVATAR, label: '活動限定', class: prizeClass, glow: prizeGlow };
+                } else {
+                    prize = { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white' };
+                }
+            } else {
+                // 🚀 一般模式：一鍵抽出卡片與對應外盒！
+                prize = drawSinglePrize();
+                boxRarity = prize.boxRarity; // 盲盒的外觀直接跟隨抽中的獎品
+            }
+            
+            gachaCardsData.push({ id: i, word: randomWord, boxRarity: boxRarity, prize: prize, flipped: false, missed: false });
+        }
+
+        saveGachaSession({
+            opponentName,
+            isEventMode,
+            picksTotal: gachaPicksLeft,
+            claimed: false,
+            createdAt: new Date().toISOString()
+        });
     }
+
+    picksSpan.innerText = gachaPicksLeft;
+    focusedCardIndex = -1;
+    board.innerHTML = "";
 
     gachaCardsData.forEach((card, index) => {
       const wrapperEl = document.createElement('div');
@@ -4388,6 +4474,25 @@ const payload = isUuidLike(room)
           </div>
         </div>
       `;
+
+      // 🛡️ 若是刷新後回到同一場抽獎，還原已翻 / 已揭曉狀態，不重新抽卡。
+      if (card.flipped) {
+          cardEl.classList.add('flipped');
+          const unlockUi = cardEl.querySelector('.unlock-ui');
+          if (unlockUi) unlockUi.style.display = 'none';
+          const cardRoot = cardEl.querySelector('.card');
+          const prizeInfo = card.prize || {};
+          let prizeRarity = 'N';
+          if (prizeInfo.class === 'prize-R') prizeRarity = 'R';
+          if (prizeInfo.class === 'prize-SR') prizeRarity = 'SR';
+          if (prizeInfo.class === 'prize-SSR') prizeRarity = 'SSR';
+          if (cardRoot) cardRoot.setAttribute('data-rarity', prizeRarity);
+          if (card.missed) cardEl.classList.add('missed');
+          if (prizeInfo.type === 'avatar' && characterAssets[prizeInfo.value] && characterAssets[prizeInfo.value].mask && cardRoot) {
+              cardRoot.classList.add('masked');
+              cardRoot.style.setProperty('--mask', `url('${characterAssets[prizeInfo.value].mask}')`);
+          }
+      }
       
       // 🚀 點擊邏輯大升級：可以隨時點擊已翻開的卡片欣賞！點放大中的卡片會自動收合！
       cardEl.onclick = (e) => {
@@ -4403,6 +4508,21 @@ const payload = isUuidLike(room)
     });
 
     overlay.classList.add('active');
+
+    const restoredSession = currentGachaSessionKey ? loadGachaSession(currentGachaSessionKey) : null;
+    if (restoredSession && restoredSession.claimed) {
+        const subtitle = document.getElementById('gacha-subtitle');
+        if (subtitle) subtitle.innerHTML = '此場獎勵已領取';
+        setTimeout(() => { showGachaSummary(); }, 350);
+    } else if (shouldRestoreSession && gachaPicksLeft <= 0 && gachaRevealAllDone) {
+        const subtitle = document.getElementById('gacha-subtitle');
+        if (subtitle) subtitle.innerHTML = '即將進入結算...';
+        setTimeout(() => { showGachaSummary(); }, 650);
+    } else if (shouldRestoreSession && gachaPicksLeft <= 0) {
+        const subtitle = document.getElementById('gacha-subtitle');
+        if (subtitle) subtitle.innerHTML = '抽卡次數已用完，點擊任意處揭曉剩餘盲盒';
+        waitForRevealAllClick();
+    }
     
     // 🚀 必須在此刻重新綁定 3D 感應，因為卡片是剛生成的！
     setTimeout(() => { initInteractiveHoloCards(); }, 100);
@@ -4617,9 +4737,11 @@ const payload = isUuidLike(room)
       gachaCardsData.forEach((c, i) => {
           if (!c.flipped && allCards[i]) {
               c.flipped = true;
+              c.missed = true;
               allCards[i].classList.add('flipped', 'missed');
           }
       });
+      saveGachaSession({ revealAllDone: true });
 
       const subtitle = document.getElementById('gacha-subtitle');
       if (subtitle) subtitle.innerHTML = '即將進入結算...';
@@ -4696,6 +4818,7 @@ const payload = isUuidLike(room)
           gachaWonItems.push(prizeToAdd);
           gachaPicksLeft--;
           document.getElementById('picks-left').innerText = gachaPicksLeft;
+          saveGachaSession({ lastRevealedIndex: index });
 
           if (gachaPicksLeft <= 0) {
               isGachaResolving = true;
@@ -4723,6 +4846,7 @@ const payload = isUuidLike(room)
   // 顯示戰利品並發送 Supabase claim-gacha
   function showGachaSummary() {
     const listEl = document.getElementById('gacha-won-list');
+    const lockedSession = currentGachaSessionKey ? loadGachaSession(currentGachaSessionKey) : null;
     let html = "";
 
     // 保留原本前端盲盒動畫算出的戰利品摘要。
@@ -4750,6 +4874,15 @@ const payload = isUuidLike(room)
     document.getElementById('gacha-summary-popup').classList.add('show');
 
     const claimBtn = document.getElementById('gacha-claim-btn');
+    if (lockedSession && lockedSession.claimed) {
+        claimBtn.innerText = "已領取，返回大廳";
+        claimBtn.style.pointerEvents = "auto";
+        claimBtn.onclick = () => {
+            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+        };
+        return;
+    }
+
     claimBtn.onclick = async () => {
         claimBtn.innerText = "發放獎勵中...";
         claimBtn.style.pointerEvents = "none";
@@ -4807,6 +4940,8 @@ const payload = isUuidLike(room)
                 ${after !== undefined ? `<div style="font-size: 14px; margin-top: 4px;">最新點數：${after}</div>` : ''}
               </div>
             `;
+
+            markGachaSessionClaimed();
 
             claimBtn.innerText = "返回大廳";
             claimBtn.style.pointerEvents = "auto";
