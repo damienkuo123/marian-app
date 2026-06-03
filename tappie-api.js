@@ -40,6 +40,7 @@ const TappieAPI = {
     adminNewsletters: "/admin-newsletters",
     adminWeeklyReports: "/admin-weekly-reports",
     adminRecordAttendance: "/admin-record-attendance",
+    adminGetQueryData: "/admin-get-query-data",
     savePushSubscription: "/save-push-subscription",
     sendTestPush: "/send-test-push",
     consoleAuth: "/console-auth",
@@ -184,6 +185,7 @@ const TappieAPI = {
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
   async adminSaveTasks(payload) { return await this._post(this.endpoints.adminSaveTasks, payload); },
   async adminRecordAttendance(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, payload); },
+  async adminGetQueryData(payload = {}) { return await this._post(this.endpoints.adminGetQueryData, payload); },
   async adminGetAttendanceToday(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, { ...payload, action: "get_today" }); },
   async savePushSubscription(payload = {}) { return await this._post(this.endpoints.savePushSubscription, payload); },
   async sendTestPush(payload = {}) { return await this._post(this.endpoints.sendTestPush, payload); },
@@ -466,6 +468,6 @@ function defaultGamification() {
     dailyChallenge: { passScore: 60, tiers: [{min:80,pts:30},{min:70,pts:20},{min:60,pts:10}] },
     mission: { failThreshold:5, failBasePenalty:-250, failPenaltyStep:50, goodThreshold:10, goodReward:100, perfectThreshold:15, perfectReward:200 },
     leaderboard:[100,50,30],
-    gachaPicks: { "初階Ai":1, "中階Ai":2, "高階Ai":3, "玩家對戰":3, "活動Boss":1 }
+    gachaPicks: { "初階Ai":1, "中階Ai":2, "高階Ai":3, "玩家對戰":2, "活動Boss":1 }
   };
 }
