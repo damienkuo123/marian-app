@@ -240,6 +240,142 @@
       #content-viewport { padding-top: max(100px, env(safe-area-inset-top) + 100px); }
     }
     
+
+    /* =======================================================
+       🔔 首頁家長通知入口：上放學通知 + 專屬週報
+       ======================================================= */
+    .home-notification-zone {
+      padding: 22px 20px;
+      margin-top: -8px;
+      text-align: left;
+    }
+    .home-notification-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 14px 0;
+      color: var(--text-main);
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+    .home-notification-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .home-notify-btn {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 24px;
+      background: rgba(255,255,255,0.68);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1);
+      padding: 16px 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-main);
+      transition: 0.25s;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .home-notify-btn:active {
+      transform: scale(0.97);
+      background: rgba(255,255,255,0.9);
+    }
+    .home-notify-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .home-notify-icon {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 17px;
+      font-size: 22px;
+      background: rgba(0,102,204,0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+    }
+    .home-notify-text {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .home-notify-label {
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: var(--text-main);
+    }
+    .home-notify-status {
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.35;
+      color: var(--text-sub);
+    }
+    .home-notify-chevron {
+      flex: 0 0 auto;
+      color: rgba(26,37,47,0.35);
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .home-notify-status.ok { color: var(--marian-green); }
+    .home-notify-status.warn { color: var(--marian-yellow); }
+    .home-notify-status.bad { color: var(--marian-red); }
+
+    .home-weekly-wrapper {
+      width: 92%;
+      max-width: 420px;
+      margin: -8px auto 22px auto;
+    }
+    .home-weekly-wrapper .newsletter-zone {
+      width: 100%;
+      margin-bottom: 0;
+    }
+
+    .pwa-required-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 22px;
+    }
+    .pwa-required-btn {
+      border: 0;
+      border-radius: 18px;
+      padding: 15px 10px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .pwa-required-btn.cancel {
+      background: rgba(0,0,0,0.06);
+      color: var(--text-main);
+    }
+    .pwa-required-btn.primary {
+      background: linear-gradient(135deg, #0066cc, #0984e3);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(0,102,204,0.22);
+    }
+
+    @media (min-width: 768px) {
+      .home-notification-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .home-weekly-wrapper {
+        max-width: 680px;
+      }
+    }
+
     /* 📱 PWA 安裝按鈕與 iOS 專屬引導視窗 */
     .btn-install-pwa { 
       width: 100%; background: linear-gradient(135deg, #0066cc, #0984e3); color: white; border: none; 
@@ -297,6 +433,62 @@
           <div class="points-label">Total Points</div>
         </div>
         <span class="history-btn" onclick="toggleLogs(true)">📋 查看點數明細</span>
+      </div>
+
+      <div class="glass-panel home-notification-zone">
+        <h3 class="home-notification-title">家長通知設定</h3>
+        <div class="home-notification-grid">
+          <button id="attendance-push-btn" class="home-notify-btn" onclick="handleAttendancePushSubscribeClick()">
+            <span class="home-notify-main">
+              <span class="home-notify-icon">🔔</span>
+              <span class="home-notify-text">
+                <span class="home-notify-label">訂閱上放學通知</span>
+                <span id="attendance-push-status" class="home-notify-status">檢查通知狀態中...</span>
+              </span>
+            </span>
+            <span class="home-notify-chevron">›</span>
+          </button>
+
+          <button id="weekly-home-btn" class="home-notify-btn" onclick="toggleHomeWeeklyZone()">
+            <span class="home-notify-main">
+              <span class="home-notify-icon">📩</span>
+              <span class="home-notify-text">
+                <span class="home-notify-label">訂閱專屬週報</span>
+                <span id="weekly-home-status" class="home-notify-status">尚未設定 Email</span>
+              </span>
+            </span>
+            <span class="home-notify-chevron">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="home-weekly-wrapper" class="home-weekly-wrapper hidden">
+      <div id="newsletter-zone" class="glass-panel newsletter-zone hidden">
+        <div class="newsletter-zone-header">
+          <h3 style="color: var(--gold); margin: 0 0 5px 0; letter-spacing: 2px; font-size: 18px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span>📩</span> 訂閱專屬學習週報
+          </h3>
+          <p style="font-size: 13px; color: var(--text-sub); margin: 0; font-weight: bold;">自動寄送寶貝的發音診斷與專欄文章</p>
+        </div>
+        
+        <div style="padding: 25px 20px;">
+          <div id="email-display-zone" class="email-display-zone" style="display: none;">
+            <div style="text-align: left;">
+              <div style="font-size: 12px; color: var(--primary-blue); font-weight: 900; margin-bottom: 2px; letter-spacing: 1px;">目前綁定信箱</div>
+              <div id="parent-email-text" style="font-size: 16px; color: var(--text-main); font-weight: 900; letter-spacing: 1px;"></div>
+            </div>
+            <button onclick="toggleEmailEdit()" style="background: rgba(0, 102, 204, 0.1); color: var(--primary-blue); border: none; padding: 10px 16px; border-radius: 12px; font-weight: 900; font-size: 14px; cursor: pointer; transition: 0.2s;">✏️ 編輯</button>
+          </div>
+
+          <div id="email-edit-zone" class="email-edit-zone">
+            <input type="email" id="parent-email-input" placeholder="請輸入家長 Email" class="email-input">
+            <button id="email-submit-btn" onclick="subscribeEmail()" style="background: linear-gradient(135deg, #00b894, #05c46b); color: white; border: none; padding: 0 22px; border-radius: 16px; font-weight: 900; font-size: 15px; cursor: pointer; box-shadow: 0 6px 15px rgba(0, 184, 148, 0.3); transition: 0.2s; white-space: nowrap;">
+              訂閱
+            </button>
+          </div>
+          <div id="email-msg" style="margin-top: 15px; font-size: 14px; font-weight: bold; color: #2ecc71; height: 20px;"></div>
+        </div>
+      </div>
       </div>
     </section>
 
@@ -486,32 +678,6 @@
         </div>
       </div>
 
-      <div id="newsletter-zone" class="glass-panel newsletter-zone hidden">
-        <div class="newsletter-zone-header">
-          <h3 style="color: var(--gold); margin: 0 0 5px 0; letter-spacing: 2px; font-size: 18px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <span>📩</span> 訂閱專屬學習週報
-          </h3>
-          <p style="font-size: 13px; color: var(--text-sub); margin: 0; font-weight: bold;">自動寄送寶貝的發音診斷與專欄文章</p>
-        </div>
-        
-        <div style="padding: 25px 20px;">
-          <div id="email-display-zone" class="email-display-zone" style="display: none;">
-            <div style="text-align: left;">
-              <div style="font-size: 12px; color: var(--primary-blue); font-weight: 900; margin-bottom: 2px; letter-spacing: 1px;">目前綁定信箱</div>
-              <div id="parent-email-text" style="font-size: 16px; color: var(--text-main); font-weight: 900; letter-spacing: 1px;"></div>
-            </div>
-            <button onclick="toggleEmailEdit()" style="background: rgba(0, 102, 204, 0.1); color: var(--primary-blue); border: none; padding: 10px 16px; border-radius: 12px; font-weight: 900; font-size: 14px; cursor: pointer; transition: 0.2s;">✏️ 編輯</button>
-          </div>
-
-          <div id="email-edit-zone" class="email-edit-zone">
-            <input type="email" id="parent-email-input" placeholder="請輸入家長 Email" class="email-input">
-            <button id="email-submit-btn" onclick="subscribeEmail()" style="background: linear-gradient(135deg, #00b894, #05c46b); color: white; border: none; padding: 0 22px; border-radius: 16px; font-weight: 900; font-size: 15px; cursor: pointer; box-shadow: 0 6px 15px rgba(0, 184, 148, 0.3); transition: 0.2s; white-space: nowrap;">
-              訂閱
-            </button>
-          </div>
-          <div id="email-msg" style="margin-top: 15px; font-size: 14px; font-weight: bold; color: #2ecc71; height: 20px;"></div>
-        </div>
-      </div>
     </section>
 
   </main>
@@ -559,6 +725,23 @@
        </p>
        <div class="arrow-down">↓</div>
        <button class="btn-close-modal" style="margin-top: 0;" onclick="document.getElementById('ios-pwa-overlay').classList.remove('show')">我知道了</button>
+    </div>
+  </div>
+
+
+  <div id="pwa-required-overlay" class="modal-overlay" onclick="togglePwaRequiredModal(false)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 style="text-align:center; color:var(--text-main); margin-top:0; font-weight:900; letter-spacing:1px;">請先將 Tappie 加入主畫面</h3>
+      <p style="color:var(--text-main); font-weight:900; line-height:1.8; text-align:center; margin:0;">
+        上放學通知需要從主畫面開啟後才能啟用。
+      </p>
+      <p style="color:var(--text-sub); font-weight:800; line-height:1.7; text-align:center; margin:10px 0 0; font-size:13px;">
+        如已加入，請從主畫面打開 Tappie 後再嘗試。
+      </p>
+      <div class="pwa-required-actions">
+        <button class="pwa-required-btn cancel" onclick="togglePwaRequiredModal(false)">取消</button>
+        <button class="pwa-required-btn primary" onclick="quickInstallFromPushModal()">快速加入</button>
+      </div>
     </div>
   </div>
 
@@ -663,6 +846,8 @@
     const params = new URLSearchParams(window.location.search);
     const STUDENT_ID = params.get('id');
     let currentParentEmail = ""; 
+    let weeklyReportAvailable = false;
+    const TAPPIE_VAPID_PUBLIC_KEY = window.TAPPIE_VAPID_PUBLIC_KEY || "";
 
     // 🚀 SPA 分頁切換邏輯
     function switchTab(tabId, titleText, navElement) {
@@ -721,6 +906,162 @@
         modal.classList.remove('show'); 
       }
     }
+
+    function isTappieStandaloneMode() {
+      return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    }
+
+    function togglePwaRequiredModal(show) {
+      const modal = document.getElementById('pwa-required-overlay');
+      if (!modal) return;
+      if (show) {
+        if (window.GlobalAudio) GlobalAudio.play('popupOpen');
+        modal.classList.add('show');
+      } else {
+        if (window.GlobalAudio) GlobalAudio.play('popupClose');
+        modal.classList.remove('show');
+      }
+    }
+
+    function quickInstallFromPushModal() {
+      togglePwaRequiredModal(false);
+      installPWA();
+    }
+
+    function setAttendancePushStatus(text, state = "") {
+      const status = document.getElementById('attendance-push-status');
+      if (!status) return;
+      status.innerText = text;
+      status.className = `home-notify-status ${state}`.trim();
+    }
+
+    async function refreshAttendancePushStatus() {
+      try {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+          setAttendancePushStatus("此瀏覽器尚不支援通知", "bad");
+          return;
+        }
+
+        if (!isTappieStandaloneMode()) {
+          setAttendancePushStatus("請先加入主畫面後啟用", "warn");
+          return;
+        }
+
+        if (Notification.permission === "denied") {
+          setAttendancePushStatus("通知權限已封鎖", "bad");
+          return;
+        }
+
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+
+        if (sub) {
+          setAttendancePushStatus("已啟用上放學通知", "ok");
+        } else if (Notification.permission === "granted") {
+          setAttendancePushStatus("已允許通知，等待完成訂閱", "warn");
+        } else {
+          setAttendancePushStatus("尚未訂閱上放學通知", "");
+        }
+      } catch (err) {
+        console.warn("push status check failed", err);
+        setAttendancePushStatus("通知狀態檢查失敗", "warn");
+      }
+    }
+
+    async function handleAttendancePushSubscribeClick() {
+      if (window.GlobalAudio) GlobalAudio.play('click');
+
+      if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert("⚠️ 此瀏覽器目前不支援 Web Push 通知，請改用 Safari 或 Chrome 並更新到較新的版本。");
+        setAttendancePushStatus("此瀏覽器尚不支援通知", "bad");
+        return;
+      }
+
+      if (!isTappieStandaloneMode()) {
+        togglePwaRequiredModal(true);
+        setAttendancePushStatus("請先加入主畫面後啟用", "warn");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        alert("⚠️ 通知權限已被封鎖。\n請到瀏覽器或系統設定中允許 Tappie 通知後再試一次。");
+        setAttendancePushStatus("通知權限已封鎖", "bad");
+        return;
+      }
+
+      const permission = Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setAttendancePushStatus("尚未允許通知權限", "warn");
+        return;
+      }
+
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+
+        if (existing) {
+          setAttendancePushStatus("已啟用上放學通知", "ok");
+          alert("✅ 這台裝置已經啟用上放學通知。");
+          return;
+        }
+
+        if (!TAPPIE_VAPID_PUBLIC_KEY) {
+          setAttendancePushStatus("已允許通知，等待系統完成訂閱", "warn");
+          alert("✅ 通知權限已開啟。\n下一步接上推播訂閱資料庫後，就能正式啟用上放學通知。");
+          return;
+        }
+
+        setAttendancePushStatus("準備建立推播訂閱...", "warn");
+        alert("✅ 通知權限已開啟，推播訂閱資料庫會在下一階段接上。");
+      } catch (err) {
+        console.error("push subscribe failed", err);
+        setAttendancePushStatus("通知啟用失敗，請稍後再試", "bad");
+      }
+    }
+
+    function refreshWeeklyHomeStatus() {
+      const status = document.getElementById('weekly-home-status');
+      if (!status) return;
+
+      if (!weeklyReportAvailable) {
+        status.innerText = "此功能限有班級學生使用";
+        status.className = "home-notify-status warn";
+        return;
+      }
+
+      if (currentParentEmail && currentParentEmail.includes('@')) {
+        status.innerText = "已訂閱週報";
+        status.className = "home-notify-status ok";
+      } else {
+        status.innerText = "尚未設定 Email";
+        status.className = "home-notify-status";
+      }
+    }
+
+    function toggleHomeWeeklyZone(forceShow) {
+      if (window.GlobalAudio) GlobalAudio.play('click');
+
+      if (!weeklyReportAvailable) {
+        alert("🔒 專屬週報需要【有班級】學生才能使用。");
+        return;
+      }
+
+      const wrapper = document.getElementById('home-weekly-wrapper');
+      const newsletter = document.getElementById('newsletter-zone');
+      if (!wrapper || !newsletter) return;
+
+      const shouldShow = typeof forceShow === "boolean" ? forceShow : wrapper.classList.contains('hidden');
+      wrapper.classList.toggle('hidden', !shouldShow);
+      newsletter.classList.toggle('hidden', !shouldShow);
+
+      if (shouldShow) {
+        setTimeout(() => wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      }
+    }
+
 
     const storedAuth = localStorage.getItem('tappie_admin_key');
     if (storedAuth && params.get('view') !== 'true') {
@@ -844,6 +1185,7 @@
       document.getElementById('email-edit-zone').style.display = 'none';
       document.getElementById('parent-email-text').innerText = maskEmail(email);
       document.getElementById('email-msg').innerText = "";
+      refreshWeeklyHomeStatus();
     }
 
     function toggleEmailEdit() {
@@ -903,10 +1245,12 @@
                 emailInput.value = "";
                 document.getElementById('email-display-zone').style.display = 'none';
                 document.getElementById('email-edit-zone').style.display = 'flex';
+                refreshWeeklyHomeStatus();
             } else {
                 msgEl.style.color = '#2ecc71';
                 msgEl.innerText = "✅ 綁定成功！每週五見囉！";
                 setTimeout(() => showEmailDisplay(email), 1500);
+                refreshWeeklyHomeStatus();
             }
           } else {
             msgEl.style.color = '#e74c3c';
@@ -983,10 +1327,13 @@
           document.getElementById('parent-email-input').value = currentParentEmail;
           showEmailDisplay(currentParentEmail);
       } else {
+          currentParentEmail = "";
           document.getElementById('email-display-zone').style.display = 'none';
           document.getElementById('email-edit-zone').style.display = 'flex';
           document.getElementById('email-submit-btn').innerText = "訂閱";
       }
+      refreshWeeklyHomeStatus();
+      refreshAttendancePushStatus();
       
       const badge = document.getElementById('honor-title');
       if (badge) {
@@ -1023,14 +1370,15 @@
       if (["有班級", "美語資優生", "elite"].includes(String(data.studentType || "").trim())) {
         // 🔓 拔掉底部導航的鎖頭，允許切換！
         document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.remove('locked'));
-        // 顯示專屬的 Email 訂閱區塊
-        document.getElementById('newsletter-zone').classList.remove('hidden'); 
+        weeklyReportAvailable = true;
       } else {
         // 🔒 無班級學生：確保鎖頭存在 (HTML裡已經預設有加了，這裡只是保險)
         document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.add('locked'));
-        // 隱藏專屬的 Email 訂閱區塊
-        document.getElementById('newsletter-zone').classList.add('hidden');
+        weeklyReportAvailable = false;
+        document.getElementById('home-weekly-wrapper')?.classList.add('hidden');
+        document.getElementById('newsletter-zone')?.classList.add('hidden');
       }
+      refreshWeeklyHomeStatus();
 
       // 📊 以下的數據渲染，不管是不是資優生都照常執行！
       // 這樣當無班級學生偷偷用開發者工具把 .locked 拿掉時，看到的也是正確的數據，而不是空版。
