@@ -5712,6 +5712,7 @@
         let ADMIN_V2_QUERY_POINTS_STATE = [];
         let ADMIN_V2_QUERY_ATTENDANCE_LOADED = false;
         let ADMIN_V2_QUERY_ATTENDANCE_STATE = null;
+        let ADMIN_V2_ATTENDANCE_TODAY_CACHE = null;
 
         function getAdminV2ModeText(mode = ADMIN_V2_ACTIVE_MODE) {
             if (mode === 'attendance') return '打卡通知';
@@ -5810,6 +5811,10 @@
             try { sessionStorage.setItem(ADMIN_V2_MANUAL_ACTION_KEY, ADMIN_V2_ATTENDANCE_ACTION); } catch(e) {}
             persistAdminV2State();
             updateAttendanceModeUI();
+            if (currentStudentId && ADMIN_V2_ACTIVE_MODE === 'attendance' && ADMIN_V2_ATTENDANCE_MODE === 'manual') {
+                if (ADMIN_V2_ATTENDANCE_TODAY_CACHE) renderAttendanceTodayStatus(ADMIN_V2_ATTENDANCE_TODAY_CACHE);
+                refreshAttendanceTodayStatus();
+            }
             adminV2DebugAttendance('setManualAttendanceAction:' + ADMIN_V2_ATTENDANCE_ACTION);
             try { scanner && scanner.focus(); } catch(e) {}
         }
@@ -5836,7 +5841,13 @@
                 if (status) status.innerText = currentStudentId ? '自動離校已準備執行' : '自動離校模式';
                 if (banner) banner.innerText = '自動離校模式已啟用。掃描學生卡後會直接登記離校。';
             } else {
-                if (status) status.innerText = currentStudentId ? '請選擇到校或離校' : '手動打卡模式';
+                if (status) {
+                    if (currentStudentId && ADMIN_V2_ATTENDANCE_TODAY_CACHE) {
+                        renderAttendanceTodayStatus(ADMIN_V2_ATTENDANCE_TODAY_CACHE);
+                    } else {
+                        status.innerText = currentStudentId ? '請選擇到校或離校' : '手動打卡模式';
+                    }
+                }
                 if (confirmBtn) confirmBtn.innerText = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? '確認離校' : '確認到校';
             }
         }
@@ -5882,6 +5893,7 @@
         }
 
         function renderAttendanceTodayStatus(todayData) {
+            ADMIN_V2_ATTENDANCE_TODAY_CACHE = todayData || null;
             const status = document.getElementById('admin-v2-attendance-status');
             if (!status) return;
             const latest = getLatestAttendanceEvent(todayData);
@@ -6269,12 +6281,39 @@
         }
 
         function toggleAdminQueryRow(el) {
+            try {
+                const evt = window.event;
+                evt?.preventDefault?.();
+                evt?.stopPropagation?.();
+            } catch(e) {}
+
             const row = el?.closest?.('.admin-v2-student-row');
-            if (!row) return;
+            if (!row) return false;
+
             const scrollBox = document.getElementById('mainCard');
-            const before = scrollBox ? scrollBox.scrollTop : 0;
+            const scrollingElement = document.scrollingElement || document.documentElement || document.body;
+            const queryTop = document.getElementById('query-ui')?.scrollTop || 0;
+            const before = {
+                main: scrollBox ? scrollBox.scrollTop : 0,
+                windowY: window.scrollY || 0,
+                doc: scrollingElement ? scrollingElement.scrollTop : 0,
+                query: queryTop
+            };
+
             row.classList.toggle('expanded');
-            if (scrollBox) requestAnimationFrame(() => { scrollBox.scrollTop = before; });
+
+            const restore = () => {
+                if (scrollBox) scrollBox.scrollTop = before.main;
+                if (scrollingElement) scrollingElement.scrollTop = before.doc;
+                const queryUI = document.getElementById('query-ui');
+                if (queryUI) queryUI.scrollTop = before.query;
+                if (before.windowY) window.scrollTo(0, before.windowY);
+            };
+
+            requestAnimationFrame(restore);
+            setTimeout(restore, 0);
+            setTimeout(restore, 80);
+            return false;
         }
 
         function toggleAdminQueryClass(el) {
@@ -6366,7 +6405,7 @@
 
                     const medal = top3Uids.includes(s.uid) ? (top3Uids.indexOf(s.uid) === 0 ? '🥇' : top3Uids.indexOf(s.uid) === 1 ? '🥈' : '🥉') : '';
                     return `
-                        <div class="admin-v2-student-row" data-tone="${visual.tone}" onclick="toggleAdminQueryRow(this)">
+                        <div class="admin-v2-student-row" data-tone="${visual.tone}" onclick="return toggleAdminQueryRow(this)">
                             <div>
                                 <strong>${medal ? medal + ' ' : ''}${escapeAdminV2(s.name || '未命名學生')}</strong>
                                 <small>${escapeAdminV2(s.uid || '')}</small>
@@ -6471,7 +6510,7 @@
                     const deltaClass = delta >= 0 ? 'admin-v2-delta-plus' : 'admin-v2-delta-minus';
                     const deltaText = delta >= 0 ? `+${delta}` : String(delta);
                     return `
-                        <div class="admin-v2-student-row" onclick="toggleAdminQueryRow(this)">
+                        <div class="admin-v2-student-row" onclick="return toggleAdminQueryRow(this)">
                             <div class="admin-v2-log-row-main">
                                 <div>
                                     <strong>${escapeAdminV2(log.name || '未命名學生')}</strong>
@@ -6574,7 +6613,7 @@
                               }).join('')
                             : `<div class="admin-v2-record-row"><span>今日尚無打卡紀錄</span><strong></strong></div>`;
                         return `
-                            <div class="admin-v2-student-row" onclick="toggleAdminQueryRow(this)">
+                            <div class="admin-v2-student-row" onclick="return toggleAdminQueryRow(this)">
                                 <div>
                                     <strong>${escapeAdminV2(student.name || '未命名學生')}</strong>
                                     <small>${escapeAdminV2(student.uid || '')}</small>
