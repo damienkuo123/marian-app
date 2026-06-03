@@ -5784,13 +5784,25 @@
             return data;
         }
 
+        function getAttendanceNotificationText(data) {
+            const n = data?.notification || {};
+            if (data?.duplicateRecent || n.status === 'duplicate_skipped') return '，未重複發送通知';
+            if (n.status === 'sent') return '，通知已送出';
+            if (n.status === 'partial_failed') return `，通知部分送出（${n.sent || 0}/${n.total || 0}）`;
+            if (n.status === 'no_subscription') return '，家長尚未訂閱通知';
+            if (n.status === 'push_not_configured') return '，通知尚未設定完成';
+            if (n.status === 'failed') return '，通知發送失敗';
+            return '';
+        }
+
         function renderAttendanceResult(data, eventType) {
             const actionText = getAttendanceActionText(eventType);
             const status = document.getElementById('admin-v2-attendance-status');
             const banner = document.getElementById('admin-v2-auto-banner');
             const timeText = getAttendanceTimeText(data?.event?.event_time || data?.event?.eventTime || data?.eventTime);
             const duplicateText = data?.duplicateRecent ? '（30 秒內重複，已略過新增）' : '';
-            const text = `已登記${actionText}${timeText ? ' ' + timeText : ''}${duplicateText}`;
+            const notificationText = getAttendanceNotificationText(data);
+            const text = `已登記${actionText}${timeText ? ' ' + timeText : ''}${duplicateText}${notificationText}`;
 
             if (data?.todayStatus) renderAttendanceTodayStatus(data.todayStatus);
             else if (status) status.innerText = text;
@@ -5813,7 +5825,7 @@
                 if (btn) { btn.innerText = '登記中...'; btn.style.pointerEvents = 'none'; }
                 const data = await recordAttendanceEvent(eventType, 'admin_manual');
                 renderAttendanceResult(data, eventType);
-                alert(`✅ 已登記${actionText}` + (data?.duplicateRecent ? '（短時間重複掃卡，未新增第二筆）' : ''));
+                alert(`✅ 已登記${actionText}` + (data?.duplicateRecent ? '（短時間重複掃卡，未新增第二筆）' : '') + getAttendanceNotificationText(data));
             } catch (err) {
                 if (err?.cancelled) {
                     const msgEl = document.getElementById('msg');
