@@ -264,38 +264,38 @@ const TappieAPI = {
     return await this._consolePost(this.endpoints.consoleSaveSchool, body, token);
   },
 
-  async consoleGetHealth({ token } = {}) {
+  async consoleGetHealth({ token, schoolCode = "", scopeMode = "" } = {}) {
     const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetHealth, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { "Authorization": `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({ schoolCode, scopeMode })
     });
     return await res.json();
   },
 
-  async consoleGetOverview({ token } = {}) {
+  async consoleGetOverview({ token, schoolCode = "", scopeMode = "" } = {}) {
     const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetOverview, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { "Authorization": `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({ schoolCode, scopeMode })
     });
     return await res.json();
   },
 
-  async consoleGetStudents({ token } = {}) {
+  async consoleGetStudents({ token, schoolCode = "", scopeMode = "" } = {}) {
     const res = await fetch(this.supabaseBaseUrl + this.endpoints.consoleGetStudents, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { "Authorization": `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({ schoolCode, scopeMode })
     });
     return await res.json();
   },
