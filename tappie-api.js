@@ -1,4 +1,4 @@
-// tappie-api.js - Tappie Supabase Dev API Layer
+// tappie-api.js - Tappie Supabase Dev API Layer 
 // Micro Polish v3 - unit_id first learning progress + safe weekly report
 const TappieAPI = {
   mode: "supabase-dev",
