@@ -5780,6 +5780,9 @@
 
             updateAttendanceModeUI();
             showAdminModeScreen();
+            if (ADMIN_V2_ACTIVE_MODE === 'attendance' && currentStudentId) {
+                setTimeout(() => refreshAttendanceTodayStatus(), 0);
+            }
             try { scanner && scanner.focus(); } catch(e) {}
         }
 
@@ -6248,10 +6251,30 @@
             return [];
         }
 
+        function getAdminStudentBestScore(student) {
+            return Number(student?.bestScore ?? student?.best_score ?? student?.score ?? student?.highestScore ?? student?.highest_score ?? 0);
+        }
+
+        function getAdminRecordTimeValue(record) {
+            return record?.completedAt || record?.completed_at || record?.createdAt || record?.created_at || record?.time || record?.date || '';
+        }
+
+        function isAdminTodayTaipei(value) {
+            if (!value) return false;
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return false;
+            const today = new Date();
+            const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' });
+            return fmt.format(d) === fmt.format(today);
+        }
+
         function toggleAdminQueryRow(el) {
             const row = el?.closest?.('.admin-v2-student-row');
             if (!row) return;
+            const scrollBox = document.getElementById('mainCard');
+            const before = scrollBox ? scrollBox.scrollTop : 0;
             row.classList.toggle('expanded');
+            if (scrollBox) requestAnimationFrame(() => { scrollBox.scrollTop = before; });
         }
 
         function toggleAdminQueryClass(el) {
@@ -6304,7 +6327,12 @@
 
                 const studentsRaw = Array.isArray(cls.students) ? cls.students : [];
                 const top3Uids = studentsRaw.slice()
-                    .sort((a,b) => Number(b.count || 0) - Number(a.count || 0))
+                    .sort((a,b) => {
+                        const scoreDiff = getAdminStudentBestScore(b) - getAdminStudentBestScore(a);
+                        if (scoreDiff) return scoreDiff;
+                        return Number(b.count || 0) - Number(a.count || 0);
+                    })
+                    .filter(s => getAdminStudentBestScore(s) > 0)
                     .slice(0, 3)
                     .map(s => s.uid);
 
@@ -6322,18 +6350,19 @@
                 const rangeText = schedule?.startDate && schedule?.endDate ? `${schedule.startDate} ～ ${schedule.endDate}` : '尚未排程';
                 const rows = students.map((s, idx) => {
                     const visual = getAdminQueryCountVisual(s.count, gami);
-                    const bestNum = Number(s.bestScore ?? s.best_score ?? s.score ?? 0);
+                    const bestNum = getAdminStudentBestScore(s);
                     const best = bestNum ? `${bestNum} 分` : '尚無';
                     const bestTime = getAdminStudentBestTime(s);
                     const bestTimeText = getAdminQueryTimeText(bestTime) || '尚無';
                     const records = getAdminStudentRecords(s);
-                    const recordHtml = records.length
-                        ? records.slice(0, 8).map(r => {
+                    const todayRecords = records.filter(r => isAdminTodayTaipei(getAdminRecordTimeValue(r)));
+                    const recordHtml = todayRecords.length
+                        ? todayRecords.slice(0, 8).map(r => {
                             const score = Number(r.score ?? r.bestScore ?? r.average_score ?? r.averageScore ?? 0);
-                            const time = getAdminQueryTimeText(r.completedAt || r.completed_at || r.createdAt || r.created_at || r.time);
+                            const time = getAdminQueryTimeText(getAdminRecordTimeValue(r));
                             return `<div class="admin-v2-record-row"><span>${escapeAdminV2(time || '未記錄時間')}</span><strong>${score ? score + ' 分' : '完成'}</strong></div>`;
                           }).join('')
-                        : `<div class="admin-v2-record-row"><span>目前沒有可展開的完成紀錄</span><strong></strong></div>`;
+                        : `<div class="admin-v2-record-row"><span>今日尚無挑戰完成紀錄</span><strong></strong></div>`;
 
                     const medal = top3Uids.includes(s.uid) ? (top3Uids.indexOf(s.uid) === 0 ? '🥇' : top3Uids.indexOf(s.uid) === 1 ? '🥈' : '🥉') : '';
                     return `
@@ -6344,11 +6373,6 @@
                             </div>
                             <span class="admin-v2-count-badge">${visual.icon} ${visual.text}　${escapeAdminV2(best)}${bestTimeText !== '尚無' ? '　' + escapeAdminV2(bestTimeText) : ''}　▾</span>
                             <div class="admin-v2-row-detail">
-                                <div class="admin-v2-detail-grid">
-                                    <div class="admin-v2-detail-box"><div class="admin-v2-detail-label">本單元完成次數</div><div class="admin-v2-detail-value">${Number(s.count || 0)} 次</div></div>
-                                    <div class="admin-v2-detail-box"><div class="admin-v2-detail-label">最高分</div><div class="admin-v2-detail-value">${escapeAdminV2(best)} ${medal || ''}</div></div>
-                                    <div class="admin-v2-detail-box" style="grid-column:1/-1;"><div class="admin-v2-detail-label">最佳完成時間</div><div class="admin-v2-detail-value">${escapeAdminV2(bestTimeText)}</div></div>
-                                </div>
                                 <div class="admin-v2-record-title">今日挑戰完成紀錄</div>
                                 ${recordHtml}
                             </div>
@@ -6458,8 +6482,7 @@
                             <div class="admin-v2-row-detail">
                                 <div class="admin-v2-detail-grid">
                                     <div class="admin-v2-detail-box"><div class="admin-v2-detail-label">班級</div><div class="admin-v2-detail-value">${escapeAdminV2(log.classCode || '未分班')}</div></div>
-                                    <div class="admin-v2-detail-box"><div class="admin-v2-detail-label">原因</div><div class="admin-v2-detail-value">${escapeAdminV2(log.title || '系統變更')}</div></div>
-                                    ${log.note ? `<div class="admin-v2-detail-box" style="grid-column:1/-1;"><div class="admin-v2-detail-label">備註</div><div class="admin-v2-detail-value">${escapeAdminV2(log.note)}</div></div>` : ''}
+                                    <div class="admin-v2-detail-box"><div class="admin-v2-detail-label">原因</div><div class="admin-v2-detail-value">${escapeAdminV2(log.title || log.note || '系統變更')}</div></div>
                                 </div>
                             </div>
                         </div>`;
