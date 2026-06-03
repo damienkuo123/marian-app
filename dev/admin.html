@@ -5672,10 +5672,90 @@
             return d.toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
         }
 
-        async function recordAttendanceEvent(eventType, source = 'admin_manual') {
+        function getAttendanceActionText(eventType) {
+            return eventType === 'checkout' ? '離校' : '到校';
+        }
+
+        function getLatestAttendanceEvent(todayData) {
+            if (todayData?.latestEvent) return todayData.latestEvent;
+            const events = Array.isArray(todayData?.events) ? todayData.events : [];
+            return events.length ? events[0] : null;
+        }
+
+        function countTodayAttendanceType(todayData, eventType) {
+            const counts = todayData?.counts || todayData?.countByType || {};
+            if (typeof counts?.[eventType] === 'number') return counts[eventType];
+            const events = Array.isArray(todayData?.events) ? todayData.events : [];
+            return events.filter(ev => ev?.event_type === eventType || ev?.eventType === eventType).length;
+        }
+
+        async function fetchAttendanceTodayStatus(uid = currentStudentId) {
+            if (!uid) return null;
+            if (!window.TappieAPI || typeof TappieAPI.adminGetAttendanceToday !== 'function') return null;
+            const data = await TappieAPI.adminGetAttendanceToday({
+                schoolCode: CURRENT_SCHOOL,
+                uid,
+                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || ''
+            });
+            if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取今日打卡狀態失敗');
+            return data;
+        }
+
+        function renderAttendanceTodayStatus(todayData) {
+            const status = document.getElementById('admin-v2-attendance-status');
+            if (!status) return;
+            const latest = getLatestAttendanceEvent(todayData);
+            if (!latest) {
+                status.innerHTML = '<span style="color:#7f8c8d;">今日尚無打卡紀錄</span>';
+                return;
+            }
+            const type = latest.event_type || latest.eventType;
+            const actionText = getAttendanceActionText(type);
+            const timeText = getAttendanceTimeText(latest.event_time || latest.eventTime || latest.created_at || latest.createdAt);
+            const color = type === 'checkout' ? '#e74c3c' : '#2ecc71';
+            status.innerHTML = `<span style="color:${color};">已${actionText}${timeText ? ' ' + timeText : ''}</span>`;
+        }
+
+        async function refreshAttendanceTodayStatus() {
+            try {
+                const data = await fetchAttendanceTodayStatus(currentStudentId);
+                renderAttendanceTodayStatus(data);
+                return data;
+            } catch (err) {
+                console.warn('[ADMIN ATTENDANCE] refresh today status failed', err);
+                return null;
+            }
+        }
+
+        async function confirmRepeatAttendanceIfNeeded(eventType) {
+            const todayData = await fetchAttendanceTodayStatus(currentStudentId);
+            renderAttendanceTodayStatus(todayData);
+            const count = countTodayAttendanceType(todayData, eventType);
+            if (count <= 0) return true;
+
+            const actionText = getAttendanceActionText(eventType);
+            const events = Array.isArray(todayData?.events) ? todayData.events : [];
+            const latestSame = events.find(ev => (ev?.event_type || ev?.eventType) === eventType);
+            const timeText = getAttendanceTimeText(latestSame?.event_time || latestSame?.eventTime || latestSame?.created_at || latestSame?.createdAt);
+            return confirm(`今日已經${actionText}${timeText ? '（' + timeText + '）' : ''}，請確認是否再次登記${actionText}？`);
+        }
+
+        function makeCancelledAttendanceError() {
+            const err = new Error('已取消本次打卡');
+            err.cancelled = true;
+            return err;
+        }
+
+        async function recordAttendanceEvent(eventType, source = 'admin_manual', options = {}) {
             if (!currentStudentId) throw new Error('請先感應學生卡');
             if (!window.TappieAPI || typeof TappieAPI.adminRecordAttendance !== 'function') {
                 throw new Error('TappieAPI.adminRecordAttendance 尚未載入');
+            }
+
+            if (!options.skipRepeatConfirm) {
+                const confirmed = await confirmRepeatAttendanceIfNeeded(eventType);
+                if (!confirmed) throw makeCancelledAttendanceError();
             }
 
             const data = await TappieAPI.adminRecordAttendance({
@@ -5695,18 +5775,26 @@
             if (!data || !data.success) {
                 throw new Error(data?.message || data?.error || '打卡登記失敗');
             }
+
+            try {
+                data.todayStatus = await fetchAttendanceTodayStatus(currentStudentId);
+            } catch (err) {
+                console.warn('[ADMIN ATTENDANCE] fetch after record failed', err);
+            }
             return data;
         }
 
         function renderAttendanceResult(data, eventType) {
-            const actionText = eventType === 'checkout' ? '離校' : '到校';
+            const actionText = getAttendanceActionText(eventType);
             const status = document.getElementById('admin-v2-attendance-status');
             const banner = document.getElementById('admin-v2-auto-banner');
             const timeText = getAttendanceTimeText(data?.event?.event_time || data?.event?.eventTime || data?.eventTime);
             const duplicateText = data?.duplicateRecent ? '（30 秒內重複，已略過新增）' : '';
             const text = `已登記${actionText}${timeText ? ' ' + timeText : ''}${duplicateText}`;
 
-            if (status) status.innerText = text;
+            if (data?.todayStatus) renderAttendanceTodayStatus(data.todayStatus);
+            else if (status) status.innerText = text;
+
             if (banner && ADMIN_V2_ATTENDANCE_MODE !== 'manual') {
                 banner.innerText = `${getAttendanceStudentName()}：${text}`;
             }
@@ -5727,6 +5815,11 @@
                 renderAttendanceResult(data, eventType);
                 alert(`✅ 已登記${actionText}` + (data?.duplicateRecent ? '（短時間重複掃卡，未新增第二筆）' : ''));
             } catch (err) {
+                if (err?.cancelled) {
+                    const msgEl = document.getElementById('msg');
+                    if (msgEl) msgEl.innerText = '已取消本次打卡';
+                    return;
+                }
                 alert('⚠️ ' + (err.message || err));
             } finally {
                 if (btn) { btn.innerText = oldText || (eventType === 'checkout' ? '確認離校' : '確認到校'); btn.style.pointerEvents = 'auto'; }
@@ -5740,6 +5833,7 @@
             // NFC 從 tap.html 回來時，localStorage 比 sessionStorage 更穩；執行前一定重讀一次。
             ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
             updateAttendanceModeUI();
+            await refreshAttendanceTodayStatus();
             adminV2DebugAttendance('handleAttendanceScanResolved');
 
             if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
@@ -5756,6 +5850,11 @@
                     const data = await recordAttendanceEvent(eventType, 'admin_auto');
                     renderAttendanceResult(data, eventType);
                 } catch (err) {
+                    if (err?.cancelled) {
+                        if (status) status.innerText = `已取消自動${actionText}`;
+                        if (banner) banner.innerText = `${getAttendanceStudentName()}：已取消本次自動${actionText}`;
+                        return;
+                    }
                     if (status) status.innerText = `自動${actionText}失敗`;
                     if (banner) banner.innerText = `⚠️ ${getAttendanceStudentName()} 自動${actionText}失敗：${err.message || err}`;
                     alert('⚠️ ' + (err.message || err));
