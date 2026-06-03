@@ -1672,8 +1672,8 @@
             width:100%;
             min-height:42px;
         }
-        .admin-v2-nocard-btn.checkin { background:linear-gradient(135deg,#22c55e,#39d98a); }
-        .admin-v2-nocard-btn.checkout { background:linear-gradient(135deg,#ef4444,#fb7185); }
+        .admin-v2-nocard-btn.checkin { background:linear-gradient(135deg,#22c55e,#39d98a); color:#fff !important; }
+        .admin-v2-nocard-btn.checkout { background:linear-gradient(135deg,#ef4444,#fb7185); color:#fff !important; }
 
 
   </style>
@@ -1698,7 +1698,7 @@
             </div>
         </div>
         <div class="admin-v2-top-actions">
-            <button class="admin-v2-utility super-only" type="button" onclick="openConsoleFromAdmin()">Console</button>
+            <button class="admin-v2-utility super-only" type="button" onclick="openConsoleFromAdmin()">校區後台</button>
             <button class="admin-v2-icon-btn" type="button" onclick="adminLogout()" aria-label="登出">⎋</button>
         </div>
     </div>
@@ -6823,9 +6823,56 @@ function getAdminQueryClassOptions() {
             }
         }
 
-        function openConsoleFromAdmin() {
-            const target = `console.html?schoolCode=${encodeURIComponent(CURRENT_SCHOOL || '')}`;
-            window.location.href = target;
+        async function openConsoleFromAdmin() {
+            if (!isAdminV2Super()) {
+                alert('只有 Super Admin 可以進入校區後台。');
+                return;
+            }
+
+            const btn = document.querySelector('.admin-v2-utility.super-only');
+            const oldText = btn ? btn.innerText : '';
+            if (btn) {
+                btn.innerText = '登入中...';
+                btn.disabled = true;
+            }
+
+            try {
+                const schoolCode = CURRENT_SCHOOL || '';
+                const password = ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '';
+                if (!schoolCode || !password) throw new Error('缺少校區或 Super Admin 授權資料');
+
+                let result = null;
+                if (window.TappieAPI && typeof TappieAPI.consoleAuth === 'function') {
+                    result = await TappieAPI.consoleAuth({
+                        mode: 'super_admin',
+                        schoolCode,
+                        password
+                    });
+                } else {
+                    const res = await fetch(`${getAdminQueryBaseUrl()}/console-auth`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'super_admin', schoolCode, password })
+                    });
+                    result = await res.json().catch(() => ({}));
+                }
+
+                if (!result || !result.success || !result.token) {
+                    throw new Error(result?.message || result?.error || '校區後台自動登入失敗');
+                }
+
+                localStorage.setItem('tappie_console_session', JSON.stringify(result));
+                const target = `console.html?schoolCode=${encodeURIComponent(schoolCode)}`;
+                window.location.href = target;
+            } catch (err) {
+                console.error('[open console from admin] failed', err);
+                alert('校區後台登入失敗：' + (err.message || err));
+            } finally {
+                if (btn) {
+                    btn.innerText = oldText || '校區後台';
+                    btn.disabled = false;
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
