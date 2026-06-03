@@ -466,6 +466,6 @@ function defaultGamification() {
     dailyChallenge: { passScore: 60, tiers: [{min:80,pts:30},{min:70,pts:20},{min:60,pts:10}] },
     mission: { failThreshold:5, failBasePenalty:-250, failPenaltyStep:50, goodThreshold:10, goodReward:100, perfectThreshold:15, perfectReward:200 },
     leaderboard:[100,50,30],
-    gachaPicks: { "初階Ai":1, "中階Ai":2, "高階Ai":3, "玩家對戰":2, "活動Boss":1 }
+    gachaPicks: { "初階Ai":1, "中階Ai":2, "高階Ai":3, "玩家對戰":3, "活動Boss":1 }
   };
 }
