@@ -123,6 +123,16 @@
     .student-avatar-img { width: 105px; height: 105px; border-radius: 50%; object-fit: cover; margin-bottom: 18px; filter: drop-shadow(0 8px 15px rgba(0,0,0,0.1)); border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     
     .student-name { font-size: 30px; font-weight: 900; color: var(--text-main); margin: 0 0 28px 0; letter-spacing: 3px; text-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .student-attendance-status {
+      margin: -16px 0 24px 0;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: var(--text-sub);
+      line-height: 1.45;
+    }
+    .student-attendance-status.checkin { color: var(--marian-green); }
+    .student-attendance-status.checkout { color: var(--marian-red); }
     
     .points-container { display: flex; flex-direction: column; align-items: center; margin: 0 0 35px 0; }
     .points { font-size: 82px; font-weight: 900; line-height: 1; margin: 0; background: linear-gradient(135deg, #ff4757, #ff6b81, #e74c3c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 10px 15px rgba(231, 76, 60, 0.25)); }
@@ -367,6 +377,109 @@
       box-shadow: 0 8px 18px rgba(0,102,204,0.22);
     }
 
+    .push-device-summary {
+      margin-top: 14px;
+      padding: 14px 14px 12px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.48);
+      border: 1px solid rgba(255,255,255,0.78);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+    }
+    .push-device-summary-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 9px;
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--text-sub);
+      letter-spacing: 1px;
+    }
+    .push-device-count {
+      color: var(--primary-blue);
+      white-space: nowrap;
+    }
+    .push-device-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .push-device-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 11px;
+      border-radius: 17px;
+      background: rgba(255,255,255,0.66);
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+    .push-device-info {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .push-device-name {
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .push-device-meta {
+      color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .push-device-badge {
+      flex: 0 0 auto;
+      color: var(--marian-green);
+      background: rgba(46,204,113,0.12);
+      border: 1px solid rgba(46,204,113,0.22);
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .push-device-empty {
+      color: var(--text-sub);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.6;
+      text-align: center;
+      padding: 8px 4px 3px;
+    }
+    .push-device-name-input {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 18px;
+      padding: 15px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.65);
+      color: var(--text-main);
+      font-size: 16px;
+      font-weight: 900;
+      outline: none;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .push-device-name-input::placeholder {
+      color: #a4b0be;
+      font-weight: 800;
+    }
+    .push-device-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
     @media (min-width: 768px) {
       .home-notification-grid {
         grid-template-columns: 1fr 1fr;
@@ -428,6 +541,7 @@
         <div id="honor-title" class="title-badge hidden"></div>
         <img src="/assets/logo.webp" id="student-avatar" class="student-avatar-img">
         <h1 id="student-name" class="student-name">-</h1>
+        <div id="student-attendance-status" class="student-attendance-status hidden"></div>
         <div class="points-container">
           <div id="current-points" class="points">0</div>
           <div class="points-label">Total Points</div>
@@ -459,6 +573,16 @@
             </span>
             <span class="home-notify-chevron">›</span>
           </button>
+        </div>
+
+        <div id="push-device-summary" class="push-device-summary">
+          <div class="push-device-summary-title">
+            <span>已綁定通知裝置</span>
+            <span id="push-device-count" class="push-device-count">0 / 3</span>
+          </div>
+          <div id="push-device-list" class="push-device-list">
+            <div class="push-device-empty">尚未綁定裝置</div>
+          </div>
         </div>
       </div>
 
@@ -745,6 +869,23 @@
     </div>
   </div>
 
+  <div id="push-device-name-overlay" class="modal-overlay" onclick="togglePushDeviceNameModal(false)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 style="text-align:center; color:var(--text-main); margin-top:0; font-weight:900; letter-spacing:1px;">設定通知裝置名稱</h3>
+      <p style="color:var(--text-main); font-weight:900; line-height:1.8; text-align:center; margin:0;">
+        請為這台裝置取一個好辨識的名稱。
+      </p>
+      <p style="color:var(--text-sub); font-weight:800; line-height:1.7; text-align:center; margin:10px 0 0; font-size:13px;">
+        例如：媽媽手機、爸爸手機、櫃檯平板。
+      </p>
+      <input id="push-device-label-input" class="push-device-name-input" maxlength="24" placeholder="媽媽手機">
+      <div class="push-device-modal-actions">
+        <button class="pwa-required-btn cancel" onclick="togglePushDeviceNameModal(false)">取消</button>
+        <button class="pwa-required-btn primary" onclick="confirmPushDeviceName()">確認訂閱</button>
+      </div>
+    </div>
+  </div>
+
   <div id="logModal" class="modal-overlay" onclick="toggleLogs(false)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 style="text-align:center; color:var(--text-main); margin-top:0; font-weight:900; letter-spacing:2px;">📝 最近點數紀錄</h3>
@@ -849,6 +990,10 @@
     let weeklyReportAvailable = false;
     const TAPPIE_VAPID_PUBLIC_KEY = window.TAPPIE_VAPID_PUBLIC_KEY || "BMv4zZ4lFP0InS2c5BQJTtVUZ7WedDUf3Rqz9v3bDZe3mlpuROiwTwbP1FGHYyJ6cbH6D0gNX5aQvUhjqE5qNhw";
 
+    const TAPPIE_PUSH_DEVICE_LIMIT = 3;
+    let cachedPushDevices = [];
+    let pendingPushSubscription = null;
+
     // 🚀 SPA 分頁切換邏輯
     function switchTab(tabId, titleText, navElement) {
       // 🔒 檢查是否被鎖定
@@ -928,6 +1073,30 @@
       installPWA();
     }
 
+    function togglePushDeviceNameModal(show, subscription = null) {
+      const modal = document.getElementById('push-device-name-overlay');
+      const input = document.getElementById('push-device-label-input');
+      if (!modal) return;
+
+      if (show) {
+        pendingPushSubscription = subscription;
+        if (input) {
+          const currentDevice = cachedPushDevices.find(device => device.isCurrent || device.is_current);
+          input.value = currentDevice?.deviceLabel || currentDevice?.device_label || getPushDeviceInfo().deviceLabel;
+          setTimeout(() => {
+            input.focus();
+            input.select();
+          }, 80);
+        }
+        if (window.GlobalAudio) GlobalAudio.play('popupOpen');
+        modal.classList.add('show');
+      } else {
+        pendingPushSubscription = null;
+        if (window.GlobalAudio) GlobalAudio.play('popupClose');
+        modal.classList.remove('show');
+      }
+    }
+
     function setAttendancePushStatus(text, state = "") {
       const status = document.getElementById('attendance-push-status');
       if (!status) return;
@@ -935,7 +1104,7 @@
       status.className = `home-notify-status ${state}`.trim();
     }
 
-function isValidVapidPublicKey() {
+    function isValidVapidPublicKey() {
       return TAPPIE_VAPID_PUBLIC_KEY && !String(TAPPIE_VAPID_PUBLIC_KEY).startsWith("REPLACE_WITH_");
     }
 
@@ -965,33 +1134,167 @@ function isValidVapidPublicKey() {
       };
     }
 
-    async function saveCurrentPushSubscription(subscription) {
+    function formatPushDeviceTime(value) {
+      if (!value) return "";
+      try {
+        return new Date(value).toLocaleString('zh-TW', {
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function normalizePushDevices(devices = []) {
+      return (devices || []).map(device => ({
+        ...device,
+        deviceLabel: device.deviceLabel || device.device_label || "未命名裝置",
+        isCurrent: Boolean(device.isCurrent || device.is_current),
+        lastSeenAt: device.lastSeenAt || device.last_seen_at || device.updated_at || device.created_at || "",
+        createdAt: device.createdAt || device.created_at || "",
+        displayMode: device.displayMode || device.display_mode || "",
+        permissionStatus: device.permissionStatus || device.permission_status || ""
+      }));
+    }
+
+    function renderPushDeviceList(devices = [], maxDevices = TAPPIE_PUSH_DEVICE_LIMIT) {
+      const list = document.getElementById('push-device-list');
+      const count = document.getElementById('push-device-count');
+      if (!list || !count) return;
+
+      const normalized = normalizePushDevices(devices);
+      cachedPushDevices = normalized;
+      count.innerText = `${normalized.length} / ${maxDevices || TAPPIE_PUSH_DEVICE_LIMIT}`;
+
+      if (!isTappieStandaloneMode()) {
+        list.innerHTML = `<div class="push-device-empty">從主畫面開啟後，即可查看與新增通知裝置。</div>`;
+        return;
+      }
+
+      if (!normalized.length) {
+        list.innerHTML = `<div class="push-device-empty">尚未綁定裝置。最多可綁定 ${maxDevices || TAPPIE_PUSH_DEVICE_LIMIT} 台。</div>`;
+        return;
+      }
+
+      list.innerHTML = normalized.map(device => {
+        const label = escapeHtml(device.deviceLabel || "未命名裝置");
+        const metaParts = [
+          [device.platform, device.browser].filter(Boolean).join(" "),
+          device.lastSeenAt ? `最後同步 ${formatPushDeviceTime(device.lastSeenAt)}` : ""
+        ].filter(Boolean);
+        const meta = escapeHtml(metaParts.join("｜") || "通知裝置");
+        const badge = device.isCurrent ? `<span class="push-device-badge">目前裝置</span>` : "";
+        return `
+          <div class="push-device-row">
+            <div class="push-device-info">
+              <div class="push-device-name">${label}</div>
+              <div class="push-device-meta">${meta}</div>
+            </div>
+            ${badge}
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function listPushDevices(currentEndpoint = "") {
+      if (!window.TappieAPI || !TappieAPI.savePushSubscription) {
+        throw new Error("TappieAPI.savePushSubscription 尚未載入");
+      }
+
+      const payload = {
+        action: "list",
+        uid: STUDENT_ID,
+        studentUid: STUDENT_ID
+      };
+      if (currentEndpoint) payload.endpoint = currentEndpoint;
+
+      if (typeof TappieAPI.listPushSubscriptions === "function") {
+        return await TappieAPI.listPushSubscriptions(payload);
+      }
+
+      return await TappieAPI.savePushSubscription(payload);
+    }
+
+    async function refreshPushDeviceList(currentEndpoint = "") {
+      try {
+        const result = await listPushDevices(currentEndpoint);
+        if (result && result.success !== false) {
+          renderPushDeviceList(result.devices || [], result.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT);
+        } else {
+          renderPushDeviceList([], TAPPIE_PUSH_DEVICE_LIMIT);
+        }
+        return result;
+      } catch (err) {
+        console.warn("push device list failed", err);
+        const list = document.getElementById('push-device-list');
+        if (list) list.innerHTML = `<div class="push-device-empty">裝置清單讀取失敗，稍後再試。</div>`;
+        return null;
+      }
+    }
+
+    async function saveCurrentPushSubscription(subscription, deviceLabel = "") {
       if (!window.TappieAPI || !TappieAPI.savePushSubscription) {
         throw new Error("TappieAPI.savePushSubscription 尚未載入");
       }
       const subscriptionJson = subscription.toJSON ? subscription.toJSON() : subscription;
       const deviceInfo = getPushDeviceInfo();
+      const finalLabel = String(deviceLabel || deviceInfo.deviceLabel || "").trim();
       return await TappieAPI.savePushSubscription({
+        action: "save",
         uid: STUDENT_ID,
         studentUid: STUDENT_ID,
         subscription: subscriptionJson,
         endpoint: subscriptionJson.endpoint,
         keys: subscriptionJson.keys || {},
         permissionStatus: Notification.permission,
-        ...deviceInfo
+        ...deviceInfo,
+        deviceLabel: finalLabel
       });
     }
 
-    async function createAndSavePushSubscription(reg) {
-      const subscription = await reg.pushManager.subscribe({
+    async function createPushSubscription(reg) {
+      return await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(TAPPIE_VAPID_PUBLIC_KEY)
       });
-      const saved = await saveCurrentPushSubscription(subscription);
-      if (!saved || saved.success === false) {
-        throw new Error(saved?.message || saved?.error || "推播訂閱儲存失敗");
+    }
+
+    async function confirmPushDeviceName() {
+      const input = document.getElementById('push-device-label-input');
+      const label = String(input?.value || "").trim() || getPushDeviceInfo().deviceLabel;
+
+      if (!pendingPushSubscription) {
+        togglePushDeviceNameModal(false);
+        return;
       }
-      return { subscription, saved };
+
+      try {
+        setAttendancePushStatus("正在儲存通知裝置...", "warn");
+        const saved = await saveCurrentPushSubscription(pendingPushSubscription, label);
+
+        if (!saved || saved.success === false) {
+          if (saved?.error === "max_devices_reached") {
+            alert(`⚠️ 這位學生已綁定 ${saved.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT} 台通知裝置。\n請先整理裝置後，再新增新的手機或平板。`);
+          } else {
+            alert(`⚠️ 通知裝置儲存失敗：${saved?.message || saved?.error || "請稍後再試"}`);
+          }
+          setAttendancePushStatus("通知啟用失敗，請稍後再試", "bad");
+          return;
+        }
+
+        const savedEndpoint = pendingPushSubscription?.endpoint || "";
+        togglePushDeviceNameModal(false);
+        await refreshPushDeviceList(savedEndpoint);
+        setAttendancePushStatus("已啟用上放學通知", "ok");
+        alert("✅ 上放學通知已啟用！\n之後老師完成到校或離校登記時，這台裝置就能收到通知。");
+      } catch (err) {
+        console.error("push save failed", err);
+        setAttendancePushStatus("通知啟用失敗，請稍後再試", "bad");
+        alert(`⚠️ 通知啟用失敗：${err.message || '請稍後再試'}`);
+      }
     }
 
     async function refreshAttendancePushStatus() {
@@ -1000,34 +1303,33 @@ function isValidVapidPublicKey() {
         // 真正的 Web Push 支援檢查，等從主畫面開啟後再做。
         if (!isTappieStandaloneMode()) {
           setAttendancePushStatus("加入主畫面獲得通知", "warn");
+          renderPushDeviceList([], TAPPIE_PUSH_DEVICE_LIMIT);
           return;
         }
 
         if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
           setAttendancePushStatus("此裝置暫不支援通知", "warn");
+          await refreshPushDeviceList("");
           return;
         }
 
         if (Notification.permission === "denied") {
           setAttendancePushStatus("通知尚未開啟，可至設定允許", "warn");
+          await refreshPushDeviceList("");
           return;
         }
 
         const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
+        const currentEndpoint = sub?.endpoint || "";
+        const listResult = await refreshPushDeviceList(currentEndpoint);
+        const devices = normalizePushDevices(listResult?.devices || []);
+        const hasCurrentDevice = devices.some(device => device.isCurrent);
 
-        if (sub) {
-          try {
-            const saved = await saveCurrentPushSubscription(sub);
-            if (saved && saved.success !== false) {
-              setAttendancePushStatus("已啟用上放學通知", "ok");
-            } else {
-              setAttendancePushStatus("已允許通知，等待同步完成", "warn");
-            }
-          } catch (syncErr) {
-            console.warn("push subscription sync failed", syncErr);
-            setAttendancePushStatus("已允許通知，等待同步完成", "warn");
-          }
+        if (sub && hasCurrentDevice) {
+          setAttendancePushStatus("已啟用上放學通知", "ok");
+        } else if (sub && !hasCurrentDevice) {
+          setAttendancePushStatus("這台裝置尚未完成綁定", "warn");
         } else if (Notification.permission === "granted") {
           setAttendancePushStatus("已允許通知，尚未完成訂閱", "warn");
         } else {
@@ -1067,36 +1369,109 @@ function isValidVapidPublicKey() {
         return;
       }
 
-      const permission = Notification.permission === "granted"
-        ? "granted"
-        : await Notification.requestPermission();
-
-      if (permission !== "granted") {
-        setAttendancePushStatus("尚未啟用，之後可再按一次訂閱", "warn");
-        return;
-      }
-
       try {
         const reg = await navigator.serviceWorker.ready;
         const existing = await reg.pushManager.getSubscription();
+        const listBefore = await refreshPushDeviceList(existing?.endpoint || "");
+        const devices = normalizePushDevices(listBefore?.devices || []);
+        const hasCurrentDevice = devices.some(device => device.isCurrent);
 
-        if (existing) {
-          setAttendancePushStatus("正在同步通知設定...", "warn");
-          const saved = await saveCurrentPushSubscription(existing);
-          if (!saved || saved.success === false) throw new Error(saved?.message || saved?.error || "推播訂閱同步失敗");
-          setAttendancePushStatus("已啟用上放學通知", "ok");
-          alert("✅ 這台裝置已經啟用上放學通知。");
+        if (!existing && devices.length >= (listBefore?.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT)) {
+          alert(`⚠️ 這位學生已綁定 ${listBefore?.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT} 台通知裝置。\n為了方便追蹤，目前最多綁定 ${listBefore?.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT} 台。`);
+          setAttendancePushStatus("已達裝置上限", "warn");
           return;
         }
 
-        setAttendancePushStatus("正在建立通知訂閱...", "warn");
-        const result = await createAndSavePushSubscription(reg);
-        setAttendancePushStatus("已啟用上放學通知", "ok");
-        alert("✅ 上放學通知已啟用！\n之後老師完成到校或離校登記時，這台裝置就能收到通知。");
+        const permission = Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+
+        if (permission !== "granted") {
+          setAttendancePushStatus("尚未啟用，之後可再按一次訂閱", "warn");
+          return;
+        }
+
+        const subscription = existing || await createPushSubscription(reg);
+
+        // 新增或更新時，都讓家長確認裝置名稱，避免之後不知道是哪一台。
+        togglePushDeviceNameModal(true, subscription);
       } catch (err) {
         console.error("push subscribe failed", err);
         setAttendancePushStatus("通知啟用失敗，請稍後再試", "bad");
         alert(`⚠️ 通知啟用失敗：${err.message || '請稍後再試'}`);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function formatAttendanceDashboardTime(value) {
+      if (!value) return "";
+      try {
+        return new Date(value).toLocaleTimeString('zh-TW', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'Asia/Taipei'
+        });
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function renderStudentAttendanceStatus(latestEvent) {
+      const el = document.getElementById('student-attendance-status');
+      if (!el) return;
+
+      const eventType = latestEvent?.eventType || latestEvent?.event_type || "";
+      const eventTime = latestEvent?.eventTime || latestEvent?.event_time || "";
+      const timeText = formatAttendanceDashboardTime(eventTime);
+
+      if (!eventType || !eventTime || !timeText) {
+        el.innerText = "";
+        el.className = "student-attendance-status hidden";
+        return;
+      }
+
+      if (eventType === "checkin") {
+        el.innerText = `今日已於 ${timeText} 到校`;
+        el.className = "student-attendance-status checkin";
+      } else if (eventType === "checkout") {
+        el.innerText = `今日已於 ${timeText} 離校`;
+        el.className = "student-attendance-status checkout";
+      } else {
+        el.innerText = "";
+        el.className = "student-attendance-status hidden";
+      }
+    }
+
+    async function refreshStudentAttendanceStatus() {
+      const el = document.getElementById('student-attendance-status');
+      if (!el || !STUDENT_ID) return;
+      try {
+        const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+          ? TappieAPI.supabaseBaseUrl
+          : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+        const res = await fetch(`${base}/get-student-attendance-status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: STUDENT_ID })
+        });
+        const result = await res.json().catch(() => ({}));
+        if (result && result.success !== false && result.latestEvent) {
+          renderStudentAttendanceStatus(result.latestEvent);
+        } else {
+          renderStudentAttendanceStatus(null);
+        }
+      } catch (err) {
+        console.warn("student attendance status failed", err);
+        renderStudentAttendanceStatus(null);
       }
     }
 
@@ -1398,6 +1773,7 @@ function isValidVapidPublicKey() {
 
       // 🚀 2. 原本的資料渲染...
       document.getElementById('student-name').innerText = data.studentName;
+      refreshStudentAttendanceStatus();
       document.getElementById('current-points').innerText = data.currentPoints;
 
       if (data.parentEmail && data.parentEmail.includes('@')) {
