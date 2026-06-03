@@ -6525,14 +6525,14 @@ function getAdminQueryClassOptions() {
                     const bestTime = getAdminStudentBestTime(s);
                     const bestTimeText = getAdminQueryTimeText(bestTime) || '尚無';
                     const records = getAdminStudentRecords(s);
-                    const todayRecords = records.filter(r => isAdminTodayTaipei(getAdminRecordTimeValue(r)));
-                    const recordHtml = todayRecords.length
-                        ? todayRecords.slice(0, 8).map(r => {
+                    const scheduleRecords = records;
+                    const recordHtml = scheduleRecords.length
+                        ? scheduleRecords.slice(0, 12).map(r => {
                             const score = Number(r.score ?? r.bestScore ?? r.average_score ?? r.averageScore ?? 0);
                             const time = getAdminQueryTimeText(getAdminRecordTimeValue(r));
                             return `<div class="admin-v2-record-row"><span>${escapeAdminV2(time || '未記錄時間')}</span><strong>${score ? score + ' 分' : '完成'}</strong></div>`;
                           }).join('')
-                        : `<div class="admin-v2-record-row"><span>今日尚無挑戰完成紀錄</span><strong></strong></div>`;
+                        : `<div class="admin-v2-record-row"><span>此排程期間尚無挑戰完成紀錄</span><strong></strong></div>`;
 
                     const medal = top3Uids.includes(s.uid) ? (top3Uids.indexOf(s.uid) === 0 ? '🥇' : top3Uids.indexOf(s.uid) === 1 ? '🥈' : '🥉') : '';
                     return `
@@ -6543,7 +6543,7 @@ function getAdminQueryClassOptions() {
                             </div>
                             <span class="admin-v2-count-badge">${visual.icon} ${visual.text}　${escapeAdminV2(best)}${bestTimeText !== '尚無' ? '　' + escapeAdminV2(bestTimeText) : ''}　▾</span>
                             <div class="admin-v2-row-detail">
-                                <div class="admin-v2-record-title">今日挑戰完成紀錄</div>
+                                <div class="admin-v2-record-title">本單元排程練習紀錄</div>
                                 ${recordHtml}
                             </div>
                         </div>`;
