@@ -1594,7 +1594,7 @@
                     <div>
                         <div class="admin-v2-card-label">今日打卡狀態</div>
                         <div class="admin-v2-big-status" id="admin-v2-attendance-status">尚未接入</div>
-                        <div class="admin-v2-muted">Web Push 上放學通知將在下一階段啟用。</div>
+                        <div class="admin-v2-muted">已接入打卡紀錄；Web Push 通知將在下一階段啟用。</div>
                     </div>
                 </div>
 
@@ -1609,7 +1609,7 @@
                         <button type="button" class="active" data-att-action="checkin" onclick="setManualAttendanceAction('checkin')">到校</button>
                         <button type="button" data-att-action="checkout" onclick="setManualAttendanceAction('checkout')">離校</button>
                     </div>
-                    <button class="admin-v2-action-disabled" type="button" onclick="handleAttendanceConfirm()">確認到校並通知（下一階段）</button>
+                    <button class="admin-v2-action-disabled" type="button" onclick="handleAttendanceConfirm()">確認到校</button>
                 </div>
 
                 <div class="admin-v2-auto-attendance hidden" id="admin-v2-auto-attendance">
@@ -5658,17 +5658,83 @@
                 if (banner) banner.innerText = '自動離校模式已啟用。掃描學生卡後會直接登記離校。';
             } else {
                 if (status) status.innerText = currentStudentId ? '請選擇到校或離校' : '手動打卡模式';
-                if (confirmBtn) confirmBtn.innerText = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? '確認離校並通知（下一階段）' : '確認到校並通知（下一階段）';
+                if (confirmBtn) confirmBtn.innerText = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? '確認離校' : '確認到校';
             }
         }
 
-        function handleAttendanceConfirm() {
-            const label = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? '離校' : '到校';
-            alert(`下一階段會在這裡登記「${label}」並發送通知。`);
-            try { scanner && scanner.focus(); } catch(e) {}
+        function getAttendanceStudentName() {
+            return document.getElementById('stu-name')?.innerText || '學生';
         }
 
-        function handleAttendanceScanResolved() {
+        function getAttendanceTimeText(value) {
+            const d = value ? new Date(value) : new Date();
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        async function recordAttendanceEvent(eventType, source = 'admin_manual') {
+            if (!currentStudentId) throw new Error('請先感應學生卡');
+            if (!window.TappieAPI || typeof TappieAPI.adminRecordAttendance !== 'function') {
+                throw new Error('TappieAPI.adminRecordAttendance 尚未載入');
+            }
+
+            const data = await TappieAPI.adminRecordAttendance({
+                schoolCode: CURRENT_SCHOOL,
+                uid: currentStudentId,
+                eventType,
+                source,
+                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                metadata: {
+                    from: ADMIN_V2_FROM_TAP ? 'tap' : 'admin',
+                    adminMode: ADMIN_V2_ACTIVE_MODE,
+                    attendanceMode: ADMIN_V2_ATTENDANCE_MODE
+                }
+            });
+
+            if (!data || !data.success) {
+                throw new Error(data?.message || data?.error || '打卡登記失敗');
+            }
+            return data;
+        }
+
+        function renderAttendanceResult(data, eventType) {
+            const actionText = eventType === 'checkout' ? '離校' : '到校';
+            const status = document.getElementById('admin-v2-attendance-status');
+            const banner = document.getElementById('admin-v2-auto-banner');
+            const timeText = getAttendanceTimeText(data?.event?.event_time || data?.event?.eventTime || data?.eventTime);
+            const duplicateText = data?.duplicateRecent ? '（30 秒內重複，已略過新增）' : '';
+            const text = `已登記${actionText}${timeText ? ' ' + timeText : ''}${duplicateText}`;
+
+            if (status) status.innerText = text;
+            if (banner && ADMIN_V2_ATTENDANCE_MODE !== 'manual') {
+                banner.innerText = `${getAttendanceStudentName()}：${text}`;
+            }
+            const msgEl = document.getElementById('msg');
+            if (msgEl) msgEl.innerText = `✅ ${getAttendanceStudentName()} ${text}`;
+        }
+
+        async function handleAttendanceConfirm() {
+            const eventType = ADMIN_V2_ATTENDANCE_ACTION === 'checkout' ? 'checkout' : 'checkin';
+            const actionText = eventType === 'checkout' ? '離校' : '到校';
+            const btn = document.querySelector('#admin-v2-manual-attendance .admin-v2-action-disabled');
+            const oldText = btn ? btn.innerText : '';
+
+            try {
+                if (!currentStudentId) return alert('請先感應學生卡');
+                if (btn) { btn.innerText = '登記中...'; btn.style.pointerEvents = 'none'; }
+                const data = await recordAttendanceEvent(eventType, 'admin_manual');
+                renderAttendanceResult(data, eventType);
+                alert(`✅ 已登記${actionText}` + (data?.duplicateRecent ? '（短時間重複掃卡，未新增第二筆）' : ''));
+            } catch (err) {
+                alert('⚠️ ' + (err.message || err));
+            } finally {
+                if (btn) { btn.innerText = oldText || (eventType === 'checkout' ? '確認離校' : '確認到校'); btn.style.pointerEvents = 'auto'; }
+                try { scanner && scanner.focus(); } catch(e) {}
+            }
+        }
+
+        async function handleAttendanceScanResolved() {
             if (ADMIN_V2_ACTIVE_MODE !== 'attendance') return;
 
             // NFC 從 tap.html 回來時，localStorage 比 sessionStorage 更穩；執行前一定重讀一次。
@@ -5679,11 +5745,23 @@
             if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
                 // 每次成功回流都續 10 分鐘，避免大量點名中途過期。
                 writeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
-                const actionText = ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout' ? '離校' : '到校';
+                const eventType = ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout' ? 'checkout' : 'checkin';
+                const actionText = eventType === 'checkout' ? '離校' : '到校';
                 const status = document.getElementById('admin-v2-attendance-status');
-                if (status) status.innerText = `已準備自動${actionText}`;
                 const banner = document.getElementById('admin-v2-auto-banner');
-                if (banner) banner.innerText = `已掃描 ${document.getElementById('stu-name')?.innerText || '學生'}。下一階段會自動登記${actionText}並發送通知。`;
+                if (status) status.innerText = `自動${actionText}登記中...`;
+                if (banner) banner.innerText = `正在登記 ${getAttendanceStudentName()} ${actionText}...`;
+
+                try {
+                    const data = await recordAttendanceEvent(eventType, 'admin_auto');
+                    renderAttendanceResult(data, eventType);
+                } catch (err) {
+                    if (status) status.innerText = `自動${actionText}失敗`;
+                    if (banner) banner.innerText = `⚠️ ${getAttendanceStudentName()} 自動${actionText}失敗：${err.message || err}`;
+                    alert('⚠️ ' + (err.message || err));
+                } finally {
+                    try { scanner && scanner.focus(); } catch(e) {}
+                }
             }
         }
 
