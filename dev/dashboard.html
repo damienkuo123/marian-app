@@ -847,7 +847,7 @@
     const STUDENT_ID = params.get('id');
     let currentParentEmail = ""; 
     let weeklyReportAvailable = false;
-    const TAPPIE_VAPID_PUBLIC_KEY = window.TAPPIE_VAPID_PUBLIC_KEY || "";
+    const TAPPIE_VAPID_PUBLIC_KEY = window.TAPPIE_VAPID_PUBLIC_KEY || "REPLACE_WITH_VAPID_PUBLIC_KEY";
 
     // 🚀 SPA 分頁切換邏輯
     function switchTab(tabId, titleText, navElement) {
@@ -935,6 +935,65 @@
       status.className = `home-notify-status ${state}`.trim();
     }
 
+function isValidVapidPublicKey() {
+      return TAPPIE_VAPID_PUBLIC_KEY && !String(TAPPIE_VAPID_PUBLIC_KEY).startsWith("REPLACE_WITH_");
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+      return outputArray;
+    }
+
+    function getPushDeviceInfo() {
+      const ua = navigator.userAgent || "";
+      const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      const isAndroid = /Android/i.test(ua);
+      const isChrome = /Chrome|CriOS/i.test(ua);
+      const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|Android/i.test(ua);
+      const platform = isIOS ? "iOS" : isAndroid ? "Android" : (navigator.platform || "Unknown");
+      const browser = isChrome ? "Chrome" : isSafari ? "Safari" : "Browser";
+      return {
+        userAgent: ua,
+        platform,
+        browser,
+        displayMode: isTappieStandaloneMode() ? "standalone" : "browser",
+        deviceLabel: `${platform} ${browser}｜${new Date().toLocaleDateString('zh-TW')}`
+      };
+    }
+
+    async function saveCurrentPushSubscription(subscription) {
+      if (!window.TappieAPI || !TappieAPI.savePushSubscription) {
+        throw new Error("TappieAPI.savePushSubscription 尚未載入");
+      }
+      const subscriptionJson = subscription.toJSON ? subscription.toJSON() : subscription;
+      const deviceInfo = getPushDeviceInfo();
+      return await TappieAPI.savePushSubscription({
+        uid: STUDENT_ID,
+        studentUid: STUDENT_ID,
+        subscription: subscriptionJson,
+        endpoint: subscriptionJson.endpoint,
+        keys: subscriptionJson.keys || {},
+        permissionStatus: Notification.permission,
+        ...deviceInfo
+      });
+    }
+
+    async function createAndSavePushSubscription(reg) {
+      const subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(TAPPIE_VAPID_PUBLIC_KEY)
+      });
+      const saved = await saveCurrentPushSubscription(subscription);
+      if (!saved || saved.success === false) {
+        throw new Error(saved?.message || saved?.error || "推播訂閱儲存失敗");
+      }
+      return { subscription, saved };
+    }
+
     async function refreshAttendancePushStatus() {
       try {
         // 家長在瀏覽器中看到的第一訊息，應該是「加入主畫面」而不是「不支援」。
@@ -958,9 +1017,19 @@
         const sub = await reg.pushManager.getSubscription();
 
         if (sub) {
-          setAttendancePushStatus("已啟用上放學通知", "ok");
+          try {
+            const saved = await saveCurrentPushSubscription(sub);
+            if (saved && saved.success !== false) {
+              setAttendancePushStatus("已啟用上放學通知", "ok");
+            } else {
+              setAttendancePushStatus("已允許通知，等待同步完成", "warn");
+            }
+          } catch (syncErr) {
+            console.warn("push subscription sync failed", syncErr);
+            setAttendancePushStatus("已允許通知，等待同步完成", "warn");
+          }
         } else if (Notification.permission === "granted") {
-          setAttendancePushStatus("已允許通知，等待完成訂閱", "warn");
+          setAttendancePushStatus("已允許通知，尚未完成訂閱", "warn");
         } else {
           setAttendancePushStatus("尚未訂閱上放學通知", "");
         }
@@ -992,6 +1061,12 @@
         return;
       }
 
+      if (!isValidVapidPublicKey()) {
+        setAttendancePushStatus("推播系統設定中，稍後即可啟用", "warn");
+        alert("🔧 推播系統尚未完成 VAPID 公鑰設定。\n設定完成後，家長就能正式啟用上放學通知。");
+        return;
+      }
+
       const permission = Notification.permission === "granted"
         ? "granted"
         : await Notification.requestPermission();
@@ -1006,22 +1081,22 @@
         const existing = await reg.pushManager.getSubscription();
 
         if (existing) {
+          setAttendancePushStatus("正在同步通知設定...", "warn");
+          const saved = await saveCurrentPushSubscription(existing);
+          if (!saved || saved.success === false) throw new Error(saved?.message || saved?.error || "推播訂閱同步失敗");
           setAttendancePushStatus("已啟用上放學通知", "ok");
           alert("✅ 這台裝置已經啟用上放學通知。");
           return;
         }
 
-        if (!TAPPIE_VAPID_PUBLIC_KEY) {
-          setAttendancePushStatus("已允許通知，等待系統完成訂閱", "warn");
-          alert("✅ 通知權限已開啟。\n下一步接上推播訂閱資料庫後，就能正式啟用上放學通知。");
-          return;
-        }
-
-        setAttendancePushStatus("準備建立推播訂閱...", "warn");
-        alert("✅ 通知權限已開啟，推播訂閱資料庫會在下一階段接上。");
+        setAttendancePushStatus("正在建立通知訂閱...", "warn");
+        const result = await createAndSavePushSubscription(reg);
+        setAttendancePushStatus("已啟用上放學通知", "ok");
+        alert("✅ 上放學通知已啟用！\n之後老師完成到校或離校登記時，這台裝置就能收到通知。");
       } catch (err) {
         console.error("push subscribe failed", err);
         setAttendancePushStatus("通知啟用失敗，請稍後再試", "bad");
+        alert(`⚠️ 通知啟用失敗：${err.message || '請稍後再試'}`);
       }
     }
 
