@@ -937,7 +937,8 @@
 
     async function refreshAttendancePushStatus() {
       try {
-        // 瀏覽器模式先引導加入主畫面，不用顯示「不支援」避免家長卻步。
+        // 家長在瀏覽器中看到的第一訊息，應該是「加入主畫面」而不是「不支援」。
+        // 真正的 Web Push 支援檢查，等從主畫面開啟後再做。
         if (!isTappieStandaloneMode()) {
           setAttendancePushStatus("加入主畫面獲得通知", "warn");
           return;
@@ -949,7 +950,7 @@
         }
 
         if (Notification.permission === "denied") {
-          setAttendancePushStatus("通知尚未開啟", "warn");
+          setAttendancePushStatus("通知尚未開啟，可至設定允許", "warn");
           return;
         }
 
@@ -972,7 +973,7 @@
     async function handleAttendancePushSubscribeClick() {
       if (window.GlobalAudio) GlobalAudio.play('click');
 
-      // 先判斷是否從主畫面開啟；瀏覽器模式一律走加入主畫面教學。
+      // 瀏覽器模式一律先引導加入主畫面，不先顯示「不支援」，避免家長卻步。
       if (!isTappieStandaloneMode()) {
         togglePwaRequiredModal(true);
         setAttendancePushStatus("加入主畫面獲得通知", "warn");
@@ -980,16 +981,14 @@
       }
 
       if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-        alert("⚠️ 這台裝置目前暫不支援上放學通知。
-請確認系統與瀏覽器已更新，或改用支援通知的裝置再試一次。");
+        alert("⚠️ 這台裝置目前暫時無法啟用通知。\n請確認已從主畫面開啟 Tappie，並更新 Safari 或 Chrome 後再試一次。");
         setAttendancePushStatus("此裝置暫不支援通知", "warn");
         return;
       }
 
       if (Notification.permission === "denied") {
-        alert("ℹ️ 目前尚未開啟 Tappie 通知。
-如果之前選擇了不允許，系統可能不會再次跳出授權視窗；請到手機的通知設定中允許 Tappie 通知後再試一次。");
-        setAttendancePushStatus("通知尚未開啟", "warn");
+        alert("🔔 通知尚未開啟。\n如果之前曾按下不允許，請到手機設定中允許 Tappie 通知，或重新加入主畫面後再試一次。");
+        setAttendancePushStatus("通知尚未開啟，可至設定允許", "warn");
         return;
       }
 
@@ -998,7 +997,7 @@
         : await Notification.requestPermission();
 
       if (permission !== "granted") {
-        setAttendancePushStatus("通知尚未開啟，可之後再試", "warn");
+        setAttendancePushStatus("尚未啟用，之後可再按一次訂閱", "warn");
         return;
       }
 
@@ -1014,8 +1013,7 @@
 
         if (!TAPPIE_VAPID_PUBLIC_KEY) {
           setAttendancePushStatus("已允許通知，等待系統完成訂閱", "warn");
-          alert("✅ 通知權限已開啟。
-下一步接上推播訂閱資料庫後，就能正式啟用上放學通知。");
+          alert("✅ 通知權限已開啟。\n下一步接上推播訂閱資料庫後，就能正式啟用上放學通知。");
           return;
         }
 
