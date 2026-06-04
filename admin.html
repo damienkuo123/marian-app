@@ -1335,6 +1335,16 @@
         .admin-v2-student-row small { display:block; color:var(--admin-muted); margin-top:3px; font-weight:700; }
         .admin-v2-count-badge { border-radius:999px; padding:7px 10px; font-size:12px; font-weight:900; color:var(--admin-text); background:rgba(255,255,255,.74); border:1px solid rgba(255,255,255,1); }
 
+        .admin-v2-attendance-badges { display:flex; align-items:center; justify-content:flex-end; gap:7px; flex-wrap:wrap; }
+        .admin-v2-push-device-badge { border-radius:999px; padding:7px 9px; font-size:12px; font-weight:900; color:#0f766e; background:rgba(20,184,166,.12); border:1px solid rgba(20,184,166,.22); white-space:nowrap; }
+        .admin-v2-push-device-badge.empty { color:#94a3b8; background:rgba(148,163,184,.12); border-color:rgba(148,163,184,.2); }
+        .admin-v2-device-list { margin-top:12px; padding-top:12px; border-top:1px dashed rgba(26,37,47,.10); }
+        .admin-v2-device-title { color:#0f766e; font-size:12px; font-weight:900; margin:0 0 8px; }
+        .admin-v2-device-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px dashed rgba(26,37,47,.07); font-size:12px; color:var(--admin-muted); }
+        .admin-v2-device-row:first-of-type { border-top:0; }
+        .admin-v2-device-row strong { color:var(--admin-text); font-size:12px; font-weight:900; }
+        .admin-v2-device-row span { text-align:right; white-space:nowrap; }
+
         .admin-v2-bottom-nav { left: 50% !important; right: auto !important; width: min(340px, calc(100vw - 48px)) !important; transform: translateX(-50%) !important; grid-template-columns: repeat(3, 1fr) !important; gap: 14px !important; bottom: calc(14px + env(safe-area-inset-bottom)) !important; pointer-events: auto !important; }
         .admin-v2-bottom-pill { display: none !important; }
         .admin-v2-nav-circle { width: 76px !important; height: 76px !important; min-height:76px !important; justify-self:center; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:3px; font-size:26px !important; line-height:1 !important; border: 1px solid rgba(255,255,255,.95) !important; background: rgba(255,255,255,.78) !important; color:#7f8c8d !important; box-shadow:0 14px 26px rgba(0,0,0,.10) !important; }
@@ -5763,6 +5773,7 @@
         let ADMIN_V2_QUERY_POINTS_STATE = [];
         let ADMIN_V2_QUERY_ATTENDANCE_LOADED = false;
         let ADMIN_V2_QUERY_ATTENDANCE_STATE = null;
+        let ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID = {};
         let ADMIN_V2_ATTENDANCE_TODAY_CACHE = null;
 
         let ADMIN_V2_QUERY_ALL_STUDENTS = [];
@@ -6653,6 +6664,7 @@ function getAdminQueryClassOptions() {
                 if (!data || !data.success) throw new Error(data?.message || data?.error || '打卡紀錄讀取失敗');
                 ADMIN_V2_QUERY_ATTENDANCE_STATE = data;
                 ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
+                await loadAdminQueryPushDevicesForStudents(Array.isArray(data.students) ? data.students : []);
                 ADMIN_V2_QUERY_ATTENDANCE_LOADED = true;
                 setupAdminQueryFilters();
                 renderAdminQueryAttendance();
@@ -6662,6 +6674,83 @@ function getAdminQueryClassOptions() {
             }
         }
 
+
+        async function fetchAdminQueryPushDeviceList(uid) {
+            const safeUid = String(uid || '').trim();
+            if (!safeUid) return [];
+            try {
+                const api = window.TappieAPI;
+                let data = null;
+                if (api && typeof api.savePushSubscription === 'function') {
+                    data = await api.savePushSubscription({ action: 'list', uid: safeUid });
+                } else {
+                    const res = await fetch(`${getAdminQueryBaseUrl()}/save-push-subscription`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'list', uid: safeUid })
+                    });
+                    data = await res.json().catch(() => ({}));
+                }
+                if (!data || !data.success) return [];
+                return Array.isArray(data.devices) ? data.devices : [];
+            } catch (err) {
+                console.warn('[ADMIN PUSH DEVICES] list failed', safeUid, err);
+                return [];
+            }
+        }
+
+        async function loadAdminQueryPushDevicesForStudents(students = []) {
+            const list = Array.isArray(students) ? students : [];
+            const uids = Array.from(new Set(list.map(s => String(s.uid || s.studentUid || '').trim()).filter(Boolean)));
+            if (!uids.length) return;
+
+            const cache = ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID || {};
+            const missing = uids.filter(uid => !Array.isArray(cache[uid]));
+            if (!missing.length) return;
+
+            const concurrency = 8;
+            for (let i = 0; i < missing.length; i += concurrency) {
+                const chunk = missing.slice(i, i + concurrency);
+                const results = await Promise.allSettled(chunk.map(uid => fetchAdminQueryPushDeviceList(uid)));
+                results.forEach((result, index) => {
+                    const uid = chunk[index];
+                    cache[uid] = result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : [];
+                });
+            }
+            ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID = cache;
+        }
+
+        function getAdminQueryPushDevices(uid) {
+            const safeUid = String(uid || '').trim();
+            const devices = ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID && Array.isArray(ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID[safeUid])
+                ? ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID[safeUid]
+                : [];
+            return devices.filter(d => d && d.isActive !== false);
+        }
+
+        function renderAdminQueryPushDeviceBadge(uid) {
+            const devices = getAdminQueryPushDevices(uid);
+            const count = devices.length;
+            return `<span class="admin-v2-push-device-badge ${count ? '' : 'empty'}">🔔 ${count}</span>`;
+        }
+
+        function renderAdminQueryPushDeviceList(uid) {
+            const devices = getAdminQueryPushDevices(uid);
+            if (!devices.length) {
+                return `<div class="admin-v2-device-list">
+                    <div class="admin-v2-device-title">訂閱通知裝置</div>
+                    <div class="admin-v2-device-row"><strong>尚無訂閱裝置</strong><span></span></div>
+                </div>`;
+            }
+            return `<div class="admin-v2-device-list">
+                <div class="admin-v2-device-title">訂閱通知裝置</div>
+                ${devices.map(d => {
+                    const label = d.deviceLabel || d.device_label || '未命名裝置';
+                    const time = formatAdminQueryDisplayTime(d.lastSeenAt || d.last_seen_at || d.updatedAt || d.updated_at || d.createdAt || d.created_at || '');
+                    return `<div class="admin-v2-device-row"><strong>${escapeAdminV2(label)}</strong><span>${escapeAdminV2(time || '未記錄時間')}</span></div>`;
+                }).join('')}
+            </div>`;
+        }
         
         function renderAdminQueryAttendance() {
             const box = document.getElementById('admin-v2-query-results');
@@ -6738,11 +6827,15 @@ function getAdminQueryClassOptions() {
                                     <strong>${escapeAdminV2(student.name || '未命名學生')}</strong>
                                     <small>${escapeAdminV2(student.uid || '')}</small>
                                 </div>
-                                <span class="admin-v2-count-badge">${escapeAdminV2(badge)}　▾</span>
+                                <div class="admin-v2-attendance-badges">
+                                    ${renderAdminQueryPushDeviceBadge(student.uid)}
+                                    <span class="admin-v2-count-badge">${escapeAdminV2(badge)}　▾</span>
+                                </div>
                                 <div class="admin-v2-row-detail">
                                     ${noCardActions}
                                     <div class="admin-v2-record-title">${escapeAdminV2(student.name || '學生')} 今日全部打卡紀錄</div>
                                     ${eventHtml}
+                                    ${renderAdminQueryPushDeviceList(student.uid)}
                                 </div>
                             </div>`;
                     }).join('')}
