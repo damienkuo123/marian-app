@@ -6664,7 +6664,7 @@ function getAdminQueryClassOptions() {
                 if (!data || !data.success) throw new Error(data?.message || data?.error || '打卡紀錄讀取失敗');
                 ADMIN_V2_QUERY_ATTENDANCE_STATE = data;
                 ADMIN_V2_QUERY_ALL_STUDENTS = Array.isArray(data.students) ? data.students : ADMIN_V2_QUERY_ALL_STUDENTS;
-                await loadAdminQueryPushDevicesForStudents(Array.isArray(data.students) ? data.students : []);
+                ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID = buildAdminQueryPushDeviceCache(data);
                 ADMIN_V2_QUERY_ATTENDANCE_LOADED = true;
                 setupAdminQueryFilters();
                 renderAdminQueryAttendance();
@@ -6674,6 +6674,22 @@ function getAdminQueryClassOptions() {
             }
         }
 
+
+        function buildAdminQueryPushDeviceCache(data = {}) {
+            const cache = {};
+            const byUid = data && typeof data.pushDevicesByUid === 'object' && data.pushDevicesByUid ? data.pushDevicesByUid : {};
+            Object.keys(byUid).forEach(uid => {
+                cache[uid] = Array.isArray(byUid[uid]) ? byUid[uid] : [];
+            });
+
+            const students = Array.isArray(data.students) ? data.students : [];
+            students.forEach(student => {
+                const uid = String(student.uid || student.studentUid || '').trim();
+                if (!uid) return;
+                if (Array.isArray(student.pushDevices)) cache[uid] = student.pushDevices;
+            });
+            return cache;
+        }
 
         async function fetchAdminQueryPushDeviceList(uid) {
             const safeUid = String(uid || '').trim();
