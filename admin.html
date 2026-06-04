@@ -3290,24 +3290,17 @@
 
         // --- 1. 掃描卡片時的 API 呼叫 ---
         function fetchStudent(cardId) {
-            // 自動到校 / 自動離校模式可能存在 localStorage（從 tap.html 回流或切換模式後），
-            // 掃卡前先重讀一次，避免 actionUI 已開啟時被舊的 manual 狀態擋掉。
-            const lockedAttendanceMode = getAdminV2LockedAutoAttendanceMode();
-            const liveAttendanceMode = readAdminV2AttendanceMode({ allowAuto: true });
-            const memoryAttendanceMode = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
-            if (ADMIN_V2_ACTIVE_MODE === 'attendance') {
-                if (lockedAttendanceMode) {
-                    ADMIN_V2_ATTENDANCE_MODE = lockedAttendanceMode;
-                } else if (memoryAttendanceMode === 'auto_checkin' || memoryAttendanceMode === 'auto_checkout') {
-                    ADMIN_V2_ATTENDANCE_MODE = memoryAttendanceMode;
-                } else if (liveAttendanceMode === 'auto_checkin' || liveAttendanceMode === 'auto_checkout') {
-                    ADMIN_V2_ATTENDANCE_MODE = liveAttendanceMode;
-                }
-            }
-            const isAutoAttendanceScan =
-                ADMIN_V2_ACTIVE_MODE === 'attendance' &&
-                (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout');
-            if (actionUI.style.display === 'block' && !isAutoAttendanceScan) return;
+            // Step 5G：掃卡當下即凍結模式與版本；之後即使使用者快速切換，也不讓舊掃卡結果套用到新模式。
+            const scanRequestSeq = ++ADMIN_V2_SCAN_REQUEST_SEQ;
+            const scanModeVersion = ADMIN_V2_ATTENDANCE_MODE_VERSION;
+            const scanAttendanceMode = ADMIN_V2_ACTIVE_MODE === 'attendance'
+                ? normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE)
+                : 'manual';
+            const isAutoAttendanceScan = ADMIN_V2_ACTIVE_MODE === 'attendance' &&
+                (scanAttendanceMode === 'auto_checkin' || scanAttendanceMode === 'auto_checkout');
+
+            // 加扣點畫面保留原本防呆；打卡畫面則允許手動/自動模式都能直接掃下一位學生。
+            if (actionUI.style.display === 'block' && ADMIN_V2_ACTIVE_MODE !== 'attendance' && !isAutoAttendanceScan) return;
 
             const rawId = String(cardId).trim();
             const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
@@ -3325,8 +3318,13 @@
                 TappieAPI.resolveStudentByUid(finalUid)
                     .then(data => {
                         if (data.success) {
+                            if (scanRequestSeq !== ADMIN_V2_SCAN_REQUEST_SEQ) return;
+                            if (ADMIN_V2_ACTIVE_MODE === 'attendance' && scanModeVersion !== ADMIN_V2_ATTENDANCE_MODE_VERSION) return;
                             currentStudentId = data.uid;
-                            renderAdminUI(toAdminStudentPayload(data.student));
+                            const payload = toAdminStudentPayload(data.student);
+                            payload._attendanceModeAtScan = scanAttendanceMode;
+                            payload._attendanceModeVersionAtScan = scanModeVersion;
+                            renderAdminUI(payload);
                         } else {
                             showError("❌ 查無此學生");
                         }
@@ -3339,7 +3337,11 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
+                        if (scanRequestSeq !== ADMIN_V2_SCAN_REQUEST_SEQ) return;
+                        if (ADMIN_V2_ACTIVE_MODE === 'attendance' && scanModeVersion !== ADMIN_V2_ATTENDANCE_MODE_VERSION) return;
                         currentStudentId = data.uid;
+                        data._attendanceModeAtScan = scanAttendanceMode;
+                        data._attendanceModeVersionAtScan = scanModeVersion;
                         renderAdminUI(data); 
                     } else {
                         showError("❌ 查無此學生");
@@ -3398,7 +3400,7 @@
             renderPointLogs(data.recentLogs || []);
             renderV2StudentSnapshot(data);
             showAdminModeScreen();
-            handleAttendanceScanResolved();
+            handleAttendanceScanResolved(data);
         }
 
         function normalizePointLog(log) {
@@ -5961,6 +5963,8 @@
                     localExpiresAt: localStorage.getItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY),
                     sessionMode: sessionStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY),
                     manualAction: sessionStorage.getItem(ADMIN_V2_MANUAL_ACTION_KEY),
+                    modeVersion: ADMIN_V2_ATTENDANCE_MODE_VERSION,
+                    autoLock: ADMIN_V2_AUTO_ATTENDANCE_LOCK,
                     fromTap: ADMIN_V2_FROM_TAP,
                     url: location.href
                 });
@@ -5986,6 +5990,9 @@
         let ADMIN_V2_AUTO_ATTENDANCE_LOCK = null;
         let ADMIN_V2_GLOBAL_SCAN_BUFFER = '';
         let ADMIN_V2_GLOBAL_SCAN_TIMER = null;
+        // Step 5G：模式版本號。每次切換手動/自動到校/自動離校都立即遞增，避免上一個模式的非同步掃卡結果回來後覆蓋新模式。
+        let ADMIN_V2_ATTENDANCE_MODE_VERSION = 0;
+        let ADMIN_V2_SCAN_REQUEST_SEQ = 0;
 
         let ADMIN_V2_QUERY_ALL_STUDENTS = [];
 
@@ -6092,10 +6099,25 @@
             } catch(e) {}
         }
 
+        function prepareAdminV2AttendanceNextScan(message) {
+            currentStudentId = null;
+            currentPointsValue = 0;
+            try { document.getElementById('top-nav').style.display = 'flex'; } catch(e) {}
+            try {
+                card.className = 'container admin-main';
+                msg.innerText = message || '🟢 系統就緒，請感應學生卡';
+                msg.style.color = '';
+            } catch(e) {}
+            try {
+                if (actionUI) actionUI.style.display = 'none';
+                if (scanUI) scanUI.style.display = 'block';
+            } catch(e) {}
+        }
+
         function setAttendanceMode(mode) {
             const nextMode = normalizeAdminV2AttendanceMode(mode);
-            ADMIN_V2_ACTIVE_MODE = 'attendance';
-            const previousMode = readAdminV2AttendanceMode({ allowAuto: true });
+            const previousMode = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE || 'manual');
+            const modeChanged = previousMode !== nextMode;
 
             if (nextMode === 'auto_checkin' && previousMode !== 'auto_checkin') {
                 const ok = confirm('啟用「自動到校」後，掃描學生卡會直接執行到校登記。\n\n請確認你正在進行大量到校點名。');
@@ -6105,13 +6127,17 @@
                 if (!ok) return;
             }
 
-            // 直接保留使用者剛選的模式，不再交給 setAdminMode 重新讀取後覆蓋成 manual。
+            // Step 5G：使用者點選的模式是唯一真相；立即讓舊模式失效，不再等 storage 同步。
+            ADMIN_V2_ATTENDANCE_MODE_VERSION += 1;
+            ADMIN_V2_GLOBAL_SCAN_BUFFER = '';
+            clearTimeout(ADMIN_V2_GLOBAL_SCAN_TIMER);
             ADMIN_V2_ACTIVE_MODE = 'attendance';
             ADMIN_V2_ATTENDANCE_MODE = nextMode;
             if (nextMode === 'auto_checkin' || nextMode === 'auto_checkout') {
                 setAdminV2LockedAutoAttendanceMode(nextMode);
             } else {
-                setAdminV2LockedAutoAttendanceMode('manual');
+                clearAdminV2AutoAttendance();
+                ADMIN_V2_ATTENDANCE_MODE = 'manual';
             }
             writeAdminV2AttendanceMode(nextMode);
             persistAdminV2State();
@@ -6127,10 +6153,21 @@
             const modeLabel = document.getElementById('admin-v2-current-mode-label');
             if (modeLabel) modeLabel.innerText = `${getAdminV2ModeText()}模式`;
             updateAttendanceModeUI();
-            showAdminModeScreen();
+
+            // 切換模式後立即回到等待掃卡，避免上一位學生畫面和舊模式殘留。
+            if (modeChanged) {
+                const label = nextMode === 'auto_checkin'
+                    ? '🟢 自動到校模式啟用中，請感應學生卡'
+                    : nextMode === 'auto_checkout'
+                        ? '🔴 自動離校模式啟用中，請感應學生卡'
+                        : '🟢 手動打卡模式，請感應學生卡';
+                prepareAdminV2AttendanceNextScan(label);
+            } else {
+                showAdminModeScreen();
+            }
+
             try { scanner && scanner.focus(); } catch(e) {}
-            setTimeout(() => { try { scanner && scanner.focus(); } catch(e) {} }, 120);
-            setTimeout(() => { try { scanner && scanner.focus(); } catch(e) {} }, 420);
+            setTimeout(() => { try { scanner && scanner.focus(); } catch(e) {} }, 80);
         }
 
         function setManualAttendanceAction(action) {
@@ -6380,23 +6417,27 @@
             }
         }
 
-        async function handleAttendanceScanResolved() {
+        async function handleAttendanceScanResolved(scanData = {}) {
             if (ADMIN_V2_ACTIVE_MODE !== 'attendance') return;
 
-            // 執行前重讀，但不可讓剛選好的自動模式被舊 storage 覆蓋回 manual。
-            const lockedAttendanceMode = getAdminV2LockedAutoAttendanceMode();
-            const storedAttendanceMode = readAdminV2AttendanceMode({ allowAuto: true });
-            const memoryAttendanceMode = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
-            ADMIN_V2_ATTENDANCE_MODE = lockedAttendanceMode || ((memoryAttendanceMode === 'auto_checkin' || memoryAttendanceMode === 'auto_checkout')
-                ? memoryAttendanceMode
-                : storedAttendanceMode);
-            updateAttendanceModeUI();
-            adminV2DebugAttendance('handleAttendanceScanResolved');
+            const scanVersion = Number(scanData?._attendanceModeVersionAtScan ?? ADMIN_V2_ATTENDANCE_MODE_VERSION);
+            const scanMode = normalizeAdminV2AttendanceMode(scanData?._attendanceModeAtScan || ADMIN_V2_ATTENDANCE_MODE);
 
-            if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
-                // 每次成功回流都續 10 分鐘，避免大量點名中途過期。
-                writeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
-                const eventType = ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout' ? 'checkout' : 'checkin';
+            // 如果使用者在掃卡請求回來前已經切換模式，這筆舊結果只顯示學生，不執行舊模式自動打卡。
+            if (scanVersion !== ADMIN_V2_ATTENDANCE_MODE_VERSION) {
+                adminV2DebugAttendance('handleAttendanceScanResolved:stale-scan-ignored');
+                await refreshAttendanceTodayStatus();
+                return;
+            }
+
+            ADMIN_V2_ATTENDANCE_MODE = scanMode;
+            updateAttendanceModeUI();
+            adminV2DebugAttendance('handleAttendanceScanResolved:' + scanMode);
+
+            if (scanMode === 'auto_checkin' || scanMode === 'auto_checkout') {
+                // 每次成功回流都續 10 分鐘，避免大量點名中途過期；但模式仍以掃卡當下的 scanMode 為準。
+                writeAdminV2AttendanceMode(scanMode);
+                const eventType = scanMode === 'auto_checkout' ? 'checkout' : 'checkin';
                 const actionText = eventType === 'checkout' ? '離校' : '到校';
                 const status = document.getElementById('admin-v2-attendance-status');
                 const banner = document.getElementById('admin-v2-auto-banner');
