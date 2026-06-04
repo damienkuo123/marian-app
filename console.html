@@ -2955,8 +2955,9 @@
         <button class="btn-compact" onclick="hideBatchModal()">關閉</button>
       </div>
       <div class="form-grid">
-        <div class="form-field"><label>學生類別</label><select id="batchStudentType" onchange="toggleBatchClassHint()"><option value="__nochange">不修改</option><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
-        <div class="form-field"><label>班級代碼</label><input id="batchStudentClass" list="studentClassOptions" placeholder="不修改請留空" /></div>
+        <div class="form-field full"><label>學生類別</label><select id="batchStudentType" class="select" onchange="toggleBatchClassHint()"><option value="__nochange">不修改</option><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
+        <div class="form-field full" id="batchStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="batchStudentClass" placeholder="不修改請留空；有班級學生需填班級，例如 A1" onkeydown="handleBatchStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addBatchStudentClassFromInput()">新增</button><select id="batchStudentExistingClass" onchange="setBatchStudentClassFromSelect(this.value);"><option value="">選擇既有班級</option></select></div></div>
+        <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="batchStudentTagInput" placeholder="不修改請留空；輸入後將覆蓋所選學生標籤" onkeydown="handleBatchStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addBatchStudentTagFromInput()">新增</button><select id="batchStudentExistingTag" onchange="addBatchStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="batchStudentTagChips" class="student-tag-chip-row"></div><div class="form-note">批量標籤有加入項目時，會以這組標籤覆蓋所選學生；沒有加入標籤則不修改標籤。</div></div>
         <div class="form-field"><label>帳號狀態</label><select id="batchStudentActive"><option value="__nochange">不修改</option><option value="true">啟用</option><option value="false">停用</option></select></div>
         <div class="form-field"><label>週報狀態</label><select id="batchStudentWeekly"><option value="__nochange">不修改</option><option value="true">啟用週報</option><option value="false">關閉週報</option></select></div>
         <div class="form-field full"><div class="form-note">批量修改不提供 UID / 姓名批量覆蓋，避免誤傷正式資料。若要修改 UID 或姓名，請用單一學生編輯。</div></div>
@@ -3091,6 +3092,7 @@
     let studentBatchMode = false;
     let selectedStudentIds = new Set();
     let currentEditingStudentTags = [];
+    let currentBatchStudentTags = [];
     let currentConsolePage = "overview";
 
     // Owner Scope v1：Owner 可在「全部校區 / 單一校區」間切換；Super Admin 永遠固定單一校區。
@@ -5123,6 +5125,14 @@
       return `<div class="student-tag-line">${visible.map(tag => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}${more}</div>`;
     }
 
+
+    function renderStudentClassChip(student = {}) {
+      const rawClass = String(student?.class_code || student?.classCode || "").trim();
+      const type = normalizeStudentType(student?.student_type || student?.studentType || "");
+      const label = rawClass && type !== "無班級" ? rawClass : "未分班";
+      return `<span class="badge ok">${escapeHtml(label)}</span>`;
+    }
+
     function setupStudentTagFilter() {
       const select = document.getElementById("studentTagFilter");
       if (!select || !studentsCache) return;
@@ -5145,6 +5155,10 @@
       }
       const tagSelect = document.getElementById("editStudentExistingTag");
       if (tagSelect) tagSelect.innerHTML = `<option value="">選擇既有標籤</option>` + getAllStudentTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+      const batchClassSelect = document.getElementById("batchStudentExistingClass");
+      if (batchClassSelect) batchClassSelect.innerHTML = `<option value="">選擇既有班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      const batchTagSelect = document.getElementById("batchStudentExistingTag");
+      if (batchTagSelect) batchTagSelect.innerHTML = `<option value="">選擇既有標籤</option>` + getAllStudentTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
     }
 
     function ensureSelectOption(selectId, value) {
@@ -5166,7 +5180,6 @@
       const value = String(input?.value || "").trim();
       if (!value) return;
       ensureSelectOption("editStudentType", normalizeStudentType(value));
-      syncStudentTypeInput();
       toggleConsoleClassHint();
     }
 
@@ -5315,7 +5328,7 @@
                 </div>
               </div>
             </td>
-            <td><div class="student-pill-stack"><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><span class="small-note">${escapeHtml(normalizeStudentType(s.student_type))}</span>${renderStudentTags(s.tags)}</div></td>
+            <td><div class="student-pill-stack">${renderStudentClassChip(s)}${renderStudentTags(s.tags)}</div></td>
             <td><div class="student-points-main">${Number(s.points || 0).toLocaleString()}</div><div class="small-note">${escapeHtml(s.title || "無 title")}</div></td>
             <td>${renderStudentStatusBadges(s, email, weekly)}</td>
             <td><strong>${escapeHtml(avatarName)}</strong><br><span class="small-note">解鎖 ${Number(s.unlocked_avatar_count || 0)} 個</span></td>
@@ -5344,7 +5357,7 @@
               <span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span>
             </div>
             <div class="student-mobile-grid">
-              <div class="student-mobile-field"><div class="student-mobile-label">班級</div><div class="student-mobile-value">${escapeHtml(s.class_code || "未分班")}</div>${renderStudentTags(s.tags, 2)}</div>
+              <div class="student-mobile-field"><div class="student-mobile-label">班級</div><div class="student-mobile-value">${renderStudentClassChip(s)}</div>${renderStudentTags(s.tags, 2)}</div>
               <div class="student-mobile-field"><div class="student-mobile-label">點數</div><div class="student-mobile-value">${Number(s.points || 0).toLocaleString()}</div></div>
               <div class="student-mobile-field"><div class="student-mobile-label">週報 / Email</div><div class="student-mobile-value ${hasStudentEmailIssue(s) ? "problem" : ""}">${weekly ? "啟用" : "關閉"}・${escapeHtml(email || "無 Email")}</div></div>
               <div class="student-mobile-field"><div class="student-mobile-label">角色</div><div class="student-mobile-value">${escapeHtml(avatarName)}</div></div>
@@ -5420,6 +5433,8 @@
       document.getElementById("editStudentUid").value = s?.uid || (currentConsoleSchoolCode() ? `${currentConsoleSchoolCode()}-` : "");
       document.getElementById("editStudentType").value = normalizeStudentType(s?.student_type || "無班級");
       document.getElementById("editStudentClass").value = s?.class_code || "";
+      const typeInput = document.getElementById("editStudentTypeInput");
+      if (typeInput) typeInput.value = document.getElementById("editStudentType").value || "";
       document.getElementById("editStudentEmail").value = s?.parent_email || "";
       document.getElementById("editStudentWeekly").value = String(Boolean(s?.weekly_report_enabled));
       document.getElementById("editStudentActive").value = String(isNew ? true : Boolean(s?.is_active));
@@ -5549,6 +5564,60 @@
     }
 
     function selectVisibleStudents(checked) { for (const s of getVisibleStudentRows()) { if (checked) selectedStudentIds.add(String(s.id)); else selectedStudentIds.delete(String(s.id)); } renderStudentsTable(); updateSelectedStudentCount(); }
+
+    function addBatchStudentClassFromInput() {
+      const input = document.getElementById("batchStudentClass");
+      const value = String(input?.value || "").trim();
+      if (!value) return;
+      ensureSelectOption("batchStudentExistingClass", value);
+    }
+
+    function setBatchStudentClassFromSelect(value) {
+      const input = document.getElementById("batchStudentClass");
+      if (input && value) input.value = value;
+    }
+
+    function handleBatchStudentClassInputKey(event) {
+      if (event.key === "Enter") { event.preventDefault(); addBatchStudentClassFromInput(); }
+    }
+
+    function renderBatchStudentTagEditor() {
+      const target = document.getElementById("batchStudentTagChips");
+      if (!target) return;
+      const tags = normalizeStudentTags(currentBatchStudentTags);
+      target.innerHTML = tags.length
+        ? tags.map((tag, idx) => `<span class="student-tag-chip">${escapeHtml(tag)} <button type="button" onclick="removeBatchStudentTag(${idx})">×</button></span>`).join("")
+        : `<span class="small-note">沒有加入標籤；批量儲存時不修改標籤</span>`;
+    }
+
+    function addBatchStudentTag(tag) {
+      const value = String(tag || "").trim();
+      if (!value) return;
+      const tags = normalizeStudentTags(currentBatchStudentTags);
+      if (!tags.includes(value)) tags.push(value);
+      currentBatchStudentTags = tags.slice(0, 20);
+      renderBatchStudentTagEditor();
+    }
+
+    function addBatchStudentTagFromInput() {
+      const input = document.getElementById("batchStudentTagInput");
+      addBatchStudentTag(input?.value || "");
+      if (input) input.value = "";
+    }
+
+    function addBatchStudentTagFromSelect(value) { addBatchStudentTag(value); }
+
+    function removeBatchStudentTag(index) {
+      const tags = normalizeStudentTags(currentBatchStudentTags);
+      tags.splice(index, 1);
+      currentBatchStudentTags = tags;
+      renderBatchStudentTagEditor();
+    }
+
+    function handleBatchStudentTagInputKey(event) {
+      if (event.key === "Enter") { event.preventDefault(); addBatchStudentTagFromInput(); }
+    }
+
     function openBatchStudentEditor() {
       if (!selectedStudentIds.size) { alert("請先勾選學生。"); return; }
       document.getElementById("batchModalSubtitle").textContent = `即將修改 ${selectedStudentIds.size} 位學生。只會修改有設定的欄位。`;
@@ -5556,6 +5625,9 @@
       document.getElementById("batchStudentClass").value = "";
       document.getElementById("batchStudentActive").value = "__nochange";
       document.getElementById("batchStudentWeekly").value = "__nochange";
+      currentBatchStudentTags = [];
+      setupStudentFormPickers();
+      renderBatchStudentTagEditor();
       document.getElementById("studentBatchModal").classList.add("show");
     }
     function closeBatchModal(event) { if (event && event.target && event.target.id !== "studentBatchModal") return; hideBatchModal(); }
@@ -5573,6 +5645,8 @@
       if (type === "無班級") patch.class_code = "";
       if (active !== "__nochange") patch.is_active = active === "true";
       if (weekly !== "__nochange") patch.weekly_report_enabled = weekly === "true";
+      const batchTags = normalizeStudentTags(currentBatchStudentTags);
+      if (batchTags.length) patch.tags = batchTags;
       if (!Object.keys(patch).length) { alert("你沒有設定任何修改內容。"); return; }
       if (patch.student_type === "有班級" && !patch.class_code) { alert("批量設為有班級學生時，請填寫班級代碼。"); return; }
       if (!confirm(`確定要批量修改 ${selectedStudentIds.size} 位學生嗎？`)) return;
