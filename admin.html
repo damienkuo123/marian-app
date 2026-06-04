@@ -1545,7 +1545,31 @@
             grid-template-columns: 1fr 1fr 1fr;
         }
 
-        .admin-v2-query-filters select {
+        .admin-v2-query-filters.has-four {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        
+        .admin-v2-tag-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .admin-v2-tag-chip {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--admin-blue);
+            background: rgba(22,119,255,.08);
+            border: 1px solid rgba(22,119,255,.13);
+        }
+
+.admin-v2-query-filters select {
             width: 100%;
             min-width: 0;
             min-height: 46px;
@@ -1843,6 +1867,9 @@
             <div class="admin-v2-query-filters">
                 <select id="admin-v2-query-class-filter" onchange="filterAdminQueryProgress()">
                     <option value="">全部學生</option>
+                </select>
+                <select id="admin-v2-query-tag-filter" class="hidden" onchange="filterAdminQueryProgress()">
+                    <option value="">全部標籤</option>
                 </select>
                 <select id="admin-v2-query-status-filter" onchange="filterAdminQueryProgress()">
                     <option value="">全部狀態</option>
@@ -6230,15 +6257,25 @@
 
         function setupAdminQueryFilters() {
             const classSelect = document.getElementById('admin-v2-query-class-filter');
+            const tagSelect = document.getElementById('admin-v2-query-tag-filter');
             const statusSelect = document.getElementById('admin-v2-query-status-filter');
             const valueSelect = document.getElementById('admin-v2-query-value-filter');
             const wrap = document.querySelector('.admin-v2-query-filters');
             if (!classSelect || !statusSelect || !valueSelect) return;
 
             const prevClass = classSelect.value || '';
+            const prevTag = tagSelect?.value || '';
             const classes = getAdminQueryClassOptions();
             classSelect.innerHTML = '<option value="">全部學生</option>' + classes.map(cls => `<option value="${escapeAdminV2(cls)}">${escapeAdminV2(cls)}</option>`).join('');
             classSelect.value = classes.includes(prevClass) ? prevClass : '';
+
+            const tags = getAdminQueryTagOptions();
+            if (tagSelect) {
+                tagSelect.innerHTML = '<option value="">全部標籤</option>' + tags.map(tag => `<option value="${escapeAdminV2(tag)}">${escapeAdminV2(tag)}</option>`).join('');
+                tagSelect.value = tags.includes(prevTag) ? prevTag : '';
+            }
+
+            wrap?.classList.remove('has-three', 'has-four');
 
             if (ADMIN_V2_QUERY_TAB === 'learning') {
                 statusSelect.innerHTML = `
@@ -6248,16 +6285,17 @@
                     <option value="perfect">卓越</option>
                     <option value="top3">排行前三</option>
                 `;
+                tagSelect?.classList.add('hidden');
                 valueSelect.classList.add('hidden');
-                wrap?.classList.remove('has-three');
             } else if (ADMIN_V2_QUERY_TAB === 'points') {
                 statusSelect.innerHTML = `
                     <option value="">全部狀態</option>
                     <option value="plus">加分</option>
                     <option value="minus">扣分</option>
                 `;
+                tagSelect?.classList.remove('hidden');
                 valueSelect.classList.remove('hidden');
-                wrap?.classList.add('has-three');
+                wrap?.classList.add('has-four');
             } else {
                 statusSelect.innerHTML = `
                     <option value="">全部狀態</option>
@@ -6265,8 +6303,9 @@
                     <option value="checkout">已離校</option>
                     <option value="none">尚無打卡</option>
                 `;
+                tagSelect?.classList.remove('hidden');
                 valueSelect.classList.add('hidden');
-                wrap?.classList.remove('has-three');
+                wrap?.classList.add('has-three');
             }
             statusSelect.value = '';
             valueSelect.value = '';
@@ -6304,6 +6343,52 @@ function getAdminQueryClassOptions() {
                     if (b === '無班級') return -1;
                     return String(a).localeCompare(String(b), 'zh-Hant');
                 });
+        }
+
+
+        function getAdminStudentTags(student = {}) {
+            const raw = student.tags || student.studentTags || student.labels || [];
+            if (Array.isArray(raw)) return raw.map(v => String(v || '').trim()).filter(Boolean);
+            if (typeof raw === 'string') {
+                const text = raw.trim();
+                if (!text) return [];
+                try {
+                    const parsed = JSON.parse(text);
+                    if (Array.isArray(parsed)) return parsed.map(v => String(v || '').trim()).filter(Boolean);
+                } catch(e) {}
+                return text.split(/[，,]/).map(v => v.trim()).filter(Boolean);
+            }
+            return [];
+        }
+
+        function getAdminQueryTagOptions() {
+            const tagSet = new Set();
+
+            flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE).forEach(s => getAdminStudentTags(s).forEach(tag => tagSet.add(tag)));
+
+            (Array.isArray(ADMIN_V2_QUERY_POINTS_STATE) ? ADMIN_V2_QUERY_POINTS_STATE : []).forEach(log => {
+                getAdminStudentTags(log).forEach(tag => tagSet.add(tag));
+            });
+
+            const attendanceStudents = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
+                ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students
+                : [];
+            attendanceStudents.forEach(s => getAdminStudentTags(s).forEach(tag => tagSet.add(tag)));
+
+            ADMIN_V2_QUERY_ALL_STUDENTS.forEach(s => getAdminStudentTags(s).forEach(tag => tagSet.add(tag)));
+
+            return Array.from(tagSet).filter(Boolean).sort((a,b) => String(a).localeCompare(String(b), 'zh-Hant'));
+        }
+
+        function adminQueryHasTag(student = {}, tag = '') {
+            if (!tag) return true;
+            return getAdminStudentTags(student).includes(tag);
+        }
+
+        function renderAdminQueryTagChips(student = {}) {
+            const tags = getAdminStudentTags(student);
+            if (!tags.length) return '';
+            return `<div class="admin-v2-tag-chip-row">${tags.map(tag => `<span class="admin-v2-tag-chip">${escapeAdminV2(tag)}</span>`).join('')}</div>`;
         }
 
         function flattenAdminProgressStudents(data) {
@@ -6604,14 +6689,16 @@ function getAdminQueryClassOptions() {
             const q = String(document.getElementById('admin-v2-query-search')?.value || '').trim().toLowerCase();
             const classFilter = document.getElementById('admin-v2-query-class-filter')?.value || '';
             const statusFilter = document.getElementById('admin-v2-query-status-filter')?.value || '';
+            const tagFilter = document.getElementById('admin-v2-query-tag-filter')?.value || '';
             const valueFilter = document.getElementById('admin-v2-query-value-filter')?.value || '';
             if (!box) return;
 
             let rows = Array.isArray(ADMIN_V2_QUERY_POINTS_STATE) ? ADMIN_V2_QUERY_POINTS_STATE.slice() : [];
             rows = rows.filter(log => {
                 const abs = Math.abs(Number(log.points || 0));
-                if (q && ![log.name, log.uid, log.classCode, log.title, log.note].some(v => String(v || '').toLowerCase().includes(q))) return false;
+                if (q && ![log.name, log.uid, log.classCode, log.title, log.note, ...(getAdminStudentTags(log) || [])].some(v => String(v || '').toLowerCase().includes(q))) return false;
                 if (classFilter && log.classCode !== classFilter) return false;
+                if (tagFilter && !adminQueryHasTag(log, tagFilter)) return false;
                 if (statusFilter === 'plus' && Number(log.points || 0) < 0) return false;
                 if (statusFilter === 'minus' && Number(log.points || 0) >= 0) return false;
                 if (valueFilter === 'lt100' && !(abs < 100)) return false;
@@ -6773,6 +6860,7 @@ function getAdminQueryClassOptions() {
             const q = String(document.getElementById('admin-v2-query-search')?.value || '').trim().toLowerCase();
             const classFilter = document.getElementById('admin-v2-query-class-filter')?.value || '';
             const statusFilter = document.getElementById('admin-v2-query-status-filter')?.value || '';
+            const tagFilter = document.getElementById('admin-v2-query-tag-filter')?.value || '';
             if (!box) return;
 
             const students = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
@@ -6842,6 +6930,7 @@ function getAdminQueryClassOptions() {
                                 <div>
                                     <strong>${escapeAdminV2(student.name || '未命名學生')}</strong>
                                     <small>${escapeAdminV2(student.uid || '')}</small>
+                                    ${renderAdminQueryTagChips(student)}
                                 </div>
                                 <div class="admin-v2-attendance-badges">
                                     ${renderAdminQueryPushDeviceBadge(student.uid)}

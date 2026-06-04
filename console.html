@@ -2979,8 +2979,9 @@
       <input type="hidden" id="curOldUnitName" />
       <input type="hidden" id="curOldClassCode" />
       <div class="form-grid">
-        <div class="form-field"><label>班級代碼</label><input id="curClassCode" placeholder="例如 A1，活動請填 EVENT" oninput="syncCurriculumEventHint()" /></div>
-        <div class="form-field"><label>單元名稱</label><input id="curUnitName" placeholder="例如 Animals" /></div>
+        <div class="form-field"><label>班級代碼</label><input id="curClassCode" list="curriculumClassOptions" placeholder="例如 A1，活動請填 EVENT" oninput="syncCurriculumEventHint()" /><datalist id="curriculumClassOptions"></datalist></div>
+        <div class="form-field"><label>選擇既有班級</label><select id="curExistingClassSelect" onchange="applyCurriculumExistingClass()"><option value="">選擇既有班級</option></select></div>
+        <div class="form-field full"><label>單元名稱</label><input id="curUnitName" placeholder="例如 Animals" /></div>
       </div>
       <div class="unit-modal-section">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
@@ -6786,7 +6787,41 @@
     function findUnitById(unitId) { return (curriculumCache?.units || []).find(u => String(u.id || u.unitId) === String(unitId)); }
     function findScheduleForUnit(unit) { return (curriculumCache?.schedules || []).find(s => (unit.id && s.unitId && String(s.unitId) === String(unit.id)) || (s.classCode === unit.classCode && s.unitName === unit.unitName)); }
     function findScheduleById(id) { return (curriculumCache?.schedules || []).find(s => String(s.id) === String(id)); }
-    function openCurriculumUnitModal(unitId = "") {
+    
+    function getCurriculumExistingClassOptions() {
+      const set = new Set();
+      (curriculumCache?.classes || []).forEach(c => { if (c) set.add(normalizeEventClassCode(c)); });
+      (curriculumCache?.units || []).forEach(u => { if (u?.classCode) set.add(normalizeEventClassCode(u.classCode)); });
+      (curriculumCache?.schedules || []).forEach(s => { if (s?.classCode) set.add(normalizeEventClassCode(s.classCode)); });
+      (studentsCache?.students || []).forEach(s => {
+        const c = s?.class_code || s?.classCode || "";
+        if (c) set.add(normalizeEventClassCode(c));
+      });
+      return Array.from(set).filter(Boolean).sort((a,b)=>a==='EVENT'?-1:b==='EVENT'?1:String(a).localeCompare(String(b), "zh-Hant"));
+    }
+
+    function refreshCurriculumClassPicker(selected = "") {
+      const classes = getCurriculumExistingClassOptions();
+      const datalist = document.getElementById("curriculumClassOptions");
+      if (datalist) datalist.innerHTML = classes.map(c => `<option value="${escapeHtml(c)}"></option>`).join("");
+      const select = document.getElementById("curExistingClassSelect");
+      if (select) {
+        select.innerHTML = `<option value="">選擇既有班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(classLabel(c))}</option>`).join("");
+        const normalized = normalizeEventClassCode(selected || "");
+        select.value = classes.includes(normalized) ? normalized : "";
+      }
+    }
+
+    function applyCurriculumExistingClass() {
+      const select = document.getElementById("curExistingClassSelect");
+      const input = document.getElementById("curClassCode");
+      const value = normalizeEventClassCode(select?.value || "");
+      if (!value || !input) return;
+      input.value = value;
+      syncCurriculumEventHint();
+    }
+
+function openCurriculumUnitModal(unitId = "") {
       const unit = unitId ? findUnitById(unitId) : null;
       currentCurriculumUnitId = unit?.id || "";
       document.getElementById("curriculumUnitModalTitle").textContent = unit ? "編輯單元" : "新增單元";
@@ -6794,6 +6829,7 @@
       document.getElementById("curOldUnitName").value = unit?.unitName || "";
       document.getElementById("curOldClassCode").value = unit?.classCode || "";
       document.getElementById("curClassCode").value = unit?.classCode || (curriculumFilter || "");
+      refreshCurriculumClassPicker(unit?.classCode || (curriculumFilter || ""));
       document.getElementById("curUnitName").value = unit?.unitName || "";
       document.getElementById("curDeleteUnitBtn").style.display = unit ? "inline-flex" : "none";
       const list = document.getElementById("curWordsList"); list.innerHTML = "";
