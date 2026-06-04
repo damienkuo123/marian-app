@@ -6361,8 +6361,7 @@ function getAdminQueryClassOptions() {
         }
 
 
-        function getAdminStudentTags(student = {}) {
-            const raw = student.tags || student.studentTags || student.labels || [];
+        function normalizeAdminStudentTagsValue(raw) {
             if (Array.isArray(raw)) return raw.map(v => String(v || '').trim()).filter(Boolean);
             if (typeof raw === 'string') {
                 const text = raw.trim();
@@ -6371,7 +6370,33 @@ function getAdminQueryClassOptions() {
                     const parsed = JSON.parse(text);
                     if (Array.isArray(parsed)) return parsed.map(v => String(v || '').trim()).filter(Boolean);
                 } catch(e) {}
-                return text.split(/[，,]/).map(v => v.trim()).filter(Boolean);
+                return text.split(/[\n，,;；]/).map(v => v.trim()).filter(Boolean);
+            }
+            return [];
+        }
+
+        function findAdminQueryStudentByUid(uid = '') {
+            const safeUid = String(uid || '').trim();
+            if (!safeUid) return null;
+            const pools = [
+                ADMIN_V2_QUERY_ALL_STUDENTS,
+                Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students) ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students : [],
+                flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE)
+            ];
+            for (const pool of pools) {
+                const found = (Array.isArray(pool) ? pool : []).find(s => String(s.uid || s.studentUid || '').trim() === safeUid);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function getAdminStudentTags(student = {}) {
+            const direct = normalizeAdminStudentTagsValue(student.tags || student.studentTags || student.labels || []);
+            if (direct.length) return direct;
+            const uid = student.uid || student.studentUid || '';
+            const matched = findAdminQueryStudentByUid(uid);
+            if (matched && matched !== student) {
+                return normalizeAdminStudentTagsValue(matched.tags || matched.studentTags || matched.labels || []);
             }
             return [];
         }
@@ -6939,6 +6964,9 @@ function getAdminQueryClassOptions() {
                     return at - bt;
                 });
                 return { key, title, hint, rows };
+            }).filter(group => {
+                if (statusFilter) return group.key === statusFilter;
+                return true;
             });
 
             const canNoCardCheckin = isAdminV2Super();
