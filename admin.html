@@ -3225,16 +3225,7 @@
             if (e.key === 'Enter') {
                 e.preventDefault(); // 🚀 加上這行，防止瀏覽器以為你要跳轉網址！
                 clearTimeout(scanTimer);
-                let rawInput = scanner.value.trim();
-                
-                // 🚀 萬能萃取器：把網址裡的 uid 或 id 挖出來
-                if (rawInput.includes("uid=")) {
-                    rawInput = rawInput.split("uid=")[1].split("&")[0];
-                } else if (rawInput.includes("id=")) {
-                    rawInput = rawInput.split("id=")[1].split("&")[0];
-                }
-
-                const finalID = rawInput.includes('-') ? rawInput : `${CURRENT_SCHOOL}-${rawInput}`;
+                const finalID = normalizeAdminV2ScannedId(scanner.value);
                 if (finalID.length >= 4) { 
                     fetchStudent(finalID);
                 }
@@ -3245,16 +3236,7 @@
         scanner.addEventListener('input', function() {
             clearTimeout(scanTimer);
             scanTimer = setTimeout(() => {
-                let rawInput = scanner.value.trim();
-                
-                // 🚀 萬能萃取器：把網址裡的 uid 或 id 挖出來
-                if (rawInput.includes("uid=")) {
-                    rawInput = rawInput.split("uid=")[1].split("&")[0];
-                } else if (rawInput.includes("id=")) {
-                    rawInput = rawInput.split("id=")[1].split("&")[0];
-                }
-
-                const finalID = rawInput.includes('-') ? rawInput : `${CURRENT_SCHOOL}-${rawInput}`;
+                const finalID = normalizeAdminV2ScannedId(scanner.value);
                 if (finalID.length >= 4) { 
                     fetchStudent(finalID);
                 }
@@ -3262,14 +3244,61 @@
             }, 200);
         });
 
+
+        function normalizeAdminV2ScannedId(rawInput) {
+            let raw = String(rawInput || '').trim();
+            if (!raw) return '';
+            if (raw.includes('uid=')) {
+                raw = raw.split('uid=')[1].split('&')[0];
+            } else if (raw.includes('id=')) {
+                raw = raw.split('id=')[1].split('&')[0];
+            }
+            return raw.includes('-') ? raw : `${CURRENT_SCHOOL}-${raw}`;
+        }
+
+        function shouldCaptureAdminV2GlobalScan(event) {
+            try {
+                if (ADMIN_V2_ACTIVE_MODE === 'query') return false;
+                const active = document.activeElement;
+                if (active === scanner) return false;
+                if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return false;
+                if (event.ctrlKey || event.metaKey || event.altKey) return false;
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (!shouldCaptureAdminV2GlobalScan(event)) return;
+            if (event.key === 'Enter') {
+                const finalID = normalizeAdminV2ScannedId(ADMIN_V2_GLOBAL_SCAN_BUFFER);
+                ADMIN_V2_GLOBAL_SCAN_BUFFER = '';
+                clearTimeout(ADMIN_V2_GLOBAL_SCAN_TIMER);
+                if (finalID && finalID.length >= 4) {
+                    event.preventDefault();
+                    fetchStudent(finalID);
+                }
+                return;
+            }
+            if (event.key && event.key.length === 1) {
+                ADMIN_V2_GLOBAL_SCAN_BUFFER += event.key;
+                clearTimeout(ADMIN_V2_GLOBAL_SCAN_TIMER);
+                ADMIN_V2_GLOBAL_SCAN_TIMER = setTimeout(() => { ADMIN_V2_GLOBAL_SCAN_BUFFER = ''; }, 350);
+            }
+        }, true);
+
         // --- 1. 掃描卡片時的 API 呼叫 ---
         function fetchStudent(cardId) {
             // 自動到校 / 自動離校模式可能存在 localStorage（從 tap.html 回流或切換模式後），
             // 掃卡前先重讀一次，避免 actionUI 已開啟時被舊的 manual 狀態擋掉。
+            const lockedAttendanceMode = getAdminV2LockedAutoAttendanceMode();
             const liveAttendanceMode = readAdminV2AttendanceMode({ allowAuto: true });
             const memoryAttendanceMode = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
             if (ADMIN_V2_ACTIVE_MODE === 'attendance') {
-                if (memoryAttendanceMode === 'auto_checkin' || memoryAttendanceMode === 'auto_checkout') {
+                if (lockedAttendanceMode) {
+                    ADMIN_V2_ATTENDANCE_MODE = lockedAttendanceMode;
+                } else if (memoryAttendanceMode === 'auto_checkin' || memoryAttendanceMode === 'auto_checkout') {
                     ADMIN_V2_ATTENDANCE_MODE = memoryAttendanceMode;
                 } else if (liveAttendanceMode === 'auto_checkin' || liveAttendanceMode === 'auto_checkout') {
                     ADMIN_V2_ATTENDANCE_MODE = liveAttendanceMode;
@@ -5852,7 +5881,19 @@
             return ['manual', 'auto_checkin', 'auto_checkout'].includes(mode) ? mode : 'manual';
         }
 
+        function getAdminV2LockedAutoAttendanceMode() {
+            const locked = normalizeAdminV2AttendanceMode(ADMIN_V2_AUTO_ATTENDANCE_LOCK);
+            return (locked === 'auto_checkin' || locked === 'auto_checkout') ? locked : '';
+        }
+
+        function setAdminV2LockedAutoAttendanceMode(mode) {
+            const normalized = normalizeAdminV2AttendanceMode(mode);
+            ADMIN_V2_AUTO_ATTENDANCE_LOCK = (normalized === 'auto_checkin' || normalized === 'auto_checkout') ? normalized : null;
+            return ADMIN_V2_AUTO_ATTENDANCE_LOCK;
+        }
+
         function clearAdminV2AutoAttendance() {
+            ADMIN_V2_AUTO_ATTENDANCE_LOCK = null;
             try {
                 localStorage.removeItem(ADMIN_V2_ATTENDANCE_MODE_KEY);
                 localStorage.removeItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY);
@@ -5900,6 +5941,7 @@
                 sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
                 sessionStorage.removeItem('tappie_attendance_action');
                 if (normalized === 'auto_checkin' || normalized === 'auto_checkout') {
+                    setAdminV2LockedAutoAttendanceMode(normalized);
                     const expiresAt = Date.now() + ADMIN_V2_AUTO_TTL_MS;
                     sessionStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(expiresAt));
                     localStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
@@ -5940,6 +5982,10 @@
         let ADMIN_V2_QUERY_ATTENDANCE_STATE = null;
         let ADMIN_V2_QUERY_PUSH_DEVICES_BY_UID = {};
         let ADMIN_V2_ATTENDANCE_TODAY_CACHE = null;
+        // Step 5F：自動打卡硬鎖。只要使用者點了自動到校/自動離校，掃卡流程一律優先採用這個值，避免任何舊狀態把它覆蓋回手動。
+        let ADMIN_V2_AUTO_ATTENDANCE_LOCK = null;
+        let ADMIN_V2_GLOBAL_SCAN_BUFFER = '';
+        let ADMIN_V2_GLOBAL_SCAN_TIMER = null;
 
         let ADMIN_V2_QUERY_ALL_STUDENTS = [];
 
@@ -6016,7 +6062,7 @@
             if (ADMIN_V2_ACTIVE_MODE !== 'attendance') {
                 writeAdminV2AttendanceMode('manual');
             } else {
-                ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
+                ADMIN_V2_ATTENDANCE_MODE = getAdminV2LockedAutoAttendanceMode() || readAdminV2AttendanceMode({ allowAuto: true });
             }
             persistAdminV2State();
             adminV2DebugAttendance('setAdminMode:' + ADMIN_V2_ACTIVE_MODE);
@@ -6062,6 +6108,11 @@
             // 直接保留使用者剛選的模式，不再交給 setAdminMode 重新讀取後覆蓋成 manual。
             ADMIN_V2_ACTIVE_MODE = 'attendance';
             ADMIN_V2_ATTENDANCE_MODE = nextMode;
+            if (nextMode === 'auto_checkin' || nextMode === 'auto_checkout') {
+                setAdminV2LockedAutoAttendanceMode(nextMode);
+            } else {
+                setAdminV2LockedAutoAttendanceMode('manual');
+            }
             writeAdminV2AttendanceMode(nextMode);
             persistAdminV2State();
             adminV2DebugAttendance('setAttendanceMode:' + nextMode);
@@ -6078,6 +6129,8 @@
             updateAttendanceModeUI();
             showAdminModeScreen();
             try { scanner && scanner.focus(); } catch(e) {}
+            setTimeout(() => { try { scanner && scanner.focus(); } catch(e) {} }, 120);
+            setTimeout(() => { try { scanner && scanner.focus(); } catch(e) {} }, 420);
         }
 
         function setManualAttendanceAction(action) {
@@ -6331,11 +6384,12 @@
             if (ADMIN_V2_ACTIVE_MODE !== 'attendance') return;
 
             // 執行前重讀，但不可讓剛選好的自動模式被舊 storage 覆蓋回 manual。
+            const lockedAttendanceMode = getAdminV2LockedAutoAttendanceMode();
             const storedAttendanceMode = readAdminV2AttendanceMode({ allowAuto: true });
             const memoryAttendanceMode = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
-            ADMIN_V2_ATTENDANCE_MODE = (memoryAttendanceMode === 'auto_checkin' || memoryAttendanceMode === 'auto_checkout')
+            ADMIN_V2_ATTENDANCE_MODE = lockedAttendanceMode || ((memoryAttendanceMode === 'auto_checkin' || memoryAttendanceMode === 'auto_checkout')
                 ? memoryAttendanceMode
-                : storedAttendanceMode;
+                : storedAttendanceMode);
             updateAttendanceModeUI();
             adminV2DebugAttendance('handleAttendanceScanResolved');
 
