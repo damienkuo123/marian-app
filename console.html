@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260601-owner-scope-v1"></script>
+  <script src="./tappie-api.js?v=20260603-console-query-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -889,6 +889,46 @@
     /* =======================================================
        📈 Learning Progress Console
        ======================================================= */
+
+    .console-query-tabs {
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(92px, 1fr));
+      gap: 6px;
+      padding: 6px;
+      margin: 4px 0 14px;
+      border-radius: 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .console-query-tabs button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .console-query-tabs button.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 8px 20px rgba(15,23,42,.06);
+    }
+    .learning-count-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 54px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
     .learning-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:18px;}
     .learning-filter-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
     .learning-summary-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:18px;}
@@ -3020,6 +3060,8 @@
     let weeklyLoading = false;
     let learningCache = null;
     let learningLoading = false;
+    let learningQueryTab = "learning";
+    const learningQueryCaches = { learning: null, points: null, attendance: null };
     let curriculumCache = null;
     let curriculumLoading = false;
     let curriculumTab = "units";
@@ -3280,6 +3322,11 @@
       studentsCache = null;
       weeklyCache = null;
       learningCache = null;
+      if (typeof learningQueryCaches !== "undefined") {
+        learningQueryCaches.learning = null;
+        learningQueryCaches.points = null;
+        learningQueryCaches.attendance = null;
+      }
       curriculumCache = null;
       if (typeof avatarsConsoleCache !== "undefined") avatarsConsoleCache = null;
       if (typeof newslettersCache !== "undefined") newslettersCache = null;
@@ -5378,33 +5425,28 @@
     function renderLearning() {
       return `
         <div class="grid cards">
-          <div class="card"><div class="metric-label">班級數</div><div id="lpClassCount" class="metric-value">—</div><div class="metric-note">目前有學習進度的班級</div></div>
-          <div class="card"><div class="metric-label">學生數</div><div id="lpStudentCount" class="metric-value">—</div><div class="metric-note">啟用學生 / 進度追蹤</div></div>
-          <div class="card"><div class="metric-label">危險提醒</div><div id="lpRiskCount" class="metric-value">—</div><div class="metric-note">少於任務基礎次數</div></div>
-          <div class="card"><div class="metric-label">排行榜上榜</div><div id="lpRankedCount" class="metric-value">—</div><div class="metric-note">目前單元 Top 3</div></div>
+          <div class="card"><div class="metric-label" id="lpMetric1Label">班級數</div><div id="lpMetric1" class="metric-value">—</div><div class="metric-note" id="lpMetric1Note">目前有學習進度的班級</div></div>
+          <div class="card"><div class="metric-label" id="lpMetric2Label">學生數</div><div id="lpMetric2" class="metric-value">—</div><div class="metric-note" id="lpMetric2Note">啟用學生 / 進度追蹤</div></div>
+          <div class="card"><div class="metric-label" id="lpMetric3Label">危險提醒</div><div id="lpMetric3" class="metric-value">—</div><div class="metric-note" id="lpMetric3Note">少於任務基礎次數</div></div>
+          <div class="card"><div class="metric-label" id="lpMetric4Label">排行榜上榜</div><div id="lpMetric4" class="metric-value">—</div><div class="metric-note" id="lpMetric4Note">目前單元 Top 3</div></div>
         </div>
         <div class="card" style="margin-top:18px;">
           <div class="panel-title">
-            <div><h2>學習進度總覽</h2><p class="small-note">依照目前單元排程彙整各班今日挑戰完成紀錄；排序與自動結算一致。</p></div>
+            <div><h2>學習進度查詢</h2><p class="small-note">整合學習、加扣分與打卡紀錄；資料依照單一校區查詢權限載入。</p></div>
             <button class="btn-compact" onclick="loadLearningData(true)">重新整理</button>
+          </div>
+          <div class="console-query-tabs">
+            <button id="learningTabBtn-learning" class="active" onclick="setLearningQueryTab('learning')">學習</button>
+            <button id="learningTabBtn-points" onclick="setLearningQueryTab('points')">加扣分</button>
+            <button id="learningTabBtn-attendance" onclick="setLearningQueryTab('attendance')">打卡</button>
           </div>
           <div class="learning-thresholds" id="learningThresholds"></div>
           <div class="learning-toolbar">
-            <div class="learning-filter-row">
-              <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級" oninput="renderLearningClasses()" style="min-width:260px;" />
-              <select id="learningClassFilter" class="select" onchange="renderLearningClasses()"><option value="all">全部班級</option></select>
-              <select id="learningStatusFilter" class="select" onchange="renderLearningClasses()">
-                <option value="all">全部狀態</option>
-                <option value="risk">危險</option>
-                <option value="good">良好以上</option>
-                <option value="perfect">卓越</option>
-                <option value="ranked">排行榜前三</option>
-              </select>
-            </div>
-            <span id="learningTableNote" class="small-note">正在讀取學習進度...</span>
+            <div class="learning-filter-row" id="learningFilterRow"></div>
+            <span id="learningTableNote" class="small-note">正在讀取查詢資料...</span>
           </div>
           <div id="learningClassGrid" class="learning-class-grid">
-            <div class="empty-state">正在讀取 Learning Progress...</div>
+            <div class="empty-state">正在讀取查詢資料...</div>
           </div>
         </div>
       `;
@@ -5423,60 +5465,142 @@
       return { icon:"✅", color:"#2563eb", bg:"rgba(59,130,246,.12)", label:"達標" };
     }
 
+    function setLearningQueryTab(tab) {
+      learningQueryTab = ["learning", "points", "attendance"].includes(tab) ? tab : "learning";
+      ["learning", "points", "attendance"].forEach(key => {
+        document.getElementById(`learningTabBtn-${key}`)?.classList.toggle("active", key === learningQueryTab);
+      });
+      loadLearningData(false);
+    }
+
     async function loadLearningData(force = false) {
       if (learningLoading) return;
-      if (learningCache && !force) { updateLearningUI(); return; }
+      if (learningQueryCaches[learningQueryTab] && !force) {
+        learningCache = learningQueryCaches[learningQueryTab];
+        updateLearningUI();
+        return;
+      }
       learningLoading = true;
       try {
         const schoolCode = currentConsoleSchoolCode();
-        const data = await TappieAPI.consoleGetProgress({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode });
-        if (!data || !data.success) throw new Error(data?.message || data?.error || "admin_get_progress_failed");
+        const scopeMode = getActiveScopePayload().scopeMode;
+        const token = session?.token || "";
+        let data;
+        if (TappieAPI && typeof TappieAPI.consoleGetQueryData === "function") {
+          data = await TappieAPI.consoleGetQueryData({ token, schoolCode, scopeMode, mode: learningQueryTab, rangeDays: 7 });
+        } else if (learningQueryTab === "learning") {
+          data = await TappieAPI.consoleGetProgress({ token, schoolCode, scopeMode });
+        } else {
+          throw new Error("console_get_query_data_not_available");
+        }
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "console_query_data_failed");
+        learningQueryCaches[learningQueryTab] = data;
         learningCache = data;
         updateLearningUI();
       } catch (err) {
         console.error("loadLearningData failed", err);
         const wrap = document.getElementById("learningClassGrid") || document.getElementById("pageContent");
-        if (wrap) wrap.innerHTML = `<div class="empty-state">學習進度讀取失敗：${escapeHtml(err.message || err)}</div>`;
+        if (wrap) wrap.innerHTML = `<div class="empty-state">查詢資料讀取失敗：${escapeHtml(err.message || err)}</div>`;
       } finally { learningLoading = false; }
     }
 
     function flattenLearningStudents() {
-      const classes = learningCache?.classes || [];
+      const classes = learningQueryCaches.learning?.classes || learningCache?.classes || [];
       return classes.flatMap(cls => (cls.students || []).map(s => ({ ...s, _class: cls })));
     }
 
+    function consoleQueryClassCodes(data = learningCache) {
+      const set = new Set();
+      (data?.students || []).forEach(s => set.add(String(s.classCode || s.class_code || "無班級")));
+      (data?.classes || []).forEach(c => set.add(String(c.classCode || c.class_code || "無班級")));
+      return Array.from(set).filter(Boolean).sort((a, b) => (a === "無班級" ? 1 : b === "無班級" ? -1 : a.localeCompare(b)));
+    }
+
+    function renderLearningFilterControls(mode) {
+      const classOptions = consoleQueryClassCodes().map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      if (mode === "points") {
+        return `
+          <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 原因" oninput="renderLearningPoints()" style="min-width:240px;" />
+          <select id="learningClassFilter" class="select" onchange="renderLearningPoints()"><option value="all">全部班級</option>${classOptions}</select>
+          <select id="learningStatusFilter" class="select" onchange="renderLearningPoints()">
+            <option value="all">全部狀態</option><option value="plus">加分</option><option value="minus">扣分</option>
+          </select>
+          <select id="learningValueFilter" class="select" onchange="renderLearningPoints()">
+            <option value="all">全部數值</option><option value="lt100">100 以下</option><option value="gte100">100 以上</option><option value="gte1000">1000 以上</option>
+          </select>`;
+      }
+      if (mode === "attendance") {
+        return `
+          <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級" oninput="renderLearningAttendance()" style="min-width:240px;" />
+          <select id="learningClassFilter" class="select" onchange="renderLearningAttendance()"><option value="all">全部班級</option>${classOptions}</select>
+          <select id="learningStatusFilter" class="select" onchange="renderLearningAttendance()">
+            <option value="all">全部狀態</option><option value="checkin">已到校</option><option value="checkout">已離校</option><option value="none">尚無打卡</option>
+          </select>`;
+      }
+      return `
+        <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級" oninput="renderLearningClasses()" style="min-width:260px;" />
+        <select id="learningClassFilter" class="select" onchange="renderLearningClasses()"><option value="all">全部班級</option>${classOptions}</select>
+        <select id="learningStatusFilter" class="select" onchange="renderLearningClasses()">
+          <option value="all">全部狀態</option>
+          <option value="risk">危險</option>
+          <option value="good">良好以上</option>
+          <option value="perfect">卓越</option>
+          <option value="ranked">排行榜前三</option>
+        </select>`;
+    }
+
+    function updateLearningMetrics(labels) {
+      ["1","2","3","4"].forEach(i => {
+        const item = labels[Number(i)-1] || {};
+        const el = document.getElementById(`lpMetric${i}`);
+        const label = document.getElementById(`lpMetric${i}Label`);
+        const note = document.getElementById(`lpMetric${i}Note`);
+        if (el) el.textContent = String(item.value ?? "—");
+        if (label) label.textContent = item.label || "—";
+        if (note) note.textContent = item.note || "";
+      });
+    }
+
     function updateLearningUI() {
-      if (!learningCache || !document.getElementById("lpClassCount")) return;
+      if (!learningCache || !document.getElementById("learningClassGrid")) return;
+      ["learning", "points", "attendance"].forEach(key => {
+        document.getElementById(`learningTabBtn-${key}`)?.classList.toggle("active", key === learningQueryTab);
+      });
+      const filterRow = document.getElementById("learningFilterRow");
+      if (filterRow) filterRow.innerHTML = renderLearningFilterControls(learningQueryTab);
+      if (learningQueryTab === "points") return renderLearningPoints(true);
+      if (learningQueryTab === "attendance") return renderLearningAttendance(true);
+      return renderLearningOverview(true);
+    }
+
+    function renderLearningOverview(fromUpdate = false) {
+      if (!learningCache || !document.getElementById("learningClassGrid")) return;
       const gami = learningCache.gamification || {};
       const classes = learningCache.classes || [];
       const allStudents = flattenLearningStudents();
       const fail = learningFailThreshold(gami), good = learningGoodThreshold(gami), perfect = learningPerfectThreshold(gami);
       const risk = allStudents.filter(s => Number(s.count || 0) < fail).length;
       const ranked = allStudents.filter(s => Number(s.rank || 0) > 0 && Number(s.rank || 0) <= 3).length;
-      document.getElementById("lpClassCount").textContent = String(classes.length || 0);
-      document.getElementById("lpStudentCount").textContent = String(allStudents.length || 0);
-      document.getElementById("lpRiskCount").textContent = String(risk);
-      document.getElementById("lpRankedCount").textContent = String(ranked);
-      document.getElementById("learningThresholds").innerHTML = `
+      updateLearningMetrics([
+        { label:"班級數", value:classes.length || 0, note:"目前有學習進度的班級" },
+        { label:"學生數", value:allStudents.length || 0, note:"啟用學生 / 進度追蹤" },
+        { label:"危險提醒", value:risk, note:"少於任務基礎次數" },
+        { label:"排行榜上榜", value:ranked, note:"目前單元 Top 3" },
+      ]);
+      const th = document.getElementById("learningThresholds");
+      if (th) th.innerHTML = `
         <span class="learning-chip">⚠️ 危險：少於 ${fail} 次</span>
         <span class="learning-chip">🔥 良好：${good} 次以上</span>
         <span class="learning-chip">🌟 卓越：${perfect} 次以上</span>
         <span class="learning-chip">🏆 排行榜：最高分優先，同分較早完成優先</span>
       `;
-      const sel = document.getElementById("learningClassFilter");
-      if (sel) {
-        const current = sel.value || "all";
-        const codes = Array.from(new Set(classes.map(c => String(c.classCode || c.class_code || "未分班")).filter(Boolean))).sort();
-        sel.innerHTML = `<option value="all">全部班級</option>` + codes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-        sel.value = codes.includes(current) ? current : "all";
-      }
       renderLearningClasses();
     }
 
     function renderLearningRecords(records) {
-      if (!records || !records.length) return `<div class="learning-record-row"><span>目前沒有今日挑戰完成紀錄</span><strong>—</strong></div>`;
-      return records.slice(0,8).map(r => `
-        <div class="learning-record-row"><span>${escapeHtml(formatDateTime(r.completedAt || r.completed_at || r.createdAt || r.created_at))}</span><strong>${Number(r.averageScore ?? r.average_score ?? 0)} 分</strong></div>
+      if (!records || !records.length) return `<div class="learning-record-row"><span>此排程期間尚無挑戰完成紀錄</span><strong>—</strong></div>`;
+      return records.slice(0,12).map(r => `
+        <div class="learning-record-row"><span>${escapeHtml(formatDateTime(r.completedAt || r.completed_at || r.createdAt || r.created_at))}</span><strong>${Number(r.averageScore ?? r.average_score ?? r.score ?? 0)} 分</strong></div>
       `).join("");
     }
 
@@ -5491,9 +5615,10 @@
       if (classFilter !== "all") classes = classes.filter(c => String(c.classCode || c.class_code || "") === classFilter);
       let totalVisible = 0;
       const html = classes.map(cls => {
-        const classCode = String(cls.classCode || cls.class_code || "未分班");
+        const classCode = String(cls.classCode || cls.class_code || "無班級");
         const unitName = cls.unitName || cls.unit_name || cls.currentUnit || "未排定單元";
-        const rangeText = cls.rangeText || [cls.startDate || cls.start_date, cls.endDate || cls.end_date].filter(Boolean).join("～") || "尚無排程區間";
+        const schedule = cls.schedule || {};
+        const rangeText = cls.rangeText || [schedule.startDate || cls.startDate || cls.start_date, schedule.endDate || cls.endDate || cls.end_date].filter(Boolean).join("～") || "尚無排程區間";
         let students = (cls.students || []).slice();
         if (q) students = students.filter(s => [s.name, s.uid, s.cardId, classCode].some(v => String(v || "").toLowerCase().includes(q)));
         if (statusFilter === "risk") students = students.filter(s => Number(s.count || 0) < fail);
@@ -5514,16 +5639,11 @@
                 <div><div class="learning-student-name">${medal ? medal + ' ' : ''}${escapeHtml(s.name || '未命名學生')}</div><div class="learning-student-sub">${escapeHtml(s.uid || '')}</div></div>
                 <div><span class="learning-count-pill" style="color:${visual.color};background:${visual.bg};border-color:${visual.color}33;">${visual.icon} ${Number(s.count||0)}次</span></div>
                 <div class="learning-score">${s.bestScore ? Number(s.bestScore) + ' 分' : '尚無'}</div>
-                <div class="learning-time">${escapeHtml(formatDateTime(s.latestCompletedAt))}</div>
+                <div class="learning-time">${escapeHtml(formatDateTime(s.latestCompletedAt || s.bestCompletedAt))}</div>
                 <div style="color:var(--muted);font-weight:900;">▾</div>
               </button>
               <div class="learning-detail">
-                <div class="learning-detail-grid">
-                  <div class="learning-detail-box"><div class="learning-detail-label">本單元完成次數</div><div class="learning-detail-value">${Number(s.count || 0)} 次</div></div>
-                  <div class="learning-detail-box"><div class="learning-detail-label">最高分</div><div class="learning-detail-value">${s.bestScore ? Number(s.bestScore) + ' 分 ' + medal : '尚無'}</div></div>
-                  <div class="learning-detail-box"><div class="learning-detail-label">最佳完成時間</div><div class="learning-detail-value">${escapeHtml(formatDateTime(s.bestCompletedAt))}</div></div>
-                </div>
-                <div class="learning-records"><div class="learning-record-title">今日挑戰完成紀錄</div>${renderLearningRecords(s.records || [])}</div>
+                <div class="learning-records"><div class="learning-record-title">本單元排程練習紀錄</div>${renderLearningRecords(s.records || [])}</div>
               </div>
             </div>`;
         }).join("") : `<div class="empty-state">此班級沒有符合條件的學生。</div>`;
@@ -5539,6 +5659,137 @@
       document.getElementById("learningClassGrid").innerHTML = html;
       const note = document.getElementById("learningTableNote");
       if (note) note.textContent = `目前顯示 ${totalVisible} 位學生`;
+    }
+
+    function renderLearningPoints() {
+      if (!learningCache || !document.getElementById("learningClassGrid")) return;
+      const items = (learningCache.items || []).slice();
+      const q = String(document.getElementById("learningSearchInput")?.value || "").trim().toLowerCase();
+      const classFilter = document.getElementById("learningClassFilter")?.value || "all";
+      const statusFilter = document.getElementById("learningStatusFilter")?.value || "all";
+      const valueFilter = document.getElementById("learningValueFilter")?.value || "all";
+      let rows = items;
+      if (q) rows = rows.filter(r => [r.name, r.uid, r.classCode, r.title, r.reason, r.note].some(v => String(v || "").toLowerCase().includes(q)));
+      if (classFilter !== "all") rows = rows.filter(r => String(r.classCode || "無班級") === classFilter);
+      if (statusFilter === "plus") rows = rows.filter(r => Number(r.points || 0) > 0);
+      if (statusFilter === "minus") rows = rows.filter(r => Number(r.points || 0) < 0);
+      if (valueFilter === "lt100") rows = rows.filter(r => Math.abs(Number(r.points || 0)) < 100);
+      if (valueFilter === "gte100") rows = rows.filter(r => Math.abs(Number(r.points || 0)) >= 100);
+      if (valueFilter === "gte1000") rows = rows.filter(r => Math.abs(Number(r.points || 0)) >= 1000);
+      const plusSum = rows.filter(r => Number(r.points || 0) > 0).reduce((sum, r) => sum + Number(r.points || 0), 0);
+      const minusSum = rows.filter(r => Number(r.points || 0) < 0).reduce((sum, r) => sum + Number(r.points || 0), 0);
+      updateLearningMetrics([
+        { label:"加扣紀錄", value:rows.length, note:"最近 7 天紀錄" },
+        { label:"加分合計", value:plusSum, note:"目前篩選結果" },
+        { label:"扣分合計", value:minusSum, note:"目前篩選結果" },
+        { label:"涉及學生", value:new Set(rows.map(r => r.uid)).size, note:"目前篩選結果" },
+      ]);
+      document.getElementById("learningThresholds").innerHTML = `<span class="learning-chip">最近 7 天</span><span class="learning-chip">依時間由新到舊排列</span>`;
+      const html = rows.length ? rows.map(item => {
+        const amount = Number(item.points || 0);
+        const cls = amount >= 0 ? "ok" : "danger";
+        const sign = amount >= 0 ? "+" : "";
+        return `
+          <div class="learning-student-row">
+            <button class="learning-student-button" onclick="this.closest('.learning-student-row').classList.toggle('open')">
+              <div><div class="learning-student-name">${escapeHtml(item.name || "未知學生")}</div><div class="learning-student-sub">${escapeHtml(item.uid || "")}｜${escapeHtml(item.classCode || "無班級")}</div></div>
+              <div><span class="badge ${cls}">${sign}${amount}</span></div>
+              <div class="learning-score">${escapeHtml(item.title || item.reason || "系統變更")}</div>
+              <div class="learning-time">${escapeHtml(formatDateTime(item.time || item.created_at))}</div>
+              <div style="color:var(--muted);font-weight:900;">▾</div>
+            </button>
+            <div class="learning-detail">
+              <div class="learning-detail-grid">
+                <div class="learning-detail-box"><div class="learning-detail-label">班級</div><div class="learning-detail-value">${escapeHtml(item.classCode || "無班級")}</div></div>
+                <div class="learning-detail-box"><div class="learning-detail-label">原因</div><div class="learning-detail-value">${escapeHtml(item.title || item.reason || "系統變更")}</div></div>
+              </div>
+            </div>
+          </div>`;
+      }).join("") : `<div class="empty-state">目前沒有符合條件的加扣分紀錄。</div>`;
+      document.getElementById("learningClassGrid").innerHTML = html;
+      const note = document.getElementById("learningTableNote");
+      if (note) note.textContent = `目前顯示 ${rows.length} 筆紀錄`;
+    }
+
+    function renderAttendanceEvents(events) {
+      if (!events || !events.length) return `<div class="learning-record-row"><span>今日尚無打卡紀錄</span><strong>—</strong></div>`;
+      return events.map(e => {
+        const type = String(e.eventType || e.event_type || "");
+        const label = type === "checkout" ? "離校" : "到校";
+        return `<div class="learning-record-row"><span>${escapeHtml(formatDateTime(e.eventTime || e.event_time))}</span><strong>${label}</strong></div>`;
+      }).join("");
+    }
+
+    function renderPushDevices(devices) {
+      if (!devices || !devices.length) return `<div class="learning-record-row"><span>尚無訂閱裝置</span><strong>—</strong></div>`;
+      return devices.map(d => `<div class="learning-record-row"><span>${escapeHtml(d.deviceLabel || "未命名裝置")}</span><strong>${escapeHtml(formatDateTime(d.lastSeenAt || d.updatedAt || d.createdAt))}</strong></div>`).join("");
+    }
+
+    function renderLearningAttendance() {
+      if (!learningCache || !document.getElementById("learningClassGrid")) return;
+      const q = String(document.getElementById("learningSearchInput")?.value || "").trim().toLowerCase();
+      const classFilter = document.getElementById("learningClassFilter")?.value || "all";
+      const statusFilter = document.getElementById("learningStatusFilter")?.value || "all";
+      const events = learningCache.events || [];
+      const byUid = new Map();
+      events.forEach(e => {
+        const uid = String(e.uid || "");
+        if (!uid) return;
+        if (!byUid.has(uid)) byUid.set(uid, []);
+        byUid.get(uid).push(e);
+      });
+      let students = (learningCache.students || []).map(s => {
+        const evts = byUid.get(String(s.uid || "")) || [];
+        evts.sort((a,b) => new Date(b.eventTime || b.event_time || 0).getTime() - new Date(a.eventTime || a.event_time || 0).getTime());
+        return { ...s, _events: evts, _latest: evts[0] || null };
+      });
+      if (q) students = students.filter(s => [s.name, s.uid, s.classCode].some(v => String(v || "").toLowerCase().includes(q)));
+      if (classFilter !== "all") students = students.filter(s => String(s.classCode || "無班級") === classFilter);
+      if (statusFilter === "checkin") students = students.filter(s => String(s._latest?.eventType || s._latest?.event_type || "") === "checkin");
+      if (statusFilter === "checkout") students = students.filter(s => String(s._latest?.eventType || s._latest?.event_type || "") === "checkout");
+      if (statusFilter === "none") students = students.filter(s => !s._latest);
+      const checkin = events.filter(e => String(e.eventType || e.event_type) === "checkin").length;
+      const checkout = events.filter(e => String(e.eventType || e.event_type) === "checkout").length;
+      updateLearningMetrics([
+        { label:"今日打卡", value:events.length, note:"到校與離校總筆數" },
+        { label:"到校", value:checkin, note:"今日到校紀錄" },
+        { label:"離校", value:checkout, note:"今日離校紀錄" },
+        { label:"訂閱裝置", value:students.reduce((sum,s)=>sum + Number(s.pushDeviceCount || 0), 0), note:"目前篩選學生合計" },
+      ]);
+      document.getElementById("learningThresholds").innerHTML = `<span class="learning-chip">今日打卡狀態</span><span class="learning-chip">🔔 顯示上放學通知訂閱裝置數</span>`;
+      const grouped = new Map();
+      students.forEach(s => {
+        const c = String(s.classCode || "無班級");
+        if (!grouped.has(c)) grouped.set(c, []);
+        grouped.get(c).push(s);
+      });
+      const classCodes = Array.from(grouped.keys()).sort((a,b)=> a === "無班級" ? 1 : b === "無班級" ? -1 : a.localeCompare(b));
+      const html = classCodes.map(classCode => {
+        const rows = grouped.get(classCode).map(s => {
+          const latest = s._latest;
+          const type = String(latest?.eventType || latest?.event_type || "");
+          const label = !latest ? "尚無打卡" : type === "checkout" ? "已離校" : "已到校";
+          const cls = !latest ? "warn" : type === "checkout" ? "danger" : "ok";
+          return `
+            <div class="learning-student-row">
+              <button class="learning-student-button" onclick="this.closest('.learning-student-row').classList.toggle('open')">
+                <div><div class="learning-student-name">${escapeHtml(s.name || "未命名學生")}</div><div class="learning-student-sub">${escapeHtml(s.uid || "")}｜${escapeHtml(classCode)}</div></div>
+                <div><span class="learning-count-pill">🔔 ${Number(s.pushDeviceCount || 0)}</span></div>
+                <div><span class="badge ${cls}">${label}</span></div>
+                <div class="learning-time">${escapeHtml(formatDateTime(latest?.eventTime || latest?.event_time))}</div>
+                <div style="color:var(--muted);font-weight:900;">▾</div>
+              </button>
+              <div class="learning-detail">
+                <div class="learning-records"><div class="learning-record-title">${escapeHtml(s.name || "")} 今日全部打卡紀錄</div>${renderAttendanceEvents(s._events)}</div>
+                <div class="learning-records"><div class="learning-record-title">訂閱通知裝置</div>${renderPushDevices(s.pushDevices || [])}</div>
+              </div>
+            </div>`;
+        }).join("");
+        return `<div class="learning-class-card"><div class="learning-class-head"><div><h3>🏷️ ${escapeHtml(classCode)}</h3><p>今日打卡查詢</p></div><div class="learning-class-metrics"><span class="learning-mini-badge">學生 ${grouped.get(classCode).length}</span></div></div><div class="learning-student-list">${rows}</div></div>`;
+      }).join("") || `<div class="empty-state">目前沒有符合條件的學生。</div>`;
+      document.getElementById("learningClassGrid").innerHTML = html;
+      const note = document.getElementById("learningTableNote");
+      if (note) note.textContent = `目前顯示 ${students.length} 位學生`;
     }
 
     function renderOwnerAllWeeklyOperations() {

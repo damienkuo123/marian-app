@@ -47,6 +47,7 @@ const TappieAPI = {
     consoleGetSchools: "/console-get-schools",
     consoleGetData: "/console-get-data",
     consoleGetProgress: "/console-get-progress",
+    consoleGetQueryData: "/console-get-query-data",
     consoleGetBranding: "/console-get-branding",
     consoleUploadBrandingAsset: "/console-upload-branding-asset",
     consoleDeleteBrandingAsset: "/console-delete-branding-asset",
@@ -328,6 +329,10 @@ const TappieAPI = {
 
   async consoleGetProgress({ token = "", schoolCode = "", date = "", scopeMode = "" } = {}) {
     return await this._consolePost(this.endpoints.consoleGetProgress, { schoolCode, date, scopeMode }, token);
+  },
+
+  async consoleGetQueryData({ token = "", schoolCode = "", mode = "learning", rangeDays = 7, scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetQueryData, { schoolCode, mode, rangeDays, scopeMode }, token);
   },
 
   async consoleGetBranding({ token = "", schoolCode = "", scopeMode = "" } = {}) {
