@@ -572,6 +572,17 @@
     .student-data-check-table .problem td:last-child { color:var(--amber); }
     .batch-actions { display:none; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:12px 14px; margin:0 0 14px; border:1px solid rgba(37,99,235,.16); background:rgba(37,99,235,.06); border-radius:16px; }
     .batch-actions.show { display:flex; }
+
+    /* Student tags v1 */
+    .student-tag-editor { display:grid; grid-template-columns: minmax(0,1fr) auto minmax(150px,.7fr); gap:8px; align-items:center; }
+    .student-tag-editor input, .student-tag-editor select { min-width:0; }
+    .student-tag-chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .student-tag-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border-radius:999px; border:1px solid rgba(37,99,235,.18); background:rgba(37,99,235,.08); color:var(--primary); font-size:12.5px; font-weight:800; max-width:100%; }
+    .student-tag-chip button { border:0; background:transparent; color:inherit; cursor:pointer; font-weight:950; padding:0; line-height:1; }
+    .student-tag-line { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .student-tag-line .badge { background:rgba(37,99,235,.08); color:var(--primary); }
+    @media (max-width: 720px) { .student-tag-editor { grid-template-columns:1fr; } }
+
     @media (max-width:640px) {
       .student-check-strip { flex-direction:column; align-items:flex-start; }
       .student-seat-active { font-size:48px; }
@@ -2911,7 +2922,8 @@
         <div class="form-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" /></div>
         <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" /></div>
         <div class="form-field"><label>學生類別</label><select id="editStudentType" onchange="toggleConsoleClassHint()"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
-        <div class="form-field"><label>班級代碼</label><input id="editStudentClass" placeholder="有班級學生需填班級，例如 A1" /></div>
+        <div class="form-field"><label>班級代碼</label><input id="editStudentClass" list="studentClassOptions" placeholder="有班級學生需填班級，例如 A1" /><datalist id="studentClassOptions"></datalist></div>
+        <div class="form-field full"><label>標籤</label><div class="student-tag-editor"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput()">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
         <div class="form-field"><label>Parent Email</label><input id="editStudentEmail" placeholder="parent@example.com" /></div>
         <div class="form-field"><label>週報狀態</label><select id="editStudentWeekly"><option value="true">啟用週報</option><option value="false">不啟用週報</option></select></div>
         <div class="form-field"><label>帳號狀態</label><select id="editStudentActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
@@ -2940,7 +2952,7 @@
       </div>
       <div class="form-grid">
         <div class="form-field"><label>學生類別</label><select id="batchStudentType" onchange="toggleBatchClassHint()"><option value="__nochange">不修改</option><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
-        <div class="form-field"><label>班級代碼</label><input id="batchStudentClass" placeholder="不修改請留空" /></div>
+        <div class="form-field"><label>班級代碼</label><input id="batchStudentClass" list="studentClassOptions" placeholder="不修改請留空" /></div>
         <div class="form-field"><label>帳號狀態</label><select id="batchStudentActive"><option value="__nochange">不修改</option><option value="true">啟用</option><option value="false">停用</option></select></div>
         <div class="form-field"><label>週報狀態</label><select id="batchStudentWeekly"><option value="__nochange">不修改</option><option value="true">啟用週報</option><option value="false">關閉週報</option></select></div>
         <div class="form-field full"><div class="form-note">批量修改不提供 UID / 姓名批量覆蓋，避免誤傷正式資料。若要修改 UID 或姓名，請用單一學生編輯。</div></div>
@@ -3073,6 +3085,7 @@
     let currentCurriculumScheduleTarget = null;
     let studentBatchMode = false;
     let selectedStudentIds = new Set();
+    let currentEditingStudentTags = [];
     let currentConsolePage = "overview";
 
     // Owner Scope v1：Owner 可在「全部校區 / 單一校區」間切換；Super Admin 永遠固定單一校區。
@@ -4190,6 +4203,7 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <input id="studentSearchInput" class="search-input" placeholder="搜尋姓名 / UID / 卡號 / Email" oninput="renderStudentsTable()" style="min-width:260px;" />
               <select id="studentClassFilter" class="select" onchange="renderStudentsTable()"><option value="all">全部班級</option></select>
+              <select id="studentTagFilter" class="select" onchange="renderStudentsTable()"><option value="all">全部標籤</option></select>
               <select id="studentStatusFilter" class="select" onchange="renderStudentsTable()">
                 <option value="active">啟用學生</option>
                 <option value="all">全部學生</option>
@@ -5044,6 +5058,8 @@
       renderStudentClassBars(activeRows);
       updateStudentDataHealth(activeRows);
       setupStudentClassFilter();
+      setupStudentTagFilter();
+      setupStudentFormPickers();
       renderStudentsTable();
     }
 
@@ -5074,6 +5090,91 @@
       }).join("") + (entries.length > 5 ? `<div class="insight-sub">另有 ${entries.length - 5} 個班級</div>` : "");
     }
 
+
+    function normalizeStudentTags(value) {
+      if (Array.isArray(value)) return [...new Set(value.map(v => String(v || "").trim()).filter(Boolean))];
+      if (typeof value === "string") {
+        const raw = value.trim();
+        if (!raw) return [];
+        try { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) return normalizeStudentTags(parsed); } catch (_) {}
+        return [...new Set(raw.split(/[\n,，;；]/).map(v => v.trim()).filter(Boolean))];
+      }
+      return [];
+    }
+
+    function getAllStudentTags() {
+      const tags = new Set();
+      for (const s of studentsCache?.students || []) {
+        normalizeStudentTags(s.tags).forEach(tag => tags.add(tag));
+      }
+      return Array.from(tags).sort((a,b) => a.localeCompare(b, "zh-Hant"));
+    }
+
+    function renderStudentTags(tags, limit = 3) {
+      const list = normalizeStudentTags(tags);
+      if (!list.length) return `<span class="small-note">無標籤</span>`;
+      const visible = list.slice(0, limit);
+      const more = list.length > limit ? `<span class="badge">+${list.length - limit}</span>` : "";
+      return `<div class="student-tag-line">${visible.map(tag => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}${more}</div>`;
+    }
+
+    function setupStudentTagFilter() {
+      const select = document.getElementById("studentTagFilter");
+      if (!select || !studentsCache) return;
+      const current = select.value || "all";
+      const tags = getAllStudentTags();
+      select.innerHTML = `<option value="all">全部標籤</option>` + tags.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+      if (["all", ...tags].includes(current)) select.value = current;
+    }
+
+    function setupStudentFormPickers() {
+      const classes = [...new Set((studentsCache?.students || []).map(s => s.class_code || s.classCode).filter(Boolean))].sort();
+      const classList = document.getElementById("studentClassOptions");
+      if (classList) classList.innerHTML = classes.map(c => `<option value="${escapeHtml(c)}"></option>`).join("");
+      const tagSelect = document.getElementById("editStudentExistingTag");
+      if (tagSelect) tagSelect.innerHTML = `<option value="">選擇既有標籤</option>` + getAllStudentTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+    }
+
+    function renderStudentTagEditor() {
+      const target = document.getElementById("editStudentTagChips");
+      if (!target) return;
+      const tags = normalizeStudentTags(currentEditingStudentTags);
+      target.innerHTML = tags.length
+        ? tags.map((tag, idx) => `<span class="student-tag-chip">${escapeHtml(tag)} <button type="button" onclick="removeStudentTag(${idx})">×</button></span>`).join("")
+        : `<span class="small-note">尚未加入標籤</span>`;
+    }
+
+    function addStudentTag(tag) {
+      const value = String(tag || "").trim();
+      if (!value) return;
+      const tags = normalizeStudentTags(currentEditingStudentTags);
+      if (!tags.includes(value)) tags.push(value);
+      currentEditingStudentTags = tags.slice(0, 20);
+      renderStudentTagEditor();
+    }
+
+    function addStudentTagFromInput() {
+      const input = document.getElementById("editStudentTagInput");
+      addStudentTag(input?.value || "");
+      if (input) input.value = "";
+    }
+
+    function addStudentTagFromSelect(value) { addStudentTag(value); }
+
+    function removeStudentTag(index) {
+      const tags = normalizeStudentTags(currentEditingStudentTags);
+      tags.splice(index, 1);
+      currentEditingStudentTags = tags;
+      renderStudentTagEditor();
+    }
+
+    function handleStudentTagInputKey(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addStudentTagFromInput();
+      }
+    }
+
     function setupStudentClassFilter() {
       const select = document.getElementById("studentClassFilter");
       if (!select || !studentsCache) return;
@@ -5092,16 +5193,18 @@
     function applyStudentFilters(rows) {
       const q = String(document.getElementById("studentSearchInput")?.value || "").trim().toLowerCase();
       const classFilter = document.getElementById("studentClassFilter")?.value || "all";
+      const tagFilter = document.getElementById("studentTagFilter")?.value || "all";
       const statusFilter = document.getElementById("studentStatusFilter")?.value || "active";
       const weeklyFilter = document.getElementById("studentWeeklyFilter")?.value || "all";
       const issueFilter = document.getElementById("studentIssueFilter")?.value || "all";
 
       let out = rows || [];
       if (q) {
-        out = out.filter(s => [s.name, s.uid, s.card_id, s.parent_email, s.school_code, s.class_code]
+        out = out.filter(s => [s.name, s.uid, s.card_id, s.parent_email, s.school_code, s.class_code, ...normalizeStudentTags(s.tags)]
           .some(v => String(v || "").toLowerCase().includes(q)));
       }
       if (classFilter !== "all") out = out.filter(s => String(s.class_code || "") === classFilter);
+      if (tagFilter !== "all") out = out.filter(s => normalizeStudentTags(s.tags).includes(tagFilter));
       if (statusFilter === "active") out = out.filter(s => Boolean(s.is_active));
       if (statusFilter === "inactive") out = out.filter(s => !Boolean(s.is_active));
       if (weeklyFilter === "enabled") out = out.filter(s => Boolean(s.weekly_report_enabled));
@@ -5157,7 +5260,7 @@
                 </div>
               </div>
             </td>
-            <td><div class="student-pill-stack"><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><span class="small-note">${escapeHtml(normalizeStudentType(s.student_type))}</span></div></td>
+            <td><div class="student-pill-stack"><span class="badge ok">${escapeHtml(s.class_code || "未分班")}</span><span class="small-note">${escapeHtml(normalizeStudentType(s.student_type))}</span>${renderStudentTags(s.tags)}</div></td>
             <td><div class="student-points-main">${Number(s.points || 0).toLocaleString()}</div><div class="small-note">${escapeHtml(s.title || "無 title")}</div></td>
             <td>${renderStudentStatusBadges(s, email, weekly)}</td>
             <td><strong>${escapeHtml(avatarName)}</strong><br><span class="small-note">解鎖 ${Number(s.unlocked_avatar_count || 0)} 個</span></td>
@@ -5186,7 +5289,7 @@
               <span class="badge ${s.is_active ? "ok" : "danger"}">${s.is_active ? "啟用" : "停用"}</span>
             </div>
             <div class="student-mobile-grid">
-              <div class="student-mobile-field"><div class="student-mobile-label">班級</div><div class="student-mobile-value">${escapeHtml(s.class_code || "未分班")}</div></div>
+              <div class="student-mobile-field"><div class="student-mobile-label">班級</div><div class="student-mobile-value">${escapeHtml(s.class_code || "未分班")}</div>${renderStudentTags(s.tags, 2)}</div>
               <div class="student-mobile-field"><div class="student-mobile-label">點數</div><div class="student-mobile-value">${Number(s.points || 0).toLocaleString()}</div></div>
               <div class="student-mobile-field"><div class="student-mobile-label">週報 / Email</div><div class="student-mobile-value ${hasStudentEmailIssue(s) ? "problem" : ""}">${weekly ? "啟用" : "關閉"}・${escapeHtml(email || "無 Email")}</div></div>
               <div class="student-mobile-field"><div class="student-mobile-label">角色</div><div class="student-mobile-value">${escapeHtml(avatarName)}</div></div>
@@ -5267,6 +5370,9 @@
       document.getElementById("editStudentActive").value = String(isNew ? true : Boolean(s?.is_active));
       document.getElementById("editStudentPoints").value = Number(s?.points || 0);
       document.getElementById("editStudentTitle").value = s?.title || "";
+      currentEditingStudentTags = normalizeStudentTags(s?.tags || []);
+      setupStudentFormPickers();
+      renderStudentTagEditor();
       const delBtn = document.getElementById("studentDisableBtn");
       delBtn.style.display = isNew ? "none" : "inline-flex";
       delBtn.textContent = s?.is_active ? "停用學生" : "重新啟用學生";
@@ -5325,7 +5431,8 @@
             weeklyReportEnabled,
             isActive,
             points: pointsRaw === "" ? undefined : Number(pointsRaw),
-            title
+            title,
+            tags: normalizeStudentTags(currentEditingStudentTags)
           }
         });
         if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "save_student_failed");
@@ -5353,7 +5460,7 @@
       try {
         const result = s.is_active
           ? await consoleSaveStudentsAction({ action: "delete_student", id })
-          : await consoleSaveStudentsAction({ action: "save_student", student: { ...s, id, uid: s.uid, cardId: s.card_id || s.uid, name: s.name, type: normalizeStudentType(s.student_type), classId: s.class_code, parentEmail: s.parent_email, weeklyReportEnabled: Boolean(s.weekly_report_enabled), isActive: true, points: s.points, title: s.title || "" } });
+          : await consoleSaveStudentsAction({ action: "save_student", student: { ...s, id, uid: s.uid, cardId: s.card_id || s.uid, name: s.name, type: normalizeStudentType(s.student_type), classId: s.class_code, parentEmail: s.parent_email, weeklyReportEnabled: Boolean(s.weekly_report_enabled), isActive: true, points: s.points, title: s.title || "", tags: normalizeStudentTags(s.tags) } });
         if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "student_status_failed");
         hideStudentModal();
         studentsCache = null;
