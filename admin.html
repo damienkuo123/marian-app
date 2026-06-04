@@ -6885,9 +6885,11 @@ function getAdminQueryClassOptions() {
                 const latest = evs[0] || null;
                 const latestType = latest ? (latest.event_type || latest.eventType) : 'none';
                 if (statusFilter && latestType !== statusFilter) return;
-                if (q && ![s.name, uid, classCode].some(v => String(v || '').toLowerCase().includes(q))) return;
-                if (!grouped.has(classCode)) grouped.set(classCode, []);
-                grouped.get(classCode).push({ student: { ...s, uid, classCode }, events: evs, latest, latestType });
+                if (tagFilter && !adminQueryHasTag(s, tagFilter)) return;
+                if (q && ![s.name, uid, classCode, ...(getAdminStudentTags(s) || [])].some(v => String(v || '').toLowerCase().includes(q))) return;
+                const statusKey = latestType === 'checkin' ? 'checkin' : latestType === 'checkout' ? 'checkout' : 'none';
+                if (!grouped.has(statusKey)) grouped.set(statusKey, []);
+                grouped.get(statusKey).push({ student: { ...s, uid, classCode }, events: evs, latest, latestType });
             });
 
             if (!grouped.size) {
@@ -6895,21 +6897,32 @@ function getAdminQueryClassOptions() {
                 return;
             }
 
-            const sortedGroups = Array.from(grouped.entries()).sort((a,b) => {
-                if (a[0] === '無班級') return 1;
-                if (b[0] === '無班級') return -1;
-                return a[0].localeCompare(b[0], 'zh-Hant');
+            const statusGroups = [
+                ['checkin', '🟢 已到校', '依到校時間早到晚'],
+                ['checkout', '🔴 已離校', '依離校時間早到晚'],
+                ['none', '⚪ 尚無打卡', '符合目前篩選但今日尚無紀錄'],
+            ].map(([key, title, hint]) => {
+                const rows = grouped.get(key) || [];
+                rows.sort((a,b) => {
+                    if (key === 'none') {
+                        return String(a.student.classCode || '').localeCompare(String(b.student.classCode || ''), 'zh-Hant') || String(a.student.name || '').localeCompare(String(b.student.name || ''), 'zh-Hant');
+                    }
+                    const at = new Date(a.latest?.event_time || a.latest?.eventTime || a.latest?.created_at || 0).getTime();
+                    const bt = new Date(b.latest?.event_time || b.latest?.eventTime || b.latest?.created_at || 0).getTime();
+                    return at - bt;
+                });
+                return { key, title, hint, rows };
             });
 
             const canNoCardCheckin = isAdminV2Super();
 
-            const html = sortedGroups.map(([classCode, rows]) => {
+            const html = statusGroups.map(({ title, hint, rows }) => {
                 return `<div class="admin-v2-class-block glass-panel">
                     <div class="admin-v2-class-head">
-                        <div><strong>${escapeAdminV2(classCode)}</strong><small>今日打卡紀錄</small></div>
+                        <div><strong>${escapeAdminV2(title)}</strong><small>${escapeAdminV2(hint)}</small></div>
                         <span class="admin-v2-count-badge">${rows.length} 人</span>
                     </div>
-                    ${rows.map(({ student, events, latest, latestType }) => {
+                    ${rows.length ? rows.map(({ student, events, latest, latestType }) => {
                         const timeText = latest ? getAdminQueryShortTimeText(latest.event_time || latest.eventTime || latest.created_at) : '';
                         const badge = latestType === 'checkout' ? `🔴 已離校 ${timeText}` : latestType === 'checkin' ? `🟢 已到校 ${timeText}` : '⚪ 尚無打卡';
                         const eventHtml = events.length
@@ -6943,7 +6956,7 @@ function getAdminQueryClassOptions() {
                                     ${renderAdminQueryPushDeviceList(student.uid)}
                                 </div>
                             </div>`;
-                    }).join('')}
+                    }).join('') : '<div class="admin-v2-empty">此區目前沒有符合條件的學生</div>'}
                 </div>`;
             }).join('');
 

@@ -573,15 +573,19 @@
     .batch-actions { display:none; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:12px 14px; margin:0 0 14px; border:1px solid rgba(37,99,235,.16); background:rgba(37,99,235,.06); border-radius:16px; }
     .batch-actions.show { display:flex; }
 
-    /* Student tags v1 */
-    .student-tag-editor { display:grid; grid-template-columns: minmax(0,1fr) auto minmax(150px,.7fr); gap:8px; align-items:center; }
-    .student-tag-editor input, .student-tag-editor select { min-width:0; }
+    /* Student student-type / class / tag compact rows v2 */
+    .student-form-line { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(150px,.72fr); gap:8px; align-items:center; }
+    .student-form-line input, .student-form-line select { min-width:0; width:100%; }
+    .student-form-line .btn-compact { white-space:nowrap; }
     .student-tag-chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     .student-tag-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border-radius:999px; border:1px solid rgba(37,99,235,.18); background:rgba(37,99,235,.08); color:var(--primary); font-size:12.5px; font-weight:800; max-width:100%; }
     .student-tag-chip button { border:0; background:transparent; color:inherit; cursor:pointer; font-weight:950; padding:0; line-height:1; }
     .student-tag-line { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
     .student-tag-line .badge { background:rgba(37,99,235,.08); color:var(--primary); }
-    @media (max-width: 720px) { .student-tag-editor { grid-template-columns:1fr; } }
+    @media (max-width: 720px) {
+      .student-form-line { grid-template-columns:minmax(0,1fr) auto minmax(112px,.78fr); gap:6px; }
+      .student-form-line .btn-compact { padding-left:10px; padding-right:10px; }
+    }
 
     @media (max-width:640px) {
       .student-check-strip { flex-direction:column; align-items:flex-start; }
@@ -2921,9 +2925,9 @@
         <input type="hidden" id="editStudentId" />
         <div class="form-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" /></div>
         <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" /></div>
-        <div class="form-field"><label>學生類別</label><select id="editStudentType" onchange="toggleConsoleClassHint()"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
-        <div class="form-field"><label>班級代碼</label><input id="editStudentClass" list="studentClassOptions" placeholder="有班級學生需填班級，例如 A1" /><datalist id="studentClassOptions"></datalist></div>
-        <div class="form-field full"><label>標籤</label><div class="student-tag-editor"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput()">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
+        <div class="form-field full"><label>學生類別</label><div class="student-form-line"><input id="editStudentTypeInput" placeholder="輸入類別，例如：有班級" onkeydown="handleStudentTypeInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTypeFromInput()">新增</button><select id="editStudentType" onchange="syncStudentTypeInput(); toggleConsoleClassHint();"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div></div>
+        <div class="form-field full" id="editStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="editStudentClass" placeholder="有班級學生需填班級，例如 A1" onkeydown="handleStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentClassFromInput()">新增</button><select id="editStudentExistingClass" onchange="setStudentClassFromSelect(this.value);"><option value="">選擇既有班級</option></select></div></div>
+        <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput()">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
         <div class="form-field"><label>Parent Email</label><input id="editStudentEmail" placeholder="parent@example.com" /></div>
         <div class="form-field"><label>週報狀態</label><select id="editStudentWeekly"><option value="true">啟用週報</option><option value="false">不啟用週報</option></select></div>
         <div class="form-field"><label>帳號狀態</label><select id="editStudentActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
@@ -5129,11 +5133,64 @@
     }
 
     function setupStudentFormPickers() {
-      const classes = [...new Set((studentsCache?.students || []).map(s => s.class_code || s.classCode).filter(Boolean))].sort();
-      const classList = document.getElementById("studentClassOptions");
-      if (classList) classList.innerHTML = classes.map(c => `<option value="${escapeHtml(c)}"></option>`).join("");
+      const students = studentsCache?.students || [];
+      const classes = [...new Set(students.map(s => s.class_code || s.classCode).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant'));
+      const classSelect = document.getElementById("editStudentExistingClass");
+      if (classSelect) classSelect.innerHTML = `<option value="">選擇既有班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      const typeSelect = document.getElementById("editStudentType");
+      const currentType = typeSelect?.value || "無班級";
+      const typeSet = new Set(["無班級", "有班級"]);
+      students.forEach(s => { const t = normalizeStudentType(s.student_type || s.studentType || ""); if (t) typeSet.add(t); });
+      if (typeSelect) {
+        typeSelect.innerHTML = Array.from(typeSet).map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+        typeSelect.value = typeSet.has(currentType) ? currentType : "無班級";
+        syncStudentTypeInput();
+      }
       const tagSelect = document.getElementById("editStudentExistingTag");
       if (tagSelect) tagSelect.innerHTML = `<option value="">選擇既有標籤</option>` + getAllStudentTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+    }
+
+    function ensureSelectOption(selectId, value) {
+      const select = document.getElementById(selectId);
+      const v = String(value || "").trim();
+      if (!select || !v) return;
+      if (![...select.options].some(opt => opt.value === v)) select.add(new Option(v, v));
+      select.value = v;
+    }
+
+    function syncStudentTypeInput() {
+      const input = document.getElementById("editStudentTypeInput");
+      const select = document.getElementById("editStudentType");
+      if (input && select) input.value = select.value || "";
+    }
+
+    function addStudentTypeFromInput() {
+      const input = document.getElementById("editStudentTypeInput");
+      const value = String(input?.value || "").trim();
+      if (!value) return;
+      ensureSelectOption("editStudentType", normalizeStudentType(value));
+      syncStudentTypeInput();
+      toggleConsoleClassHint();
+    }
+
+    function handleStudentTypeInputKey(event) {
+      if (event.key === "Enter") { event.preventDefault(); addStudentTypeFromInput(); }
+    }
+
+    function addStudentClassFromInput() {
+      const input = document.getElementById("editStudentClass");
+      const value = String(input?.value || "").trim();
+      if (!value) return;
+      ensureSelectOption("editStudentExistingClass", value);
+    }
+
+    function setStudentClassFromSelect(value) {
+      const input = document.getElementById("editStudentClass");
+      if (input && value) input.value = value;
+    }
+
+    function handleStudentClassInputKey(event) {
+      if (event.key === "Enter") { event.preventDefault(); addStudentClassFromInput(); }
     }
 
     function renderStudentTagEditor() {
@@ -5366,6 +5423,8 @@
       document.getElementById("editStudentUid").value = s?.uid || (currentConsoleSchoolCode() ? `${currentConsoleSchoolCode()}-` : "");
       document.getElementById("editStudentType").value = normalizeStudentType(s?.student_type || "無班級");
       document.getElementById("editStudentClass").value = s?.class_code || "";
+      const typeInput = document.getElementById("editStudentTypeInput");
+      if (typeInput) typeInput.value = document.getElementById("editStudentType").value || "";
       document.getElementById("editStudentEmail").value = s?.parent_email || "";
       document.getElementById("editStudentWeekly").value = String(Boolean(s?.weekly_report_enabled));
       document.getElementById("editStudentActive").value = String(isNew ? true : Boolean(s?.is_active));
@@ -5390,10 +5449,15 @@
     function toggleConsoleClassHint() {
       const type = document.getElementById("editStudentType")?.value || "";
       const note = document.getElementById("studentFormNote");
+      const classField = document.getElementById("editStudentClassField");
+      const classInput = document.getElementById("editStudentClass");
+      const isNoClass = type === "無班級";
+      if (classField) classField.classList.toggle("hidden", isNoClass);
+      if (isNoClass && classInput) classInput.value = "";
       if (!note) return;
       note.textContent = type === "有班級"
         ? "有班級學生必須填寫班級代碼，才會出現在對應單元、挑戰與排行榜。"
-        : "無班級學生可以不填班級代碼；適合只使用點數、角色、週報或通知功能的學生。";
+        : "無班級學生會隱藏班級代碼；適合只使用點數、角色、週報或通知功能的學生。";
     }
 
     async function saveConsoleStudent() {
@@ -5621,15 +5685,37 @@
       const set = new Set();
       (data?.students || []).forEach(s => set.add(String(s.classCode || s.class_code || "無班級")));
       (data?.classes || []).forEach(c => set.add(String(c.classCode || c.class_code || "無班級")));
-      return Array.from(set).filter(Boolean).sort((a, b) => (a === "無班級" ? 1 : b === "無班級" ? -1 : a.localeCompare(b)));
+      return Array.from(set).filter(Boolean).sort((a, b) => (a === "無班級" ? 1 : b === "無班級" ? -1 : a.localeCompare(b, 'zh-Hant')));
+    }
+
+    function consoleQueryStudentTags(obj) {
+      return normalizeStudentTags(obj?.tags || obj?.studentTags || obj?.tagList || []);
+    }
+
+    function consoleQueryTagOptions(data = learningCache) {
+      const set = new Set();
+      (data?.students || []).forEach(s => consoleQueryStudentTags(s).forEach(t => set.add(t)));
+      (data?.items || []).forEach(s => consoleQueryStudentTags(s).forEach(t => set.add(t)));
+      (data?.classes || []).forEach(c => (c.students || []).forEach(s => consoleQueryStudentTags(s).forEach(t => set.add(t))));
+      return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+    }
+
+    function consoleQueryHasTag(obj, tag) {
+      if (!tag || tag === "all") return true;
+      return consoleQueryStudentTags(obj).includes(tag);
     }
 
     function renderLearningFilterControls(mode) {
       const classOptions = consoleQueryClassCodes().map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      const tagOptions = consoleQueryTagOptions().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+      const tagSelectPoints = `<select id="learningTagFilter" class="select" onchange="renderLearningPoints()"><option value="all">全部標籤</option>${tagOptions}</select>`;
+      const tagSelectAttendance = `<select id="learningTagFilter" class="select" onchange="renderLearningAttendance()"><option value="all">全部標籤</option>${tagOptions}</select>`;
+      const tagSelectLearning = `<select id="learningTagFilter" class="select" onchange="renderLearningClasses()"><option value="all">全部標籤</option>${tagOptions}</select>`;
       if (mode === "points") {
         return `
           <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 原因" oninput="renderLearningPoints()" style="min-width:240px;" />
           <select id="learningClassFilter" class="select" onchange="renderLearningPoints()"><option value="all">全部班級</option>${classOptions}</select>
+          ${tagSelectPoints}
           <select id="learningStatusFilter" class="select" onchange="renderLearningPoints()">
             <option value="all">全部狀態</option><option value="plus">加分</option><option value="minus">扣分</option>
           </select>
@@ -5639,15 +5725,17 @@
       }
       if (mode === "attendance") {
         return `
-          <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級" oninput="renderLearningAttendance()" style="min-width:240px;" />
+          <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級 / 標籤" oninput="renderLearningAttendance()" style="min-width:240px;" />
           <select id="learningClassFilter" class="select" onchange="renderLearningAttendance()"><option value="all">全部班級</option>${classOptions}</select>
+          ${tagSelectAttendance}
           <select id="learningStatusFilter" class="select" onchange="renderLearningAttendance()">
             <option value="all">全部狀態</option><option value="checkin">已到校</option><option value="checkout">已離校</option><option value="none">尚無打卡</option>
           </select>`;
       }
       return `
-        <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級" oninput="renderLearningClasses()" style="min-width:260px;" />
+        <input id="learningSearchInput" class="search-input" placeholder="搜尋學生 / UID / 班級 / 標籤" oninput="renderLearningClasses()" style="min-width:260px;" />
         <select id="learningClassFilter" class="select" onchange="renderLearningClasses()"><option value="all">全部班級</option>${classOptions}</select>
+        ${tagSelectLearning}
         <select id="learningStatusFilter" class="select" onchange="renderLearningClasses()">
           <option value="all">全部狀態</option>
           <option value="risk">危險</option>
@@ -5718,6 +5806,7 @@
       const fail = learningFailThreshold(gami), good = learningGoodThreshold(gami), perfect = learningPerfectThreshold(gami);
       const q = String(document.getElementById("learningSearchInput")?.value || "").trim().toLowerCase();
       const classFilter = document.getElementById("learningClassFilter")?.value || "all";
+      const tagFilter = document.getElementById("learningTagFilter")?.value || "all";
       const statusFilter = document.getElementById("learningStatusFilter")?.value || "all";
       let classes = learningCache.classes || [];
       if (classFilter !== "all") classes = classes.filter(c => String(c.classCode || c.class_code || "") === classFilter);
@@ -5728,7 +5817,8 @@
         const schedule = cls.schedule || {};
         const rangeText = cls.rangeText || [schedule.startDate || cls.startDate || cls.start_date, schedule.endDate || cls.endDate || cls.end_date].filter(Boolean).join("～") || "尚無排程區間";
         let students = (cls.students || []).slice();
-        if (q) students = students.filter(s => [s.name, s.uid, s.cardId, classCode].some(v => String(v || "").toLowerCase().includes(q)));
+        if (q) students = students.filter(s => [s.name, s.uid, s.cardId, classCode, ...consoleQueryStudentTags(s)].some(v => String(v || "").toLowerCase().includes(q)));
+        if (tagFilter !== "all") students = students.filter(s => consoleQueryHasTag(s, tagFilter));
         if (statusFilter === "risk") students = students.filter(s => Number(s.count || 0) < fail);
         if (statusFilter === "good") students = students.filter(s => Number(s.count || 0) >= good);
         if (statusFilter === "perfect") students = students.filter(s => Number(s.count || 0) >= perfect);
@@ -5774,11 +5864,13 @@
       const items = (learningCache.items || []).slice();
       const q = String(document.getElementById("learningSearchInput")?.value || "").trim().toLowerCase();
       const classFilter = document.getElementById("learningClassFilter")?.value || "all";
+      const tagFilter = document.getElementById("learningTagFilter")?.value || "all";
       const statusFilter = document.getElementById("learningStatusFilter")?.value || "all";
       const valueFilter = document.getElementById("learningValueFilter")?.value || "all";
       let rows = items;
-      if (q) rows = rows.filter(r => [r.name, r.uid, r.classCode, r.title, r.reason, r.note].some(v => String(v || "").toLowerCase().includes(q)));
+      if (q) rows = rows.filter(r => [r.name, r.uid, r.classCode, r.title, r.reason, r.note, ...consoleQueryStudentTags(r)].some(v => String(v || "").toLowerCase().includes(q)));
       if (classFilter !== "all") rows = rows.filter(r => String(r.classCode || "無班級") === classFilter);
+      if (tagFilter !== "all") rows = rows.filter(r => consoleQueryHasTag(r, tagFilter));
       if (statusFilter === "plus") rows = rows.filter(r => Number(r.points || 0) > 0);
       if (statusFilter === "minus") rows = rows.filter(r => Number(r.points || 0) < 0);
       if (valueFilter === "lt100") rows = rows.filter(r => Math.abs(Number(r.points || 0)) < 100);
@@ -5837,6 +5929,7 @@
       if (!learningCache || !document.getElementById("learningClassGrid")) return;
       const q = String(document.getElementById("learningSearchInput")?.value || "").trim().toLowerCase();
       const classFilter = document.getElementById("learningClassFilter")?.value || "all";
+      const tagFilter = document.getElementById("learningTagFilter")?.value || "all";
       const statusFilter = document.getElementById("learningStatusFilter")?.value || "all";
       const events = learningCache.events || [];
       const byUid = new Map();
@@ -5851,8 +5944,9 @@
         evts.sort((a,b) => new Date(b.eventTime || b.event_time || 0).getTime() - new Date(a.eventTime || a.event_time || 0).getTime());
         return { ...s, _events: evts, _latest: evts[0] || null };
       });
-      if (q) students = students.filter(s => [s.name, s.uid, s.classCode].some(v => String(v || "").toLowerCase().includes(q)));
+      if (q) students = students.filter(s => [s.name, s.uid, s.classCode, ...consoleQueryStudentTags(s)].some(v => String(v || "").toLowerCase().includes(q)));
       if (classFilter !== "all") students = students.filter(s => String(s.classCode || "無班級") === classFilter);
+      if (tagFilter !== "all") students = students.filter(s => consoleQueryHasTag(s, tagFilter));
       if (statusFilter === "checkin") students = students.filter(s => String(s._latest?.eventType || s._latest?.event_type || "") === "checkin");
       if (statusFilter === "checkout") students = students.filter(s => String(s._latest?.eventType || s._latest?.event_type || "") === "checkout");
       if (statusFilter === "none") students = students.filter(s => !s._latest);
@@ -5865,23 +5959,40 @@
         { label:"訂閱裝置", value:students.reduce((sum,s)=>sum + Number(s.pushDeviceCount || 0), 0), note:"目前篩選學生合計" },
       ]);
       document.getElementById("learningThresholds").innerHTML = `<span class="learning-chip">今日打卡狀態</span><span class="learning-chip">🔔 顯示上放學通知訂閱裝置數</span>`;
-      const grouped = new Map();
+      function attendanceBucketKey(s) {
+        const type = String(s._latest?.eventType || s._latest?.event_type || "");
+        if (type === "checkin") return "checkin";
+        if (type === "checkout") return "checkout";
+        return "none";
+      }
+      function attendanceSortTime(s) {
+        const t = s._latest?.eventTime || s._latest?.event_time || "";
+        return t ? new Date(t).getTime() : Number.MAX_SAFE_INTEGER;
+      }
+      const buckets = [
+        { key:"checkin", title:"🟢 已到校", hint:"依到校時間早到晚", rows:[] },
+        { key:"checkout", title:"🔴 已離校", hint:"依離校時間早到晚", rows:[] },
+        { key:"none", title:"⚪ 尚無打卡", hint:"符合目前篩選但今日尚無紀錄", rows:[] },
+      ];
       students.forEach(s => {
-        const c = String(s.classCode || "無班級");
-        if (!grouped.has(c)) grouped.set(c, []);
-        grouped.get(c).push(s);
+        const bucket = buckets.find(b => b.key === attendanceBucketKey(s));
+        if (bucket) bucket.rows.push(s);
       });
-      const classCodes = Array.from(grouped.keys()).sort((a,b)=> a === "無班級" ? 1 : b === "無班級" ? -1 : a.localeCompare(b));
-      const html = classCodes.map(classCode => {
-        const rows = grouped.get(classCode).map(s => {
+      buckets.forEach(bucket => {
+        if (bucket.key === "none") bucket.rows.sort((a,b)=>String(a.classCode||"").localeCompare(String(b.classCode||""),'zh-Hant') || String(a.name||"").localeCompare(String(b.name||""),'zh-Hant'));
+        else bucket.rows.sort((a,b)=>attendanceSortTime(a)-attendanceSortTime(b));
+      });
+      const html = buckets.map(bucket => {
+        const rows = bucket.rows.map(s => {
           const latest = s._latest;
           const type = String(latest?.eventType || latest?.event_type || "");
           const label = !latest ? "尚無打卡" : type === "checkout" ? "已離校" : "已到校";
           const cls = !latest ? "warn" : type === "checkout" ? "danger" : "ok";
+          const classCode = String(s.classCode || "無班級");
           return `
             <div class="learning-student-row">
               <button class="learning-student-button" onclick="this.closest('.learning-student-row').classList.toggle('open')">
-                <div><div class="learning-student-name">${escapeHtml(s.name || "未命名學生")}</div><div class="learning-student-sub">${escapeHtml(s.uid || "")}｜${escapeHtml(classCode)}</div></div>
+                <div><div class="learning-student-name">${escapeHtml(s.name || "未命名學生")}</div><div class="learning-student-sub">${escapeHtml(s.uid || "")}｜${escapeHtml(classCode)}${consoleQueryStudentTags(s).length ? '｜' + consoleQueryStudentTags(s).map(escapeHtml).join('、') : ''}</div></div>
                 <div><span class="learning-count-pill">🔔 ${Number(s.pushDeviceCount || 0)}</span></div>
                 <div><span class="badge ${cls}">${label}</span></div>
                 <div class="learning-time">${escapeHtml(formatDateTime(latest?.eventTime || latest?.event_time))}</div>
@@ -5892,9 +6003,9 @@
                 <div class="learning-records"><div class="learning-record-title">訂閱通知裝置</div>${renderPushDevices(s.pushDevices || [])}</div>
               </div>
             </div>`;
-        }).join("");
-        return `<div class="learning-class-card"><div class="learning-class-head"><div><h3>🏷️ ${escapeHtml(classCode)}</h3><p>今日打卡查詢</p></div><div class="learning-class-metrics"><span class="learning-mini-badge">學生 ${grouped.get(classCode).length}</span></div></div><div class="learning-student-list">${rows}</div></div>`;
-      }).join("") || `<div class="empty-state">目前沒有符合條件的學生。</div>`;
+        }).join("") || `<div class="empty-state">此區目前沒有符合條件的學生。</div>`;
+        return `<div class="learning-class-card"><div class="learning-class-head"><div><h3>${bucket.title}</h3><p>${bucket.hint}</p></div><div class="learning-class-metrics"><span class="learning-mini-badge">學生 ${bucket.rows.length}</span></div></div><div class="learning-student-list">${rows}</div></div>`;
+      }).join("");
       document.getElementById("learningClassGrid").innerHTML = html;
       const note = document.getElementById("learningTableNote");
       if (note) note.textContent = `目前顯示 ${students.length} 位學生`;
