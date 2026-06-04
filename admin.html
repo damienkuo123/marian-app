@@ -2660,9 +2660,25 @@
                 studentName: s.name || s.studentName || '-',
                 currentPoints: Number(s.points || s.currentPoints || 0),
                 uid: s.uid,
+                studentType: s.student_type || s.studentType || '',
                 classCode: s.class_code || s.classCode || '',
+                tags: normalizeAdminStudentTags(s.tags || s.studentTags || s.labels || []),
                 recentLogs: s.recentLogs || s.pointLogs || s.logs || []
             };
+        }
+
+        function normalizeAdminStudentTags(value) {
+            if (Array.isArray(value)) return [...new Set(value.map(v => String(v || '').trim()).filter(Boolean))];
+            if (typeof value === 'string') {
+                const raw = value.trim();
+                if (!raw) return [];
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) return normalizeAdminStudentTags(parsed);
+                } catch (_) {}
+                return [...new Set(raw.split(/[\n,，;；]/).map(v => v.trim()).filter(Boolean))];
+            }
+            return [];
         }
 
         
@@ -6202,8 +6218,16 @@
         function renderV2StudentSnapshot(data = {}) {
             const meta = document.getElementById('admin-v2-student-meta');
             if (meta) {
+                const studentType = data.studentType || data.student_type || '';
                 const classCode = data.classCode || data.class_code || data.unitName || '';
-                meta.innerText = classCode ? `${classCode}` : '已掃描學生卡';
+                const tags = normalizeAdminStudentTags(data.tags || data.studentTags || []);
+                const main = studentType === '有班級'
+                    ? `${studentType}${classCode ? '｜' + classCode : ''}`
+                    : (studentType || (classCode ? classCode : '已掃描學生卡'));
+                const tagHtml = tags.length
+                    ? `<div class="admin-v2-tag-chip-row" style="justify-content:center;margin-top:8px;">${tags.map(tag => `<span class="admin-v2-tag-chip">${escapeAdminV2(tag)}</span>`).join('')}</div>`
+                    : '';
+                meta.innerHTML = `${escapeAdminV2(main)}${tagHtml}`;
             }
             // v2.1：學生資訊不顯示頭像。
         }

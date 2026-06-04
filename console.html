@@ -2925,7 +2925,7 @@
         <input type="hidden" id="editStudentId" />
         <div class="form-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" /></div>
         <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" /></div>
-        <div class="form-field full"><label>學生類別</label><div class="student-form-line"><input id="editStudentTypeInput" placeholder="輸入類別，例如：有班級" onkeydown="handleStudentTypeInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTypeFromInput()">新增</button><select id="editStudentType" onchange="syncStudentTypeInput(); toggleConsoleClassHint();"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div></div>
+        <div class="form-field full"><label>學生類別</label><select id="editStudentType" class="select" onchange="toggleConsoleClassHint();"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
         <div class="form-field full" id="editStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="editStudentClass" placeholder="有班級學生需填班級，例如 A1" onkeydown="handleStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentClassFromInput()">新增</button><select id="editStudentExistingClass" onchange="setStudentClassFromSelect(this.value);"><option value="">選擇既有班級</option></select></div></div>
         <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput()">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
         <div class="form-field"><label>Parent Email</label><input id="editStudentEmail" placeholder="parent@example.com" /></div>
@@ -5138,13 +5138,10 @@
       const classSelect = document.getElementById("editStudentExistingClass");
       if (classSelect) classSelect.innerHTML = `<option value="">選擇既有班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
       const typeSelect = document.getElementById("editStudentType");
-      const currentType = typeSelect?.value || "無班級";
-      const typeSet = new Set(["無班級", "有班級"]);
-      students.forEach(s => { const t = normalizeStudentType(s.student_type || s.studentType || ""); if (t) typeSet.add(t); });
+      const currentType = normalizeStudentType(typeSelect?.value || "無班級");
       if (typeSelect) {
-        typeSelect.innerHTML = Array.from(typeSet).map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
-        typeSelect.value = typeSet.has(currentType) ? currentType : "無班級";
-        syncStudentTypeInput();
+        typeSelect.innerHTML = `<option value="無班級">無班級</option><option value="有班級">有班級</option>`;
+        typeSelect.value = currentType === "有班級" ? "有班級" : "無班級";
       }
       const tagSelect = document.getElementById("editStudentExistingTag");
       if (tagSelect) tagSelect.innerHTML = `<option value="">選擇既有標籤</option>` + getAllStudentTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
@@ -5423,8 +5420,6 @@
       document.getElementById("editStudentUid").value = s?.uid || (currentConsoleSchoolCode() ? `${currentConsoleSchoolCode()}-` : "");
       document.getElementById("editStudentType").value = normalizeStudentType(s?.student_type || "無班級");
       document.getElementById("editStudentClass").value = s?.class_code || "";
-      const typeInput = document.getElementById("editStudentTypeInput");
-      if (typeInput) typeInput.value = document.getElementById("editStudentType").value || "";
       document.getElementById("editStudentEmail").value = s?.parent_email || "";
       document.getElementById("editStudentWeekly").value = String(Boolean(s?.weekly_report_enabled));
       document.getElementById("editStudentActive").value = String(isNew ? true : Boolean(s?.is_active));
