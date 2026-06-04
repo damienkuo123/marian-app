@@ -2793,15 +2793,9 @@
         const actionUI = document.getElementById('action-ui');
 
         // 🚀 URL 跳轉掃描接收邏輯
-        const TARGET_ID = params.get('id') || params.get('cardId');
-        if (TARGET_ID) {
-            currentStudentId = TARGET_ID;
-            window.history.replaceState(null, null, 'admin.html');
-            card.className = 'container admin-main loading';
-            msg.innerText = "⏳ 讀取學生資料中...";
-            msg.style.color = "#ffd700";
-            loadStudentData(currentStudentId);
-        }
+        // Step 5H：NFC / 外部連結本質是 URL 回流。不要在這裡立刻 loadStudentData，
+        // 因為 Admin v2 的模式狀態還沒初始化完成；太早吃 URL 會讓自動/手動模式不同步。
+        const ADMIN_V2_URL_TARGET_ID = params.get('id') || params.get('cardId') || params.get('cardid') || params.get('uid');
 
         // 🟢 選單切換邏輯 (加入安全防呆)
         function toggleMenu() {
@@ -5877,6 +5871,7 @@
         const ADMIN_V2_ATTENDANCE_EXPIRES_KEY = 'tappie_attendance_expires_at';
         const ADMIN_V2_MANUAL_ACTION_KEY = 'tappie_manual_attendance_action';
         const ADMIN_V2_LAST_MODE_KEY = 'tappie_admin_last_mode';
+        const ADMIN_V2_ATTENDANCE_UPDATED_KEY = 'tappie_attendance_mode_updated_at';
         const ADMIN_V2_AUTO_TTL_MS = 10 * 60 * 1000;
 
         function normalizeAdminV2AttendanceMode(mode) {
@@ -5894,15 +5889,31 @@
             return ADMIN_V2_AUTO_ATTENDANCE_LOCK;
         }
 
+        function writeAdminV2AttendanceStorage(mode, expiresAt = 0) {
+            const normalized = normalizeAdminV2AttendanceMode(mode);
+            const updatedAt = String(Date.now());
+            try {
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
+                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_UPDATED_KEY, updatedAt);
+                localStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
+                localStorage.setItem(ADMIN_V2_ATTENDANCE_UPDATED_KEY, updatedAt);
+                sessionStorage.removeItem('tappie_attendance_action');
+                if (normalized === 'auto_checkin' || normalized === 'auto_checkout') {
+                    const exp = expiresAt || (Date.now() + ADMIN_V2_AUTO_TTL_MS);
+                    sessionStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(exp));
+                    localStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(exp));
+                } else {
+                    sessionStorage.removeItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY);
+                    localStorage.removeItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY);
+                }
+            } catch(e) {}
+        }
+
         function clearAdminV2AutoAttendance() {
             ADMIN_V2_AUTO_ATTENDANCE_LOCK = null;
-            try {
-                localStorage.removeItem(ADMIN_V2_ATTENDANCE_MODE_KEY);
-                localStorage.removeItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY);
-                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, 'manual');
-                sessionStorage.removeItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY);
-                sessionStorage.removeItem('tappie_attendance_action');
-            } catch(e) {}
+            // Step 5H：手動模式也要寫進 localStorage，因為 NFC/記事本連結會透過 URL 回流。
+            // 若只清除 local auto，下一次跨頁回來可能又被 session/舊流程誤判。
+            writeAdminV2AttendanceStorage('manual', 0);
         }
 
         function readAdminV2AttendanceMode({ allowAuto = false } = {}) {
@@ -5910,8 +5921,11 @@
             try {
                 const sessionMode = normalizeAdminV2AttendanceMode(sessionStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY) || 'manual');
                 const localMode = normalizeAdminV2AttendanceMode(localStorage.getItem(ADMIN_V2_ATTENDANCE_MODE_KEY) || 'manual');
-                // 同一頁點選後以 session 為優先；從 tap.html 回流或重新整理時以 localStorage 補上。
-                const rawMode = sessionMode !== 'manual' ? sessionMode : localMode;
+                const sessionUpdated = Number(sessionStorage.getItem(ADMIN_V2_ATTENDANCE_UPDATED_KEY) || 0);
+                const localUpdated = Number(localStorage.getItem(ADMIN_V2_ATTENDANCE_UPDATED_KEY) || 0);
+
+                // Step 5H：以「最近一次使用者切換」為唯一真相，而不是固定偏好 session 或 local。
+                const rawMode = localUpdated > sessionUpdated ? localMode : sessionMode;
                 const sessionExpiresAt = Number(sessionStorage.getItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY) || 0);
                 const localExpiresAt = Number(localStorage.getItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY) || 0);
                 let expiresAt = Math.max(sessionExpiresAt, localExpiresAt);
@@ -5921,10 +5935,9 @@
                         mode = rawMode;
                         if (!expiresAt) {
                             expiresAt = Date.now() + ADMIN_V2_AUTO_TTL_MS;
-                            sessionStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(expiresAt));
-                            try { localStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(expiresAt)); } catch(e) {}
+                            writeAdminV2AttendanceStorage(mode, expiresAt);
                         }
-                    } else {
+                    } else if (expiresAt && Date.now() > expiresAt) {
                         clearAdminV2AutoAttendance();
                     }
                 } else {
@@ -5939,19 +5952,13 @@
         function writeAdminV2AttendanceMode(mode) {
             const normalized = normalizeAdminV2AttendanceMode(mode);
             ADMIN_V2_ATTENDANCE_MODE = normalized;
-            try {
-                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
-                sessionStorage.removeItem('tappie_attendance_action');
-                if (normalized === 'auto_checkin' || normalized === 'auto_checkout') {
-                    setAdminV2LockedAutoAttendanceMode(normalized);
-                    const expiresAt = Date.now() + ADMIN_V2_AUTO_TTL_MS;
-                    sessionStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(expiresAt));
-                    localStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, normalized);
-                    localStorage.setItem(ADMIN_V2_ATTENDANCE_EXPIRES_KEY, String(expiresAt));
-                } else {
-                    clearAdminV2AutoAttendance();
-                }
-            } catch(e) {}
+            if (normalized === 'auto_checkin' || normalized === 'auto_checkout') {
+                setAdminV2LockedAutoAttendanceMode(normalized);
+                writeAdminV2AttendanceStorage(normalized, Date.now() + ADMIN_V2_AUTO_TTL_MS);
+            } else {
+                ADMIN_V2_AUTO_ATTENDANCE_LOCK = null;
+                writeAdminV2AttendanceStorage('manual', 0);
+            }
         }
 
         function adminV2DebugAttendance(label) {
@@ -5971,7 +5978,7 @@
             } catch(e) {}
         }
 
-        const ADMIN_V2_INITIAL_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: ADMIN_V2_FROM_TAP });
+        const ADMIN_V2_INITIAL_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: ADMIN_V2_FROM_TAP || !!ADMIN_V2_URL_TARGET_ID });
         let ADMIN_V2_ACTIVE_MODE = (ADMIN_V2_FROM_TAP && ADMIN_V2_INITIAL_ATTENDANCE_MODE !== 'manual')
             ? 'attendance'
             : (sessionStorage.getItem('tappie_admin_mode') || localStorage.getItem(ADMIN_V2_LAST_MODE_KEY) || 'points');
@@ -6058,7 +6065,7 @@
             try {
                 sessionStorage.setItem('tappie_admin_mode', ADMIN_V2_ACTIVE_MODE || 'points');
                 localStorage.setItem(ADMIN_V2_LAST_MODE_KEY, ADMIN_V2_ACTIVE_MODE || 'points');
-                sessionStorage.setItem(ADMIN_V2_ATTENDANCE_MODE_KEY, ADMIN_V2_ATTENDANCE_MODE || 'manual');
+                // attendance mode is persisted by writeAdminV2AttendanceMode(), which keeps session/local timestamps in sync.
                 sessionStorage.setItem(ADMIN_V2_MANUAL_ACTION_KEY, ADMIN_V2_ATTENDANCE_ACTION || 'checkin');
                 sessionStorage.removeItem('tappie_attendance_action');
             } catch(e) {}
@@ -7415,9 +7422,48 @@ function getAdminQueryClassOptions() {
             }
         }
 
+        function cleanAdminV2UrlAfterTarget() {
+            try {
+                const cleanParams = new URLSearchParams(window.location.search);
+                cleanParams.delete('id');
+                cleanParams.delete('cardId');
+                cleanParams.delete('cardid');
+                cleanParams.delete('uid');
+                cleanParams.delete('from');
+                const query = cleanParams.toString();
+                const cleanUrl = window.location.pathname + (query ? `?${query}` : '');
+                window.history.replaceState(null, null, cleanUrl);
+            } catch(e) {
+                try { window.history.replaceState(null, null, 'admin.html'); } catch(_) {}
+            }
+        }
+
+        function processAdminV2UrlTarget() {
+            const target = String(ADMIN_V2_URL_TARGET_ID || '').trim();
+            if (!target) return;
+
+            // Step 5H：URL/NFC 回流時，先讓 Admin v2 模式完全初始化，再掃學生。
+            // 如果使用者最後停在打卡頁，就留在打卡頁；如果停在加扣點，就留在加扣點。
+            // 若目前是打卡頁，立刻重新讀取最新手動/自動模式，讓「剛切換後馬上感應」也跟得上。
+            if (ADMIN_V2_ACTIVE_MODE === 'attendance') {
+                ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
+                if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
+                    setAdminV2LockedAutoAttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
+                } else {
+                    ADMIN_V2_AUTO_ATTENDANCE_LOCK = null;
+                }
+                updateAttendanceModeUI();
+            }
+
+            cleanAdminV2UrlAfterTarget();
+            adminV2DebugAttendance('process-url-target-before-fetch');
+            setTimeout(() => fetchStudent(target), 0);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initAdminV2Branding();
             setAdminMode(ADMIN_V2_ACTIVE_MODE || 'points');
+            processAdminV2UrlTarget();
         });
 
 
