@@ -2516,9 +2516,21 @@
       };
     })();
 
+
+    // Station-aware return helper: only affects idle/logout return target.
+    function getStationAwareHomeUrl() {
+      try {
+        const raw = localStorage.getItem('tappie_station_session');
+        if (!raw) return 'index.html';
+        const session = JSON.parse(raw);
+        if (session && session.stationAuthorized === true && session.schoolCode) return 'station.html';
+      } catch (_) {}
+      return 'index.html';
+    }
+
     // 🚀 靜置自動登出
     let idleTimer;
-    const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = "index.html"; }, 180000); };
+    const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = getStationAwareHomeUrl(); }, 180000); };
     document.addEventListener('touchstart', resetIdleTimer); document.addEventListener('mousedown', resetIdleTimer); resetIdleTimer();
 
     // =======================================================

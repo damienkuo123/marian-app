@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Tappie 現場站</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tappie現場站" />
+  <link rel="apple-touch-icon" href="/assets/app-icon.png" />
+  <script src="./tappie-api.js?v=station-v1"></script>
+  <style>
+    :root {
+      --primary-blue: #2563eb;
+      --primary-blue-2: #60a5fa;
+      --marian-yellow: #f59e0b;
+      --marian-green: #22c55e;
+      --marian-red: #ef4444;
+      --text-main: #101828;
+      --text-sub: #667085;
+      --surface: rgba(255, 255, 255, 0.72);
+      --surface-strong: rgba(255, 255, 255, 0.9);
+      --border: rgba(255, 255, 255, 0.9);
+      --line: rgba(148, 163, 184, 0.28);
+      --shadow: 0 22px 58px rgba(15, 23, 42, 0.12), inset 0 1px 1px rgba(255,255,255,.95);
+      --radius: 30px;
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      font-family: var(--font);
+      color: var(--text-main);
+      background: #f3f7fb;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .ambient-orb { position: fixed; border-radius: 999px; filter: blur(64px); opacity: .62; pointer-events: none; z-index: 0; animation: floatOrb 16s ease-in-out infinite alternate; }
+    .orb-1 { width: 360px; height: 360px; background: rgba(37, 99, 235, .24); top: -120px; left: -130px; }
+    .orb-2 { width: 390px; height: 390px; background: rgba(245, 158, 11, .20); right: -160px; bottom: 40px; animation-delay: -5s; }
+    .orb-3 { width: 280px; height: 280px; background: rgba(34, 197, 94, .16); left: 32%; top: 36%; animation-duration: 21s; }
+    @keyframes floatOrb { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(38px,-32px,0) scale(1.15); } }
+
+    .app-shell { position: relative; z-index: 1; height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+    .topbar {
+      height: max(74px, calc(var(--safe-top) + 68px));
+      padding: var(--safe-top) clamp(18px, 3vw, 34px) 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      background: rgba(255,255,255,.38); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+      border-bottom: 1px solid rgba(255,255,255,.70);
+    }
+    .brand-zone { display:flex; align-items:center; gap: 13px; min-width:0; }
+    .school-logo { width: 46px; height: 46px; border-radius: 18px; object-fit: cover; background: #fff; border: 1px solid rgba(255,255,255,.9); box-shadow: 0 10px 24px rgba(15,23,42,.08); }
+    .brand-text { min-width:0; }
+    .station-kicker { font-size: 12px; color: var(--text-sub); font-weight: 850; letter-spacing:.08em; text-transform: uppercase; line-height:1.2; }
+    .school-name { font-size: clamp(17px, 2.3vw, 24px); font-weight: 950; letter-spacing: -.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56vw; }
+    .top-actions { display:flex; align-items:center; gap: 10px; }
+    .status-pill, .icon-btn { border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.58); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 999px; color: var(--text-main); box-shadow: 0 10px 24px rgba(15,23,42,.06); }
+    .status-pill { padding: 10px 13px; font-weight: 900; font-size: 13px; display:flex; align-items:center; gap: 8px; white-space: nowrap; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--marian-green); box-shadow: 0 0 0 6px rgba(34,197,94,.12), 0 0 16px rgba(34,197,94,.6); }
+    .icon-btn { width: 42px; height: 42px; border:0; cursor:pointer; display:grid; place-items:center; font-size: 18px; }
+    .icon-btn:active, .station-card:active, .mode-btn:active, .primary-btn:active, .ghost-btn:active { transform: scale(.98); }
+
+    .content { overflow: auto; -webkit-overflow-scrolling: touch; padding: clamp(18px, 4vw, 36px) clamp(16px, 4vw, 44px) max(114px, calc(var(--safe-bottom) + 104px)); }
+    .content::-webkit-scrollbar { display:none; }
+    .view { display:none; animation: fadeUp .24s ease-out both; }
+    .view.active { display:block; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+
+    .hero-grid { max-width: 1040px; margin: 0 auto; display:grid; grid-template-columns: 1.05fr .95fr; gap: clamp(16px, 3vw, 26px); align-items: stretch; }
+    .glass-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(26px) saturate(140%); -webkit-backdrop-filter: blur(26px) saturate(140%); }
+    .welcome-card { padding: clamp(22px, 4vw, 36px); min-height: 330px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; position:relative; }
+    .welcome-card::after { content:""; position:absolute; inset:auto -80px -90px auto; width:260px; height:260px; border-radius:50%; background: radial-gradient(circle, rgba(37,99,235,.17), transparent 68%); }
+    .welcome-title { font-size: clamp(34px, 6vw, 68px); line-height:.98; letter-spacing:-.075em; font-weight: 950; margin: 0; }
+    .welcome-copy { color: var(--text-sub); font-size: 16px; line-height: 1.75; font-weight: 650; max-width: 560px; margin: 18px 0 0; }
+    .scanner-state { display:flex; align-items:center; gap: 10px; margin-top: 22px; padding: 13px 15px; border-radius: 20px; background: rgba(255,255,255,.58); border:1px solid rgba(255,255,255,.75); color: var(--text-sub); font-weight: 850; }
+    .scanner-wave { width: 12px; height:12px; border-radius: 50%; background: var(--primary-blue); box-shadow: 0 0 0 0 rgba(37,99,235,.38); animation: wave 1.4s infinite; }
+    @keyframes wave { 70% { box-shadow: 0 0 0 16px rgba(37,99,235,0); } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
+
+    .station-actions { display:grid; grid-template-columns: 1fr; gap: 16px; }
+    .station-card { border:1px solid var(--border); background: rgba(255,255,255,.76); border-radius: 28px; padding: 24px; box-shadow: 0 16px 34px rgba(15,23,42,.08); text-align:left; cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; position:relative; overflow:hidden; min-height: 157px; }
+    .station-card:hover { box-shadow: 0 22px 46px rgba(15,23,42,.11); }
+    .station-card .icon { width: 54px; height: 54px; border-radius: 20px; display:grid; place-items:center; font-size: 28px; background: linear-gradient(135deg, rgba(37,99,235,.14), rgba(96,165,250,.18)); margin-bottom: 17px; }
+    .station-card.checkin .icon { background: linear-gradient(135deg, rgba(34,197,94,.14), rgba(245,158,11,.18)); }
+    .station-card h2 { margin:0; font-size: 22px; letter-spacing:-.035em; }
+    .station-card p { color:var(--text-sub); line-height:1.65; font-weight:650; margin: 8px 0 0; }
+
+    .mode-panel { max-width: 780px; margin: 0 auto; padding: clamp(18px, 4vw, 30px); }
+    .mode-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom: 18px; }
+    .mode-title { margin:0; font-size: clamp(28px, 4.4vw, 42px); letter-spacing:-.06em; line-height:1.05; }
+    .mode-sub { color:var(--text-sub); font-weight:650; line-height:1.65; margin: 8px 0 0; }
+    .mode-switch { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+    .mode-btn { border:1px solid rgba(148,163,184,.30); border-radius: 18px; background: rgba(255,255,255,.72); color: var(--text-main); padding: 14px 12px; font-weight: 950; cursor:pointer; }
+    .mode-btn.active { color:#fff; background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-2)); box-shadow: 0 14px 28px rgba(37,99,235,.24); }
+    .mode-btn.checkout.active { background: linear-gradient(135deg, #f97316, #fb7185); box-shadow: 0 14px 28px rgba(249,115,22,.20); }
+    .student-result { border: 1px dashed rgba(148,163,184,.42); background: rgba(255,255,255,.56); border-radius: 24px; padding: 20px; min-height: 126px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+    .student-name { font-size: 30px; font-weight: 950; letter-spacing:-.04em; margin:0; }
+    .student-meta { color:var(--text-sub); font-weight:800; margin-top: 6px; display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+    .chip { display:inline-flex; align-items:center; border-radius:999px; padding: 6px 10px; background: rgba(37,99,235,.10); color:#1d4ed8; font-size: 12px; font-weight: 950; }
+    .checkin-actions { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .primary-btn, .ghost-btn { border:0; cursor:pointer; border-radius: 20px; padding: 15px 16px; font-weight: 950; font-size: 16px; }
+    .primary-btn { color:#fff; background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 14px 28px rgba(22,163,74,.20); }
+    .primary-btn.checkout { background: linear-gradient(135deg, #ea580c, #fb7185); box-shadow: 0 14px 28px rgba(234,88,12,.18); }
+    .ghost-btn { background: rgba(255,255,255,.66); color: var(--text-main); border:1px solid rgba(148,163,184,.32); }
+    .log-box { margin-top: 16px; border-radius: 20px; padding: 15px; color: var(--text-sub); font-weight: 750; line-height:1.65; background: rgba(255,255,255,.52); border: 1px solid rgba(255,255,255,.72); }
+
+    .login-shell { height:100%; display:grid; place-items:center; padding: clamp(18px, 4vw, 36px); }
+    .login-card { width:min(460px, 100%); padding: 30px; }
+    .login-brand { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom: 18px; }
+    .login-brand img { width:52px; height:52px; border-radius: 18px; object-fit:cover; background:#fff; }
+    .login-card h1 { margin: 0; text-align:center; font-size: 31px; letter-spacing:-.05em; }
+    .login-card p { color: var(--text-sub); text-align:center; line-height:1.7; font-weight:650; margin: 10px 0 22px; }
+    .field { margin-bottom: 14px; }
+    .field label { display:block; color: var(--text-sub); font-size: 13px; font-weight: 900; margin-bottom: 7px; }
+    .field input { width:100%; border:1px solid rgba(148,163,184,.32); background: rgba(255,255,255,.78); border-radius: 18px; padding: 15px 16px; font: inherit; font-weight: 850; outline:none; color: var(--text-main); }
+    .field input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 5px rgba(37,99,235,.12); }
+    .login-error { display:none; margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(239,68,68,.10); color:#b91c1c; border:1px solid rgba(239,68,68,.18); font-weight: 850; line-height:1.5; }
+
+    .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; height: max(86px, calc(var(--safe-bottom) + 76px)); padding: 9px 18px var(--safe-bottom); display:flex; justify-content:center; z-index: 4; pointer-events:none; }
+    .bottom-inner { pointer-events:auto; display:grid; grid-template-columns: repeat(3, minmax(88px, 150px)); gap: 8px; padding: 8px; border-radius: 28px; border:1px solid rgba(255,255,255,.76); background: rgba(255,255,255,.62); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 18px 42px rgba(15,23,42,.10); }
+    .nav-item { border:0; border-radius: 21px; background: transparent; color: var(--text-sub); font-weight: 950; cursor:pointer; padding: 10px 8px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .nav-item.active { background: rgba(37,99,235,.12); color: var(--primary-blue); }
+    .nav-icon { font-size: 21px; line-height:1; }
+    #scanner-input { position: fixed; left: -9999px; width:1px; height:1px; opacity:0; }
+    .hidden { display:none !important; }
+
+    @media (max-width: 760px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .school-name { max-width: 48vw; }
+      .status-pill { display:none; }
+      .mode-head { flex-direction:column; }
+      .mode-switch { grid-template-columns:1fr; }
+      .checkin-actions { grid-template-columns: 1fr; }
+      .bottom-inner { grid-template-columns: repeat(3, 1fr); width:100%; }
+      .nav-item { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-orb orb-1"></div>
+  <div class="ambient-orb orb-2"></div>
+  <div class="ambient-orb orb-3"></div>
+
+  <input id="scanner-input" autocomplete="off" inputmode="none" />
+
+  <section id="login-screen" class="login-shell">
+    <div class="login-card glass-card">
+      <div class="login-brand">
+        <img src="/assets/app-icon.png" alt="Tappie" />
+      </div>
+      <h1>Tappie 現場站</h1>
+      <p>啟用此平板作為校區現場站。登入後將保留在本機，直到右上角登出。</p>
+      <div class="field">
+        <label for="login-school">校區代碼</label>
+        <input id="login-school" placeholder="例如 TP01" autocapitalize="characters" />
+      </div>
+      <div class="field">
+        <label for="login-secret">Super Admin 密碼</label>
+        <input id="login-secret" type="password" placeholder="請輸入校區 Super Admin 密碼" />
+      </div>
+      <button class="primary-btn" style="width:100%;" onclick="stationLogin()">啟用現場站</button>
+      <div id="login-error" class="login-error"></div>
+    </div>
+  </section>
+
+  <main id="station-app" class="app-shell hidden">
+    <header class="topbar">
+      <div class="brand-zone">
+        <img id="station-logo" class="school-logo" src="/assets/app-icon.png" alt="校區 Logo" />
+        <div class="brand-text">
+          <div class="station-kicker">Tappie Station</div>
+          <div id="station-school-name" class="school-name">校區現場站</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="status-pill"><span class="status-dot"></span><span id="station-mode-pill">學生入口</span></div>
+        <button class="icon-btn" title="登出" onclick="logoutStation()">⏻</button>
+      </div>
+    </header>
+
+    <section class="content">
+      <div id="home-view" class="view active">
+        <div class="hero-grid">
+          <div class="welcome-card glass-card">
+            <div>
+              <h1 class="welcome-title">校區現場站</h1>
+              <p class="welcome-copy">這台平板已啟用為校區現場入口。學生可感應卡片進入學習中心，老師也可以切換到現場打卡模式。</p>
+            </div>
+            <div class="scanner-state"><span class="scanner-wave"></span><span id="home-scan-text">請感應學生卡，或使用下方功能切換模式。</span></div>
+          </div>
+          <div class="station-actions">
+            <button class="station-card" onclick="showView('student')">
+              <div class="icon">🎒</div>
+              <h2>學生學習入口</h2>
+              <p>感應學生卡後，進入個人 Dashboard、口說練習與對戰大廳。</p>
+            </button>
+            <button class="station-card checkin" onclick="showView('checkin')">
+              <div class="icon">🪪</div>
+              <h2>現場打卡站</h2>
+              <p>支援手動到校 / 離校，以及自動到校 / 自動離校連續掃卡。</p>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="student-view" class="view">
+        <div class="mode-panel glass-card">
+          <div class="mode-head">
+            <div>
+              <h2 class="mode-title">學生學習入口</h2>
+              <p class="mode-sub">感應學生 NFC 卡，或用讀卡機輸入卡號。系統會帶學生進入個人 Dashboard。</p>
+            </div>
+            <button class="ghost-btn" onclick="showView('home')">返回首頁</button>
+          </div>
+          <div class="student-result" id="student-result">
+            <div class="scanner-wave" style="margin-bottom:12px;"></div>
+            <div style="font-weight:950; font-size:22px;">等待學生卡</div>
+            <div style="color:var(--text-sub); font-weight:700; margin-top:8px;">支援純數字、完整 UID、或 tap URL</div>
+          </div>
+          <div class="log-box" id="student-log">目前模式：學生入口。感應後將前往 dashboard.html。</div>
+        </div>
+      </div>
+
+      <div id="checkin-view" class="view">
+        <div class="mode-panel glass-card">
+          <div class="mode-head">
+            <div>
+              <h2 class="mode-title">現場打卡站</h2>
+              <p class="mode-sub">選擇打卡模式後感應學生卡。自動模式可連續掃卡，不會進入完整 Admin 後台。</p>
+            </div>
+            <button class="ghost-btn" onclick="showView('home')">返回首頁</button>
+          </div>
+
+          <div class="mode-switch">
+            <button id="mode-manual" class="mode-btn active" onclick="setCheckinMode('manual')">手動</button>
+            <button id="mode-checkin" class="mode-btn" onclick="setCheckinMode('auto_checkin')">自動到校</button>
+            <button id="mode-checkout" class="mode-btn checkout" onclick="setCheckinMode('auto_checkout')">自動離校</button>
+          </div>
+
+          <div class="student-result" id="checkin-result">
+            <div class="scanner-wave" style="margin-bottom:12px;"></div>
+            <div style="font-weight:950; font-size:22px;">等待學生卡</div>
+            <div style="color:var(--text-sub); font-weight:700; margin-top:8px;">目前為手動打卡模式</div>
+          </div>
+
+          <div class="checkin-actions" id="manual-actions">
+            <button class="primary-btn" onclick="manualRecord('checkin')">確認到校</button>
+            <button class="primary-btn checkout" onclick="manualRecord('checkout')">確認離校</button>
+          </div>
+          <div class="log-box" id="checkin-log">目前模式：手動。請感應學生卡後選擇到校或離校。</div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="bottom-nav">
+      <div class="bottom-inner">
+        <button id="nav-home" class="nav-item active" onclick="showView('home')"><span class="nav-icon">🏠</span><span>首頁</span></button>
+        <button id="nav-student" class="nav-item" onclick="showView('student')"><span class="nav-icon">🎒</span><span>學生入口</span></button>
+        <button id="nav-checkin" class="nav-item" onclick="showView('checkin')"><span class="nav-icon">🪪</span><span>打卡</span></button>
+      </div>
+    </nav>
+  </main>
+
+  <script>
+    const STATION_SESSION_KEY = 'tappie_station_session';
+    const STATION_LAST_VIEW_KEY = 'tappie_station_last_view';
+    const STATION_CHECKIN_MODE_KEY = 'tappie_station_checkin_mode';
+    let stationSession = null;
+    let currentView = 'home';
+    let checkinMode = 'manual';
+    let currentStudent = null;
+    let scannerBuffer = '';
+    let scannerTimer = null;
+    let isProcessingScan = false;
+
+    function getApiBaseUrl() {
+      if (window.TappieAPI && TappieAPI.supabaseBaseUrl) return String(TappieAPI.supabaseBaseUrl).replace(/\/$/, '');
+      return 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+    }
+
+    function readStationSession() {
+      try {
+        const raw = localStorage.getItem(STATION_SESSION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || parsed.stationAuthorized !== true || !parsed.schoolCode || !parsed.adminKey) return null;
+        return parsed;
+      } catch (_) { return null; }
+    }
+
+    function writeStationSession(session) {
+      stationSession = { ...session, stationAuthorized: true, updatedAt: Date.now() };
+      localStorage.setItem(STATION_SESSION_KEY, JSON.stringify(stationSession));
+    }
+
+    function showLoginError(message) {
+      const el = document.getElementById('login-error');
+      if (!el) return;
+      el.innerText = message || '登入失敗';
+      el.style.display = 'block';
+    }
+
+    function clearLoginError() {
+      const el = document.getElementById('login-error');
+      if (!el) return;
+      el.innerText = '';
+      el.style.display = 'none';
+    }
+
+    async function stationLogin() {
+      clearLoginError();
+      const schoolCode = String(document.getElementById('login-school')?.value || '').trim().toUpperCase();
+      const secret = String(document.getElementById('login-secret')?.value || '').trim();
+      if (!schoolCode || !secret) return showLoginError('請輸入校區代碼與 Super Admin 密碼。');
+
+      const btn = event?.target;
+      const oldText = btn?.innerText;
+      if (btn) { btn.disabled = true; btn.innerText = '驗證中...'; }
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/admin-auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schoolCode, secret })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success || !data.valid) throw new Error(data.message || data.error || '登入失敗');
+        if (String(data.role || '') !== 'super') throw new Error('此現場站需使用 Super Admin 密碼啟用。');
+
+        const branding = await loadBranding(schoolCode).catch(() => ({}));
+        writeStationSession({
+          schoolCode,
+          adminKey: secret,
+          role: 'super',
+          schoolName: branding.schoolName || branding.school_name || branding.name || schoolCode,
+          logoUrl: branding.logoUrl || branding.logo_url || branding.logo || branding.assets?.logoUrl || '/assets/app-icon.png'
+        });
+        bootStation();
+      } catch (err) {
+        showLoginError(err.message || String(err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerText = oldText || '啟用現場站'; }
+      }
+    }
+
+    async function loadBranding(schoolCode) {
+      if (window.TappieAPI && typeof TappieAPI.adminGetBranding === 'function') {
+        const data = await TappieAPI.adminGetBranding(schoolCode);
+        if (data && data.success !== false) return data;
+      }
+      const res = await fetch(`${getApiBaseUrl()}/admin-get-branding?schoolCode=${encodeURIComponent(schoolCode)}`);
+      return await res.json().catch(() => ({}));
+    }
+
+    function bootStation() {
+      stationSession = readStationSession();
+      if (!stationSession) {
+        document.getElementById('login-screen')?.classList.remove('hidden');
+        document.getElementById('station-app')?.classList.add('hidden');
+        return;
+      }
+      document.getElementById('login-screen')?.classList.add('hidden');
+      document.getElementById('station-app')?.classList.remove('hidden');
+      applyStationBranding();
+      checkinMode = normalizeCheckinMode(localStorage.getItem(STATION_CHECKIN_MODE_KEY) || 'manual');
+      setCheckinMode(checkinMode, { silent: true });
+      const last = localStorage.getItem(STATION_LAST_VIEW_KEY) || 'home';
+      showView(['home','student','checkin'].includes(last) ? last : 'home');
+      focusScanner();
+    }
+
+    function applyStationBranding() {
+      const name = stationSession?.schoolName || stationSession?.schoolCode || '校區現場站';
+      const logo = stationSession?.logoUrl || '/assets/app-icon.png';
+      const nameEl = document.getElementById('station-school-name');
+      const logoEl = document.getElementById('station-logo');
+      if (nameEl) nameEl.innerText = name;
+      if (logoEl) logoEl.src = logo;
+    }
+
+    function logoutStation() {
+      if (!confirm('確定要登出此現場站嗎？登出後需要重新輸入 Super Admin 密碼。')) return;
+      localStorage.removeItem(STATION_SESSION_KEY);
+      localStorage.removeItem(STATION_LAST_VIEW_KEY);
+      localStorage.removeItem(STATION_CHECKIN_MODE_KEY);
+      stationSession = null;
+      currentStudent = null;
+      location.reload();
+    }
+
+    function showView(view) {
+      if (!['home','student','checkin'].includes(view)) view = 'home';
+      currentView = view;
+      localStorage.setItem(STATION_LAST_VIEW_KEY, view);
+      document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+      document.getElementById(`${view}-view`)?.classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.getElementById(`nav-${view}`)?.classList.add('active');
+      const pill = document.getElementById('station-mode-pill');
+      if (pill) pill.innerText = view === 'checkin' ? getCheckinModeLabel(checkinMode) : (view === 'student' ? '學生入口' : '現場站');
+      focusScanner();
+    }
+
+    function normalizeCheckinMode(mode) {
+      if (mode === 'auto_checkin' || mode === 'auto_checkout') return mode;
+      return 'manual';
+    }
+
+    function getCheckinModeLabel(mode) {
+      if (mode === 'auto_checkin') return '自動到校';
+      if (mode === 'auto_checkout') return '自動離校';
+      return '手動打卡';
+    }
+
+    function setCheckinMode(mode, options = {}) {
+      checkinMode = normalizeCheckinMode(mode);
+      localStorage.setItem(STATION_CHECKIN_MODE_KEY, checkinMode);
+      document.getElementById('mode-manual')?.classList.toggle('active', checkinMode === 'manual');
+      document.getElementById('mode-checkin')?.classList.toggle('active', checkinMode === 'auto_checkin');
+      document.getElementById('mode-checkout')?.classList.toggle('active', checkinMode === 'auto_checkout');
+      const manualActions = document.getElementById('manual-actions');
+      if (manualActions) manualActions.style.display = checkinMode === 'manual' ? 'grid' : 'none';
+      const result = document.getElementById('checkin-result');
+      if (!options.keepStudent && result) {
+        currentStudent = null;
+        result.innerHTML = `<div class="scanner-wave" style="margin-bottom:12px;"></div><div style="font-weight:950; font-size:22px;">等待學生卡</div><div style="color:var(--text-sub); font-weight:700; margin-top:8px;">目前為${getCheckinModeLabel(checkinMode)}模式</div>`;
+      }
+      const log = document.getElementById('checkin-log');
+      if (log && !options.silent) log.innerText = `目前模式：${getCheckinModeLabel(checkinMode)}。請感應學生卡。`;
+      const pill = document.getElementById('station-mode-pill');
+      if (pill && currentView === 'checkin') pill.innerText = getCheckinModeLabel(checkinMode);
+      focusScanner();
+    }
+
+    function focusScanner() {
+      setTimeout(() => {
+        const input = document.getElementById('scanner-input');
+        try { input && input.focus({ preventScroll: true }); } catch (_) { try { input && input.focus(); } catch (e) {} }
+      }, 30);
+    }
+
+    function normalizeScanInput(raw) {
+      let value = String(raw || '').trim();
+      if (!value) return { raw: '', uid: '', cardId: '' };
+      try {
+        const url = new URL(value, window.location.origin);
+        value = url.searchParams.get('uid') || url.searchParams.get('id') || url.searchParams.get('cardId') || url.searchParams.get('cardid') || value;
+      } catch (_) {}
+      value = String(value || '').trim();
+      if (!value) return { raw: '', uid: '', cardId: '' };
+      if (/^[A-Za-z0-9]+-\d+$/.test(value)) return { raw: value, uid: value, cardId: '' };
+      if (/^\d+$/.test(value)) return { raw: value, uid: '', cardId: value };
+      return { raw: value, uid: value, cardId: '' };
+    }
+
+    async function resolveScannedStudent(raw) {
+      const scan = normalizeScanInput(raw);
+      if (!scan.raw) throw new Error('沒有讀到卡號');
+      let data = null;
+      if (scan.uid && window.TappieAPI?.resolveStudentByUid) data = await TappieAPI.resolveStudentByUid(scan.uid);
+      else if (scan.cardId && window.TappieAPI?.resolveStudentByCard) data = await TappieAPI.resolveStudentByCard(scan.cardId);
+      else throw new Error('TappieAPI 尚未載入');
+      if (!data || !data.success || !data.student) throw new Error(data?.message || data?.error || '查無此學生');
+      return data;
+    }
+
+    function renderStudentCard(targetId, data, helperText = '') {
+      const student = data.student || {};
+      const school = data.school || {};
+      const tags = Array.isArray(student.tags) ? student.tags : [];
+      const classCode = student.classCode || student.class_code || '未分班';
+      const chips = [classCode, ...tags].filter(Boolean).map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      el.innerHTML = `
+        <div class="student-name">${escapeHtml(student.name || '未命名學生')}</div>
+        <div class="student-meta">${chips || '<span class="chip">未分班</span>'}</div>
+        <div style="color:var(--text-sub); font-weight:750; margin-top:12px;">${escapeHtml(helperText || school.name || '')}</div>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[ch]));
+    }
+
+    async function handleScan(raw) {
+      if (!stationSession || isProcessingScan) return;
+      isProcessingScan = true;
+      try {
+        const data = await resolveScannedStudent(raw);
+        if (currentView === 'checkin') await handleCheckinStudent(data);
+        else await handleStudentEntrance(data);
+      } catch (err) {
+        showScanError(err.message || String(err));
+      } finally {
+        isProcessingScan = false;
+        scannerBuffer = '';
+        focusScanner();
+      }
+    }
+
+    async function handleStudentEntrance(data) {
+      renderStudentCard('student-result', data, '正在進入學生學習中心...');
+      const log = document.getElementById('student-log');
+      if (log) log.innerText = `${data.student?.name || '學生'} 已辨識，準備進入 Dashboard。`;
+      const uid = data.uid || data.student?.uid;
+      setTimeout(() => { window.location.href = `dashboard.html?id=${encodeURIComponent(uid)}`; }, 520);
+    }
+
+    async function handleCheckinStudent(data) {
+      currentStudent = data;
+      const studentName = data.student?.name || '學生';
+      renderStudentCard('checkin-result', data, checkinMode === 'manual' ? '請選擇到校或離校' : `正在執行${getCheckinModeLabel(checkinMode)}...`);
+      if (checkinMode === 'auto_checkin') await recordAttendance('checkin', 'station_auto');
+      else if (checkinMode === 'auto_checkout') await recordAttendance('checkout', 'station_auto');
+      else {
+        const log = document.getElementById('checkin-log');
+        if (log) log.innerText = `已讀取 ${studentName}，請選擇到校或離校。`;
+      }
+    }
+
+    async function manualRecord(eventType) {
+      if (!currentStudent) return alert('請先感應學生卡');
+      await recordAttendance(eventType, 'station_manual');
+    }
+
+    async function recordAttendance(eventType, source) {
+      if (!currentStudent) throw new Error('請先感應學生卡');
+      const uid = currentStudent.uid || currentStudent.student?.uid;
+      const actionText = eventType === 'checkout' ? '離校' : '到校';
+      const log = document.getElementById('checkin-log');
+      if (log) log.innerText = `正在登記${actionText}...`;
+      const payload = {
+        schoolCode: stationSession.schoolCode,
+        uid,
+        eventType,
+        source,
+        adminKey: stationSession.adminKey,
+        role: 'super',
+        metadata: { from: 'station', stationMode: checkinMode, stationSchoolCode: stationSession.schoolCode }
+      };
+      const data = await TappieAPI.adminRecordAttendance(payload);
+      if (!data || !data.success) throw new Error(data?.message || data?.error || `登記${actionText}失敗`);
+      const timeText = formatTaipeiTime(data?.event?.event_time || data?.event?.eventTime || data?.eventTime || new Date());
+      if (log) log.innerText = `✅ ${currentStudent.student?.name || '學生'} 已登記${actionText}${timeText ? ' ' + timeText : ''}${data.duplicateRecent ? '（短時間重複，未新增第二筆）' : ''}`;
+      renderStudentCard('checkin-result', currentStudent, `已登記${actionText}${timeText ? ' ' + timeText : ''}`);
+    }
+
+    function formatTaipeiTime(value) {
+      const d = value ? new Date(value) : new Date();
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function showScanError(message) {
+      const target = currentView === 'checkin' ? 'checkin-log' : (currentView === 'student' ? 'student-log' : 'home-scan-text');
+      const el = document.getElementById(target);
+      if (el) el.innerText = `⚠️ ${message || '讀卡失敗'}`;
+    }
+
+    document.getElementById('scanner-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const value = e.currentTarget.value;
+        e.currentTarget.value = '';
+        handleScan(value);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!stationSession) return;
+      const active = document.activeElement;
+      if (active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName) && active.id !== 'scanner-input') return;
+      if (e.key === 'Enter') {
+        const value = scannerBuffer.trim();
+        scannerBuffer = '';
+        if (value) handleScan(value);
+        return;
+      }
+      if (e.key && e.key.length === 1) {
+        scannerBuffer += e.key;
+        clearTimeout(scannerTimer);
+        scannerTimer = setTimeout(() => {
+          const value = scannerBuffer.trim();
+          scannerBuffer = '';
+          if (value && value.length >= 6) handleScan(value);
+        }, 360);
+      }
+    }, true);
+
+    document.addEventListener('click', focusScanner);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) focusScanner(); });
+    bootStation();
+  </script>
+</body>
+</html>
