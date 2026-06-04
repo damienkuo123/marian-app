@@ -5138,8 +5138,8 @@
       if (!select || !studentsCache) return;
       const current = select.value || "all";
       const tags = getAllStudentTags();
-      select.innerHTML = `<option value="all">全部標籤</option>` + tags.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
-      if (["all", ...tags].includes(current)) select.value = current;
+      select.innerHTML = `<option value="all">全部標籤</option><option value="__untagged">無標籤</option>` + tags.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+      if (["all", "__untagged", ...tags].includes(current)) select.value = current;
     }
 
     function setupStudentFormPickers() {
@@ -5272,7 +5272,8 @@
           .some(v => String(v || "").toLowerCase().includes(q)));
       }
       if (classFilter !== "all") out = out.filter(s => String(s.class_code || "") === classFilter);
-      if (tagFilter !== "all") out = out.filter(s => normalizeStudentTags(s.tags).includes(tagFilter));
+      if (tagFilter === "__untagged") out = out.filter(s => normalizeStudentTags(s.tags).length === 0);
+      else if (tagFilter !== "all") out = out.filter(s => normalizeStudentTags(s.tags).includes(tagFilter));
       if (statusFilter === "active") out = out.filter(s => Boolean(s.is_active));
       if (statusFilter === "inactive") out = out.filter(s => !Boolean(s.is_active));
       if (weeklyFilter === "enabled") out = out.filter(s => Boolean(s.weekly_report_enabled));

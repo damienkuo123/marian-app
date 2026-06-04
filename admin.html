@@ -1725,7 +1725,92 @@
         .admin-v2-nocard-btn.checkout { background:linear-gradient(135deg,#ef4444,#fb7185); color:#fff !important; }
 
 
-  </style>
+  
+        /* =======================================================
+           Step 5D｜CSS-only Neon Auto Attendance Mode
+           - 保持原版面，只用氛圍提示目前是連續自動掃卡模式
+           ======================================================= */
+        body.admin-v2-auto-mode {
+            background:
+                radial-gradient(circle at 50% 18%, rgba(34,211,238,.16), transparent 32%),
+                radial-gradient(circle at 16% 82%, rgba(59,130,246,.12), transparent 30%),
+                radial-gradient(circle at 86% 80%, rgba(168,85,247,.11), transparent 28%),
+                radial-gradient(circle at center, #111827 0%, #020617 100%) !important;
+        }
+        body.admin-v2-auto-mode #mainCard.admin-main {
+            border-color: rgba(34,211,238,.34) !important;
+            box-shadow:
+                0 0 0 1px rgba(34,211,238,.20),
+                0 0 28px rgba(34,211,238,.18),
+                0 24px 56px rgba(2,6,23,.46),
+                inset 0 0 24px rgba(255,255,255,.06) !important;
+        }
+        body.admin-v2-auto-checkout-mode #mainCard.admin-main {
+            border-color: rgba(244,114,182,.34) !important;
+            box-shadow:
+                0 0 0 1px rgba(244,114,182,.20),
+                0 0 28px rgba(244,114,182,.18),
+                0 24px 56px rgba(2,6,23,.46),
+                inset 0 0 24px rgba(255,255,255,.06) !important;
+        }
+        body.admin-v2-auto-mode #mainCard.admin-main::before {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            border-radius: 35px;
+            padding: 2px;
+            background: conic-gradient(from 0deg, rgba(34,211,238,.18), rgba(59,130,246,.70), rgba(16,185,129,.42), rgba(34,211,238,.18));
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            animation: adminAutoBorderFlow 4.5s linear infinite;
+        }
+        body.admin-v2-auto-checkout-mode #mainCard.admin-main::before {
+            background: conic-gradient(from 0deg, rgba(244,114,182,.18), rgba(168,85,247,.68), rgba(239,68,68,.42), rgba(244,114,182,.18));
+        }
+        body.admin-v2-auto-mode #mainCard.admin-main::after {
+            content: "";
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            top: 0;
+            height: 2px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, transparent, rgba(125,211,252,.85), transparent);
+            box-shadow: 0 0 16px rgba(34,211,238,.48);
+            pointer-events: none;
+            animation: adminAutoScanLine 2.6s ease-in-out infinite;
+        }
+        body.admin-v2-auto-mode .status-dot {
+            background: #22d3ee !important;
+            box-shadow: 0 0 14px #22d3ee, 0 0 32px rgba(34,211,238,.35) !important;
+            animation: adminAutoPulse 1.35s ease-in-out infinite !important;
+        }
+        body.admin-v2-auto-checkout-mode .status-dot {
+            background: #f472b6 !important;
+            box-shadow: 0 0 14px #f472b6, 0 0 32px rgba(244,114,182,.32) !important;
+        }
+        #mainCard.admin-v2-scan-success-flash {
+            animation: adminScanSuccessFlash 1.1s ease-out 1;
+        }
+        @keyframes adminAutoBorderFlow {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes adminAutoScanLine {
+            0%, 100% { transform: translateY(18px); opacity: .18; }
+            50% { transform: translateY(calc(100% + 220px)); opacity: .78; }
+        }
+        @keyframes adminAutoPulse {
+            0%, 100% { transform: scale(1); opacity: .75; }
+            50% { transform: scale(1.35); opacity: 1; }
+        }
+        @keyframes adminScanSuccessFlash {
+            0% { box-shadow: 0 0 0 1px rgba(34,197,94,.15), 0 24px 56px rgba(2,6,23,.36), inset 0 0 0 rgba(34,197,94,0); }
+            28% { box-shadow: 0 0 0 3px rgba(34,197,94,.30), 0 0 42px rgba(34,197,94,.42), 0 24px 56px rgba(2,6,23,.36), inset 0 0 34px rgba(34,197,94,.16); }
+            100% { box-shadow: inherit; }
+        }
+</style>
 </head>
 <body>
     <div class="admin-v2-orb admin-v2-orb-1"></div>
@@ -2676,6 +2761,8 @@
                 currentPoints: Number(s.points || s.currentPoints || 0),
                 uid: s.uid,
                 classCode: s.class_code || s.classCode || '',
+                studentType: s.student_type || s.studentType || '',
+                tags: s.tags || s.studentTags || s.labels || [],
                 recentLogs: s.recentLogs || s.pointLogs || s.logs || []
             };
         }
@@ -3170,7 +3257,19 @@
 
         // --- 1. 掃描卡片時的 API 呼叫 ---
         function fetchStudent(cardId) {
-            if (actionUI.style.display === 'block' && !(ADMIN_V2_ACTIVE_MODE === 'attendance' && (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout'))) return;
+            // 自動到校 / 自動離校模式可能存在 localStorage（從 tap.html 回流或切換模式後），
+            // 掃卡前先重讀一次，避免 actionUI 已開啟時被舊的 manual 狀態擋掉。
+            const liveAttendanceMode = readAdminV2AttendanceMode({ allowAuto: true });
+            if (
+                ADMIN_V2_ACTIVE_MODE === 'attendance' &&
+                (liveAttendanceMode === 'auto_checkin' || liveAttendanceMode === 'auto_checkout')
+            ) {
+                ADMIN_V2_ATTENDANCE_MODE = liveAttendanceMode;
+            }
+            const isAutoAttendanceScan =
+                ADMIN_V2_ACTIVE_MODE === 'attendance' &&
+                (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout');
+            if (actionUI.style.display === 'block' && !isAutoAttendanceScan) return;
 
             const rawId = String(cardId).trim();
             const finalUid = rawId.includes('-') ? rawId : `${CURRENT_SCHOOL}-${rawId}`;
@@ -5899,6 +5998,7 @@
             adminV2DebugAttendance('setAdminMode:' + ADMIN_V2_ACTIVE_MODE);
 
             document.body.classList.toggle('admin-mode-attendance', ADMIN_V2_ACTIVE_MODE === 'attendance');
+            applyAdminV2AutoAttendanceVisualMode();
 
             document.querySelectorAll('[data-admin-mode]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.adminMode === ADMIN_V2_ACTIVE_MODE);
@@ -5954,8 +6054,30 @@
             try { scanner && scanner.focus(); } catch(e) {}
         }
 
+        function applyAdminV2AutoAttendanceVisualMode() {
+            try {
+                const mode = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
+                const isAttendance = ADMIN_V2_ACTIVE_MODE === 'attendance';
+                document.body.classList.toggle('admin-v2-auto-mode', isAttendance && (mode === 'auto_checkin' || mode === 'auto_checkout'));
+                document.body.classList.toggle('admin-v2-auto-checkin-mode', isAttendance && mode === 'auto_checkin');
+                document.body.classList.toggle('admin-v2-auto-checkout-mode', isAttendance && mode === 'auto_checkout');
+            } catch(e) {}
+        }
+
+        function triggerAdminV2ScanSuccessFlash() {
+            try {
+                const target = document.getElementById('mainCard');
+                if (!target) return;
+                target.classList.remove('admin-v2-scan-success-flash');
+                void target.offsetWidth;
+                target.classList.add('admin-v2-scan-success-flash');
+                setTimeout(() => target.classList.remove('admin-v2-scan-success-flash'), 1300);
+            } catch(e) {}
+        }
+
         function updateAttendanceModeUI() {
             ADMIN_V2_ATTENDANCE_MODE = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE);
+            applyAdminV2AutoAttendanceVisualMode();
             document.querySelectorAll('[data-att-mode]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.attMode === ADMIN_V2_ATTENDANCE_MODE);
             });
@@ -6138,6 +6260,7 @@
             }
             const msgEl = document.getElementById('msg');
             if (msgEl) msgEl.innerText = `✅ ${getAttendanceStudentName()} ${text}`;
+            triggerAdminV2ScanSuccessFlash();
         }
 
         async function handleAttendanceConfirm() {
@@ -6171,7 +6294,6 @@
             // NFC 從 tap.html 回來時，localStorage 比 sessionStorage 更穩；執行前一定重讀一次。
             ADMIN_V2_ATTENDANCE_MODE = readAdminV2AttendanceMode({ allowAuto: true });
             updateAttendanceModeUI();
-            await refreshAttendanceTodayStatus();
             adminV2DebugAttendance('handleAttendanceScanResolved');
 
             if (ADMIN_V2_ATTENDANCE_MODE === 'auto_checkin' || ADMIN_V2_ATTENDANCE_MODE === 'auto_checkout') {
@@ -6185,8 +6307,9 @@
                 if (banner) banner.innerText = `正在登記 ${getAttendanceStudentName()} ${actionText}...`;
 
                 try {
-                    const data = await recordAttendanceEvent(eventType, 'admin_auto');
+                    const data = await recordAttendanceEvent(eventType, 'admin_auto', { skipRepeatConfirm: true });
                     renderAttendanceResult(data, eventType);
+                    triggerAdminV2ScanSuccessFlash();
                 } catch (err) {
                     if (err?.cancelled) {
                         if (status) status.innerText = `已取消自動${actionText}`;
@@ -6199,6 +6322,8 @@
                 } finally {
                     try { scanner && scanner.focus(); } catch(e) {}
                 }
+            } else {
+                await refreshAttendanceTodayStatus();
             }
         }
 
@@ -6429,6 +6554,17 @@ function getAdminQueryClassOptions() {
             const tags = getAdminStudentTags(student);
             if (!tags.length) return '';
             return `<div class="admin-v2-tag-chip-row">${tags.map(tag => `<span class="admin-v2-tag-chip">${escapeAdminV2(tag)}</span>`).join('')}</div>`;
+        }
+
+        function renderAdminQueryClassAndTagChips(student = {}) {
+            const chips = [];
+            const classCode = normalizeAdminQueryClassCode(student.classCode || student.class_code || '');
+            if (classCode) chips.push(classCode);
+            getAdminStudentTags(student).forEach(tag => {
+                if (tag && !chips.includes(tag)) chips.push(tag);
+            });
+            if (!chips.length) return '';
+            return `<div class="admin-v2-tag-chip-row">${chips.map(tag => `<span class="admin-v2-tag-chip">${escapeAdminV2(tag)}</span>`).join('')}</div>`;
         }
 
 
@@ -6998,7 +7134,7 @@ function getAdminQueryClassOptions() {
                                 <div>
                                     <strong>${escapeAdminV2(student.name || '未命名學生')}</strong>
                                     <small>${escapeAdminV2(student.uid || '')}</small>
-                                    ${renderAdminQueryTagChips(student)}
+                                    ${renderAdminQueryClassAndTagChips(student)}
                                 </div>
                                 <div class="admin-v2-attendance-badges">
                                     ${renderAdminQueryPushDeviceBadge(student.uid)}
