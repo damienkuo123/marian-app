@@ -219,6 +219,21 @@
     .bottom-inner { width:min(460px,100%) !important; }
     @media (max-height:760px){ .scan-card{ min-height:330px !important; } .brand-scan-visual{ width:min(220px,46vw); margin-bottom:16px;} }
 
+
+    /* Step 7E｜Clean brand watermark scan card */
+    .page-title { display:none !important; }
+    .station-brand { justify-content:flex-start !important; text-align:left !important; }
+    .top-title { font-weight:620 !important; letter-spacing:-.02em !important; text-align:left !important; }
+    .scan-card { min-height: clamp(360px, 52vh, 620px) !important; justify-content:center !important; }
+    .brand-scan-visual { width:min(340px, 50vw) !important; max-width:420px !important; margin-bottom:28px !important; }
+    .brand-watermark { width:72% !important; height:72% !important; opacity:.18 !important; filter:saturate(.96) contrast(1.02) !important; border-radius:24% !important; }
+    .brand-glow { width:84% !important; height:84% !important; background:radial-gradient(circle, rgba(0,102,204,.10), rgba(243,156,18,.055) 48%, transparent 72%) !important; }
+    .nfc-ring, .nfc-core { display:none !important; }
+    .scan-line { left:8% !important; right:8% !important; height:3px !important; top:16% !important; background:linear-gradient(90deg, transparent, rgba(255,255,255,.92), rgba(0,102,204,.30), rgba(255,255,255,.92), transparent) !important; box-shadow:0 0 22px rgba(0,102,204,.18) !important; opacity:.68 !important; animation:scanLineClean 2.65s ease-in-out infinite !important; }
+    @keyframes scanLineClean { 0%,100%{ transform:translateY(0); opacity:.12;} 12%{ opacity:.58;} 50%{ transform:translateY(220px); opacity:.82;} 88%{ opacity:.58;} }
+    .waiting-title { font-weight:560 !important; font-size:clamp(22px, 3vw, 34px) !important; letter-spacing:-.02em !important; }
+    .log-box { font-weight:460 !important; }
+
   </style>
 </head>
 <body>
@@ -255,22 +270,12 @@
 
     <section class="content">
       <div id="student-view" class="view active">
-        <h1 class="page-title">學生入口</h1>
         <div class="panel glass">
           <div id="student-result" class="scan-card">
             <div class="brand-scan-visual" aria-hidden="true">
               <div class="brand-glow"></div>
               <img class="brand-watermark" src="/assets/app-icon.png" alt="" />
-              <div class="nfc-ring"></div>
               <div class="scan-line"></div>
-              <div class="nfc-core">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M8.2 7.2c1.2 1.1 1.9 2.8 1.9 4.8s-.7 3.7-1.9 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                  <path d="M11.4 4.6c2 1.8 3.2 4.4 3.2 7.4s-1.2 5.6-3.2 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".72"/>
-                  <path d="M14.8 2.6c2.8 2.4 4.5 5.8 4.5 9.4s-1.7 7-4.5 9.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".42"/>
-                  <rect x="3.3" y="7.4" width="3.4" height="9.2" rx="1.2" fill="currentColor" opacity=".86"/>
-                </svg>
-              </div>
             </div>
             <div class="waiting-title">請感應學生卡</div>
           </div>
@@ -300,22 +305,12 @@
       </div>
 
       <div id="checkin-view" class="view">
-        <h1 class="page-title">到校打卡</h1>
         <div class="panel glass">
           <div id="checkin-result" class="scan-card">
             <div class="brand-scan-visual" aria-hidden="true">
               <div class="brand-glow"></div>
               <img class="brand-watermark" src="/assets/app-icon.png" alt="" />
-              <div class="nfc-ring"></div>
               <div class="scan-line"></div>
-              <div class="nfc-core">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M8.2 7.2c1.2 1.1 1.9 2.8 1.9 4.8s-.7 3.7-1.9 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                  <path d="M11.4 4.6c2 1.8 3.2 4.4 3.2 7.4s-1.2 5.6-3.2 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".72"/>
-                  <path d="M14.8 2.6c2.8 2.4 4.5 5.8 4.5 9.4s-1.7 7-4.5 9.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".42"/>
-                  <rect x="3.3" y="7.4" width="3.4" height="9.2" rx="1.2" fill="currentColor" opacity=".86"/>
-                </svg>
-              </div>
             </div>
             <div class="waiting-title">請感應學生卡</div>
             <div id="checkin-mode-pill" class="waiting-sub">手動模式</div>
@@ -435,7 +430,7 @@
         if (String(data.role || '') !== 'super') throw new Error('此現場站需使用 Super Admin 密碼啟用。');
 
         const branding = await loadBranding(schoolCode).catch(() => ({}));
-        const brand = extractSchoolBranding(branding, schoolCode);
+        const brand = extractSchoolBranding({ ...branding, auth: data, school: data.school || branding.school }, schoolCode);
         writeStationSession({
           schoolCode,
           adminKey: secret,
@@ -462,19 +457,23 @@
 
     function extractSchoolBranding(raw, fallbackCode = '') {
       const data = raw || {};
-      const school = data.school || data.schoolData || data.currentSchool || {};
-      const branding = data.branding || data.config || data.settings || {};
-      const assets = data.assets || branding.assets || {};
+      const auth = data.auth || {};
+      const school = data.school || data.schoolData || data.currentSchool || auth.school || {};
+      const branding = data.branding || data.config || data.settings || data.brandingConfig || {};
+      const assets = data.assets || branding.assets || data.branding_assets || {};
       const schoolName =
         data.schoolName || data.school_name || data.name ||
-        school.name || school.schoolName || school.school_name ||
-        branding.schoolName || branding.school_name || branding.name ||
+        school.name || school.schoolName || school.school_name || school.schoolTitle || school.title ||
+        auth.schoolName || auth.school_name || auth.name ||
+        branding.schoolName || branding.school_name || branding.name || branding.school_title ||
+        data.school?.name ||
         fallbackCode || '校區現場站';
       const logoUrl =
         data.logoUrl || data.logo_url || data.logo || data.logoURL ||
-        school.logoUrl || school.logo_url || school.logo || school.logoURL ||
-        branding.logoUrl || branding.logo_url || branding.logo || branding.logoURL ||
-        assets.logoUrl || assets.logo_url || assets.logo ||
+        school.logoUrl || school.logo_url || school.logo || school.logoURL || school.logo_url_public ||
+        auth.logoUrl || auth.logo_url || auth.logo ||
+        branding.logoUrl || branding.logo_url || branding.logo || branding.logoURL || branding.logo_url_public ||
+        assets.logoUrl || assets.logo_url || assets.logo || assets.logo_url_public ||
         '/assets/app-icon.png';
       return { schoolName, logoUrl };
     }
@@ -489,6 +488,7 @@
       document.getElementById('login-screen')?.classList.add('hidden');
       document.getElementById('station-app')?.classList.remove('hidden');
       applyStationBranding();
+      refreshStationBrandingIfNeeded();
       checkinMode = normalizeCheckinMode(localStorage.getItem(STATION_CHECKIN_MODE_KEY) || 'manual');
       setCheckinMode(checkinMode, { silent: true });
       const last = localStorage.getItem(STATION_LAST_VIEW_KEY) || 'student';
@@ -507,6 +507,30 @@
       const logoEl = document.getElementById('station-logo');
       if (logoEl) logoEl.src = logoUrl;
       document.querySelectorAll('.brand-watermark').forEach(img => { img.src = logoUrl; });
+    }
+
+
+
+    async function refreshStationBrandingIfNeeded() {
+      try {
+        if (!stationSession?.schoolCode) return;
+        const currentName = String(stationSession.schoolName || '').trim();
+        const looksLikeCodeOnly = !currentName || currentName === stationSession.schoolCode;
+        const missingLogo = !stationSession.logoUrl || String(stationSession.logoUrl).includes('/assets/app-icon.png');
+        if (!looksLikeCodeOnly && !missingLogo) return;
+        const branding = await loadBranding(stationSession.schoolCode);
+        const brand = extractSchoolBranding(branding, stationSession.schoolCode);
+        const next = {
+          ...stationSession,
+          schoolName: brand.schoolName || stationSession.schoolName,
+          logoUrl: brand.logoUrl || stationSession.logoUrl
+        };
+        writeStationSession(next);
+        applyStationBranding();
+        console.info('[Station] branding refreshed', { schoolCode: next.schoolCode, schoolName: next.schoolName, logoUrl: next.logoUrl, raw: branding });
+      } catch (err) {
+        console.warn('[Station] branding refresh failed', err);
+      }
     }
 
     function logoutStation() {
