@@ -8,135 +8,146 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Tappie現場站" />
   <link rel="apple-touch-icon" href="/assets/app-icon.png" />
-  <script src="./tappie-api.js?v=station-v1"></script>
+  <script src="./tappie-api.js?v=station-step7b"></script>
   <style>
     :root {
-      --primary-blue: #2563eb;
-      --primary-blue-2: #60a5fa;
-      --marian-yellow: #f59e0b;
-      --marian-green: #22c55e;
-      --marian-red: #ef4444;
-      --text-main: #101828;
-      --text-sub: #667085;
-      --surface: rgba(255, 255, 255, 0.72);
-      --surface-strong: rgba(255, 255, 255, 0.9);
-      --border: rgba(255, 255, 255, 0.9);
-      --line: rgba(148, 163, 184, 0.28);
-      --shadow: 0 22px 58px rgba(15, 23, 42, 0.12), inset 0 1px 1px rgba(255,255,255,.95);
-      --radius: 30px;
+      --primary-blue: #0066cc;
+      --primary-blue-2: #4da3ff;
+      --marian-yellow: #f39c12;
+      --marian-green: #2ecc71;
+      --marian-red: #e74c3c;
+      --text-main: #1a252f;
+      --text-sub: #7f8c8d;
+      --glass-bg: rgba(255, 255, 255, 0.66);
+      --glass-strong: rgba(255, 255, 255, 0.86);
+      --glass-border: rgba(255, 255, 255, 0.88);
+      --line: rgba(148, 163, 184, 0.24);
+      --shadow: 0 18px 44px rgba(16, 24, 40, 0.10), inset 0 1px 1px rgba(255,255,255,0.92);
       --safe-top: env(safe-area-inset-top);
       --safe-bottom: env(safe-area-inset-bottom);
-      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      --font: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     }
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     body {
       font-family: var(--font);
+      background: #f0f4f8;
       color: var(--text-main);
-      background: #f3f7fb;
       -webkit-font-smoothing: antialiased;
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
     }
-    .ambient-orb { position: fixed; border-radius: 999px; filter: blur(64px); opacity: .62; pointer-events: none; z-index: 0; animation: floatOrb 16s ease-in-out infinite alternate; }
-    .orb-1 { width: 360px; height: 360px; background: rgba(37, 99, 235, .24); top: -120px; left: -130px; }
-    .orb-2 { width: 390px; height: 390px; background: rgba(245, 158, 11, .20); right: -160px; bottom: 40px; animation-delay: -5s; }
-    .orb-3 { width: 280px; height: 280px; background: rgba(34, 197, 94, .16); left: 32%; top: 36%; animation-duration: 21s; }
-    @keyframes floatOrb { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(38px,-32px,0) scale(1.15); } }
+    button, input { font: inherit; }
+    input { user-select: text; -webkit-user-select: text; }
+    .hidden { display: none !important; }
 
+    .ambient-orb { position: fixed; border-radius: 999px; filter: blur(64px); z-index: 0; opacity: .64; pointer-events: none; animation: floatOrb 15s ease-in-out infinite alternate; }
+    .orb-1 { width: 350px; height: 350px; background: rgba(0, 102, 204, .22); top: -110px; left: -140px; }
+    .orb-2 { width: 410px; height: 410px; background: rgba(243, 156, 18, .18); right: -170px; bottom: 20px; animation-delay: -5s; }
+    .orb-3 { width: 260px; height: 260px; background: rgba(46, 204, 113, .15); left: 30%; top: 36%; animation-duration: 21s; }
+    @keyframes floatOrb { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(36px,-36px,0) scale(1.16); } }
+
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(26px) saturate(145%);
+      -webkit-backdrop-filter: blur(26px) saturate(145%);
+    }
+
+    #scanner-input { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+    /* Login */
+    .login-shell { position: relative; z-index: 1; height: 100%; display: grid; place-items: center; padding: max(18px, var(--safe-top)) 18px max(18px, var(--safe-bottom)); }
+    .login-card { width: min(460px, 100%); border-radius: 34px; padding: 32px 28px; }
+    .login-logo { width: 62px; height: 62px; display: block; margin: 0 auto 18px; border-radius: 22px; background: #fff; object-fit: cover; box-shadow: 0 12px 26px rgba(16,24,40,.08); }
+    .login-title { text-align:center; margin: 0; font-size: 31px; letter-spacing: -.04em; font-weight: 950; }
+    .field { margin-top: 15px; }
+    .field label { display:block; color: var(--text-sub); font-size: 13px; font-weight: 900; margin-bottom: 7px; }
+    .input {
+      width: 100%; border: 1px solid rgba(148,163,184,.34); background: rgba(255,255,255,.78);
+      border-radius: 18px; padding: 15px 16px; color: var(--text-main); outline: none; font-weight: 850;
+    }
+    .input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 5px rgba(0,102,204,.12); }
+    .login-error { display:none; margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(231,76,60,.10); color: #b42318; border: 1px solid rgba(231,76,60,.18); font-weight: 850; line-height: 1.5; }
+
+    /* App */
     .app-shell { position: relative; z-index: 1; height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
     .topbar {
-      height: max(74px, calc(var(--safe-top) + 68px));
-      padding: var(--safe-top) clamp(18px, 3vw, 34px) 0;
-      display: flex; align-items: center; justify-content: space-between; gap: 14px;
-      background: rgba(255,255,255,.38); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
-      border-bottom: 1px solid rgba(255,255,255,.70);
+      height: max(70px, calc(var(--safe-top) + 62px));
+      padding: var(--safe-top) 18px 0;
+      display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.42); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+      border-bottom: 1px solid rgba(255,255,255,.68);
     }
-    .brand-zone { display:flex; align-items:center; gap: 13px; min-width:0; }
-    .school-logo { width: 46px; height: 46px; border-radius: 18px; object-fit: cover; background: #fff; border: 1px solid rgba(255,255,255,.9); box-shadow: 0 10px 24px rgba(15,23,42,.08); }
-    .brand-text { min-width:0; }
-    .station-kicker { font-size: 12px; color: var(--text-sub); font-weight: 850; letter-spacing:.08em; text-transform: uppercase; line-height:1.2; }
-    .school-name { font-size: clamp(17px, 2.3vw, 24px); font-weight: 950; letter-spacing: -.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56vw; }
-    .top-actions { display:flex; align-items:center; gap: 10px; }
-    .status-pill, .icon-btn { border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.58); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 999px; color: var(--text-main); box-shadow: 0 10px 24px rgba(15,23,42,.06); }
-    .status-pill { padding: 10px 13px; font-weight: 900; font-size: 13px; display:flex; align-items:center; gap: 8px; white-space: nowrap; }
-    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--marian-green); box-shadow: 0 0 0 6px rgba(34,197,94,.12), 0 0 16px rgba(34,197,94,.6); }
-    .icon-btn { width: 42px; height: 42px; border:0; cursor:pointer; display:grid; place-items:center; font-size: 18px; }
-    .icon-btn:active, .station-card:active, .mode-btn:active, .primary-btn:active, .ghost-btn:active { transform: scale(.98); }
+    .top-title { text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(17px, 2.4vw, 23px); font-weight: 950; letter-spacing: -.035em; }
+    .top-spacer { width: 44px; height: 44px; }
+    .logout-btn { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.78); border-radius: 50%; background: rgba(255,255,255,.58); color: var(--text-main); box-shadow: 0 10px 24px rgba(15,23,42,.06); cursor: pointer; font-weight: 950; }
+    .logout-btn:active, .nav-item:active, .primary-btn:active, .ghost-btn:active, .mode-btn:active, .manual-toggle:active { transform: scale(.97); }
 
-    .content { overflow: auto; -webkit-overflow-scrolling: touch; padding: clamp(18px, 4vw, 36px) clamp(16px, 4vw, 44px) max(114px, calc(var(--safe-bottom) + 104px)); }
+    .content { overflow: auto; -webkit-overflow-scrolling: touch; padding: clamp(18px, 4vw, 34px) clamp(16px, 4vw, 44px) max(114px, calc(var(--safe-bottom) + 104px)); }
     .content::-webkit-scrollbar { display:none; }
-    .view { display:none; animation: fadeUp .24s ease-out both; }
+    .view { display:none; max-width: 760px; margin: 0 auto; animation: fadeUp .22s ease-out both; }
     .view.active { display:block; }
-    @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    .hero-grid { max-width: 1040px; margin: 0 auto; display:grid; grid-template-columns: 1.05fr .95fr; gap: clamp(16px, 3vw, 26px); align-items: stretch; }
-    .glass-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(26px) saturate(140%); -webkit-backdrop-filter: blur(26px) saturate(140%); }
-    .welcome-card { padding: clamp(22px, 4vw, 36px); min-height: 330px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; position:relative; }
-    .welcome-card::after { content:""; position:absolute; inset:auto -80px -90px auto; width:260px; height:260px; border-radius:50%; background: radial-gradient(circle, rgba(37,99,235,.17), transparent 68%); }
-    .welcome-title { font-size: clamp(34px, 6vw, 68px); line-height:.98; letter-spacing:-.075em; font-weight: 950; margin: 0; }
-    .welcome-copy { color: var(--text-sub); font-size: 16px; line-height: 1.75; font-weight: 650; max-width: 560px; margin: 18px 0 0; }
-    .scanner-state { display:flex; align-items:center; gap: 10px; margin-top: 22px; padding: 13px 15px; border-radius: 20px; background: rgba(255,255,255,.58); border:1px solid rgba(255,255,255,.75); color: var(--text-sub); font-weight: 850; }
-    .scanner-wave { width: 12px; height:12px; border-radius: 50%; background: var(--primary-blue); box-shadow: 0 0 0 0 rgba(37,99,235,.38); animation: wave 1.4s infinite; }
-    @keyframes wave { 70% { box-shadow: 0 0 0 16px rgba(37,99,235,0); } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
+    .page-title { margin: 0 0 16px; font-size: clamp(32px, 5vw, 50px); line-height: 1.02; letter-spacing: -.065em; font-weight: 950; }
+    .panel { border-radius: 34px; padding: clamp(18px, 4vw, 30px); }
 
-    .station-actions { display:grid; grid-template-columns: 1fr; gap: 16px; }
-    .station-card { border:1px solid var(--border); background: rgba(255,255,255,.76); border-radius: 28px; padding: 24px; box-shadow: 0 16px 34px rgba(15,23,42,.08); text-align:left; cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; position:relative; overflow:hidden; min-height: 157px; }
-    .station-card:hover { box-shadow: 0 22px 46px rgba(15,23,42,.11); }
-    .station-card .icon { width: 54px; height: 54px; border-radius: 20px; display:grid; place-items:center; font-size: 28px; background: linear-gradient(135deg, rgba(37,99,235,.14), rgba(96,165,250,.18)); margin-bottom: 17px; }
-    .station-card.checkin .icon { background: linear-gradient(135deg, rgba(34,197,94,.14), rgba(245,158,11,.18)); }
-    .station-card h2 { margin:0; font-size: 22px; letter-spacing:-.035em; }
-    .station-card p { color:var(--text-sub); line-height:1.65; font-weight:650; margin: 8px 0 0; }
+    .scan-card {
+      min-height: 245px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+      border-radius: 30px;
+      background: rgba(255,255,255,.74);
+      border: 1px dashed rgba(148,163,184,.44);
+      padding: 26px 18px;
+      position: relative;
+      overflow:hidden;
+    }
+    .scan-card::after { content:""; position:absolute; inset:auto -70px -90px auto; width: 230px; height: 230px; border-radius:50%; background: radial-gradient(circle, rgba(0,102,204,.13), transparent 68%); }
+    .scan-wave { width: 16px; height: 16px; border-radius: 50%; background: var(--primary-blue); box-shadow: 0 0 0 0 rgba(0,102,204,.36); animation: wave 1.35s infinite; margin-bottom: 15px; }
+    @keyframes wave { 70% { box-shadow: 0 0 0 18px rgba(0,102,204,0); } 100% { box-shadow: 0 0 0 0 rgba(0,102,204,0); } }
+    .waiting-title { font-size: 25px; font-weight: 950; letter-spacing: -.035em; }
+    .waiting-sub { color: var(--text-sub); font-weight: 800; margin-top: 8px; }
+    .student-name { font-size: 34px; font-weight: 950; letter-spacing: -.045em; margin: 0; }
+    .student-points { margin-top: 8px; color: var(--marian-green); font-size: 34px; font-weight: 950; text-shadow: 0 0 18px rgba(46,204,113,.18); }
+    .chip-row { display:flex; flex-wrap:wrap; justify-content:center; gap: 8px; margin-top: 10px; }
+    .chip { display:inline-flex; align-items:center; border-radius:999px; padding: 6px 11px; background: rgba(0,102,204,.10); color:#0b5eb8; font-size: 12px; font-weight: 950; }
 
-    .mode-panel { max-width: 780px; margin: 0 auto; padding: clamp(18px, 4vw, 30px); }
-    .mode-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom: 18px; }
-    .mode-title { margin:0; font-size: clamp(28px, 4.4vw, 42px); letter-spacing:-.06em; line-height:1.05; }
-    .mode-sub { color:var(--text-sub); font-weight:650; line-height:1.65; margin: 8px 0 0; }
-    .mode-switch { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
-    .mode-btn { border:1px solid rgba(148,163,184,.30); border-radius: 18px; background: rgba(255,255,255,.72); color: var(--text-main); padding: 14px 12px; font-weight: 950; cursor:pointer; }
-    .mode-btn.active { color:#fff; background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-2)); box-shadow: 0 14px 28px rgba(37,99,235,.24); }
-    .mode-btn.checkout.active { background: linear-gradient(135deg, #f97316, #fb7185); box-shadow: 0 14px 28px rgba(249,115,22,.20); }
-    .student-result { border: 1px dashed rgba(148,163,184,.42); background: rgba(255,255,255,.56); border-radius: 24px; padding: 20px; min-height: 126px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
-    .student-name { font-size: 30px; font-weight: 950; letter-spacing:-.04em; margin:0; }
-    .student-meta { color:var(--text-sub); font-weight:800; margin-top: 6px; display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
-    .chip { display:inline-flex; align-items:center; border-radius:999px; padding: 6px 10px; background: rgba(37,99,235,.10); color:#1d4ed8; font-size: 12px; font-weight: 950; }
-    .checkin-actions { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .manual-box { margin-top: 16px; border-radius: 26px; background: rgba(255,255,255,.58); border: 1px solid rgba(255,255,255,.76); overflow: hidden; }
+    .manual-toggle { width:100%; border:0; background: transparent; padding: 16px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight: 950; color: var(--text-main); cursor:pointer; }
+    .manual-toggle span:first-child { display:flex; align-items:center; gap:10px; }
+    .manual-form { display:none; padding: 0 18px 18px; }
+    .manual-form.show { display:block; }
+    .manual-grid { display:grid; grid-template-columns: .9fr 1.1fr; gap: 12px; }
+    .manual-actions { margin-top: 12px; display:grid; grid-template-columns: 1fr; gap: 10px; }
+
+    .mode-bar-wrap { margin-top: 16px; padding: 8px; border-radius: 25px; background: rgba(255,255,255,.60); border: 1px solid rgba(255,255,255,.78); box-shadow: 0 12px 28px rgba(15,23,42,.06); }
+    .mode-bar { display:grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .mode-btn { border:0; border-radius: 19px; background: transparent; color: var(--text-sub); padding: 13px 8px; font-size: 14px; font-weight: 950; cursor:pointer; }
+    .mode-btn.active { background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-2)); color: #fff; box-shadow: 0 12px 24px rgba(0,102,204,.22); }
+    .mode-btn.checkout.active { background: linear-gradient(135deg, #f97316, #fb7185); box-shadow: 0 12px 24px rgba(249,115,22,.20); }
+
+    .checkin-actions { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
     .primary-btn, .ghost-btn { border:0; cursor:pointer; border-radius: 20px; padding: 15px 16px; font-weight: 950; font-size: 16px; }
-    .primary-btn { color:#fff; background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 14px 28px rgba(22,163,74,.20); }
+    .primary-btn { color:#fff; background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-2)); box-shadow: 0 14px 28px rgba(0,102,204,.20); }
+    .primary-btn.success { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 14px 28px rgba(22,163,74,.20); }
     .primary-btn.checkout { background: linear-gradient(135deg, #ea580c, #fb7185); box-shadow: 0 14px 28px rgba(234,88,12,.18); }
-    .ghost-btn { background: rgba(255,255,255,.66); color: var(--text-main); border:1px solid rgba(148,163,184,.32); }
-    .log-box { margin-top: 16px; border-radius: 20px; padding: 15px; color: var(--text-sub); font-weight: 750; line-height:1.65; background: rgba(255,255,255,.52); border: 1px solid rgba(255,255,255,.72); }
-
-    .login-shell { height:100%; display:grid; place-items:center; padding: clamp(18px, 4vw, 36px); }
-    .login-card { width:min(460px, 100%); padding: 30px; }
-    .login-brand { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom: 18px; }
-    .login-brand img { width:52px; height:52px; border-radius: 18px; object-fit:cover; background:#fff; }
-    .login-card h1 { margin: 0; text-align:center; font-size: 31px; letter-spacing:-.05em; }
-    .login-card p { color: var(--text-sub); text-align:center; line-height:1.7; font-weight:650; margin: 10px 0 22px; }
-    .field { margin-bottom: 14px; }
-    .field label { display:block; color: var(--text-sub); font-size: 13px; font-weight: 900; margin-bottom: 7px; }
-    .field input { width:100%; border:1px solid rgba(148,163,184,.32); background: rgba(255,255,255,.78); border-radius: 18px; padding: 15px 16px; font: inherit; font-weight: 850; outline:none; color: var(--text-main); }
-    .field input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 5px rgba(37,99,235,.12); }
-    .login-error { display:none; margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(239,68,68,.10); color:#b91c1c; border:1px solid rgba(239,68,68,.18); font-weight: 850; line-height:1.5; }
+    .ghost-btn { background: rgba(255,255,255,.70); color: var(--text-main); border:1px solid rgba(148,163,184,.32); }
+    .log-box { margin-top: 15px; border-radius: 20px; padding: 14px 15px; color: var(--text-sub); font-weight: 800; line-height:1.6; background: rgba(255,255,255,.54); border: 1px solid rgba(255,255,255,.74); }
 
     .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; height: max(86px, calc(var(--safe-bottom) + 76px)); padding: 9px 18px var(--safe-bottom); display:flex; justify-content:center; z-index: 4; pointer-events:none; }
-    .bottom-inner { pointer-events:auto; display:grid; grid-template-columns: repeat(3, minmax(88px, 150px)); gap: 8px; padding: 8px; border-radius: 28px; border:1px solid rgba(255,255,255,.76); background: rgba(255,255,255,.62); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 18px 42px rgba(15,23,42,.10); }
-    .nav-item { border:0; border-radius: 21px; background: transparent; color: var(--text-sub); font-weight: 950; cursor:pointer; padding: 10px 8px; display:flex; flex-direction:column; align-items:center; gap:3px; }
-    .nav-item.active { background: rgba(37,99,235,.12); color: var(--primary-blue); }
+    .bottom-inner { pointer-events:auto; width: min(440px, 100%); display:grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; border-radius: 28px; border:1px solid rgba(255,255,255,.76); background: rgba(255,255,255,.64); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 18px 42px rgba(15,23,42,.10); }
+    .nav-item { border:0; border-radius: 21px; background: transparent; color: var(--text-sub); font-weight: 950; cursor:pointer; padding: 11px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height: 54px; }
+    .nav-item.active { background: rgba(0,102,204,.12); color: var(--primary-blue); }
     .nav-icon { font-size: 21px; line-height:1; }
-    #scanner-input { position: fixed; left: -9999px; width:1px; height:1px; opacity:0; }
-    .hidden { display:none !important; }
 
-    @media (max-width: 760px) {
-      .hero-grid { grid-template-columns: 1fr; }
-      .school-name { max-width: 48vw; }
-      .status-pill { display:none; }
-      .mode-head { flex-direction:column; }
-      .mode-switch { grid-template-columns:1fr; }
+    @media (max-width: 640px) {
+      .manual-grid { grid-template-columns: 1fr; }
       .checkin-actions { grid-template-columns: 1fr; }
-      .bottom-inner { grid-template-columns: repeat(3, 1fr); width:100%; }
-      .nav-item { font-size: 12px; }
+      .mode-bar { grid-template-columns: 1fr; }
+      .page-title { margin-bottom: 12px; }
     }
   </style>
 </head>
@@ -144,123 +155,97 @@
   <div class="ambient-orb orb-1"></div>
   <div class="ambient-orb orb-2"></div>
   <div class="ambient-orb orb-3"></div>
-
   <input id="scanner-input" autocomplete="off" inputmode="none" />
 
   <section id="login-screen" class="login-shell">
-    <div class="login-card glass-card">
-      <div class="login-brand">
-        <img src="/assets/app-icon.png" alt="Tappie" />
-      </div>
-      <h1>Tappie 現場站</h1>
-      <p>啟用此平板作為校區現場站。登入後將保留在本機，直到右上角登出。</p>
+    <div class="login-card glass">
+      <img class="login-logo" src="/assets/app-icon.png" alt="Tappie" />
+      <h1 class="login-title">Tappie 現場站</h1>
       <div class="field">
         <label for="login-school">校區代碼</label>
-        <input id="login-school" placeholder="例如 TP01" autocapitalize="characters" />
+        <input id="login-school" class="input" placeholder="例如 TP01" autocapitalize="characters" />
       </div>
       <div class="field">
         <label for="login-secret">Super Admin 密碼</label>
-        <input id="login-secret" type="password" placeholder="請輸入校區 Super Admin 密碼" />
+        <input id="login-secret" class="input" type="password" placeholder="請輸入密碼" />
       </div>
-      <button class="primary-btn" style="width:100%;" onclick="stationLogin()">啟用現場站</button>
+      <button class="primary-btn" style="width:100%; margin-top:14px;" onclick="stationLogin(event)">啟用現場站</button>
       <div id="login-error" class="login-error"></div>
     </div>
   </section>
 
   <main id="station-app" class="app-shell hidden">
     <header class="topbar">
-      <div class="brand-zone">
-        <img id="station-logo" class="school-logo" src="/assets/app-icon.png" alt="校區 Logo" />
-        <div class="brand-text">
-          <div class="station-kicker">Tappie Station</div>
-          <div id="station-school-name" class="school-name">校區現場站</div>
-        </div>
-      </div>
-      <div class="top-actions">
-        <div class="status-pill"><span class="status-dot"></span><span id="station-mode-pill">學生入口</span></div>
-        <button class="icon-btn" title="登出" onclick="logoutStation()">⏻</button>
-      </div>
+      <div class="top-spacer"></div>
+      <div id="station-school-name" class="top-title">校區現場站</div>
+      <button class="logout-btn" title="登出" onclick="logoutStation()">⏻</button>
     </header>
 
     <section class="content">
-      <div id="home-view" class="view active">
-        <div class="hero-grid">
-          <div class="welcome-card glass-card">
-            <div>
-              <h1 class="welcome-title">校區現場站</h1>
-              <p class="welcome-copy">這台平板已啟用為校區現場入口。學生可感應卡片進入學習中心，老師也可以切換到現場打卡模式。</p>
-            </div>
-            <div class="scanner-state"><span class="scanner-wave"></span><span id="home-scan-text">請感應學生卡，或使用下方功能切換模式。</span></div>
+      <div id="student-view" class="view active">
+        <h1 class="page-title">學生入口</h1>
+        <div class="panel glass">
+          <div id="student-result" class="scan-card">
+            <div class="scan-wave"></div>
+            <div class="waiting-title">請感應學生卡</div>
+            <div class="waiting-sub">也可以使用下方手動登入</div>
           </div>
-          <div class="station-actions">
-            <button class="station-card" onclick="showView('student')">
-              <div class="icon">🎒</div>
-              <h2>學生學習入口</h2>
-              <p>感應學生卡後，進入個人 Dashboard、口說練習與對戰大廳。</p>
-            </button>
-            <button class="station-card checkin" onclick="showView('checkin')">
-              <div class="icon">🪪</div>
-              <h2>現場打卡站</h2>
-              <p>支援手動到校 / 離校，以及自動到校 / 自動離校連續掃卡。</p>
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div id="student-view" class="view">
-        <div class="mode-panel glass-card">
-          <div class="mode-head">
-            <div>
-              <h2 class="mode-title">學生學習入口</h2>
-              <p class="mode-sub">感應學生 NFC 卡，或用讀卡機輸入卡號。系統會帶學生進入個人 Dashboard。</p>
+          <div class="manual-box">
+            <button class="manual-toggle" onclick="toggleStudentManual()">
+              <span><span>⌨️</span><span>手動登入</span></span><span id="manual-arrow">⌄</span>
+            </button>
+            <div id="student-manual-form" class="manual-form">
+              <div class="manual-grid">
+                <div class="field">
+                  <label for="manual-school-code">校區代碼</label>
+                  <input id="manual-school-code" class="input" placeholder="TP01" autocapitalize="characters" />
+                </div>
+                <div class="field">
+                  <label for="manual-student-code">學生代號</label>
+                  <input id="manual-student-code" class="input" placeholder="1344109060" />
+                </div>
+              </div>
+              <div class="manual-actions">
+                <button id="manual-submit-btn" class="primary-btn" onclick="handleManualStudentLogin(event)">進入學生中心</button>
+              </div>
             </div>
-            <button class="ghost-btn" onclick="showView('home')">返回首頁</button>
           </div>
-          <div class="student-result" id="student-result">
-            <div class="scanner-wave" style="margin-bottom:12px;"></div>
-            <div style="font-weight:950; font-size:22px;">等待學生卡</div>
-            <div style="color:var(--text-sub); font-weight:700; margin-top:8px;">支援純數字、完整 UID、或 tap URL</div>
-          </div>
-          <div class="log-box" id="student-log">目前模式：學生入口。感應後將前往 dashboard.html。</div>
+          <div id="student-log" class="log-box">等待學生卡。</div>
         </div>
       </div>
 
       <div id="checkin-view" class="view">
-        <div class="mode-panel glass-card">
-          <div class="mode-head">
-            <div>
-              <h2 class="mode-title">現場打卡站</h2>
-              <p class="mode-sub">選擇打卡模式後感應學生卡。自動模式可連續掃卡，不會進入完整 Admin 後台。</p>
-            </div>
-            <button class="ghost-btn" onclick="showView('home')">返回首頁</button>
+        <h1 class="page-title">到校打卡</h1>
+        <div class="panel glass">
+          <div id="checkin-result" class="scan-card">
+            <div class="scan-wave"></div>
+            <div class="waiting-title">請感應學生卡</div>
+            <div class="waiting-sub">目前為手動模式</div>
           </div>
 
-          <div class="mode-switch">
-            <button id="mode-manual" class="mode-btn active" onclick="setCheckinMode('manual')">手動</button>
-            <button id="mode-checkin" class="mode-btn" onclick="setCheckinMode('auto_checkin')">自動到校</button>
-            <button id="mode-checkout" class="mode-btn checkout" onclick="setCheckinMode('auto_checkout')">自動離校</button>
-          </div>
-
-          <div class="student-result" id="checkin-result">
-            <div class="scanner-wave" style="margin-bottom:12px;"></div>
-            <div style="font-weight:950; font-size:22px;">等待學生卡</div>
-            <div style="color:var(--text-sub); font-weight:700; margin-top:8px;">目前為手動打卡模式</div>
-          </div>
-
-          <div class="checkin-actions" id="manual-actions">
-            <button class="primary-btn" onclick="manualRecord('checkin')">確認到校</button>
+          <div id="manual-actions" class="checkin-actions">
+            <button class="primary-btn success" onclick="manualRecord('checkin')">確認到校</button>
             <button class="primary-btn checkout" onclick="manualRecord('checkout')">確認離校</button>
           </div>
-          <div class="log-box" id="checkin-log">目前模式：手動。請感應學生卡後選擇到校或離校。</div>
+
+          <div class="mode-bar-wrap">
+            <div class="mode-bar">
+              <button id="mode-manual" class="mode-btn active" onclick="setCheckinMode('manual')">手動</button>
+              <button id="mode-checkin" class="mode-btn" onclick="setCheckinMode('auto_checkin')">自動到校</button>
+              <button id="mode-checkout" class="mode-btn checkout" onclick="setCheckinMode('auto_checkout')">自動離校</button>
+            </div>
+          </div>
+
+          <div id="checkin-log" class="log-box">目前模式：手動。請感應學生卡。</div>
         </div>
       </div>
     </section>
 
     <nav class="bottom-nav">
       <div class="bottom-inner">
-        <button id="nav-home" class="nav-item active" onclick="showView('home')"><span class="nav-icon">🏠</span><span>首頁</span></button>
-        <button id="nav-student" class="nav-item" onclick="showView('student')"><span class="nav-icon">🎒</span><span>學生入口</span></button>
-        <button id="nav-checkin" class="nav-item" onclick="showView('checkin')"><span class="nav-icon">🪪</span><span>打卡</span></button>
+        <button id="nav-student" class="nav-item active" onclick="showView('student')"><span class="nav-icon">🎒</span><span>學生入口</span></button>
+        <button id="nav-checkin" class="nav-item" onclick="showView('checkin')"><span class="nav-icon">🪪</span><span>到校打卡</span></button>
       </div>
     </nav>
   </main>
@@ -270,7 +255,7 @@
     const STATION_LAST_VIEW_KEY = 'tappie_station_last_view';
     const STATION_CHECKIN_MODE_KEY = 'tappie_station_checkin_mode';
     let stationSession = null;
-    let currentView = 'home';
+    let currentView = 'student';
     let checkinMode = 'manual';
     let currentStudent = null;
     let scannerBuffer = '';
@@ -280,6 +265,28 @@
     function getApiBaseUrl() {
       if (window.TappieAPI && TappieAPI.supabaseBaseUrl) return String(TappieAPI.supabaseBaseUrl).replace(/\/$/, '');
       return 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+    }
+
+    function isEditableElement(el = document.activeElement) {
+      if (!el) return false;
+      const tag = String(el.tagName || '').toUpperCase();
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    }
+
+    function shouldScannerFocus() {
+      if (!stationSession) return false;
+      if (document.getElementById('login-screen') && !document.getElementById('login-screen').classList.contains('hidden')) return false;
+      if (isEditableElement() && document.activeElement?.id !== 'scanner-input') return false;
+      return true;
+    }
+
+    function focusScanner() {
+      if (!shouldScannerFocus()) return;
+      setTimeout(() => {
+        if (!shouldScannerFocus()) return;
+        const input = document.getElementById('scanner-input');
+        try { input && input.focus({ preventScroll: true }); } catch (_) { try { input && input.focus(); } catch (e) {} }
+      }, 30);
     }
 
     function readStationSession() {
@@ -311,13 +318,13 @@
       el.style.display = 'none';
     }
 
-    async function stationLogin() {
+    async function stationLogin(e) {
       clearLoginError();
       const schoolCode = String(document.getElementById('login-school')?.value || '').trim().toUpperCase();
       const secret = String(document.getElementById('login-secret')?.value || '').trim();
       if (!schoolCode || !secret) return showLoginError('請輸入校區代碼與 Super Admin 密碼。');
 
-      const btn = event?.target;
+      const btn = e?.currentTarget || e?.target;
       const oldText = btn?.innerText;
       if (btn) { btn.disabled = true; btn.innerText = '驗證中...'; }
       try {
@@ -367,22 +374,21 @@
       applyStationBranding();
       checkinMode = normalizeCheckinMode(localStorage.getItem(STATION_CHECKIN_MODE_KEY) || 'manual');
       setCheckinMode(checkinMode, { silent: true });
-      const last = localStorage.getItem(STATION_LAST_VIEW_KEY) || 'home';
-      showView(['home','student','checkin'].includes(last) ? last : 'home');
+      const last = localStorage.getItem(STATION_LAST_VIEW_KEY) || 'student';
+      showView(['student','checkin'].includes(last) ? last : 'student');
+      const manualSchool = document.getElementById('manual-school-code');
+      if (manualSchool) manualSchool.value = stationSession.schoolCode || '';
       focusScanner();
     }
 
     function applyStationBranding() {
       const name = stationSession?.schoolName || stationSession?.schoolCode || '校區現場站';
-      const logo = stationSession?.logoUrl || '/assets/app-icon.png';
       const nameEl = document.getElementById('station-school-name');
-      const logoEl = document.getElementById('station-logo');
       if (nameEl) nameEl.innerText = name;
-      if (logoEl) logoEl.src = logo;
     }
 
     function logoutStation() {
-      if (!confirm('確定要登出此現場站嗎？登出後需要重新輸入 Super Admin 密碼。')) return;
+      if (!confirm('確定要登出此現場站嗎？')) return;
       localStorage.removeItem(STATION_SESSION_KEY);
       localStorage.removeItem(STATION_LAST_VIEW_KEY);
       localStorage.removeItem(STATION_CHECKIN_MODE_KEY);
@@ -392,16 +398,49 @@
     }
 
     function showView(view) {
-      if (!['home','student','checkin'].includes(view)) view = 'home';
+      if (!['student','checkin'].includes(view)) view = 'student';
       currentView = view;
       localStorage.setItem(STATION_LAST_VIEW_KEY, view);
       document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
       document.getElementById(`${view}-view`)?.classList.add('active');
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       document.getElementById(`nav-${view}`)?.classList.add('active');
-      const pill = document.getElementById('station-mode-pill');
-      if (pill) pill.innerText = view === 'checkin' ? getCheckinModeLabel(checkinMode) : (view === 'student' ? '學生入口' : '現場站');
       focusScanner();
+    }
+
+    function toggleStudentManual() {
+      const form = document.getElementById('student-manual-form');
+      const arrow = document.getElementById('manual-arrow');
+      const open = !form?.classList.contains('show');
+      form?.classList.toggle('show', open);
+      if (arrow) arrow.innerText = open ? '⌃' : '⌄';
+      if (open) {
+        const school = document.getElementById('manual-school-code');
+        if (school && !school.value) school.value = stationSession?.schoolCode || '';
+        setTimeout(() => document.getElementById('manual-student-code')?.focus(), 40);
+      } else {
+        focusScanner();
+      }
+    }
+
+    async function handleManualStudentLogin(e) {
+      const schoolCode = String(document.getElementById('manual-school-code')?.value || '').trim().toUpperCase();
+      const studentCode = String(document.getElementById('manual-student-code')?.value || '').trim().toUpperCase();
+      if (!schoolCode || !studentCode) return alert('請完整輸入校區代碼與學生代號。');
+      const combinedUid = studentCode.includes('-') ? studentCode : `${schoolCode}-${studentCode}`;
+      const btn = e?.currentTarget || e?.target;
+      const oldText = btn?.innerText;
+      if (btn) { btn.disabled = true; btn.innerText = '驗證中...'; }
+      try {
+        const data = await TappieAPI.resolveStudentByUid(combinedUid);
+        if (!data || !data.success) throw new Error(data?.message || data?.msg || '查無此帳號');
+        renderStudentCard('student-result', data, '正在進入學生中心...');
+        setTimeout(() => { window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid || combinedUid)}`; }, 420);
+      } catch (err) {
+        alert(err.message || String(err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerText = oldText || '進入學生中心'; }
+      }
     }
 
     function normalizeCheckinMode(mode) {
@@ -412,7 +451,7 @@
     function getCheckinModeLabel(mode) {
       if (mode === 'auto_checkin') return '自動到校';
       if (mode === 'auto_checkout') return '自動離校';
-      return '手動打卡';
+      return '手動';
     }
 
     function setCheckinMode(mode, options = {}) {
@@ -426,20 +465,11 @@
       const result = document.getElementById('checkin-result');
       if (!options.keepStudent && result) {
         currentStudent = null;
-        result.innerHTML = `<div class="scanner-wave" style="margin-bottom:12px;"></div><div style="font-weight:950; font-size:22px;">等待學生卡</div><div style="color:var(--text-sub); font-weight:700; margin-top:8px;">目前為${getCheckinModeLabel(checkinMode)}模式</div>`;
+        result.innerHTML = `<div class="scan-wave"></div><div class="waiting-title">請感應學生卡</div><div class="waiting-sub">目前為${getCheckinModeLabel(checkinMode)}模式</div>`;
       }
       const log = document.getElementById('checkin-log');
       if (log && !options.silent) log.innerText = `目前模式：${getCheckinModeLabel(checkinMode)}。請感應學生卡。`;
-      const pill = document.getElementById('station-mode-pill');
-      if (pill && currentView === 'checkin') pill.innerText = getCheckinModeLabel(checkinMode);
       focusScanner();
-    }
-
-    function focusScanner() {
-      setTimeout(() => {
-        const input = document.getElementById('scanner-input');
-        try { input && input.focus({ preventScroll: true }); } catch (_) { try { input && input.focus(); } catch (e) {} }
-      }, 30);
     }
 
     function normalizeScanInput(raw) {
@@ -469,16 +499,17 @@
 
     function renderStudentCard(targetId, data, helperText = '') {
       const student = data.student || {};
-      const school = data.school || {};
       const tags = Array.isArray(student.tags) ? student.tags : [];
       const classCode = student.classCode || student.class_code || '未分班';
       const chips = [classCode, ...tags].filter(Boolean).map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+      const points = Number(student.points ?? 0);
       const el = document.getElementById(targetId);
       if (!el) return;
       el.innerHTML = `
         <div class="student-name">${escapeHtml(student.name || '未命名學生')}</div>
-        <div class="student-meta">${chips || '<span class="chip">未分班</span>'}</div>
-        <div style="color:var(--text-sub); font-weight:750; margin-top:12px;">${escapeHtml(helperText || school.name || '')}</div>
+        <div class="student-points">${Number.isFinite(points) ? points : 0} 點</div>
+        <div class="chip-row">${chips || '<span class="chip">未分班</span>'}</div>
+        <div class="waiting-sub" style="margin-top:12px;">${escapeHtml(helperText || '')}</div>
       `;
     }
 
@@ -503,7 +534,7 @@
     }
 
     async function handleStudentEntrance(data) {
-      renderStudentCard('student-result', data, '正在進入學生學習中心...');
+      renderStudentCard('student-result', data, '正在進入學生中心...');
       const log = document.getElementById('student-log');
       if (log) log.innerText = `${data.student?.name || '學生'} 已辨識，準備進入 Dashboard。`;
       const uid = data.uid || data.student?.uid;
@@ -512,13 +543,12 @@
 
     async function handleCheckinStudent(data) {
       currentStudent = data;
-      const studentName = data.student?.name || '學生';
       renderStudentCard('checkin-result', data, checkinMode === 'manual' ? '請選擇到校或離校' : `正在執行${getCheckinModeLabel(checkinMode)}...`);
       if (checkinMode === 'auto_checkin') await recordAttendance('checkin', 'station_auto');
       else if (checkinMode === 'auto_checkout') await recordAttendance('checkout', 'station_auto');
       else {
         const log = document.getElementById('checkin-log');
-        if (log) log.innerText = `已讀取 ${studentName}，請選擇到校或離校。`;
+        if (log) log.innerText = `已讀取 ${data.student?.name || '學生'}，請選擇到校或離校。`;
       }
     }
 
@@ -556,7 +586,7 @@
     }
 
     function showScanError(message) {
-      const target = currentView === 'checkin' ? 'checkin-log' : (currentView === 'student' ? 'student-log' : 'home-scan-text');
+      const target = currentView === 'checkin' ? 'checkin-log' : 'student-log';
       const el = document.getElementById(target);
       if (el) el.innerText = `⚠️ ${message || '讀卡失敗'}`;
     }
@@ -580,7 +610,7 @@
         if (value) handleScan(value);
         return;
       }
-      if (e.key && e.key.length === 1) {
+      if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         scannerBuffer += e.key;
         clearTimeout(scannerTimer);
         scannerTimer = setTimeout(() => {
@@ -591,7 +621,7 @@
       }
     }, true);
 
-    document.addEventListener('click', focusScanner);
+    document.addEventListener('pointerdown', () => { if (!isEditableElement()) focusScanner(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) focusScanner(); });
     bootStation();
   </script>
