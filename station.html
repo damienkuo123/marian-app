@@ -238,35 +238,54 @@
     /* Step 7F｜Full-card slow scan + Admin-consistent mode colors */
     .scan-card { isolation:isolate !important; }
     .scan-card .brand-scan-visual { z-index:1 !important; }
-    .scan-card .waiting-title, .scan-card .waiting-sub, .scan-card .student-name, .scan-card .student-points, .scan-card .chip-row { position:relative !important; z-index:2 !important; }
+    .scan-card .waiting-title, .scan-card .waiting-sub, .scan-card .student-name, .scan-card .student-points, .scan-card .chip-row { position:relative !important; z-index:4 !important; }
     .brand-scan-visual .scan-line { display:none !important; }
+    /* Step 7G｜Reliable visible scan sweep: no blend mode, full-card soft band */
+    .scan-card {
+      overflow:hidden !important;
+    }
     .card-scan-line {
       position:absolute !important;
-      left:0 !important;
-      right:0 !important;
-      top:8% !important;
-      height:54px !important;
-      z-index:1 !important;
+      left:-6% !important;
+      right:-6% !important;
+      top:-22% !important;
+      height:32% !important;
+      min-height:120px !important;
+      z-index:3 !important;
       pointer-events:none !important;
+      opacity:.62 !important;
       background:
         linear-gradient(180deg,
-          transparent 0%,
-          rgba(255,255,255,.18) 28%,
-          rgba(255,255,255,.76) 50%,
-          rgba(0,102,204,.14) 52%,
-          rgba(255,255,255,.48) 68%,
-          transparent 100%
+          rgba(37,99,235,0) 0%,
+          rgba(37,99,235,.035) 22%,
+          rgba(255,255,255,.74) 46%,
+          rgba(96,165,250,.18) 51%,
+          rgba(255,255,255,.52) 58%,
+          rgba(245,158,11,.035) 78%,
+          rgba(37,99,235,0) 100%
         ) !important;
-      box-shadow:0 0 36px rgba(0,102,204,.10) !important;
-      opacity:.38 !important;
-      animation:stationFullCardScan 5.6s ease-in-out infinite !important;
-      mix-blend-mode:screen !important;
+      box-shadow:
+        0 0 44px rgba(96,165,250,.16),
+        0 0 72px rgba(245,158,11,.08) !important;
+      transform:translateY(0) skewY(-2deg) !important;
+      animation:stationFullCardScanReliable 7.8s cubic-bezier(.42,0,.18,1) infinite !important;
     }
-    @keyframes stationFullCardScan {
-      0%,100% { top:6%; opacity:.10; }
-      16% { opacity:.38; }
-      50% { top:78%; opacity:.50; }
-      84% { opacity:.34; }
+    .card-scan-line::before {
+      content:"";
+      position:absolute;
+      left:0;
+      right:0;
+      top:48%;
+      height:1px;
+      background:linear-gradient(90deg, transparent, rgba(0,102,204,.28), rgba(255,255,255,.85), rgba(0,102,204,.20), transparent);
+      opacity:.75;
+    }
+    @keyframes stationFullCardScanReliable {
+      0%, 8% { transform:translateY(-18%) skewY(-2deg); opacity:.06; }
+      22% { opacity:.42; }
+      52% { transform:translateY(210%) skewY(-2deg); opacity:.66; }
+      78% { opacity:.38; }
+      100% { transform:translateY(285%) skewY(-2deg); opacity:.06; }
     }
     .mode-btn.active {
       color:#fff !important;
