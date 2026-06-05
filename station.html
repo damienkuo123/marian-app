@@ -1232,6 +1232,24 @@
       }
     }
 
+  
+    /* Step 7K-4｜Station manual input simplification */
+    .manual-grid.single {
+      grid-template-columns: 1fr !important;
+    }
+
+    .checkin-manual-box {
+      margin-top: 14px !important;
+    }
+
+    .checkin-manual-box.hidden {
+      display: none !important;
+    }
+
+    .checkin-manual-box .manual-toggle {
+      padding: 15px 18px !important;
+    }
+
   </style>
 </head>
 <body>
@@ -1284,11 +1302,7 @@
               <span><span>⌨️</span><span>手動登入</span></span><span id="manual-arrow">⌄</span>
             </button>
             <div id="student-manual-form" class="manual-form">
-              <div class="manual-grid">
-                <div class="field">
-                  <label for="manual-school-code">校區代碼</label>
-                  <input id="manual-school-code" class="input" placeholder="TP01" autocapitalize="characters" />
-                </div>
+              <div class="manual-grid single">
                 <div class="field">
                   <label for="manual-student-code">學生代號</label>
                   <input id="manual-student-code" class="input" placeholder="1344109060" />
@@ -1326,6 +1340,23 @@
               <button id="mode-manual" class="mode-btn active" onclick="setCheckinMode('manual')">手動</button>
               <button id="mode-checkin" class="mode-btn" onclick="setCheckinMode('auto_checkin')">自動到校</button>
               <button id="mode-checkout" class="mode-btn checkout" onclick="setCheckinMode('auto_checkout')">自動離校</button>
+            </div>
+          </div>
+
+          <div id="checkin-manual-box" class="manual-box checkin-manual-box">
+            <button class="manual-toggle" onclick="toggleCheckinManualInput()">
+              <span><span>⌨️</span><span>手動輸入學生代號</span></span><span id="checkin-manual-arrow">⌄</span>
+            </button>
+            <div id="checkin-manual-form" class="manual-form">
+              <div class="manual-grid single">
+                <div class="field">
+                  <label for="checkin-manual-student-code">學生代號</label>
+                  <input id="checkin-manual-student-code" class="input" placeholder="1344109060" />
+                </div>
+              </div>
+              <div class="manual-actions">
+                <button id="checkin-manual-submit-btn" class="primary-btn" onclick="handleManualCheckinLookup(event)">讀取學生</button>
+              </div>
             </div>
           </div>
 
@@ -1662,9 +1693,10 @@
     }
 
     async function handleManualStudentLogin(e) {
-      const schoolCode = String(document.getElementById('manual-school-code')?.value || '').trim().toUpperCase();
+      const schoolCode = String(stationSession?.schoolCode || '').trim().toUpperCase();
       const studentCode = String(document.getElementById('manual-student-code')?.value || '').trim().toUpperCase();
-      if (!schoolCode || !studentCode) return alert('請完整輸入校區代碼與學生代號。');
+      if (!schoolCode) return alert('此現場站尚未取得校區代碼，請重新登入 Station。');
+      if (!studentCode) return alert('請輸入學生代號。');
       const combinedUid = studentCode.includes('-') ? studentCode : `${schoolCode}-${studentCode}`;
       const btn = e?.currentTarget || e?.target;
       const oldText = btn?.innerText;
@@ -1678,6 +1710,42 @@
         alert(err.message || String(err));
       } finally {
         if (btn) { btn.disabled = false; btn.innerText = oldText || '進入學生中心'; }
+      }
+    }
+
+    function toggleCheckinManualInput() {
+      if (checkinMode !== 'manual') return;
+      const form = document.getElementById('checkin-manual-form');
+      const arrow = document.getElementById('checkin-manual-arrow');
+      const open = !form?.classList.contains('show');
+      form?.classList.toggle('show', open);
+      if (arrow) arrow.innerText = open ? '⌃' : '⌄';
+      if (open) {
+        const input = document.getElementById('checkin-manual-student-code');
+        setTimeout(() => input?.focus(), 80);
+      } else {
+        focusScanner();
+      }
+    }
+
+    async function handleManualCheckinLookup(e) {
+      if (checkinMode !== 'manual') return;
+      const schoolCode = String(stationSession?.schoolCode || '').trim().toUpperCase();
+      const studentCode = String(document.getElementById('checkin-manual-student-code')?.value || '').trim().toUpperCase();
+      if (!schoolCode) return alert('此現場站尚未取得校區代碼，請重新登入 Station。');
+      if (!studentCode) return alert('請輸入學生代號。');
+      const combinedUid = studentCode.includes('-') ? studentCode : `${schoolCode}-${studentCode}`;
+      const btn = e?.currentTarget || e?.target;
+      const oldText = btn?.innerText;
+      if (btn) { btn.disabled = true; btn.innerText = '讀取中...'; }
+      try {
+        await handleScan(combinedUid);
+        const input = document.getElementById('checkin-manual-student-code');
+        if (input) input.value = '';
+      } catch (err) {
+        alert(err.message || String(err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerText = oldText || '讀取學生'; }
       }
     }
 
@@ -1720,6 +1788,14 @@
       document.getElementById('mode-checkout')?.classList.toggle('active', checkinMode === 'auto_checkout');
       const manualActions = document.getElementById('manual-actions');
       if (manualActions) manualActions.classList.add('hidden');
+      const checkinManualBox = document.getElementById('checkin-manual-box');
+      const checkinManualForm = document.getElementById('checkin-manual-form');
+      const checkinManualArrow = document.getElementById('checkin-manual-arrow');
+      if (checkinManualBox) checkinManualBox.classList.toggle('hidden', checkinMode !== 'manual');
+      if (checkinMode !== 'manual') {
+        checkinManualForm?.classList.remove('show');
+        if (checkinManualArrow) checkinManualArrow.innerText = '⌄';
+      }
       const result = document.getElementById('checkin-result');
       if (!options.keepStudent && result) {
         currentStudent = null;
