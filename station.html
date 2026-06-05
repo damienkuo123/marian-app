@@ -303,6 +303,88 @@
     .primary-btn.success { background:linear-gradient(135deg, #27ae60, #2ecc71) !important; }
     .primary-btn.checkout { background:linear-gradient(135deg, #c0392b, #e74c3c) !important; }
 
+  
+    /* Step 7H｜Single soft full-card scan surface
+       - remove the humorous double light bars
+       - keep only transparent school logo + one gentle moving sheen
+       - applies to both student entrance and check-in waiting cards
+    */
+    .scan-card {
+      isolation:isolate !important;
+      overflow:hidden !important;
+    }
+    .brand-scan-visual {
+      position:absolute !important;
+      inset:0 !important;
+      width:100% !important;
+      height:100% !important;
+      max-width:none !important;
+      aspect-ratio:auto !important;
+      margin:0 !important;
+      z-index:1 !important;
+      pointer-events:none !important;
+      display:grid !important;
+      place-items:center !important;
+    }
+    .brand-glow,
+    .brand-scan-visual .scan-line,
+    .brand-scan-visual .nfc-ring,
+    .brand-scan-visual .nfc-core {
+      display:none !important;
+    }
+    .brand-watermark {
+      width:min(44%, 280px) !important;
+      height:auto !important;
+      max-height:42% !important;
+      object-fit:contain !important;
+      opacity:.145 !important;
+      filter:saturate(.96) contrast(1.02) !important;
+      border-radius:0 !important;
+    }
+    .card-scan-line {
+      position:absolute !important;
+      left:-8% !important;
+      right:-8% !important;
+      top:-34% !important;
+      height:34% !important;
+      min-height:130px !important;
+      z-index:2 !important;
+      pointer-events:none !important;
+      opacity:.42 !important;
+      background:
+        linear-gradient(180deg,
+          rgba(255,255,255,0) 0%,
+          rgba(255,255,255,0) 18%,
+          rgba(255,255,255,.22) 42%,
+          rgba(96,165,250,.105) 52%,
+          rgba(255,255,255,.18) 62%,
+          rgba(255,255,255,0) 100%
+        ) !important;
+      box-shadow:0 0 54px rgba(96,165,250,.10) !important;
+      transform:translateY(0) !important;
+      animation:stationSingleSoftScan 9.2s ease-in-out infinite !important;
+    }
+    .card-scan-line::before,
+    .card-scan-line::after {
+      display:none !important;
+      content:none !important;
+    }
+    @keyframes stationSingleSoftScan {
+      0%, 10% { transform:translateY(-18%); opacity:.04; }
+      26% { opacity:.24; }
+      52% { transform:translateY(238%); opacity:.42; }
+      78% { opacity:.18; }
+      100% { transform:translateY(320%); opacity:.04; }
+    }
+    .scan-card .waiting-title,
+    .scan-card .waiting-sub,
+    .scan-card .student-name,
+    .scan-card .student-points,
+    .scan-card .chip-row {
+      position:relative !important;
+      z-index:4 !important;
+    }
+
   </style>
 </head>
 <body>
@@ -672,7 +754,16 @@
     }
 
     function getTapVisualHtml() {
-      return `<div class="tap-visual" aria-hidden="true"><div class="tap-card"></div><div class="tap-phone"></div><div class="tap-rings"></div><div class="tap-hand">🤚</div></div>`;
+      const brand = extractSchoolBranding(stationSession || {}, stationSession?.schoolCode || '');
+      const logoUrl = brand.logoUrl || stationSession?.logoUrl || '/assets/app-icon.png';
+      return `
+        <div class="brand-scan-visual" aria-hidden="true">
+          <div class="brand-glow"></div>
+          <img class="brand-watermark" src="${escapeHtml(logoUrl)}" alt="" />
+          <div class="scan-line"></div>
+        </div>
+        <div class="card-scan-line" aria-hidden="true"></div>
+      `;
     }
 
     function renderWaitingCard(targetId, title = '請感應學生卡', sub = '') {
