@@ -1250,6 +1250,100 @@
       padding: 15px 18px !important;
     }
 
+  
+    /* Step 7L｜Station auto mode confirm + attendance result status */
+    .station-attendance-confirm-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 5600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+      background: rgba(15, 23, 42, .24);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .station-attendance-confirm-overlay.show {
+      display: flex;
+      animation: fadeIn .18s ease-out both;
+    }
+    .station-attendance-confirm-card {
+      width: min(520px, 92vw);
+      border-radius: 32px;
+      padding: 26px 24px 22px;
+      text-align: left;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(255,255,255,.94);
+      box-shadow: 0 28px 80px rgba(16,24,40,.22), inset 0 1px 1px rgba(255,255,255,.9);
+    }
+    .station-attendance-confirm-card h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      font-weight: 680;
+      letter-spacing: -.04em;
+      color: var(--text-main);
+    }
+    .station-attendance-confirm-card p {
+      margin: 0;
+      color: var(--text-sub);
+      line-height: 1.75;
+      font-size: 15px;
+      font-weight: 450;
+    }
+    .station-confirm-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 22px;
+    }
+    .station-confirm-cancel,
+    .station-confirm-ok {
+      flex: 1;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 16px;
+      cursor: pointer;
+      font-weight: 620;
+    }
+    .station-confirm-cancel {
+      background: rgba(148,163,184,.14);
+      color: var(--text-main);
+    }
+    .station-confirm-ok {
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      color: white;
+      box-shadow: 0 12px 22px rgba(34,197,94,.18);
+    }
+    .station-confirm-ok.checkout {
+      background: linear-gradient(135deg, #dc2626, #fb7185);
+      box-shadow: 0 12px 22px rgba(239,68,68,.18);
+    }
+
+    .station-attendance-status-card {
+      margin-top: 14px;
+      padding: 15px 16px;
+      border-radius: 22px;
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(255,255,255,.82);
+      box-shadow: 0 12px 28px rgba(16,24,40,.06);
+      text-align: left;
+    }
+    .station-attendance-label {
+      color: var(--text-sub);
+      font-size: 12px;
+      font-weight: 620;
+      margin-bottom: 7px;
+    }
+    .station-attendance-line {
+      font-size: 18px;
+      line-height: 1.35;
+      font-weight: 680;
+      color: var(--marian-green);
+    }
+    .station-attendance-line.checkout {
+      color: var(--marian-red);
+    }
+
   </style>
 </head>
 <body>
@@ -1417,6 +1511,17 @@
       </div>
     </div>
 
+    <div id="station-auto-confirm-overlay" class="station-attendance-confirm-overlay">
+      <div class="station-attendance-confirm-card glass" role="dialog" aria-modal="true">
+        <h2 id="station-auto-confirm-title">啟用自動模式</h2>
+        <p id="station-auto-confirm-text">啟用後，掃描學生卡會直接執行打卡登記。</p>
+        <div class="station-confirm-actions">
+          <button class="station-confirm-cancel" type="button" onclick="cancelPendingCheckinMode()">取消</button>
+          <button id="station-auto-confirm-ok" class="station-confirm-ok" type="button" onclick="confirmPendingCheckinMode()">確認啟用</button>
+        </div>
+      </div>
+    </div>
+
     <nav class="bottom-nav">
       <div class="bottom-inner">
         <button id="nav-student" class="nav-item active" onclick="showView('student')"><span class="nav-icon">🎒</span><span>學生入口</span></button>
@@ -1432,6 +1537,7 @@
     let stationSession = null;
     let currentView = 'student';
     let checkinMode = 'manual';
+    let pendingCheckinMode = null;
     let currentStudent = null;
     let scannerBuffer = '';
     let scannerTimer = null;
@@ -1781,6 +1887,52 @@
     }
 
     function setCheckinMode(mode, options = {}) {
+      const nextMode = normalizeCheckinMode(mode);
+      const previousMode = normalizeCheckinMode(checkinMode || 'manual');
+      const shouldConfirmAuto =
+        !options.skipConfirm &&
+        nextMode !== previousMode &&
+        (nextMode === 'auto_checkin' || nextMode === 'auto_checkout');
+
+      if (shouldConfirmAuto) {
+        showAutoModeConfirm(nextMode);
+        return;
+      }
+
+      applyCheckinMode(nextMode, options);
+    }
+
+    function showAutoModeConfirm(mode) {
+      pendingCheckinMode = normalizeCheckinMode(mode);
+      const isCheckout = pendingCheckinMode === 'auto_checkout';
+      const title = `啟用「${isCheckout ? '自動離校' : '自動到校'}」`;
+      const text = isCheckout
+        ? '啟用「自動離校」後，掃描學生卡會直接執行離校登記。\n\n請確認你正在進行大量離校點名。'
+        : '啟用「自動到校」後，掃描學生卡會直接執行到校登記。\n\n請確認你正在進行大量到校點名。';
+
+      const titleEl = document.getElementById('station-auto-confirm-title');
+      const textEl = document.getElementById('station-auto-confirm-text');
+      const okBtn = document.getElementById('station-auto-confirm-ok');
+      if (titleEl) titleEl.innerText = title;
+      if (textEl) textEl.innerText = text;
+      if (okBtn) okBtn.classList.toggle('checkout', isCheckout);
+      document.getElementById('station-auto-confirm-overlay')?.classList.add('show');
+    }
+
+    function cancelPendingCheckinMode() {
+      pendingCheckinMode = null;
+      document.getElementById('station-auto-confirm-overlay')?.classList.remove('show');
+      focusScanner();
+    }
+
+    function confirmPendingCheckinMode() {
+      const mode = pendingCheckinMode;
+      pendingCheckinMode = null;
+      document.getElementById('station-auto-confirm-overlay')?.classList.remove('show');
+      if (mode) applyCheckinMode(mode, { skipConfirm: true });
+    }
+
+    function applyCheckinMode(mode, options = {}) {
       checkinMode = normalizeCheckinMode(mode);
       localStorage.setItem(STATION_CHECKIN_MODE_KEY, checkinMode);
       document.getElementById('mode-manual')?.classList.toggle('active', checkinMode === 'manual');
@@ -1845,7 +1997,7 @@
           <div class="student-name">${escapeHtml(student.name || '未命名學生')}</div>
           <div class="student-points">${Number.isFinite(points) ? points : 0} 點</div>
           <div class="chip-row">${chips || '<span class="chip">未分班</span>'}</div>
-          ${helperText ? `<div class="student-status-note">${escapeHtml(helperText)}</div>` : ''}
+          ${helperText ? (String(helperText).includes('station-attendance-status-card') ? String(helperText) : `<div class="student-status-note">${escapeHtml(helperText)}</div>`) : ''}
         </div>
       `;
     }
@@ -1914,7 +2066,17 @@
       if (!data || !data.success) throw new Error(data?.message || data?.error || `登記${actionText}失敗`);
       const timeText = formatTaipeiTime(data?.event?.event_time || data?.event?.eventTime || data?.eventTime || new Date());
       if (log) log.innerText = `✅ ${currentStudent.student?.name || '學生'} 已登記${actionText}${timeText ? ' ' + timeText : ''}${data.duplicateRecent ? '（短時間重複，未新增第二筆）' : ''}`;
-      renderStudentCard('checkin-result', currentStudent, `已登記${actionText}${timeText ? ' ' + timeText : ''}`);
+      renderStudentCard('checkin-result', currentStudent, renderStationAttendanceStatus(eventType, timeText));
+    }
+
+    function renderStationAttendanceStatus(eventType, timeText = '') {
+      const isCheckout = eventType === 'checkout';
+      const label = isCheckout ? '已離校' : '已到校';
+      const safeTime = timeText ? ` ${escapeHtml(timeText)}` : '';
+      return `<div class="station-attendance-status-card">
+        <div class="station-attendance-label">今日打卡狀態</div>
+        <div class="station-attendance-line${isCheckout ? ' checkout' : ''}">${label}${safeTime}</div>
+      </div>`;
     }
 
     function formatTaipeiTime(value) {
@@ -1940,6 +2102,7 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        cancelPendingCheckinMode();
         closeStationLogoutConfirm();
         closeStationSettings();
         return;
