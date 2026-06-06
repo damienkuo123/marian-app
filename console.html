@@ -2825,6 +2825,10 @@
       }
     }
 
+  
+    /* Step Console Query Polish｜clear time display in point logs */
+    .learning-student-sub .point-time { color: var(--muted); font-weight: 700; }
+
   </style>
 </head>
 <body>
@@ -3132,7 +3136,7 @@
         ]},
         { group: "學生與學習", items: [
           ["students", "學生", "👥"],
-          ["learning", "學習進度", "📈"]
+          ["learning", "學習查詢", "📈"]
         ]},
         { group: "課程與任務", items: [
           ["curriculum", "單元排程", "🗓"]
@@ -3421,7 +3425,7 @@
         overview: ["Overview", "校區營運、校區營運、資料健康、週報狀態總覽"],
         schools: ["Schools", "Owner 多校區狀態與資料信心值"],
         students: ["Students", "學生資料、點數、週報、角色狀態"],
-        learning: ["Learning Progress", "學習進度、單元表現與雷達診斷"],
+        learning: ["Learning Query", "學習、加扣分與打卡三合一查詢"],
         curriculum: ["Curriculum", "班級、單元、單字與排程"],
         weekly: ["Weekly Reports", "週報設定、寄送狀態、收件人健康"],
         newsletters: ["Newsletters", "教育專欄排序、預覽與封存"],
@@ -3529,7 +3533,7 @@
     function renderSingleSchoolGuard(page) {
       const title = {
         students: "學生管理",
-        learning: "學習進度",
+        learning: "學習查詢",
         curriculum: "單元排程",
         newsletters: "專欄管理",
         avatars: "角色管理",
@@ -5674,7 +5678,7 @@
         </div>
         <div class="card" style="margin-top:18px;">
           <div class="panel-title">
-            <div><h2>學習進度查詢</h2><p class="small-note">整合學習、加扣分與打卡紀錄；資料依照單一校區查詢權限載入。</p></div>
+            <div><h2>學習查詢</h2><p class="small-note">整合學習、加扣分與打卡紀錄；資料依照單一校區查詢權限載入。</p></div>
             <button class="btn-compact" onclick="loadLearningData(true)">重新整理</button>
           </div>
           <div class="console-query-tabs">
@@ -5929,6 +5933,10 @@
       if (note) note.textContent = `目前顯示 ${totalVisible} 位學生`;
     }
 
+    function getLearningPointTime(item = {}) {
+      return item.time || item.createdAt || item.created_at || item.created_at_tz || item.date || item.insertedAt || item.inserted_at || "";
+    }
+
     function renderLearningPoints() {
       if (!learningCache || !document.getElementById("learningClassGrid")) return;
       const items = (learningCache.items || []).slice();
@@ -5959,18 +5967,20 @@
         const amount = Number(item.points || 0);
         const cls = amount >= 0 ? "ok" : "danger";
         const sign = amount >= 0 ? "+" : "";
+        const timeText = formatDateTime(getLearningPointTime(item));
         return `
           <div class="learning-student-row">
             <button class="learning-student-button" onclick="this.closest('.learning-student-row').classList.toggle('open')">
-              <div><div class="learning-student-name">${escapeHtml(item.name || "未知學生")}</div><div class="learning-student-sub">${escapeHtml(item.uid || "")}｜${escapeHtml(item.classCode || "無班級")}</div></div>
+              <div><div class="learning-student-name">${escapeHtml(item.name || "未知學生")}</div><div class="learning-student-sub">${escapeHtml(item.uid || "")}｜${escapeHtml(item.classCode || "無班級")}｜${escapeHtml(timeText)}</div></div>
               <div><span class="badge ${cls}">${sign}${amount}</span></div>
               <div class="learning-score">${escapeHtml(item.title || item.reason || "系統變更")}</div>
-              <div class="learning-time">${escapeHtml(formatDateTime(item.time || item.created_at))}</div>
+              <div class="learning-time">${escapeHtml(timeText)}</div>
               <div style="color:var(--muted);font-weight:900;">▾</div>
             </button>
             <div class="learning-detail">
               <div class="learning-detail-grid">
-                <div class="learning-detail-box"><div class="learning-detail-label">班級</div><div class="learning-detail-value">${escapeHtml(item.classCode || "無班級")}</div></div>
+                <div class="learning-detail-box"><div class="learning-detail-label">時間</div><div class="learning-detail-value">${escapeHtml(timeText)}</div></div>
+                <div class="learning-detail-box"><div class="learning-detail-label">班級 / 標籤</div><div class="learning-detail-value">${escapeHtml(item.classCode || "無班級")}${consoleQueryStudentTags(item).length ? "｜" + consoleQueryStudentTags(item).map(escapeHtml).join("、") : ""}</div></div>
                 <div class="learning-detail-box"><div class="learning-detail-label">原因</div><div class="learning-detail-value">${escapeHtml(item.title || item.reason || "系統變更")}</div></div>
               </div>
             </div>
@@ -6039,11 +6049,17 @@
         const t = s._latest?.eventTime || s._latest?.event_time || "";
         return t ? new Date(t).getTime() : Number.MAX_SAFE_INTEGER;
       }
-      const buckets = [
-        { key:"checkin", title:"🟢 已到校", hint:"依到校時間早到晚", rows:[] },
-        { key:"checkout", title:"🔴 已離校", hint:"依離校時間早到晚", rows:[] },
-        { key:"none", title:"⚪ 尚無打卡", hint:"符合目前篩選但今日尚無紀錄", rows:[] },
-      ];
+      const bucketPresets = {
+        checkin: [{ key:"checkin", title:"🟢 已到校", hint:"依到校時間早到晚", rows:[] }],
+        checkout: [{ key:"checkout", title:"🔴 已離校", hint:"依離校時間早到晚", rows:[] }],
+        none: [{ key:"none", title:"⚪ 尚無打卡", hint:"符合目前篩選但今日尚無紀錄", rows:[] }],
+        all: [
+          { key:"checkin", title:"🟢 已到校", hint:"依到校時間早到晚", rows:[] },
+          { key:"checkout", title:"🔴 已離校", hint:"依離校時間早到晚", rows:[] },
+          { key:"none", title:"⚪ 尚無打卡", hint:"符合目前篩選但今日尚無紀錄", rows:[] },
+        ]
+      };
+      const buckets = bucketPresets[statusFilter] || bucketPresets.all;
       students.forEach(s => {
         const bucket = buckets.find(b => b.key === attendanceBucketKey(s));
         if (bucket) bucket.rows.push(s);
