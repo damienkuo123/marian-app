@@ -937,6 +937,85 @@
     const params = new URLSearchParams(window.location.search);
     const STUDENT_ID = params.get('id') || "S001";
 
+  // Feature Gate F5｜頁面初始化 Guard：優先讀 Dashboard sessionStorage，沒有快取才 fallback get-dashboard
+  const DEFAULT_PAGE_FEATURES = {
+    attendance_enabled: true,
+    manual_points_enabled: true,
+    practice_enabled: true,
+    battle_enabled: true,
+    weekly_report_enabled: true,
+    newsletter_enabled: true,
+    station_enabled: true
+  };
+
+  function normalizePageFeatures(value) {
+    const raw = value && typeof value === 'object' ? value : {};
+    const out = {};
+    Object.keys(DEFAULT_PAGE_FEATURES).forEach(key => {
+      out[key] = raw[key] === false ? false : true;
+    });
+    return out;
+  }
+
+  function readEffectiveFeaturesCache(uid) {
+    if (!uid) return null;
+    try {
+      const raw = sessionStorage.getItem(`tappie_effective_features_${uid}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.features ? normalizePageFeatures(parsed.features) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function saveEffectiveFeaturesCache(uid, features) {
+    if (!uid || !features) return;
+    try {
+      sessionStorage.setItem(
+        `tappie_effective_features_${uid}`,
+        JSON.stringify({ features: normalizePageFeatures(features) })
+      );
+    } catch (_) {}
+  }
+
+  async function getEffectiveFeaturesForGuard(uid) {
+    const cached = readEffectiveFeaturesCache(uid);
+    if (cached) return cached;
+
+    try {
+      if (!window.TappieAPI || typeof TappieAPI.getDashboard !== 'function') return normalizePageFeatures({});
+      const data = await TappieAPI.getDashboard(uid);
+      const features =
+        data?.effectiveFeatures ||
+        data?.features ||
+        data?.data?.effectiveFeatures ||
+        data?.data?.features ||
+        null;
+      const normalized = normalizePageFeatures(features);
+      saveEffectiveFeaturesCache(uid, normalized);
+      return normalized;
+    } catch (err) {
+      console.warn('[Feature Gate] fallback get-dashboard failed:', err);
+      return normalizePageFeatures({});
+    }
+  }
+
+  function getFeatureDisabledDashboardUrl(uid) {
+    return `./dashboard.html?id=${encodeURIComponent(uid || '')}`;
+  }
+
+  async function guardPageFeature(featureKey, message) {
+    const features = await getEffectiveFeaturesForGuard(STUDENT_ID);
+    if (features?.[featureKey] === false) {
+      alert(message);
+      window.location.href = getFeatureDisabledDashboardUrl(STUDENT_ID);
+      return false;
+    }
+    return true;
+  }
+
+
     // =======================================================
     // 🚀 瑪麗安專屬：全域雲端語音中心 (Azure Neural TTS + 快取擴大機)
     // =======================================================
@@ -1060,8 +1139,29 @@
       try {
         if (!window.TappieAPI) throw new Error("TappieAPI 尚未載入");
 
+        const cachedFeatures = readEffectiveFeaturesCache(STUDENT_ID);
+        if (cachedFeatures?.battle_enabled === false) {
+          alert("🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。");
+          window.location.href = getFeatureDisabledDashboardUrl(STUDENT_ID);
+          return;
+        }
+
         const dashboardRaw = await TappieAPI.getDashboard(STUDENT_ID);
         const dashboard = TappieAPI.toLegacyDashboard(dashboardRaw);
+        const dashboardFeatures = normalizePageFeatures(
+          dashboardRaw?.effectiveFeatures ||
+          dashboardRaw?.features ||
+          dashboardRaw?.data?.effectiveFeatures ||
+          dashboard?.effectiveFeatures ||
+          dashboard?.features ||
+          null
+        );
+        saveEffectiveFeaturesCache(STUDENT_ID, dashboardFeatures);
+        if (dashboardFeatures.battle_enabled === false) {
+          alert("🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。");
+          window.location.href = getFeatureDisabledDashboardUrl(STUDENT_ID);
+          return;
+        }
         
         lobbyGamiConfig =
           dashboard.gamification ||

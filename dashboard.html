@@ -1015,6 +1015,16 @@
       return out;
     }
 
+    function saveEffectiveFeaturesCache(uid, features) {
+      if (!uid || !features) return;
+      try {
+        sessionStorage.setItem(
+          `tappie_effective_features_${uid}`,
+          JSON.stringify({ features: normalizeDashboardFeatures(features) })
+        );
+      } catch (_) {}
+    }
+
     function isDashboardFeatureEnabled(key) {
       return dashboardEffectiveFeatures?.[key] !== false;
     }
@@ -1815,6 +1825,7 @@
     
     function renderDashboard(data) {
       dashboardEffectiveFeatures = normalizeDashboardFeatures(data?.effectiveFeatures || data?.features || dashboardEffectiveFeatures);
+      saveEffectiveFeaturesCache(STUDENT_ID, dashboardEffectiveFeatures);
       // 🚀 1. 客製化視覺與動態 App 打包引擎
       if (data.logoUrl) {
           const logoEl = document.getElementById('student-avatar');
