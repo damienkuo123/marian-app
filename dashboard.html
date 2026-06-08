@@ -994,12 +994,94 @@
     let cachedPushDevices = [];
     let pendingPushSubscription = null;
 
+    // Feature Gate F4｜Dashboard 入口閥門（預設全開，只有明確 false 才關閉）
+    const DEFAULT_DASHBOARD_FEATURES = {
+      attendance_enabled: true,
+      manual_points_enabled: true,
+      practice_enabled: true,
+      battle_enabled: true,
+      weekly_report_enabled: true,
+      newsletter_enabled: true,
+      station_enabled: true
+    };
+    let dashboardEffectiveFeatures = { ...DEFAULT_DASHBOARD_FEATURES };
+
+    function normalizeDashboardFeatures(value) {
+      const raw = value && typeof value === 'object' ? value : {};
+      const out = {};
+      Object.keys(DEFAULT_DASHBOARD_FEATURES).forEach(key => {
+        out[key] = raw[key] === false ? false : true;
+      });
+      return out;
+    }
+
+    function isDashboardFeatureEnabled(key) {
+      return dashboardEffectiveFeatures?.[key] !== false;
+    }
+
+    function getNavFeatureKey(tabId) {
+      if (['challenge', 'practice', 'learning'].includes(tabId)) return 'practice_enabled';
+      if (tabId === 'arena') return 'battle_enabled';
+      return '';
+    }
+
+    function isClassBasedStudent(data) {
+      return ["有班級", "美語資優生", "elite"].includes(String(data?.studentType || "").trim());
+    }
+
+    function setBottomNavLock(tabId, locked, message = "") {
+      const nav = document.querySelector(`.nav-item[onclick*="'${tabId}'"]`);
+      if (!nav) return;
+      nav.classList.toggle('locked', !!locked);
+      if (locked && message) nav.dataset.lockMessage = message;
+      else delete nav.dataset.lockMessage;
+    }
+
+    function applyDashboardFeatureLocks(data) {
+      const isClassStudent = isClassBasedStudent(data);
+      const classLockMessage = "🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。";
+      const practiceLockMessage = "🔒 此校區尚未啟用【今日挑戰 / 一般練習】功能。\n請聯繫老師或校區主管確認。";
+      const battleLockMessage = "🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。";
+
+      [
+        { tab: 'challenge', feature: 'practice_enabled', message: practiceLockMessage },
+        { tab: 'practice', feature: 'practice_enabled', message: practiceLockMessage },
+        { tab: 'learning', feature: 'practice_enabled', message: practiceLockMessage },
+        { tab: 'arena', feature: 'battle_enabled', message: battleLockMessage },
+      ].forEach(item => {
+        if (!isDashboardFeatureEnabled(item.feature)) {
+          setBottomNavLock(item.tab, true, item.message);
+        } else if (!isClassStudent) {
+          setBottomNavLock(item.tab, true, classLockMessage);
+        } else {
+          setBottomNavLock(item.tab, false);
+        }
+      });
+    }
+
+    function applyDashboardNotificationFeatureVisibility() {
+      const attendanceEnabled = isDashboardFeatureEnabled('attendance_enabled');
+      const weeklyEnabled = isDashboardFeatureEnabled('weekly_report_enabled');
+
+      document.getElementById('attendance-push-btn')?.classList.toggle('hidden', !attendanceEnabled);
+      document.getElementById('push-device-summary')?.classList.toggle('hidden', !attendanceEnabled);
+      document.getElementById('weekly-home-btn')?.classList.toggle('hidden', !weeklyEnabled);
+
+      if (!weeklyEnabled) {
+        document.getElementById('home-weekly-wrapper')?.classList.add('hidden');
+        document.getElementById('newsletter-zone')?.classList.add('hidden');
+      }
+
+      const zone = document.querySelector('.home-notification-zone');
+      if (zone) zone.classList.toggle('hidden', !attendanceEnabled && !weeklyEnabled);
+    }
+
     // 🚀 SPA 分頁切換邏輯
     function switchTab(tabId, titleText, navElement) {
       // 🔒 檢查是否被鎖定
       if (navElement.classList.contains('locked')) {
         if (window.GlobalAudio) GlobalAudio.play('click'); // 播放一下拒絕的聲音也可以用 click
-        alert("🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。");
+        alert(navElement.dataset.lockMessage || "🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。");
         return; // 終止執行，不切換分頁
       }
 
@@ -1574,6 +1656,14 @@
       TappieAPI.getDashboard(STUDENT_ID)
         .then(async rawData => {
           const data = TappieAPI.toLegacyDashboard(rawData);
+          data.effectiveFeatures = normalizeDashboardFeatures(
+            rawData?.effectiveFeatures ||
+            rawData?.data?.effectiveFeatures ||
+            data?.effectiveFeatures ||
+            data?.features ||
+            null
+          );
+          dashboardEffectiveFeatures = data.effectiveFeatures;
           // 🚀 關鍵修復：檢查後端是否回報錯誤（例如：沒這間校區、沒這個學號）
           if (data.success === false || data.error) {
               alert("⚠️ 查無此帳號！請確認學生代號或校區代碼是否正確。");
@@ -1594,6 +1684,10 @@
               if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
           }
 
+          if (overlay?.effectiveFeatures || overlay?.features) {
+              data.effectiveFeatures = normalizeDashboardFeatures(overlay.effectiveFeatures || overlay.features);
+              dashboardEffectiveFeatures = data.effectiveFeatures;
+          }
           renderDashboard(data);
           
           document.getElementById('loading-screen').style.opacity = '0';
@@ -1720,6 +1814,7 @@
     }
     
     function renderDashboard(data) {
+      dashboardEffectiveFeatures = normalizeDashboardFeatures(data?.effectiveFeatures || data?.features || dashboardEffectiveFeatures);
       // 🚀 1. 客製化視覺與動態 App 打包引擎
       if (data.logoUrl) {
           const logoEl = document.getElementById('student-avatar');
@@ -1773,7 +1868,11 @@
 
       // 🚀 2. 原本的資料渲染...
       document.getElementById('student-name').innerText = data.studentName;
-      refreshStudentAttendanceStatus();
+      if (isDashboardFeatureEnabled('attendance_enabled')) {
+        refreshStudentAttendanceStatus();
+      } else {
+        document.getElementById('student-attendance-status')?.classList.add('hidden');
+      }
       document.getElementById('current-points').innerText = data.currentPoints;
 
       if (data.parentEmail && data.parentEmail.includes('@')) {
@@ -1787,7 +1886,7 @@
           document.getElementById('email-submit-btn').innerText = "訂閱";
       }
       refreshWeeklyHomeStatus();
-      refreshAttendancePushStatus();
+      if (isDashboardFeatureEnabled('attendance_enabled')) refreshAttendancePushStatus();
       
       const badge = document.getElementById('honor-title');
       if (badge) {
@@ -1820,18 +1919,14 @@
         }
       }
 
-      // 👑 權限判定：拔除鎖頭與顯示專屬功能
-      if (["有班級", "美語資優生", "elite"].includes(String(data.studentType || "").trim())) {
-        // 🔓 拔掉底部導航的鎖頭，允許切換！
-        document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.remove('locked'));
-        weeklyReportAvailable = true;
-      } else {
-        // 🔒 無班級學生：確保鎖頭存在 (HTML裡已經預設有加了，這裡只是保險)
-        document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.add('locked'));
-        weeklyReportAvailable = false;
+      // 👑 權限判定：延伸原本底部鎖頭，功能關閉優先於無班級鎖定
+      applyDashboardFeatureLocks(data);
+      weeklyReportAvailable = isClassBasedStudent(data) && isDashboardFeatureEnabled('weekly_report_enabled');
+      if (!weeklyReportAvailable) {
         document.getElementById('home-weekly-wrapper')?.classList.add('hidden');
         document.getElementById('newsletter-zone')?.classList.add('hidden');
       }
+      applyDashboardNotificationFeatureVisibility();
       refreshWeeklyHomeStatus();
 
       // 📊 以下的數據渲染，不管是不是資優生都照常執行！
@@ -2080,7 +2175,13 @@
       return 'index.html';
     }
 
-    function goToLobby() { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }
+    function goToLobby() {
+      if (!isDashboardFeatureEnabled('battle_enabled')) {
+        alert("🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。");
+        return;
+      }
+      window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    }
     function logoutToPortal() {
       if (confirm("確定要登出並回到刷卡頁面嗎？")) {
         window.location.href = getStationAwareHomeUrl(); 
@@ -2088,6 +2189,10 @@
     }
 
     function checkVoiceLimitAndGo(targetUrl, btnElement, disabledText) {
+        if (!isDashboardFeatureEnabled('practice_enabled') && String(targetUrl || '').includes('arena.html')) {
+            alert("🔒 此校區尚未啟用【今日挑戰 / 一般練習】功能。\n請聯繫老師或校區主管確認。");
+            return;
+        }
         const originalText = btnElement.innerText;
         btnElement.innerText = "✨ 傳送中...";
         btnElement.style.pointerEvents = "none";
