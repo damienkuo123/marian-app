@@ -2900,6 +2900,61 @@
       .feature-access-head .btn-compact { width:100%; }
     }
 
+  
+    /* Feature Gate F2B｜Super Admin Feature_Config UI */
+    .feature-config-panel { margin-bottom:18px; }
+    .feature-config-grid {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      margin-top:14px;
+    }
+    .feature-config-card {
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background:var(--surface);
+      cursor:pointer;
+      min-height:86px;
+      box-shadow:0 8px 20px rgba(16,24,40,.035);
+    }
+    .feature-config-card input {
+      width:20px;
+      height:20px;
+      margin-top:2px;
+      accent-color:var(--primary);
+      flex:0 0 auto;
+    }
+    .feature-config-card strong {
+      display:block;
+      color:var(--text);
+      font-size:14px;
+      font-weight:900;
+      margin-bottom:4px;
+    }
+    .feature-config-card small {
+      display:block;
+      color:var(--muted);
+      line-height:1.55;
+      font-size:12px;
+      font-weight:650;
+    }
+    .feature-config-card:has(input:disabled) {
+      opacity:.72;
+      cursor:not-allowed;
+    }
+    .feature-config-actions {
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid var(--border);
+    }
+    @media (max-width:720px) {
+      .feature-config-grid { grid-template-columns:1fr; }
+    }
+
   </style>
 </head>
 <body>
@@ -3169,6 +3224,8 @@
     let currentEditingStudentTags = [];
     let currentBatchStudentTags = [];
     let currentConsolePage = "overview";
+    let featureSettingsCache = null;
+    let featureSettingsLoading = false;
 
     // Owner Scope v1：Owner 可在「全部校區 / 單一校區」間切換；Super Admin 永遠固定單一校區。
     let consoleScope = {
@@ -3278,6 +3335,176 @@
       });
       return normalizeFeatureMap(out);
     }
+
+
+    function getCurrentFeatureAccess() {
+      return normalizeFeatureMap(
+        featureSettingsCache?.featureAccess ||
+        session?.featureAccess ||
+        {}
+      );
+    }
+
+    function getCurrentFeatureConfig() {
+      return normalizeFeatureMap(
+        featureSettingsCache?.featureConfig ||
+        session?.featureConfig ||
+        {}
+      );
+    }
+
+    function getCurrentEffectiveFeatures() {
+      return normalizeFeatureMap(
+        featureSettingsCache?.effectiveFeatures ||
+        session?.effectiveFeatures ||
+        {}
+      );
+    }
+
+    function renderFeatureConfigPanelHtml() {
+      const access = getCurrentFeatureAccess();
+      const config = getCurrentFeatureConfig();
+      const isSuper = isSuperAdmin();
+      const visibleItems = FEATURE_ACCESS_ITEMS.filter(item => access[item.key] !== false);
+
+      if (!visibleItems.length) {
+        return `
+          <div class="gami-config-card feature-config-panel">
+            <div class="gami-config-head">
+              <div>
+                <h3>校區功能啟用</h3>
+                <p>此校區目前沒有可由校區主管啟用的功能。請聯絡 Tappie Owner 調整功能授權。</p>
+              </div>
+              <span class="gami-impact-pill neutral">Feature_Config</span>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="gami-config-card feature-config-panel">
+          <div class="gami-config-head">
+            <div>
+              <h3>校區功能啟用</h3>
+              <p>第二層設定：校區主管只能在 Owner 已授權的功能範圍內自行啟用或停用。</p>
+            </div>
+            <span class="gami-impact-pill neutral">Feature_Config</span>
+          </div>
+          <div class="feature-config-grid">
+            ${visibleItems.map(item => `
+              <label class="feature-config-card" for="featureConfig_${item.key}">
+                <input
+                  id="featureConfig_${item.key}"
+                  type="checkbox"
+                  data-feature-config-key="${item.key}"
+                  ${config[item.key] !== false ? "checked" : ""}
+                  ${isSuper ? "" : "disabled"}
+                />
+                <span>
+                  <strong>${escapeHtml(item.title)}</strong>
+                  <small>${escapeHtml(item.note)}</small>
+                </span>
+              </label>
+            `).join("")}
+          </div>
+          ${isSuper ? `
+            <div class="modal-actions feature-config-actions">
+              <button class="btn-compact" onclick="loadFeatureSettings(true)">重新整理功能設定</button>
+              <div class="right"><button id="featureConfigSaveBtn" class="btn-compact primary" onclick="saveFeatureConfig()">儲存功能啟用</button></div>
+            </div>
+          ` : `
+            <div class="form-note">Owner 請在「校區管理」調整第一層功能授權；第二層啟用設定由 Super Admin 管理。</div>
+          `}
+          <div id="featureConfigStatus" class="branding-status">功能設定尚未同步。</div>
+        </div>
+      `;
+    }
+
+    function readFeatureConfigForm() {
+      const access = getCurrentFeatureAccess();
+      const current = getCurrentFeatureConfig();
+      const out = {};
+      FEATURE_ACCESS_ITEMS.forEach(item => {
+        if (access[item.key] === false) {
+          out[item.key] = false;
+          return;
+        }
+        const input = document.getElementById(`featureConfig_${item.key}`);
+        out[item.key] = input ? Boolean(input.checked) : current[item.key] !== false;
+      });
+      return normalizeFeatureMap(out);
+    }
+
+    function setFeatureConfigStatus(message, type = "") {
+      const el = document.getElementById("featureConfigStatus");
+      if (!el) return;
+      el.textContent = message;
+      el.className = "branding-status" + (type ? " " + type : "");
+    }
+
+    async function loadFeatureSettings(force = false) {
+      if (featureSettingsLoading) return featureSettingsCache;
+      if (!force && featureSettingsCache) return featureSettingsCache;
+      featureSettingsLoading = true;
+      try {
+        const data = await TappieAPI.consoleGetData({
+          token: session?.token || "",
+          schoolCode: getActiveSchoolCode(),
+          mode: "settings",
+          scopeMode: getActiveScopePayload().scopeMode
+        });
+        if (!data || !data.success) throw new Error(data?.message || data?.detail || data?.error || "feature_settings_load_failed");
+        featureSettingsCache = {
+          featureAccess: normalizeFeatureMap(data.featureAccess || {}),
+          featureConfig: normalizeFeatureMap(data.featureConfig || {}),
+          effectiveFeatures: normalizeFeatureMap(data.effectiveFeatures || {})
+        };
+        if (isSuperAdmin()) {
+          session.featureAccess = featureSettingsCache.featureAccess;
+          session.featureConfig = featureSettingsCache.featureConfig;
+          session.effectiveFeatures = featureSettingsCache.effectiveFeatures;
+          try { localStorage.setItem("tappie_console_session", JSON.stringify(session)); } catch (_) {}
+        }
+        return featureSettingsCache;
+      } catch (err) {
+        console.warn("[Feature Config] load failed", err);
+        setFeatureConfigStatus("⚠️ 功能設定讀取失敗：" + (err?.message || err), "danger");
+        return featureSettingsCache;
+      } finally {
+        featureSettingsLoading = false;
+      }
+    }
+
+    async function saveFeatureConfig() {
+      if (!isSuperAdmin()) return alert("只有 Super Admin 可以調整校區功能啟用。");
+      const btn = document.getElementById("featureConfigSaveBtn");
+      const oldText = btn?.textContent || "儲存功能啟用";
+      if (btn) { btn.disabled = true; btn.textContent = "儲存中..."; }
+      try {
+        const featureConfig = readFeatureConfigForm();
+        const res = await TappieAPI.consoleSaveFeatures({
+          token: session?.token || "",
+          schoolCode: getActiveSchoolCode(),
+          featureConfig
+        });
+        if (!res || !res.success) throw new Error(res?.message || res?.detail || res?.error || "save_features_failed");
+        featureSettingsCache = {
+          featureAccess: normalizeFeatureMap(res.featureAccess || getCurrentFeatureAccess()),
+          featureConfig: normalizeFeatureMap(res.featureConfig || featureConfig),
+          effectiveFeatures: normalizeFeatureMap(res.effectiveFeatures || {})
+        };
+        session.featureAccess = featureSettingsCache.featureAccess;
+        session.featureConfig = featureSettingsCache.featureConfig;
+        session.effectiveFeatures = featureSettingsCache.effectiveFeatures;
+        try { localStorage.setItem("tappie_console_session", JSON.stringify(session)); } catch (_) {}
+        setFeatureConfigStatus("功能啟用設定已儲存。", "ok");
+      } catch (err) {
+        setFeatureConfigStatus("⚠️ 儲存失敗：" + (err?.message || err), "danger");
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = oldText; }
+      }
+    }
+
 
     async function hydrateSchoolEditorFeatureAccess(code, raw = null) {
       const fallback = getOwnerSchoolFeatureAccess(raw || {});
@@ -3530,6 +3757,7 @@
       if (typeof newslettersCache !== "undefined") newslettersCache = null;
       if (typeof brandingCache !== "undefined") brandingCache = null;
       if (typeof gamificationCache !== "undefined") gamificationCache = null;
+      featureSettingsCache = null;
     }
 
     function changeConsoleScope(value) {
@@ -3651,6 +3879,11 @@
         loadBrandingConsole(false);
       }
       if (page === "settings") {
+        loadFeatureSettings(false).then(() => {
+          const host = document.getElementById("featureConfigPanelHost");
+          if (host) host.innerHTML = renderFeatureConfigPanelHtml();
+          setFeatureConfigStatus("功能設定已同步。", "ok");
+        });
         loadGamificationConsole(false);
       }
       if (page === "automation") {
@@ -8138,6 +8371,7 @@ function openCurriculumUnitModal(unitId = "") {
     }
     function renderGamificationConsole(){
       return `
+        <div id="featureConfigPanelHost">${renderFeatureConfigPanelHtml()}</div>
         <div class="gami-rule-hero">
           <div class="gami-rule-hero-main">
             <div class="gami-kicker">遊戲規則中心</div>
