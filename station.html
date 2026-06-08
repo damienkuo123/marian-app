@@ -141,6 +141,18 @@
     .bottom-inner { pointer-events:auto; width: min(440px, 100%); display:grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; border-radius: 28px; border:1px solid rgba(255,255,255,.76); background: rgba(255,255,255,.64); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 18px 42px rgba(15,23,42,.10); }
     .nav-item { border:0; border-radius: 21px; background: transparent; color: var(--text-sub); font-weight: 560; cursor:pointer; padding: 11px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height: 54px; }
     .nav-item.active { background: rgba(0,102,204,.12); color: var(--primary-blue); }
+    .nav-item.feature-locked { opacity: .48; filter: grayscale(.35); }
+    .bottom-inner.single-nav { grid-template-columns: 1fr !important; }
+    .station-disabled-note {
+      margin-top: 12px;
+      padding: 13px 14px;
+      border-radius: 18px;
+      background: rgba(231,76,60,.10);
+      color: #b42318;
+      border: 1px solid rgba(231,76,60,.18);
+      font-weight: 560;
+      line-height: 1.55;
+    }
     .nav-icon { font-size: 21px; line-height:1; }
 
   
@@ -1543,6 +1555,76 @@
     let scannerTimer = null;
     let isProcessingScan = false;
 
+    const DEFAULT_STATION_FEATURES = {
+      attendance_enabled: true,
+      manual_points_enabled: true,
+      practice_enabled: true,
+      battle_enabled: true,
+      weekly_report_enabled: true,
+      newsletter_enabled: true,
+      station_enabled: true
+    };
+
+    function normalizeStationFeatures(value) {
+      const raw = value && typeof value === 'object' ? value : {};
+      const out = {};
+      Object.keys(DEFAULT_STATION_FEATURES).forEach(key => {
+        out[key] = raw[key] === false ? false : true;
+      });
+      return out;
+    }
+
+    function getStationFeatures() {
+      return normalizeStationFeatures(stationSession?.effectiveFeatures || stationSession?.features || {});
+    }
+
+    function isStationFeatureEnabled(key) {
+      return getStationFeatures()[key] !== false;
+    }
+
+    function applyStationFeatureGate() {
+      if (!stationSession) return;
+      if (!isStationFeatureEnabled('station_enabled')) {
+        localStorage.removeItem(STATION_SESSION_KEY);
+        stationSession = null;
+        document.getElementById('station-app')?.classList.add('hidden');
+        document.getElementById('login-screen')?.classList.remove('hidden');
+        showLoginError('此校區尚未啟用 Station 現場站，請至 Console 開啟功能。');
+        return;
+      }
+
+      const attendanceEnabled = isStationFeatureEnabled('attendance_enabled');
+      const checkinNav = document.getElementById('nav-checkin');
+      const bottomInner = checkinNav?.parentElement;
+      checkinNav?.classList.toggle('hidden', !attendanceEnabled);
+      checkinNav?.classList.toggle('feature-locked', !attendanceEnabled);
+      bottomInner?.classList.toggle('single-nav', !attendanceEnabled);
+
+      if (!attendanceEnabled) {
+        localStorage.setItem(STATION_LAST_VIEW_KEY, 'student');
+        checkinMode = 'manual';
+        document.getElementById('checkin-view')?.classList.remove('active');
+        document.getElementById('student-view')?.classList.add('active');
+        document.getElementById('nav-student')?.classList.add('active');
+        currentView = 'student';
+      }
+    }
+
+    async function refreshStationFeatureSettings() {
+      if (!stationSession?.schoolCode || !window.TappieAPI || typeof TappieAPI.adminGetData !== 'function') return;
+      try {
+        const data = await TappieAPI.adminGetData(stationSession.schoolCode, 'settings');
+        if (data && data.success !== false && (data.effectiveFeatures || data.features)) {
+          stationSession.effectiveFeatures = normalizeStationFeatures(data.effectiveFeatures || data.features);
+          stationSession.features = stationSession.effectiveFeatures;
+          writeStationSession(stationSession);
+          applyStationFeatureGate();
+        }
+      } catch (err) {
+        console.warn('[Station Feature Gate] refresh failed', err);
+      }
+    }
+
     function getApiBaseUrl() {
       if (window.TappieAPI && TappieAPI.supabaseBaseUrl) return String(TappieAPI.supabaseBaseUrl).replace(/\/$/, '');
       return 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
@@ -1617,6 +1699,8 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success || !data.valid) throw new Error(data.message || data.error || '登入失敗');
         if (String(data.role || '') !== 'super') throw new Error('此現場站需使用 Super Admin 密碼啟用。');
+        const authFeatures = normalizeStationFeatures(data.effectiveFeatures || data.features || {});
+        if (authFeatures.station_enabled === false) throw new Error('此校區尚未啟用 Station 現場站，請至 Console 開啟功能。');
 
         const branding = await loadBranding(schoolCode).catch(() => ({}));
         const brand = extractSchoolBranding({ ...branding, auth: data, school: data.school || branding.school }, schoolCode);
@@ -1625,7 +1709,9 @@
           adminKey: secret,
           role: 'super',
           schoolName: brand.schoolName,
-          logoUrl: brand.logoUrl
+          logoUrl: brand.logoUrl,
+          effectiveFeatures: authFeatures,
+          features: authFeatures
         });
         bootStation();
       } catch (err) {
@@ -1677,7 +1763,10 @@
       document.getElementById('login-screen')?.classList.add('hidden');
       document.getElementById('station-app')?.classList.remove('hidden');
       applyStationBranding();
+      applyStationFeatureGate();
+      if (!stationSession) return;
       refreshStationBrandingIfNeeded();
+      refreshStationFeatureSettings();
       checkinMode = normalizeCheckinMode(localStorage.getItem(STATION_CHECKIN_MODE_KEY) || 'manual');
       setCheckinMode(checkinMode, { silent: true });
       const last = localStorage.getItem(STATION_LAST_VIEW_KEY) || 'student';
@@ -1774,6 +1863,10 @@
 
     function showView(view) {
       if (!['student','checkin'].includes(view)) view = 'student';
+      if (view === 'checkin' && !isStationFeatureEnabled('attendance_enabled')) {
+        alert('🔒 此校區尚未啟用【上放學 / 到校打卡】功能。');
+        view = 'student';
+      }
       currentView = view;
       localStorage.setItem(STATION_LAST_VIEW_KEY, view);
       document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
@@ -1887,6 +1980,10 @@
     }
 
     function setCheckinMode(mode, options = {}) {
+      if (!isStationFeatureEnabled('attendance_enabled')) {
+        checkinMode = 'manual';
+        return;
+      }
       const nextMode = normalizeCheckinMode(mode);
       const previousMode = normalizeCheckinMode(checkinMode || 'manual');
       const shouldConfirmAuto =
@@ -2031,6 +2128,11 @@
     }
 
     async function handleCheckinStudent(data) {
+      if (!isStationFeatureEnabled('attendance_enabled')) {
+        showScanError('此校區尚未啟用上放學 / 到校打卡功能。');
+        showView('student');
+        return;
+      }
       currentStudent = data;
       renderStudentCard('checkin-result', data, checkinMode === 'manual' ? '請選擇到校或離校' : `正在執行${getCheckinModeLabel(checkinMode)}...`);
       if (checkinMode === 'auto_checkin') await recordAttendance('checkin', 'station_auto');
@@ -2043,11 +2145,13 @@
     }
 
     async function manualRecord(eventType) {
+      if (!isStationFeatureEnabled('attendance_enabled')) return alert('🔒 此校區尚未啟用【上放學 / 到校打卡】功能。');
       if (!currentStudent) return alert('請先感應學生卡');
       await recordAttendance(eventType, 'station_manual');
     }
 
     async function recordAttendance(eventType, source) {
+      if (!isStationFeatureEnabled('attendance_enabled')) throw new Error('此校區尚未啟用上放學 / 到校打卡功能。');
       if (!currentStudent) throw new Error('請先感應學生卡');
       const uid = currentStudent.uid || currentStudent.student?.uid;
       const actionText = eventType === 'checkout' ? '離校' : '到校';

@@ -1152,6 +1152,15 @@
             background: #f8fafc !important;
         }
 
+        .admin-v2-feature-locked {
+            opacity: .46 !important;
+            filter: grayscale(.35);
+        }
+        .admin-v2-feature-locked small::after {
+            content: " 🔒";
+            font-size: 11px;
+        }
+
         .hidden { display: none !important; }
 
         @media (min-width: 720px) {
@@ -2757,6 +2766,91 @@
         let ADMIN_ROLE = null;
         let ADMIN_AUTH_READY = false;
 
+        const DEFAULT_ADMIN_FEATURES = {
+            attendance_enabled: true,
+            manual_points_enabled: true,
+            practice_enabled: true,
+            battle_enabled: true,
+            weekly_report_enabled: true,
+            newsletter_enabled: true,
+            station_enabled: true
+        };
+        let ADMIN_FEATURES = { ...DEFAULT_ADMIN_FEATURES };
+
+        function normalizeAdminFeatures(value) {
+            const raw = value && typeof value === 'object' ? value : {};
+            const out = {};
+            Object.keys(DEFAULT_ADMIN_FEATURES).forEach(key => {
+                out[key] = raw[key] === false ? false : true;
+            });
+            return out;
+        }
+
+        function applyAdminFeatureSettings(data = {}) {
+            const features = data.effectiveFeatures || data.features || data?.auth?.effectiveFeatures || data?.auth?.features || null;
+            if (features) {
+                ADMIN_FEATURES = normalizeAdminFeatures(features);
+                try { localStorage.setItem('tappie_admin_effective_features', JSON.stringify(ADMIN_FEATURES)); } catch(e) {}
+            } else {
+                try {
+                    const cached = JSON.parse(localStorage.getItem('tappie_admin_effective_features') || 'null');
+                    if (cached) ADMIN_FEATURES = normalizeAdminFeatures(cached);
+                } catch(e) {}
+            }
+            try { updateAdminFeatureGateUI(); } catch(e) {}
+        }
+
+        function isAdminFeatureEnabled(key) {
+            return ADMIN_FEATURES?.[key] !== false;
+        }
+
+        function isAdminModeEnabled(mode) {
+            if (mode === 'points') return isAdminFeatureEnabled('manual_points_enabled');
+            if (mode === 'attendance') return isAdminFeatureEnabled('attendance_enabled');
+            return true;
+        }
+
+        function getAdminFeatureDisabledMessage(mode) {
+            if (mode === 'points') return '🔒 此校區尚未啟用【手動加扣點】功能。';
+            if (mode === 'attendance') return '🔒 此校區尚未啟用【上放學 / 打卡】功能。';
+            return '🔒 此功能尚未啟用。';
+        }
+
+        function normalizeAdminFeatureMode(mode) {
+            const target = mode || 'points';
+            if (isAdminModeEnabled(target)) return target;
+            return 'query';
+        }
+
+        function updateAdminFeatureGateUI() {
+            document.querySelectorAll('[data-admin-mode]').forEach(btn => {
+                const mode = btn.dataset.adminMode;
+                btn.classList.toggle('admin-v2-feature-locked', !isAdminModeEnabled(mode));
+            });
+            document.querySelectorAll('[data-query-tab]').forEach(btn => {
+                const tab = btn.dataset.queryTab;
+                const hidden =
+                    (tab === 'points' && !isAdminFeatureEnabled('manual_points_enabled')) ||
+                    (tab === 'attendance' && !isAdminFeatureEnabled('attendance_enabled'));
+                btn.classList.toggle('hidden', hidden);
+            });
+            const attendanceBar = document.getElementById('admin-v2-attendance-modebar');
+            if (attendanceBar) attendanceBar.classList.toggle('hidden', !isAdminFeatureEnabled('attendance_enabled'));
+            try { updatePointPickerFabVisibility(); } catch(e) {}
+        }
+
+        function getEnabledAdminQueryTabs() {
+            const tabs = ['learning'];
+            if (isAdminFeatureEnabled('manual_points_enabled')) tabs.push('points');
+            if (isAdminFeatureEnabled('attendance_enabled')) tabs.push('attendance');
+            return tabs;
+        }
+
+        function normalizeAdminQueryTabByFeatures(tab) {
+            const enabled = getEnabledAdminQueryTabs();
+            return enabled.includes(tab) ? tab : enabled[0];
+        }
+
         function getAdminAuthBaseUrl() {
             if (window.TappieAPI && TappieAPI.supabaseBaseUrl) return String(TappieAPI.supabaseBaseUrl).replace(/\/$/, '');
             return 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
@@ -2766,6 +2860,7 @@
             localStorage.removeItem('tappie_admin_key');
             localStorage.removeItem('tappie_admin_key_time');
             localStorage.removeItem('tappie_admin_role');
+            localStorage.removeItem('tappie_admin_effective_features');
             localStorage.removeItem('tappie_attendance_mode');
             localStorage.removeItem('tappie_attendance_expires_at');
             localStorage.removeItem('tappie_admin_last_mode');
@@ -2787,7 +2882,7 @@
             document.querySelectorAll('.super-only').forEach(el => el.style.display = 'none');
         }
 
-        function applyAdminRole(role) {
+        function applyAdminRole(role, authData = {}) {
             ADMIN_ROLE = role;
             ADMIN_AUTH_READY = true;
             localStorage.setItem('tappie_admin_role', role);
@@ -2804,6 +2899,7 @@
                 if (isSuper) el.style.setProperty('display', 'inline-flex', 'important');
                 else el.style.setProperty('display', 'none', 'important');
             });
+            applyAdminFeatureSettings(authData);
             try { updatePointPickerFabVisibility(); } catch(e) {}
         }
 
@@ -2823,7 +2919,7 @@
                 throw new Error(data.message || data.error || "管理員密碼錯誤");
             }
 
-            applyAdminRole(data.role === "super" ? "super" : "admin");
+            applyAdminRole(data.role === "super" ? "super" : "admin", data);
             console.log("✅ Admin Auth 驗證成功", { school: CURRENT_SCHOOL, role: data.role });
         }
 
@@ -2892,6 +2988,7 @@
             if (!window.TappieAPI || !TappieAPI.adminGetData) throw new Error('TappieAPI.adminGetData 尚未載入');
             const data = await TappieAPI.adminGetData(CURRENT_SCHOOL, mode);
             if (!data.success) throw new Error(data.message || data.error || 'admin-get-data failed');
+            applyAdminFeatureSettings(data);
             return data;
         }
 
@@ -3669,6 +3766,10 @@
         }
 
         function send(val, btnElement) {
+            if (!isAdminFeatureEnabled('manual_points_enabled')) {
+                alert(getAdminFeatureDisabledMessage('points'));
+                return;
+            }
             if (!currentStudentId) return;
             const amount = Number(val || 0);
             if (Math.abs(amount) >= 101) {
@@ -6255,7 +6356,7 @@
         function updatePointPickerFabVisibility() {
             const fab = document.getElementById('admin-v2-point-picker-fab');
             if (!fab) return;
-            const visible = ADMIN_V2_ACTIVE_MODE === 'points' && isAdminV2Super();
+            const visible = ADMIN_V2_ACTIVE_MODE === 'points' && isAdminV2Super() && isAdminFeatureEnabled('manual_points_enabled');
             fab.classList.toggle('visible', visible);
             fab.style.display = visible ? 'grid' : 'none';
         }
@@ -6399,7 +6500,12 @@
         }
 
         function setAdminMode(mode) {
-            ADMIN_V2_ACTIVE_MODE = mode || 'points';
+            let requestedMode = mode || 'points';
+            if (!isAdminModeEnabled(requestedMode)) {
+                alert(getAdminFeatureDisabledMessage(requestedMode));
+                requestedMode = normalizeAdminFeatureMode(requestedMode);
+            }
+            ADMIN_V2_ACTIVE_MODE = requestedMode;
             if (ADMIN_V2_ACTIVE_MODE !== 'attendance') {
                 writeAdminV2AttendanceMode('manual');
             } else {
@@ -6423,6 +6529,7 @@
             if (modeLabel) modeLabel.innerText = `${getAdminV2ModeText()}模式`;
 
             updateAttendanceModeUI();
+            updateAdminFeatureGateUI();
             showAdminModeScreen();
             if (ADMIN_V2_ACTIVE_MODE === 'attendance' && currentStudentId) {
                 setTimeout(() => refreshAttendanceTodayStatus(), 0);
@@ -6449,6 +6556,10 @@
         }
 
         function setAttendanceMode(mode) {
+            if (!isAdminFeatureEnabled('attendance_enabled')) {
+                alert(getAdminFeatureDisabledMessage('attendance'));
+                return;
+            }
             const nextMode = normalizeAdminV2AttendanceMode(mode);
             const previousMode = normalizeAdminV2AttendanceMode(ADMIN_V2_ATTENDANCE_MODE || 'manual');
             const modeChanged = previousMode !== nextMode;
@@ -6659,6 +6770,7 @@
         }
 
         async function recordAttendanceEvent(eventType, source = 'admin_manual', options = {}) {
+            if (!isAdminFeatureEnabled('attendance_enabled')) throw new Error(getAdminFeatureDisabledMessage('attendance'));
             if (!currentStudentId) throw new Error('請先感應學生卡');
             if (!window.TappieAPI || typeof TappieAPI.adminRecordAttendance !== 'function') {
                 throw new Error('TappieAPI.adminRecordAttendance 尚未載入');
@@ -6845,7 +6957,13 @@
         }
 
         function setAdminQueryTab(tab) {
-            ADMIN_V2_QUERY_TAB = ['learning', 'points', 'attendance'].includes(tab) ? tab : 'learning';
+            const requestedTab = ['learning', 'points', 'attendance'].includes(tab) ? tab : 'learning';
+            const nextTab = normalizeAdminQueryTabByFeatures(requestedTab);
+            if (requestedTab !== nextTab && requestedTab !== 'learning') {
+                alert(requestedTab === 'points' ? getAdminFeatureDisabledMessage('points') : getAdminFeatureDisabledMessage('attendance'));
+            }
+            ADMIN_V2_QUERY_TAB = nextTab;
+            updateAdminFeatureGateUI();
             document.querySelectorAll('[data-query-tab]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.queryTab === ADMIN_V2_QUERY_TAB);
             });
@@ -6855,6 +6973,7 @@
         }
 
         function reloadAdminQueryCurrentView(force = false) {
+            ADMIN_V2_QUERY_TAB = normalizeAdminQueryTabByFeatures(ADMIN_V2_QUERY_TAB);
             if (ADMIN_V2_QUERY_TAB === 'points') return loadAdminQueryPoints(force);
             if (ADMIN_V2_QUERY_TAB === 'attendance') return loadAdminQueryAttendance(force);
             return loadAdminQueryProgress(force);
@@ -7789,6 +7908,7 @@ function getAdminQueryClassOptions() {
 
         document.addEventListener('DOMContentLoaded', () => {
             initAdminV2Branding();
+            applyAdminFeatureSettings();
             setAdminMode(ADMIN_V2_ACTIVE_MODE || 'points');
             processAdminV2UrlTarget();
         });
