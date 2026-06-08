@@ -3361,6 +3361,61 @@
       );
     }
 
+    function isFeatureEnabled(key) {
+      const features = getCurrentEffectiveFeatures();
+      return features[key] !== false;
+    }
+
+    function getEnabledLearningTabs() {
+      const features = getCurrentEffectiveFeatures();
+      const tabs = [];
+      if (features.practice_enabled !== false) tabs.push("learning");
+      if (features.manual_points_enabled !== false) tabs.push("points");
+      if (features.attendance_enabled !== false) tabs.push("attendance");
+      return tabs;
+    }
+
+    function isConsolePageAllowedByFeatures(page) {
+      if (!isSingleSchoolMode()) return true;
+      if (page === "weekly") return isFeatureEnabled("weekly_report_enabled");
+      if (page === "newsletters") return isFeatureEnabled("newsletter_enabled");
+      if (page === "learning") return getEnabledLearningTabs().length > 0;
+      return true;
+    }
+
+    function filterConsoleNavGroupsByFeatures(groups) {
+      if (!isSingleSchoolMode()) return groups;
+      return (groups || []).map(group => ({
+        ...group,
+        items: (group.items || []).filter(item => isConsolePageAllowedByFeatures(item[0]))
+      })).filter(group => (group.items || []).length > 0);
+    }
+
+    function getLearningTabLabel(tab) {
+      return tab === "points" ? "加扣分" : tab === "attendance" ? "打卡" : "學習";
+    }
+
+    function normalizeLearningQueryTab(tab = learningQueryTab) {
+      const enabled = getEnabledLearningTabs();
+      if (!enabled.length) return "";
+      return enabled.includes(tab) ? tab : enabled[0];
+    }
+
+    function renderFeatureDisabledCard(title = "此功能未啟用", message = "此校區目前未啟用此功能，請至「設定」調整校區功能啟用。") {
+      return `
+        <div class="card">
+          <div class="panel-title">
+            <div><h2>${escapeHtml(title)}</h2><p class="small-note">${escapeHtml(message)}</p></div>
+            <span class="badge warn">Feature Gate</span>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-compact primary" onclick="showPage('settings')">前往設定</button>
+            <button class="btn-compact" onclick="showPage('overview')">回總覽</button>
+          </div>
+        </div>
+      `;
+    }
+
     function renderFeatureConfigPanelHtml() {
       const access = getCurrentFeatureAccess();
       const config = getCurrentFeatureConfig();
@@ -3497,6 +3552,8 @@
         session.featureConfig = featureSettingsCache.featureConfig;
         session.effectiveFeatures = featureSettingsCache.effectiveFeatures;
         try { localStorage.setItem("tappie_console_session", JSON.stringify(session)); } catch (_) {}
+        renderNav();
+        if (!isConsolePageAllowedByFeatures(currentConsolePage)) showPage("overview");
         setFeatureConfigStatus("功能啟用設定已儲存。", "ok");
       } catch (err) {
         setFeatureConfigStatus("⚠️ 儲存失敗：" + (err?.message || err), "danger");
@@ -3760,7 +3817,7 @@
       featureSettingsCache = null;
     }
 
-    function changeConsoleScope(value) {
+    async function changeConsoleScope(value) {
       if (!isOwner()) return;
 
       if (value === "all") {
@@ -3776,9 +3833,12 @@
 
       clearConsolePageCaches();
       updateConsoleScopeUI();
+      if (isSingleSchoolMode()) await loadFeatureSettings(true);
       renderNav();
 
       if (isOwnerAllMode() && SINGLE_SCHOOL_PAGES.has(currentConsolePage)) {
+        showPage("overview");
+      } else if (!isConsolePageAllowedByFeatures(currentConsolePage)) {
         showPage("overview");
       } else {
         showPage(currentConsolePage || "overview");
@@ -3786,8 +3846,9 @@
     }
 
     function getConsoleNavGroups() {
+      let groups;
       if (isOwner() && isSingleSchoolMode()) {
-        return [
+        groups = [
           { group: "總覽", items: [
             ["overview", "總覽", "⌘"],
             ["schools", "校區", "▦"],
@@ -3795,8 +3856,10 @@
           ]},
           ...navByRole.super_admin.slice(1)
         ];
+      } else {
+        groups = navByRole[session.role] || [];
       }
-      return navByRole[session.role] || [];
+      return filterConsoleNavGroupsByFeatures(groups);
     }
 
     function renderNav() {
@@ -3843,6 +3906,11 @@
 
       if (isOwnerAllMode() && SINGLE_SCHOOL_PAGES.has(currentConsolePage)) {
         document.getElementById("pageContent").innerHTML = renderSingleSchoolGuard(currentConsolePage);
+        return;
+      }
+
+      if (!isConsolePageAllowedByFeatures(currentConsolePage)) {
+        document.getElementById("pageContent").innerHTML = renderFeatureDisabledCard();
         return;
       }
 
@@ -6081,7 +6149,16 @@
     }
 
 
+    function renderLearningQueryTabsHtml() {
+      const enabled = getEnabledLearningTabs();
+      if (!enabled.length) return "";
+      return enabled.map(key => `
+        <button id="learningTabBtn-${key}" class="${key === learningQueryTab ? "active" : ""}" onclick="setLearningQueryTab('${key}')">${getLearningTabLabel(key)}</button>
+      `).join("");
+    }
+
     function renderLearning() {
+      learningQueryTab = normalizeLearningQueryTab();
       return `
         <div class="grid cards">
           <div class="card"><div class="metric-label" id="lpMetric1Label">班級數</div><div id="lpMetric1" class="metric-value">—</div><div class="metric-note" id="lpMetric1Note">目前有學習進度的班級</div></div>
@@ -6094,10 +6171,8 @@
             <div><h2>學習查詢</h2><p class="small-note">整合學習、加扣分與打卡紀錄；資料依照單一校區查詢權限載入。</p></div>
             <button class="btn-compact" onclick="loadLearningData(true)">重新整理</button>
           </div>
-          <div class="console-query-tabs">
-            <button id="learningTabBtn-learning" class="active" onclick="setLearningQueryTab('learning')">學習</button>
-            <button id="learningTabBtn-points" onclick="setLearningQueryTab('points')">加扣分</button>
-            <button id="learningTabBtn-attendance" onclick="setLearningQueryTab('attendance')">打卡</button>
+          <div class="console-query-tabs" id="learningQueryTabs">
+            ${renderLearningQueryTabsHtml()}
           </div>
           <div class="learning-thresholds" id="learningThresholds"></div>
           <div class="learning-toolbar">
@@ -6125,14 +6200,30 @@
     }
 
     function setLearningQueryTab(tab) {
-      learningQueryTab = ["learning", "points", "attendance"].includes(tab) ? tab : "learning";
-      ["learning", "points", "attendance"].forEach(key => {
+      const enabled = getEnabledLearningTabs();
+      if (!enabled.length) {
+        learningQueryTab = "";
+        updateLearningUI();
+        return;
+      }
+      learningQueryTab = enabled.includes(tab) ? tab : enabled[0];
+      enabled.forEach(key => {
         document.getElementById(`learningTabBtn-${key}`)?.classList.toggle("active", key === learningQueryTab);
       });
       loadLearningData(false);
     }
 
     async function loadLearningData(force = false) {
+      const normalizedTab = normalizeLearningQueryTab();
+      if (!normalizedTab) {
+        learningQueryTab = "";
+        learningCache = null;
+        updateLearningUI();
+        return;
+      }
+      if (learningQueryTab !== normalizedTab) learningQueryTab = normalizedTab;
+      const tabs = document.getElementById("learningQueryTabs");
+      if (tabs) tabs.innerHTML = renderLearningQueryTabsHtml();
       if (learningLoading) return;
       if (learningQueryCaches[learningQueryTab] && !force) {
         learningCache = learningQueryCaches[learningQueryTab];
@@ -6245,8 +6336,34 @@
     }
 
     function updateLearningUI() {
-      if (!learningCache || !document.getElementById("learningClassGrid")) return;
-      ["learning", "points", "attendance"].forEach(key => {
+      const grid = document.getElementById("learningClassGrid");
+      if (!grid) return;
+      const enabled = getEnabledLearningTabs();
+      const tabs = document.getElementById("learningQueryTabs");
+      if (tabs) tabs.innerHTML = renderLearningQueryTabsHtml();
+      if (!enabled.length) {
+        updateLearningMetrics([
+          { label:"學習", value:"關閉", note:"未啟用" },
+          { label:"加扣分", value:"關閉", note:"未啟用" },
+          { label:"打卡", value:"關閉", note:"未啟用" },
+          { label:"可用查詢", value:0, note:"請至設定啟用" },
+        ]);
+        const th = document.getElementById("learningThresholds");
+        if (th) th.innerHTML = `<span class="learning-chip">此校區目前未啟用任何學習查詢項目</span>`;
+        const filterRow = document.getElementById("learningFilterRow");
+        if (filterRow) filterRow.innerHTML = "";
+        const note = document.getElementById("learningTableNote");
+        if (note) note.textContent = "請至設定啟用學習、加扣分或打卡查詢。";
+        grid.innerHTML = `<div class="empty-state">此校區目前未啟用任何學習查詢項目。</div>`;
+        return;
+      }
+      const normalizedTab = normalizeLearningQueryTab();
+      if (learningQueryTab !== normalizedTab) learningQueryTab = normalizedTab;
+      if (!learningCache) {
+        grid.innerHTML = `<div class="empty-state">正在讀取查詢資料...</div>`;
+        return;
+      }
+      enabled.forEach(key => {
         document.getElementById(`learningTabBtn-${key}`)?.classList.toggle("active", key === learningQueryTab);
       });
       const filterRow = document.getElementById("learningFilterRow");
