@@ -2829,6 +2829,77 @@
     /* Step Console Query Polish｜clear time display in point logs */
     .learning-student-sub .point-time { color: var(--muted); font-weight: 700; }
 
+  
+    /* Feature Gate F2A｜Owner Feature Access editor */
+    .feature-access-section {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 16px;
+      background: var(--surface-2);
+    }
+    .feature-access-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .feature-access-head label { margin:0 0 5px; }
+    .feature-access-head p {
+      margin:0;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.55;
+      font-weight:700;
+      text-transform:none;
+      letter-spacing:0;
+    }
+    .feature-access-grid {
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
+    .feature-access-card {
+      display:flex !important;
+      align-items:flex-start;
+      gap:10px;
+      padding:13px 13px;
+      border-radius:18px;
+      border:1px solid var(--border);
+      background:var(--surface);
+      cursor:pointer;
+      margin:0 !important;
+      text-transform:none !important;
+      letter-spacing:0 !important;
+    }
+    .feature-access-card input {
+      width:18px;
+      height:18px;
+      margin:2px 0 0;
+      accent-color: var(--primary);
+      flex:0 0 auto;
+    }
+    .feature-access-card strong {
+      display:block;
+      color:var(--text);
+      font-size:14px;
+      line-height:1.3;
+      font-weight:900;
+    }
+    .feature-access-card small {
+      display:block;
+      margin-top:4px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+      font-weight:650;
+    }
+    @media (max-width: 720px) {
+      .feature-access-grid { grid-template-columns: 1fr; }
+      .feature-access-head { flex-direction:column; }
+      .feature-access-head .btn-compact { width:100%; }
+    }
+
   </style>
 </head>
 <body>
@@ -3116,6 +3187,109 @@
       "branding",
       "settings"
     ]);
+
+
+    const DEFAULT_FEATURES = {
+      attendance_enabled: true,
+      manual_points_enabled: true,
+      practice_enabled: true,
+      battle_enabled: true,
+      weekly_report_enabled: true,
+      newsletter_enabled: true,
+      station_enabled: true
+    };
+
+    const FEATURE_ACCESS_ITEMS = [
+      { key: "attendance_enabled", title: "上放學功能", note: "Admin 打卡、Station 到校打卡、上放學通知。" },
+      { key: "manual_points_enabled", title: "手動加扣點", note: "老師端加扣點與 Super Admin 選擇學生加扣分。" },
+      { key: "practice_enabled", title: "今日挑戰 / 一般練習", note: "Dashboard 進入 Arena 的口說練習入口。" },
+      { key: "battle_enabled", title: "對戰模式", note: "Dashboard 進入 Lobby，Battle 的 AI / 1v1 / 活動對戰。" },
+      { key: "weekly_report_enabled", title: "週報功能", note: "家長週報、週報設定與寄送流程。" },
+      { key: "newsletter_enabled", title: "專欄功能", note: "Console 專欄管理與週報專欄內容。" },
+      { key: "station_enabled", title: "Station 現場站", note: "現場平板入口。若上放學關閉，Station 仍可只保留學生入口。" }
+    ];
+
+    function normalizeFeatureMap(value) {
+      const raw = value && typeof value === "object" ? value : {};
+      const out = {};
+      Object.keys(DEFAULT_FEATURES).forEach(key => {
+        out[key] = raw[key] === false ? false : true;
+      });
+      return out;
+    }
+
+    function getOwnerSchoolFeatureAccess(raw) {
+      return normalizeFeatureMap(
+        raw?.featureAccess ||
+        raw?.feature_access ||
+        raw?.features ||
+        raw?.settings?.featureAccess ||
+        raw?.raw?.feature_access ||
+        raw?.raw?.featureAccess ||
+        null
+      );
+    }
+
+    function renderFeatureAccessEditorHtml() {
+      return `
+        <div class="form-field full feature-access-section">
+          <div class="feature-access-head">
+            <div>
+              <label>功能授權 Feature_Access（Owner Only）</label>
+              <p>第一層授權：未勾選的功能，校區主管之後不能自行啟用，也不應在 Console 顯示相關設定。</p>
+            </div>
+            <button type="button" class="btn-compact" onclick="setSchoolEditorAllFeatures(true)">全開</button>
+          </div>
+          <div class="feature-access-grid">
+            ${FEATURE_ACCESS_ITEMS.map(item => `
+              <label class="feature-access-card" for="schoolFeature_${item.key}">
+                <input id="schoolFeature_${item.key}" type="checkbox" data-feature-key="${item.key}" />
+                <span>
+                  <strong>${escapeHtml(item.title)}</strong>
+                  <small>${escapeHtml(item.note)}</small>
+                </span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function setSchoolEditorFeatureAccess(features = {}) {
+      const normalized = normalizeFeatureMap(features);
+      FEATURE_ACCESS_ITEMS.forEach(item => {
+        const input = document.getElementById(`schoolFeature_${item.key}`);
+        if (input) input.checked = normalized[item.key] !== false;
+      });
+    }
+
+    function setSchoolEditorAllFeatures(enabled = true) {
+      FEATURE_ACCESS_ITEMS.forEach(item => {
+        const input = document.getElementById(`schoolFeature_${item.key}`);
+        if (input) input.checked = Boolean(enabled);
+      });
+    }
+
+    function readSchoolEditorFeatureAccess() {
+      const out = {};
+      FEATURE_ACCESS_ITEMS.forEach(item => {
+        const input = document.getElementById(`schoolFeature_${item.key}`);
+        out[item.key] = input ? Boolean(input.checked) : true;
+      });
+      return normalizeFeatureMap(out);
+    }
+
+    async function hydrateSchoolEditorFeatureAccess(code, raw = null) {
+      const fallback = getOwnerSchoolFeatureAccess(raw || {});
+      setSchoolEditorFeatureAccess(fallback);
+      if (!code || !session?.token || !window.TappieAPI?.consoleGetData) return;
+      try {
+        const res = await TappieAPI.consoleGetData({ token: session.token, schoolCode: code, mode: "settings", scopeMode: "single" });
+        if (res && res.success && res.featureAccess) setSchoolEditorFeatureAccess(res.featureAccess);
+      } catch (err) {
+        console.warn("[Feature Access] load existing feature access failed", err);
+      }
+    }
 
     const navByRole = {
       owner: [
@@ -3750,6 +3924,7 @@
                 <label>Normal Admin 密碼（Owner Only）</label>
                 <input id="schoolEditorAdminPassword" type="password" placeholder="設定一般 Admin 登入密碼" autocomplete="new-password" />
               </div>
+              ${renderFeatureAccessEditorHtml()}
               <div class="form-field full">
                 <div class="form-note">提醒：Admin_Password / Super_Admin_Password 只允許 Owner 在全校區模式調整。Super Admin 不能修改，避免影響 NFC 實體卡與後台權限流程。</div>
               </div>
@@ -3831,6 +4006,8 @@
       document.getElementById("schoolEditorSuperAdminPassword").value = isEdit ? String(raw?.settings?.superAdminPassword || raw?.superAdminPassword || raw?.raw?.super_admin_password || "") : "";
       document.getElementById("schoolEditorAdminPassword").value = isEdit ? String(raw?.settings?.adminPassword || raw?.adminPassword || raw?.raw?.admin_password || "") : "";
       document.getElementById("schoolEditorIsActive").value = isEdit && s.isActive === false ? "false" : "true";
+      setSchoolEditorFeatureAccess(isEdit ? getOwnerSchoolFeatureAccess(raw || {}) : DEFAULT_FEATURES);
+      if (isEdit) hydrateSchoolEditorFeatureAccess(s.code, raw);
       modal.classList.add("show");
       document.body.classList.add("console-modal-open");
       prepareSchoolEditorMobileScroll();
@@ -3856,7 +4033,8 @@
       const superAdminPassword = String(document.getElementById("schoolEditorSuperAdminPassword")?.value || "").trim();
       const adminPassword = String(document.getElementById("schoolEditorAdminPassword")?.value || "").trim();
       const isActive = String(document.getElementById("schoolEditorIsActive")?.value || "true") === "true";
-      return { mode, originalCode, schoolCode, name, studentLimit, speechLimit, battleLimit, legacySheetId, superAdminPassword, adminPassword, isActive };
+      const featureAccess = readSchoolEditorFeatureAccess();
+      return { mode, originalCode, schoolCode, name, studentLimit, speechLimit, battleLimit, legacySheetId, superAdminPassword, adminPassword, isActive, featureAccess };
     }
 
     async function submitSchoolEditor() {
@@ -3873,6 +4051,7 @@
           token: session.token,
           action: payload.mode === "create" ? "create" : "update",
           schoolCode: payload.mode === "create" ? payload.schoolCode : payload.originalCode,
+          featureAccess: payload.featureAccess,
           data: {
             schoolCode: payload.schoolCode,
             name: payload.name,
@@ -3882,7 +4061,8 @@
             legacySheetId: payload.legacySheetId,
             superAdminPassword: payload.superAdminPassword,
             adminPassword: payload.adminPassword,
-            isActive: payload.isActive
+            isActive: payload.isActive,
+            featureAccess: payload.featureAccess
           }
         });
         if (!res || !res.success) throw new Error(res?.message || res?.detail || res?.error || "save_school_failed");
