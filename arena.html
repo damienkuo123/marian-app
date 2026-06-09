@@ -2039,13 +2039,14 @@
       ? Number(explicitRemaining)
       : Math.max(0, graceLimit - graceUsed);
     const status = String(usage.status || data.status || '').toLowerCase();
-    const exhausted = data.error === 'speech_limit_exhausted' || data.overLimit === true || status === 'exhausted';
+    const exhausted = data.error === 'speech_limit_exhausted' || status === 'exhausted' || data.success === false && data.overLimit === true;
     const isGrace = !exhausted && (
       usage.isUsingGrace === true ||
       data.isUsingGrace === true ||
       status === 'grace' ||
       Number(graceUsed) > 0 ||
-      (dailyLimit > 0 && voiceCount > dailyLimit)
+      (dailyLimit > 0 && voiceCount > dailyLimit) ||
+      (data.success === true && data.overLimit === true)
     );
     return { dailyLimit, voiceCount, graceLimit, graceUsed, graceRemaining, status, exhausted, isGrace };
   }
@@ -2062,7 +2063,7 @@
         tappieVoiceGraceState.exhaustedAnnounced = true;
       }
       if (statusEl) {
-        statusEl.innerText = '今日語音額度已用完';
+        statusEl.innerText = '已抵達今日語音上限';
         statusEl.classList.add('speech-grace-hint', 'exhausted');
       }
       if (recordBtn) {
@@ -2747,7 +2748,15 @@
 
         // 🔵 狀態 A：如果目前沒有在錄音 -> 啟動錄音
         if (!isRecording) {
-            if (isSpeechExhausted()) return;
+            if (isSpeechExhausted()) {
+                updateSpeechGraceHint({
+                  success: false,
+                  overLimit: true,
+                  error: 'speech_limit_exhausted',
+                  speechUsage: { status: 'exhausted', graceRemaining: 0 }
+                }, { statusId: 'status', recordBtnId: 'record-btn' });
+                return;
+            }
             isRecording = true;
             rb.classList.add('recording-active'); // 變藍色
             
@@ -4510,7 +4519,15 @@
 
           // 🔵 狀態 A：如果目前沒有在錄音 -> 啟動錄音
           if (!isGachaRecording) {
-              if (isSpeechExhausted()) return;
+              if (isSpeechExhausted()) {
+                updateSpeechGraceHint({
+                  success: false,
+                  overLimit: true,
+                  error: 'speech_limit_exhausted',
+                  speechUsage: { status: 'exhausted', graceRemaining: 0 }
+                }, { statusId: 'status', recordBtnId: 'record-btn' });
+                return;
+            }
               isGachaRecording = true;
               
               // 強制切斷所有正在播放的讀音
