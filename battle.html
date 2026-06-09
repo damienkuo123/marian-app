@@ -2377,7 +2377,9 @@ const payload = isUuidLike(room)
   const tappieVoiceGraceState = {
     announced: false,
     exhaustedAnnounced: false,
-    exhausted: false
+    exhausted: false,
+    active: false,
+    remaining: null
   };
 
   function showTappieSoftToast(message, type = 'grace') {
@@ -2427,6 +2429,8 @@ const payload = isUuidLike(room)
 
     if (usage.exhausted) {
       tappieVoiceGraceState.exhausted = true;
+      tappieVoiceGraceState.active = false;
+      tappieVoiceGraceState.remaining = 0;
       if (!tappieVoiceGraceState.exhaustedAnnounced) {
         showTappieSoftToast('今日語音額度已使用完畢，你仍可以查看送出目前結果。', 'exhausted');
         tappieVoiceGraceState.exhaustedAnnounced = true;
@@ -2440,23 +2444,79 @@ const payload = isUuidLike(room)
         recordBtn.disabled = true;
         recordBtn.setAttribute('aria-disabled', 'true');
       }
+      applySpeechGraceToIdleHints();
+      setTimeout(applySpeechGraceToIdleHints, 0);
+      setTimeout(applySpeechGraceToIdleHints, 250);
       return { allowed: false, usage };
     }
 
     if (usage.isGrace) {
+      tappieVoiceGraceState.active = true;
+      tappieVoiceGraceState.exhausted = false;
+      tappieVoiceGraceState.remaining = Math.max(0, usage.graceRemaining);
       if (!tappieVoiceGraceState.announced) {
         showTappieSoftToast('✨ 已到達本日使用上限，系統贈送你額外練習 10 次。', 'grace');
         tappieVoiceGraceState.announced = true;
       }
       if (statusEl) {
-        statusEl.innerText = `剩餘贈送 ${Math.max(0, usage.graceRemaining)} 次`;
-        statusEl.classList.add('speech-grace-hint');
-        statusEl.classList.remove('exhausted');
+        applySpeechGraceLabelTo(statusEl);
       }
+      applySpeechGraceToIdleHints();
+      setTimeout(applySpeechGraceToIdleHints, 0);
+      setTimeout(applySpeechGraceToIdleHints, 250);
       return { allowed: true, usage };
     }
 
     return { allowed: true, usage };
+  }
+
+  function applySpeechGraceLabelTo(el) {
+    if (!el) return false;
+
+    if (tappieVoiceGraceState.exhausted) {
+      el.innerText = '已抵達今日語音上限';
+      el.classList.add('speech-grace-hint', 'exhausted');
+      return true;
+    }
+
+    if (tappieVoiceGraceState.active) {
+      const remain = Math.max(0, Number(tappieVoiceGraceState.remaining ?? 0));
+      el.innerText = `剩餘贈送 ${remain} 次`;
+      el.classList.add('speech-grace-hint');
+      el.classList.remove('exhausted');
+      return true;
+    }
+
+    return false;
+  }
+
+  function clearSpeechGraceLabelFrom(el, defaultText = '') {
+    if (!el) return;
+    el.classList.remove('speech-grace-hint', 'exhausted');
+    if (defaultText) el.innerText = defaultText;
+  }
+
+  function applySpeechGraceToIdleHints() {
+    const mainStatus = document.getElementById('status');
+    if (mainStatus && (
+      mainStatus.classList.contains('speech-grace-hint') ||
+      mainStatus.innerText.includes('點擊開始錄音') ||
+      mainStatus.innerText.includes('剩餘贈送') ||
+      mainStatus.innerText.includes('已抵達今日語音上限')
+    )) {
+      applySpeechGraceLabelTo(mainStatus);
+    }
+
+    document.querySelectorAll('.voice-status').forEach((el) => {
+      if (
+        el.classList.contains('speech-grace-hint') ||
+        el.innerText.includes('點擊開始解鎖') ||
+        el.innerText.includes('剩餘贈送') ||
+        el.innerText.includes('已抵達今日語音上限')
+      ) {
+        applySpeechGraceLabelTo(el);
+      }
+    });
   }
 
   function isSpeechExhausted() {
@@ -3018,8 +3078,11 @@ const payload = isUuidLike(room)
 
     isGrading = false;
     isRecording = false;
-    document.getElementById('status').innerText = "點擊開始錄音";
-    document.getElementById('status').style.color = "#636e72"; 
+    const idleStatus = document.getElementById('status');
+    if (!applySpeechGraceLabelTo(idleStatus)) {
+      clearSpeechGraceLabelFrom(idleStatus, "點擊開始錄音");
+      idleStatus.style.color = "#636e72";
+    }
   }
   
   let isGrading = false; 
@@ -4867,7 +4930,9 @@ const payload = isUuidLike(room)
       document.getElementById(`wrapper-${focusedCardIndex}`).classList.remove('has-focus');
       document.getElementById('gacha-overlay').classList.remove('focus-mode');
       const resetStatus = document.getElementById(`lock-status-${focusedCardIndex}`);
-      if (resetStatus && !resetStatus.classList.contains('speech-grace-hint')) resetStatus.innerText = "點擊開始解鎖";
+      if (resetStatus && !applySpeechGraceLabelTo(resetStatus)) {
+        clearSpeechGraceLabelFrom(resetStatus, "點擊開始解鎖");
+      }
       focusedCardIndex = -1;
   }
 
@@ -5003,21 +5068,33 @@ const payload = isUuidLike(room)
                               } else {
                                   status.innerText = "密語不夠準確，請重唸";
                                   status.style.color = "#e74c3c";
+                                  if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                                      setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                                  }
                               }
                           } else {
                               status.innerText = "未辨識到密語";
                               status.style.color = "#e74c3c";
+                              if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                                  setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                              }
                           }
                           recognizer.close();
                       }, (err) => {
                           console.error("Azure 辨識錯誤:", err);
                           status.innerText = "🚨 引擎連線錯誤，請重試";
                           status.style.color = "#e74c3c";
+                          if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                              setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                          }
                           btn.style.pointerEvents = "auto"; // 必須解開按鈕，否則卡死
                           recognizer.close();
                       });
                   } catch(err) {
                       status.innerText = "判定失敗，請重試";
+                      if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                          setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                      }
                       btn.style.pointerEvents = "auto";
                   }
               };
