@@ -3202,6 +3202,8 @@
     let overviewAnalyticsCache = null;
     let overviewAnalyticsLoading = false;
     let overviewAnalyticsRange = 7;
+    let overviewAnalyticsRequestSeq = 0;
+    let overviewAnalyticsAbortController = null;
     let studentsCache = null;
     let studentsLoading = false;
     let weeklyCache = null;
@@ -5063,26 +5065,57 @@
 
     async function loadOverviewAnalyticsData(force = false){
       if (!session || !session.token) return;
-      if (overviewAnalyticsLoading) return;
       if (overviewAnalyticsCache && !force) { updateOverviewAnalyticsUI(); return; }
+
+      const requestSeq = ++overviewAnalyticsRequestSeq;
+      const requestedRange = Number(overviewAnalyticsRange) === 30 ? 30 : 7;
+
+      try {
+        if (overviewAnalyticsAbortController) {
+          try { overviewAnalyticsAbortController.abort(); } catch (_) {}
+        }
+        overviewAnalyticsAbortController = new AbortController();
+      } catch (_) {
+        overviewAnalyticsAbortController = null;
+      }
+
       overviewAnalyticsLoading = true;
+
+      ['anaUsageChart','anaModeDonut','anaPointChart','anaClassUsage','anaStudentWatch'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.innerHTML=`<div class="empty-state">正在讀取近 ${requestedRange} 天分析資料…</div>`;
+      });
+
       try{
         const base = getFunctionBaseForConsole();
         const res = await fetch(`${base}/console-get-analytics?ts=${Date.now()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.token}` },
-          body: JSON.stringify({ rangeDays: overviewAnalyticsRange, schoolCode: getActiveSchoolCode() || null, scopeMode: isOwnerAllMode() ? 'all' : 'single' })
+          body: JSON.stringify({ rangeDays: requestedRange, schoolCode: getActiveSchoolCode() || null, scopeMode: isOwnerAllMode() ? 'all' : 'single' }),
+          signal: overviewAnalyticsAbortController ? overviewAnalyticsAbortController.signal : undefined
         });
+
         const data = await res.json().catch(()=>({ success:false, message:'invalid_json' }));
+
+        // If the user switched 7/30 days while this request was in-flight, ignore stale responses.
+        if (requestSeq !== overviewAnalyticsRequestSeq) return;
+
         if (!res.ok || !data || data.success === false) throw new Error(data?.message || data?.error || 'console_get_analytics_failed');
+
         overviewAnalyticsCache = data;
         updateOverviewAnalyticsUI();
       }catch(err){
+        if (err && err.name === 'AbortError') return;
+        if (requestSeq !== overviewAnalyticsRequestSeq) return;
         console.error('loadOverviewAnalyticsData failed', err);
         ['anaUsageChart','anaModeDonut','anaPointChart','anaClassUsage','anaStudentWatch'].forEach(id=>{
           const el=document.getElementById(id); if(el) el.innerHTML=`<div class="empty-state">分析資料讀取失敗：${escapeHtml(err.message || err)}</div>`;
         });
-      }finally{ overviewAnalyticsLoading = false; }
+      }finally{
+        if (requestSeq === overviewAnalyticsRequestSeq) {
+          overviewAnalyticsLoading = false;
+        }
+      }
     }
 
     function numFmt(n){ return Number(n||0).toLocaleString('zh-TW'); }
