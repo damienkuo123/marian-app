@@ -1271,6 +1271,131 @@
       .btn-finish { font-size: 26px; padding: 25px; border-radius: 20px; margin-top: 30px; }
     }
     
+  
+    /* =======================================================
+       🎙️ Speech Grace UX：非阻擋式玻璃提示與額度小字
+       ======================================================= */
+    .tappie-soft-toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(24px, calc(env(safe-area-inset-bottom) + 18px));
+      transform: translateX(-50%) translateY(18px);
+      min-width: min(86vw, 360px);
+      max-width: min(90vw, 460px);
+      padding: 13px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(255,255,255,.92);
+      box-shadow: 0 18px 45px rgba(15,23,42,.16), inset 0 1px 1px rgba(255,255,255,.95);
+      backdrop-filter: blur(22px) saturate(145%);
+      -webkit-backdrop-filter: blur(22px) saturate(145%);
+      color: #1f2937;
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 850;
+      letter-spacing: -.01em;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999999;
+      transition: opacity .22s ease, transform .22s ease;
+    }
+    .tappie-soft-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .tappie-soft-toast.grace { color: #9a5b00; background: rgba(255,248,232,.88); border-color: rgba(255,218,150,.82); }
+    .tappie-soft-toast.exhausted { color: #a33a28; background: rgba(255,241,238,.90); border-color: rgba(255,180,170,.80); }
+
+    .speech-grace-hint {
+      color: #c47a00 !important;
+      background: rgba(255, 244, 214, .72);
+      border: 1px solid rgba(255, 207, 111, .55);
+      border-radius: 999px;
+      display: inline-block;
+      padding: 6px 12px;
+      box-shadow: 0 8px 20px rgba(255, 170, 0, .10);
+    }
+    .speech-grace-hint.exhausted {
+      color: #c0392b !important;
+      background: rgba(255, 236, 232, .78);
+      border-color: rgba(231, 76, 60, .28);
+    }
+    #record-btn.speech-exhausted,
+    .unlock-btn.speech-exhausted,
+    [id^="lock-btn-"].speech-exhausted {
+      filter: grayscale(.45);
+      opacity: .72;
+      pointer-events: none !important;
+      box-shadow: none !important;
+    }
+
+    /* =======================================================
+       ⚔️ Battle Result Responsive Fix：平板/大螢幕結果卡片自適應
+       ======================================================= */
+    #impact-overlay.active {
+      min-height: 100dvh;
+    }
+    #impact-stand-stage {
+      width: min(94vw, 560px) !important;
+      height: min(86dvh, 820px) !important;
+      max-width: min(94vw, 560px) !important;
+      max-height: 86dvh !important;
+      padding: clamp(12px, 2.2dvh, 22px) clamp(10px, 2vw, 18px) !important;
+      box-sizing: border-box !important;
+      gap: clamp(6px, 1.5dvh, 14px) !important;
+      overflow: visible !important;
+    }
+    .impact-card-wrapper {
+      width: min(72vw, 330px, 40dvh) !important;
+      max-width: 330px !important;
+      min-width: 170px !important;
+      margin: clamp(4px, 1dvh, 10px) 0 !important;
+      flex: 0 1 auto !important;
+    }
+    #impact-result {
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+      max-width: 96vw !important;
+      font-size: clamp(42px, 8vw, 80px) !important;
+      letter-spacing: clamp(3px, 1.1vw, 10px) !important;
+      line-height: .96 !important;
+      margin: clamp(-12px, -1dvh, 0px) 0 0 !important;
+    }
+    .is-final #impact-result {
+      font-size: clamp(40px, 7vw, 72px) !important;
+      letter-spacing: clamp(2px, .9vw, 8px) !important;
+    }
+    #impact-subtitle {
+      font-size: clamp(12px, 2.2vw, 16px) !important;
+      letter-spacing: clamp(2px, .8vw, 8px) !important;
+      white-space: nowrap !important;
+    }
+    .impact-score-board {
+      max-width: min(92vw, 420px) !important;
+      padding: clamp(10px, 1.7dvh, 15px) clamp(16px, 4vw, 32px) !important;
+      gap: clamp(12px, 3vw, 25px) !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+    }
+    .score-number {
+      font-size: clamp(36px, 7vw, 60px) !important;
+    }
+    @media (min-width: 820px) and (min-height: 760px) {
+      .impact-card-wrapper {
+        width: min(34vw, 320px, 39dvh) !important;
+      }
+      #impact-stand-stage {
+        justify-content: center !important;
+      }
+    }
+    @media (max-height: 680px) {
+      .impact-card-wrapper {
+        width: min(60vw, 260px, 34dvh) !important;
+      }
+      .impact-score-board {
+        transform: scale(.92) translateY(30px);
+      }
+    }
+
   </style>
   <!-- Supabase Battle from arena v1 -->
 </head>
@@ -2244,13 +2369,105 @@ const payload = isUuidLike(room)
   const MAX_TOKEN_FETCHES = 4; // 最多允許拿 4 次 (約 32 分鐘極限)
 
 
+  // =======================================================
+  // 🎙️ Speech Grace UX：後端回傳 speechUsage / overLimit 時的柔性提示
+  // =======================================================
+  const tappieVoiceGraceState = {
+    announced: false,
+    exhaustedAnnounced: false,
+    exhausted: false
+  };
+
+  function showTappieSoftToast(message, type = 'grace') {
+    let toast = document.getElementById('tappie-soft-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'tappie-soft-toast';
+      toast.className = 'tappie-soft-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.className = `tappie-soft-toast ${type}`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, type === 'exhausted' ? 4200 : 3400);
+  }
+
+  function normalizeSpeechUsage(data = {}) {
+    const usage = data.speechUsage || data.usage || data.voiceUsage || data || {};
+    const dailyLimit = Number(usage.dailyLimit ?? usage.limit ?? data.limit ?? 0);
+    const voiceCount = Number(usage.voiceCount ?? usage.count ?? data.count ?? 0);
+    const graceLimit = Number(usage.graceLimit ?? usage.voiceGraceLimit ?? data.graceLimit ?? 10);
+    const graceUsed = Number(usage.graceUsed ?? usage.voiceGraceCount ?? data.graceUsed ?? 0);
+    const explicitRemaining = usage.graceRemaining ?? data.graceRemaining;
+    const graceRemaining = Number.isFinite(Number(explicitRemaining))
+      ? Number(explicitRemaining)
+      : Math.max(0, graceLimit - graceUsed);
+    const status = String(usage.status || data.status || '').toLowerCase();
+    const exhausted = data.error === 'speech_limit_exhausted' || data.overLimit === true || status === 'exhausted';
+    const isGrace = !exhausted && (
+      usage.isUsingGrace === true ||
+      data.isUsingGrace === true ||
+      status === 'grace' ||
+      Number(graceUsed) > 0 ||
+      (dailyLimit > 0 && voiceCount > dailyLimit)
+    );
+    return { dailyLimit, voiceCount, graceLimit, graceUsed, graceRemaining, status, exhausted, isGrace };
+  }
+
+  function updateSpeechGraceHint(data = {}, opts = {}) {
+    const usage = normalizeSpeechUsage(data);
+    const statusEl = opts.statusEl || document.getElementById(opts.statusId || 'status');
+    const recordBtn = opts.recordBtn || document.getElementById(opts.recordBtnId || 'record-btn');
+
+    if (usage.exhausted) {
+      tappieVoiceGraceState.exhausted = true;
+      if (!tappieVoiceGraceState.exhaustedAnnounced) {
+        showTappieSoftToast('今日語音額度已使用完畢，你仍可以查看送出目前結果。', 'exhausted');
+        tappieVoiceGraceState.exhaustedAnnounced = true;
+      }
+      if (statusEl) {
+        statusEl.innerText = '今日語音額度已用完';
+        statusEl.classList.add('speech-grace-hint', 'exhausted');
+      }
+      if (recordBtn) {
+        recordBtn.classList.add('speech-exhausted');
+        recordBtn.disabled = true;
+        recordBtn.setAttribute('aria-disabled', 'true');
+      }
+      return { allowed: false, usage };
+    }
+
+    if (usage.isGrace) {
+      if (!tappieVoiceGraceState.announced) {
+        showTappieSoftToast('✨ 已到達本日使用上限，系統贈送你額外練習 10 次。', 'grace');
+        tappieVoiceGraceState.announced = true;
+      }
+      if (statusEl) {
+        statusEl.innerText = `剩餘贈送 ${Math.max(0, usage.graceRemaining)} 次`;
+        statusEl.classList.add('speech-grace-hint');
+        statusEl.classList.remove('exhausted');
+      }
+      return { allowed: true, usage };
+    }
+
+    return { allowed: true, usage };
+  }
+
+  function isSpeechExhausted() {
+    return tappieVoiceGraceState.exhausted === true;
+  }
+
+
+
 
   // =======================================================
   // 🎙️ Voice Usage Guard：每次真正進入 Azure 評分前，先累加 daily_usage.voice_count
   // =======================================================
-  async function incrementVoiceUsageOrBlock(source = 'unknown') {
-    // ✅ battle.html 不阻擋已進入的對戰；但每次真正呼叫 Azure 前仍要嘗試累加 voice_count。
-    // 若今日已超額，increment-voice-usage 可能回 overLimit；這裡只記錄，不跳彈窗、不阻斷流程。
+  async function incrementVoiceUsageOrBlock(source = 'unknown', opts = {}) {
+    // ✅ battle.html 對戰本體不阻擋；抽獎密語可用同一套 grace UI 提示。
     try {
       const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
         method: 'POST',
@@ -2258,12 +2475,15 @@ const payload = isUuidLike(room)
         body: JSON.stringify({ uid: STUDENT_ID, source })
       });
       const data = await res.json().catch(() => ({}));
-      if (!data.success) {
-        console.warn('voice usage not incremented, but battle continues:', data);
+      const usageState = updateSpeechGraceHint(data, opts);
+
+      if (!data.success && (data.overLimit || data.error === 'speech_limit_exhausted')) {
+        return false;
       }
-      return true;
+      if (!data.success) console.warn('voice usage not incremented:', data);
+      return usageState.allowed !== false;
     } catch (err) {
-      console.warn('voice usage increment failed, but battle continues:', err);
+      console.warn('voice usage increment failed:', err);
       return true;
     }
   }
@@ -2904,7 +3124,7 @@ const payload = isUuidLike(room)
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
 
-                    await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge_in_battle_html' : 'arena_review_in_battle_html');
+                    await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge_in_battle_html' : 'arena_review_in_battle_html', { statusId: 'status', recordBtnId: 'record-btn' });
 
                     recognizer.recognizeOnceAsync(
                         (result) => {
@@ -2929,6 +3149,7 @@ const payload = isUuidLike(room)
                                     clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
                                     return data;
                                 }).then(data => {
+                                    updateSpeechGraceHint(data, { statusId: 'status', recordBtnId: 'record-btn' });
                                     scores[currentIndex] = data.practice?.score ?? data.score; 
                                     if(!window.feedbacks) window.feedbacks = [];
                                     window.feedbacks[currentIndex] = data.practice?.feedback || data.feedback || '已完成評分';
@@ -4642,7 +4863,8 @@ const payload = isUuidLike(room)
       document.getElementById(`gacha-card-${focusedCardIndex}`).classList.remove('focused');
       document.getElementById(`wrapper-${focusedCardIndex}`).classList.remove('has-focus');
       document.getElementById('gacha-overlay').classList.remove('focus-mode');
-      document.getElementById(`lock-status-${focusedCardIndex}`).innerText = "點擊開始解鎖";
+      const resetStatus = document.getElementById(`lock-status-${focusedCardIndex}`);
+      if (resetStatus && !resetStatus.classList.contains('speech-grace-hint')) resetStatus.innerText = "點擊開始解鎖";
       focusedCardIndex = -1;
   }
 
@@ -4662,6 +4884,7 @@ const payload = isUuidLike(room)
 
           // 🔵 狀態 A：如果目前沒有在錄音 -> 啟動錄音
           if (!isGachaRecording) {
+              if (isSpeechExhausted()) return;
               isGachaRecording = true;
               
               // 強制切斷所有正在播放的讀音
@@ -4748,7 +4971,15 @@ const payload = isUuidLike(room)
                       const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                       pronConfig.applyTo(recognizer);
 
-                      await incrementVoiceUsageOrBlock('battle_gacha_phrase');
+                      const voiceOk = await incrementVoiceUsageOrBlock('battle_gacha_phrase', { statusEl: status, recordBtn: btn });
+                      if (!voiceOk) {
+                          btn.style.pointerEvents = "none";
+                          btn.classList.add('speech-exhausted');
+                          if (typeof revealAllRemainingGachaCards === 'function') {
+                              setTimeout(() => revealAllRemainingGachaCards(), 900);
+                          }
+                          return;
+                      }
 
                       recognizer.recognizeOnceAsync((result) => {
                           btn.style.pointerEvents = "auto"; // 判定完成，解開按鈕封印
