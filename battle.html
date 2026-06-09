@@ -1306,17 +1306,19 @@
 
     .speech-grace-hint {
       color: #c47a00 !important;
-      background: rgba(255, 244, 214, .72);
-      border: 1px solid rgba(255, 207, 111, .55);
-      border-radius: 999px;
-      display: inline-block;
-      padding: 6px 12px;
-      box-shadow: 0 8px 20px rgba(255, 170, 0, .10);
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      display: block;
+      padding: 0 !important;
+      box-shadow: none !important;
+      font-weight: inherit;
     }
     .speech-grace-hint.exhausted {
       color: #c0392b !important;
-      background: rgba(255, 236, 232, .78);
-      border-color: rgba(231, 76, 60, .28);
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
     }
     #record-btn.speech-exhausted,
     .unlock-btn.speech-exhausted,
@@ -2406,13 +2408,13 @@ const payload = isUuidLike(room)
       ? Number(explicitRemaining)
       : Math.max(0, graceLimit - graceUsed);
     const status = String(usage.status || data.status || '').toLowerCase();
+    const ignoredGraceStatus = status === 'battle_unlimited' || status === 'normal' || status === 'duel';
     const exhausted = data.error === 'speech_limit_exhausted' || status === 'exhausted' || data.success === false && data.overLimit === true;
-    const isGrace = !exhausted && (
+    const isGrace = !exhausted && !ignoredGraceStatus && (
       usage.isUsingGrace === true ||
       data.isUsingGrace === true ||
       status === 'grace' ||
       Number(graceUsed) > 0 ||
-      (dailyLimit > 0 && voiceCount > dailyLimit) ||
       (data.success === true && data.overLimit === true)
     );
     return { dailyLimit, voiceCount, graceLimit, graceUsed, graceRemaining, status, exhausted, isGrace };
