@@ -1396,96 +1396,240 @@
       }
     }
 
-  
-    /* 🎙️ Grace text should visually match the original unlock hint text. */
-    .voice-status.speech-grace-hint,
-    #status.speech-grace-hint {
-      display: revert !important;
-      font: inherit !important;
-      font-weight: inherit !important;
-      letter-spacing: inherit !important;
-      line-height: inherit !important;
+    /* =======================================================
+       🎯 Hotfix：Grace 小字完全沿用原本 voice-status 字型，只改顏色
+       ======================================================= */
+    .voice-status.speech-grace-hint {
+      color: #c47a00 !important;
       background: transparent !important;
       border: none !important;
       border-radius: 0 !important;
       padding: 0 !important;
       box-shadow: none !important;
     }
-    .voice-status.speech-grace-hint { color: #c47a00 !important; }
-    .voice-status.speech-grace-hint.exhausted { color: #c0392b !important; }
+    .voice-status.speech-grace-hint.exhausted {
+      color: #c0392b !important;
+    }
+
+    /* =======================================================
+       🎯 Hotfix：Battle Impact 結果畫面手機 / 平板自適應
+       - 避免 FINAL MATCH RESULT 與 對戰勝利/失敗重疊
+       - 避免分數偏離框框
+       - 避免平板卡片立繪過小
+       ======================================================= */
+    #impact-overlay.active {
+      align-items: center !important;
+      justify-content: center !important;
+      padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+    }
+    #impact-stand-stage {
+      width: min(94vw, 620px) !important;
+      height: auto !important;
+      min-height: min(82dvh, 760px) !important;
+      max-height: 88dvh !important;
+      padding: clamp(12px, 2dvh, 22px) clamp(10px, 2.2vw, 22px) !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: clamp(8px, 1.6dvh, 16px) !important;
+      overflow: visible !important;
+    }
+    #impact-stand-stage > div:first-child {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: clamp(2px, .8dvh, 8px) !important;
+      flex: 0 0 auto !important;
+    }
+    #impact-subtitle {
+      margin: 0 !important;
+      font-size: clamp(11px, 2.4vmin, 16px) !important;
+      line-height: 1.15 !important;
+      letter-spacing: clamp(2px, .85vmin, 7px) !important;
+      white-space: nowrap !important;
+    }
+    #impact-result {
+      margin: 0 !important;
+      max-width: 96vw !important;
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+      line-height: 1.02 !important;
+      font-size: clamp(42px, 9.5vmin, 80px) !important;
+      letter-spacing: clamp(3px, 1.3vmin, 10px) !important;
+      transform-origin: center center !important;
+    }
+    .is-final #impact-result {
+      font-size: clamp(38px, 8.4vmin, 72px) !important;
+      letter-spacing: clamp(2px, 1vmin, 8px) !important;
+    }
+    .impact-card-wrapper {
+      width: clamp(190px, 52vw, 335px) !important;
+      max-width: 335px !important;
+      min-width: 190px !important;
+      margin: 0 !important;
+      flex: 0 1 auto !important;
+    }
+    .impact-score-board {
+      width: min(92vw, 440px) !important;
+      max-width: 440px !important;
+      padding: clamp(10px, 1.7dvh, 15px) clamp(16px, 4vw, 32px) !important;
+      gap: clamp(14px, 4vw, 28px) !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+      margin-bottom: 0 !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .score-col {
+      min-width: clamp(60px, 18vw, 96px) !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+    .score-number {
+      width: 100% !important;
+      text-align: center !important;
+      font-size: clamp(38px, 8.2vmin, 60px) !important;
+      line-height: .95 !important;
+    }
+    .score-vs {
+      flex: 0 0 auto !important;
+      line-height: 1 !important;
+    }
+    @media (min-width: 700px) and (min-height: 700px) {
+      .impact-card-wrapper {
+        width: clamp(280px, 36vw, 380px) !important;
+        max-width: 380px !important;
+      }
+      #impact-stand-stage {
+        min-height: min(84dvh, 820px) !important;
+      }
+    }
+    @media (max-height: 700px) {
+      #impact-stand-stage {
+        min-height: 0 !important;
+        max-height: 92dvh !important;
+        gap: 6px !important;
+      }
+      .impact-card-wrapper {
+        width: clamp(165px, 36dvh, 260px) !important;
+        min-width: 165px !important;
+      }
+      #impact-result {
+        font-size: clamp(34px, 8dvh, 62px) !important;
+      }
+      .impact-score-board {
+        padding: 8px 18px !important;
+      }
+    }
 
   
     /* =======================================================
-       🛠️ Impact Stand Layout v3：立繪 + 分數框一起自適應
+       🎴 Impact Portrait Size Fix v4｜只修結果立繪區
+       目標：
+       1. 將「? VS ?」分數框納入立繪整體高度配置
+       2. 放大手機 / 平板上的結果立繪
+       3. 縮小外層舞台空白感，避免看起來像大框包小卡
+       4. 不修改抽獎、grace、對戰邏輯
        ======================================================= */
+
     #impact-overlay.active {
       min-height: 100dvh !important;
       padding: max(8px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)) !important;
       box-sizing: border-box !important;
     }
+
     #impact-stand-stage {
-      width: min(96vw, 720px) !important;
-      height: min(92dvh, 900px) !important;
-      max-width: 720px !important;
-      max-height: 92dvh !important;
-      padding: clamp(8px, 1.4dvh, 16px) clamp(8px, 2vw, 18px) !important;
+      width: min(94vw, 760px) !important;
+      max-width: 760px !important;
+      height: auto !important;
+      min-height: auto !important;
+      max-height: calc(100dvh - 18px) !important;
+      padding: clamp(8px, 1.3dvh, 14px) clamp(6px, 1.6vw, 14px) !important;
       box-sizing: border-box !important;
-      display: grid !important;
-      grid-template-rows: auto minmax(0, 1fr) auto !important;
-      justify-items: center !important;
+      background: rgba(5, 9, 20, 0.72) !important;
+      border-radius: clamp(22px, 4vw, 34px) !important;
+      display: flex !important;
+      flex-direction: column !important;
       align-items: center !important;
-      row-gap: clamp(4px, 1dvh, 10px) !important;
-      overflow: hidden !important;
+      justify-content: center !important;
+      gap: clamp(3px, .8dvh, 8px) !important;
+      overflow: visible !important;
     }
+
     #impact-stand-stage > div:first-child {
       margin-top: 0 !important;
-      align-self: end !important;
-      min-height: 0 !important;
+      margin-bottom: clamp(0px, .4dvh, 4px) !important;
+      text-align: center !important;
+      flex: 0 0 auto !important;
+      max-width: 96vw !important;
     }
+
     #impact-subtitle {
-      font-size: clamp(11px, 2.1vw, 15px) !important;
+      font-size: clamp(10px, 2.2vw, 15px) !important;
       line-height: 1 !important;
-      letter-spacing: clamp(2px, .8vw, 7px) !important;
-      margin: 0 0 2px 0 !important;
+      letter-spacing: clamp(2px, .75vw, 7px) !important;
+      margin: 0 0 clamp(2px, .4dvh, 5px) 0 !important;
       white-space: nowrap !important;
     }
+
     #impact-result {
+      font-size: clamp(40px, 10vw, 88px) !important;
+      line-height: .9 !important;
+      letter-spacing: clamp(2px, 1vw, 9px) !important;
+      margin: 0 !important;
       white-space: nowrap !important;
       word-break: keep-all !important;
       overflow-wrap: normal !important;
       max-width: 96vw !important;
-      font-size: clamp(42px, 10vw, 86px) !important;
-      letter-spacing: clamp(2px, 1.1vw, 10px) !important;
-      line-height: .92 !important;
-      margin: 0 !important;
     }
+
     .is-final #impact-result {
-      font-size: clamp(36px, 8.6vw, 72px) !important;
-      letter-spacing: clamp(1px, .75vw, 7px) !important;
+      font-size: clamp(34px, 8.5vw, 76px) !important;
+      letter-spacing: clamp(1px, .72vw, 7px) !important;
     }
+
     .impact-card-wrapper {
-      width: min(82vw, 50dvh, 440px) !important;
-      max-width: 440px !important;
-      min-width: min(78vw, 230px) !important;
-      margin: 0 !important;
+      width: min(92vw, 60dvh, 560px) !important;
+      max-width: 560px !important;
+      min-width: min(86vw, 285px) !important;
+      margin: clamp(2px, .6dvh, 8px) 0 !important;
+      flex: 0 1 auto !important;
       align-self: center !important;
-      justify-self: center !important;
-      flex: none !important;
+      z-index: 10 !important;
     }
+
+    #impact-card,
+    #impact-card .card__translater,
+    #impact-card .card__rotator,
+    #impact-card .card__front {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
     .impact-score-board {
-      width: min(88vw, 430px) !important;
-      max-width: 430px !important;
+      width: min(90vw, 520px) !important;
+      max-width: 520px !important;
       display: grid !important;
-      grid-template-columns: minmax(72px, 1fr) auto minmax(72px, 1fr) !important;
+      grid-template-columns: minmax(74px, 1fr) auto minmax(74px, 1fr) !important;
       align-items: center !important;
       justify-items: center !important;
-      gap: clamp(10px, 2.8vw, 24px) !important;
-      padding: clamp(9px, 1.4dvh, 14px) clamp(14px, 3.2vw, 28px) !important;
-      margin: 0 0 clamp(2px, 1dvh, 10px) 0 !important;
+      gap: clamp(8px, 2.6vw, 24px) !important;
+      padding: clamp(8px, 1.25dvh, 14px) clamp(14px, 3.2vw, 30px) !important;
+      margin: clamp(2px, .8dvh, 8px) 0 0 0 !important;
       box-sizing: border-box !important;
+      flex: 0 0 auto !important;
       transform-origin: center !important;
-      flex-shrink: 0 !important;
     }
+
     .score-col {
       width: 100% !important;
       min-width: 0 !important;
@@ -1494,61 +1638,82 @@
       align-items: center !important;
       justify-content: center !important;
     }
+
     .score-number {
       width: 100% !important;
       display: block !important;
       text-align: center !important;
-      font-size: clamp(34px, 8vw, 64px) !important;
+      font-size: clamp(32px, 7.8vw, 62px) !important;
       line-height: .95 !important;
       font-variant-numeric: tabular-nums !important;
     }
+
     .score-label {
       width: 100% !important;
       text-align: center !important;
-      font-size: clamp(9px, 1.8vw, 11px) !important;
-      letter-spacing: clamp(1px, .5vw, 2px) !important;
+      font-size: clamp(8px, 1.8vw, 11px) !important;
+      letter-spacing: clamp(1px, .45vw, 2px) !important;
       margin-top: 4px !important;
       white-space: nowrap !important;
     }
+
     .score-vs {
-      min-width: clamp(34px, 7vw, 48px) !important;
+      min-width: clamp(32px, 7vw, 50px) !important;
       text-align: center !important;
-      font-size: clamp(16px, 3.6vw, 22px) !important;
-      line-height: 1 !important;
       justify-self: center !important;
+      font-size: clamp(15px, 3.5vw, 22px) !important;
+      line-height: 1 !important;
     }
+
     @media (min-width: 700px) and (min-height: 760px) {
-      .impact-card-wrapper {
-        width: min(58vw, 52dvh, 470px) !important;
-        max-width: 470px !important;
+      #impact-stand-stage {
+        width: min(88vw, 820px) !important;
+        max-width: 820px !important;
+        padding: clamp(10px, 1.5dvh, 18px) clamp(10px, 2vw, 20px) !important;
       }
+
+      .impact-card-wrapper {
+        width: min(70vw, 58dvh, 600px) !important;
+        max-width: 600px !important;
+      }
+
       .impact-score-board {
-        width: min(70vw, 460px) !important;
+        width: min(66vw, 560px) !important;
+        max-width: 560px !important;
       }
     }
+
     @media (max-height: 720px) {
       #impact-stand-stage {
-        height: min(94dvh, 720px) !important;
-        row-gap: 4px !important;
+        max-height: calc(100dvh - 12px) !important;
+        gap: 2px !important;
+        padding: 7px 6px !important;
       }
-      .impact-card-wrapper {
-        width: min(78vw, 45dvh, 380px) !important;
+
+      #impact-subtitle {
+        font-size: clamp(9px, 2vw, 12px) !important;
       }
+
       #impact-result {
-        font-size: clamp(34px, 8.6vw, 68px) !important;
+        font-size: clamp(32px, 8.4vw, 64px) !important;
       }
+
       .is-final #impact-result {
-        font-size: clamp(30px, 7.4vw, 58px) !important;
+        font-size: clamp(28px, 7.2vw, 54px) !important;
       }
+
+      .impact-card-wrapper {
+        width: min(88vw, 54dvh, 460px) !important;
+      }
+
       .impact-score-board {
-        padding: 8px 16px !important;
+        padding: 7px 14px !important;
+        margin-top: 2px !important;
       }
+
       .score-number {
-        font-size: clamp(30px, 7vw, 52px) !important;
+        font-size: clamp(28px, 6.8vw, 50px) !important;
       }
-    }
-    .gacha-card.auto-won .card__rotator {
-      box-shadow: 0 0 0 2px rgba(241,196,15,.45), 0 14px 34px rgba(0,0,0,.55) !important;
     }
 
   </style>
@@ -4667,7 +4832,8 @@ const payload = isUuidLike(room)
   let isGachaResolving = false;
   let currentGachaSessionKey = ""; // v1 local lock: 同一場勝利固定 6 張盲盒與翻開狀態
   let gachaAwaitingRevealAll = false; // 最後一抽收合後，等待玩家點擊揭曉剩餘盲盒
-  let gachaRevealAllDone = false;     // 防止剩餘盲盒重複翻開 / 重複結算
+  let gachaRevealAllDone = false;
+  let gachaAutoPickDone = false;     // 防止剩餘盲盒重複翻開 / 重複結算
   let focusedCardIndex = -1; // 目前放大等待聲控的卡片
   
   // 🎙️ 抽獎專用語音參數
@@ -4823,6 +4989,7 @@ const payload = isUuidLike(room)
       isGachaResolving = gachaPicksLeft <= 0;
       gachaAwaitingRevealAll = false;
       gachaRevealAllDone = !!session.revealAllDone;
+      gachaAutoPickDone = !!session.autoPickedByGrace;
   }
 
   function markGachaSessionClaimed() {
@@ -4886,6 +5053,7 @@ const payload = isUuidLike(room)
         isGachaResolving = false;
         gachaAwaitingRevealAll = false;
         gachaRevealAllDone = false;
+        gachaAutoPickDone = false;
 
         // 🚀 2. 盲盒畫面永遠固定顯示 6 張；gachaPicksLeft 只代表可以翻幾張。
         const cardCount = 6;
@@ -5204,8 +5372,10 @@ const payload = isUuidLike(room)
                       if (!voiceOk) {
                           btn.style.pointerEvents = "none";
                           btn.classList.add('speech-exhausted');
-                          if (typeof autoSelectRemainingGachaRewards === 'function') {
-                              setTimeout(() => autoSelectRemainingGachaRewards('speech_grace_exhausted'), 700);
+                          status.innerText = "已抵達今日語音上限";
+                          status.style.color = "#c0392b";
+                          if (typeof autoPickRemainingGachaRewardsDueToGraceExhausted === 'function') {
+                              setTimeout(() => autoPickRemainingGachaRewardsDueToGraceExhausted(), 900);
                           } else if (typeof revealAllRemainingGachaCards === 'function') {
                               setTimeout(() => revealAllRemainingGachaCards(), 900);
                           }
@@ -5294,101 +5464,89 @@ const payload = isUuidLike(room)
   }
 
 
-  function addGachaPrizeToWon(prizeInfo, cardRoot = null) {
+  function awardGachaPrizeWithoutVoice(index, options = {}) {
+      const cardData = gachaCardsData[index];
+      const cardEl = document.getElementById(`gacha-card-${index}`);
+      if (!cardData || !cardEl || cardData.flipped) return false;
+
+      const prizeInfo = cardData.prize || {};
+      const cardRoot = cardEl.querySelector('.card');
+
+      cardData.flipped = true;
+      cardEl.classList.add('flipped');
+      if (options.autoPicked) cardEl.classList.add('auto-picked');
+
+      const unlockUi = cardEl.querySelector('.unlock-ui');
+      if (unlockUi) unlockUi.style.display = 'none';
+
+      let prizeRarity = 'N';
+      if (prizeInfo.class === 'prize-R') prizeRarity = 'R';
+      if (prizeInfo.class === 'prize-SR') prizeRarity = 'SR';
+      if (prizeInfo.class === 'prize-SSR') prizeRarity = 'SSR';
+      if (cardRoot) cardRoot.setAttribute('data-rarity', prizeRarity);
+
       let prizeToAdd = { ...prizeInfo };
 
       if (prizeToAdd.type === 'avatar') {
           const charId = prizeToAdd.value;
-          const alreadyOwnedInAccount = (window.myUnlockedAvatars || []).includes(charId);
-          const alreadyGotInThisGacha = (window.wonAvatars || []).includes(charId);
-
-          if (alreadyOwnedInAccount || alreadyGotInThisGacha) {
-              const charName = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
-              prizeToAdd.realLabel = `(重複) ${charName} → 轉為 100 點`;
-              window.wonPoints += 100;
-          } else {
-              prizeToAdd.realLabel = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
-              window.wonAvatars.push(charId);
-          }
-
           if (cardRoot && characterAssets[charId] && characterAssets[charId].mask) {
               cardRoot.classList.add('masked');
               cardRoot.style.setProperty('--mask', `url('${characterAssets[charId].mask}')`);
           }
+
+          const alreadyOwnedInAccount = (window.myUnlockedAvatars || []).includes(charId);
+          const alreadyGotInThisGacha = window.wonAvatars.includes(charId);
+
+          if (alreadyOwnedInAccount || alreadyGotInThisGacha) {
+              const charName = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
+              prizeToAdd.realLabel = `(自動抽取・重複) ${charName} → 轉為 100 點`;
+              window.wonPoints += 100;
+          } else {
+              prizeToAdd.realLabel = `(自動抽取) ${characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label}`;
+              window.wonAvatars.push(charId);
+          }
       } else {
           window.wonPoints += Number(prizeToAdd.value || 0);
-          prizeToAdd.realLabel = prizeToAdd.label;
+          prizeToAdd.realLabel = `(自動抽取) ${prizeToAdd.label}`;
       }
 
       gachaWonItems.push(prizeToAdd);
-      return prizeToAdd;
+      return true;
   }
 
-  function autoSelectRemainingGachaRewards(reason = 'speech_grace_exhausted') {
-      const remainingPicks = Math.max(0, Math.min(6, Number(gachaPicksLeft || 0)));
-      if (remainingPicks <= 0) {
-          isGachaResolving = true;
-          waitForRevealAllClick();
-          return 0;
-      }
+  function autoPickRemainingGachaRewardsDueToGraceExhausted() {
+      if (gachaAutoPickDone) return;
+      gachaAutoPickDone = true;
 
+      cancelFocus();
+
+      let remainingPicks = Math.max(0, Number(gachaPicksLeft || 0));
       const allCards = document.querySelectorAll('.gacha-card');
-      const candidates = gachaCardsData
-        .map((card, index) => ({ card, index }))
-        .filter(({ card }) => !card.flipped && !card.missed && !card.autoWon);
 
-      for (let i = candidates.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      for (let i = 0; i < gachaCardsData.length && remainingPicks > 0; i++) {
+          const cardData = gachaCardsData[i];
+          if (!cardData || cardData.flipped) continue;
+
+          const picked = awardGachaPrizeWithoutVoice(i, { autoPicked: true });
+          if (picked) {
+              remainingPicks--;
+              if (allCards[i]) allCards[i].classList.add('flipped', 'auto-picked');
+          }
       }
 
-      const chosen = candidates.slice(0, Math.min(remainingPicks, candidates.length));
-
-      chosen.forEach(({ card, index }) => {
-          const cardEl = allCards[index];
-          const cardRoot = cardEl ? cardEl.querySelector('.card') : null;
-          const prizeInfo = card.prize || {};
-
-          card.flipped = true;
-          card.autoWon = true;
-
-          if (cardEl) {
-              cardEl.classList.add('flipped', 'auto-won');
-              const unlockUi = cardEl.querySelector('.unlock-ui');
-              if (unlockUi) unlockUi.style.display = 'none';
-          }
-
-          if (cardRoot) {
-              let prizeRarity = 'N';
-              if (prizeInfo.class === 'prize-R') prizeRarity = 'R';
-              if (prizeInfo.class === 'prize-SR') prizeRarity = 'SR';
-              if (prizeInfo.class === 'prize-SSR') prizeRarity = 'SSR';
-              cardRoot.setAttribute('data-rarity', prizeRarity);
-          }
-
-          addGachaPrizeToWon(prizeInfo, cardRoot);
-      });
-
-      gachaPicksLeft = Math.max(0, gachaPicksLeft - chosen.length);
-      const picksSpan = document.getElementById('picks-left');
-      if (picksSpan) picksSpan.innerText = gachaPicksLeft;
+      gachaPicksLeft = 0;
+      const picksEl = document.getElementById('picks-left');
+      if (picksEl) picksEl.innerText = gachaPicksLeft;
 
       isGachaResolving = true;
-      saveGachaSession({
-          autoResolved: true,
-          autoResolveReason: reason,
-          autoResolvedAt: new Date().toISOString(),
-          picksLeft: gachaPicksLeft,
-          wonItems: gachaWonItems,
-          wonPoints: Number(window.wonPoints || 0),
-          wonAvatars: Array.isArray(window.wonAvatars) ? window.wonAvatars : [],
-      });
+      saveGachaSession({ autoPickedByGrace: true, picksLeft: 0 });
 
       const subtitle = document.getElementById('gacha-subtitle');
-      if (subtitle) subtitle.innerHTML = `保護額度已用完，系統已幫你完成剩餘 ${chosen.length} 次抽獎。點擊任意處揭曉剩餘盲盒`;
+      if (subtitle) subtitle.innerHTML = "<span style='color:#f1c40f'>贈送額度已用完，系統已自動完成剩餘抽獎。點擊畫面揭曉剩餘盲盒</span>";
 
-      setTimeout(() => waitForRevealAllClick(), 650);
-      return chosen.length;
+      setTimeout(() => {
+          waitForRevealAllClick();
+      }, 650);
   }
 
 
