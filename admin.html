@@ -7016,8 +7016,9 @@
                     <option value="perfect">卓越</option>
                     <option value="top3">排行前三</option>
                 `;
-                tagSelect?.classList.add('hidden');
+                tagSelect?.classList.remove('hidden');
                 valueSelect.classList.add('hidden');
+                wrap?.classList.add('has-three');
             } else if (ADMIN_V2_QUERY_TAB === 'points') {
                 statusSelect.innerHTML = `
                     <option value="">全部狀態</option>
@@ -7266,6 +7267,28 @@ function getAdminQueryClassOptions() {
             return Number(student?.bestScore ?? student?.best_score ?? student?.score ?? student?.highestScore ?? student?.highest_score ?? 0);
         }
 
+        function getAdminLearningRankTimeValue(student) {
+            const value = getAdminStudentBestTime(student);
+            const t = value ? new Date(value).getTime() : Number.POSITIVE_INFINITY;
+            return Number.isFinite(t) ? t : Number.POSITIVE_INFINITY;
+        }
+
+        function compareAdminLearningRank(a = {}, b = {}) {
+            const scoreDiff = getAdminStudentBestScore(b) - getAdminStudentBestScore(a);
+            if (scoreDiff) return scoreDiff;
+
+            // 同分只看完成挑戰時間：較早完成者在前。
+            const timeDiff = getAdminLearningRankTimeValue(a) - getAdminLearningRankTimeValue(b);
+            if (timeDiff) return timeDiff;
+
+            // 完全相同時只做穩定排序，避免畫面跳動；不使用完成次數做排名。
+            const nameDiff = String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hant');
+            if (nameDiff) return nameDiff;
+
+            return String(a.uid || '').localeCompare(String(b.uid || ''), 'zh-Hant');
+        }
+
+
         function getAdminRecordTimeValue(record) {
             return record?.completedAt || record?.completed_at || record?.createdAt || record?.created_at || record?.time || record?.date || '';
         }
@@ -7355,6 +7378,7 @@ function getAdminQueryClassOptions() {
             const box = document.getElementById('admin-v2-query-results');
             const input = document.getElementById('admin-v2-query-search');
             const classFilter = document.getElementById('admin-v2-query-class-filter')?.value || '';
+            const tagFilter = document.getElementById('admin-v2-query-tag-filter')?.value || '';
             const statusFilter = document.getElementById('admin-v2-query-status-filter')?.value || '';
             if (!box) return;
             const q = String(input?.value || '').trim().toLowerCase();
@@ -7371,25 +7395,22 @@ function getAdminQueryClassOptions() {
                 if (classFilter && classCode !== classFilter) return '';
 
                 const studentsRaw = Array.isArray(cls.students) ? cls.students : [];
-                const top3Uids = studentsRaw.slice()
-                    .sort((a,b) => {
-                        const scoreDiff = getAdminStudentBestScore(b) - getAdminStudentBestScore(a);
-                        if (scoreDiff) return scoreDiff;
-                        return Number(b.count || 0) - Number(a.count || 0);
-                    })
+                const rankedStudents = studentsRaw.slice().sort(compareAdminLearningRank);
+                const top3Uids = rankedStudents
                     .filter(s => getAdminStudentBestScore(s) > 0)
                     .slice(0, 3)
                     .map(s => s.uid);
 
                 const students = studentsRaw.filter(s => {
                     const merged = { ...s, classCode };
-                    if (q && ![classCode, cls.unitName, s.name, s.uid].some(v => String(v || '').toLowerCase().includes(q))) return false;
+                    if (q && ![classCode, cls.unitName, s.name, s.uid, ...(getAdminStudentTags(merged) || [])].some(v => String(v || '').toLowerCase().includes(q))) return false;
+                    if (tagFilter && !adminQueryHasTag(merged, tagFilter)) return false;
                     if (statusFilter === 'top3') return top3Uids.includes(s.uid);
                     if (statusFilter) return getAdminLearningStatus(merged, gami) === statusFilter;
                     return true;
-                });
+                }).sort(compareAdminLearningRank);
 
-                if (!students.length && (q || classFilter || statusFilter)) return '';
+                if (!students.length && (q || classFilter || tagFilter || statusFilter)) return '';
                 const schedule = cls.schedule || null;
                 const unitName = schedule?.unitName || cls.unitName || '未排定';
                 const rangeText = schedule?.startDate && schedule?.endDate ? `${schedule.startDate} ～ ${schedule.endDate}` : '尚未排程';
@@ -7415,6 +7436,7 @@ function getAdminQueryClassOptions() {
                             <div>
                                 <strong>${medal ? medal + ' ' : ''}${escapeAdminV2(s.name || '未命名學生')}</strong>
                                 <small>${escapeAdminV2(s.uid || '')}</small>
+                                ${renderAdminQueryClassAndTagChips({ ...s, classCode })}
                             </div>
                             <span class="admin-v2-count-badge">${visual.icon} ${visual.text}　${escapeAdminV2(best)}${bestTimeText !== '尚無' ? '　' + escapeAdminV2(bestTimeText) : ''}　▾</span>
                             <div class="admin-v2-row-detail">
