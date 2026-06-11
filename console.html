@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260611-console-admin-cards-v2"></script>
+  <script src="./tappie-api.js?v=20260611-console-admin-cards-v3"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -2982,7 +2982,85 @@
       .feature-config-grid { grid-template-columns:1fr; }
     }
 
-  </style>
+  
+    /* =======================================================
+       Admin Card Teacher Modal Mobile Scroll Hard Fix v5C
+       - The previous modal guard sets touch-action:none on modal-backdrop.
+       - For this teacher modal, restore pan-y on the modal/backdrop and force the form body to be the scroll container.
+       ======================================================= */
+    body.console-modal-open #adminCardEditModal.modal-backdrop.show {
+      touch-action: pan-y !important;
+      overscroll-behavior: contain !important;
+    }
+    #adminCardEditModal.show {
+      display: flex !important;
+      overflow: hidden !important;
+    }
+    #adminCardEditModal .console-modal {
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
+      height: auto !important;
+      max-height: min(92dvh, 760px) !important;
+      overflow: hidden !important;
+      touch-action: pan-y !important;
+      overscroll-behavior: contain !important;
+    }
+    #adminCardEditModal .modal-head,
+    #adminCardEditModal .modal-actions {
+      flex: 0 0 auto !important;
+    }
+    #adminCardEditModal .form-grid {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      touch-action: pan-y !important;
+      overscroll-behavior: contain !important;
+    }
+    @media (max-width: 720px) {
+      #adminCardEditModal.show {
+        align-items: flex-end !important;
+        justify-content: flex-end !important;
+        padding: 0 !important;
+      }
+      #adminCardEditModal .console-modal {
+        width: 100% !important;
+        height: 92vh !important;
+        height: 92dvh !important;
+        max-height: 92vh !important;
+        max-height: 92dvh !important;
+        border-radius: 26px 26px 0 0 !important;
+        border-left: 0 !important;
+        border-right: 0 !important;
+        border-bottom: 0 !important;
+      }
+      #adminCardEditModal .form-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+        padding: 18px 20px 22px !important;
+      }
+      #adminCardEditModal .modal-actions {
+        padding: 14px 20px max(18px, env(safe-area-inset-bottom)) !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        margin-top: 0 !important;
+      }
+      #adminCardEditModal .modal-actions .right {
+        width: 100% !important;
+        margin-left: 0 !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+      }
+      #adminCardEditModal .modal-actions > .btn-compact {
+        width: 100% !important;
+      }
+    }
+
+</style>
 </head>
 <body>
   <section id="loginView" class="login-shell">
@@ -6495,8 +6573,13 @@
       disableBtn.style.display = isNew ? "none" : "inline-flex";
       disableBtn.textContent = c?.isActive ? "停用老師卡" : "重新啟用老師卡";
       disableBtn.className = c?.isActive ? "btn-compact danger" : "btn-compact ok";
-      document.getElementById("adminCardEditModal").classList.add("show");
+      const modalEl = document.getElementById("adminCardEditModal");
+      modalEl.classList.add("show");
       document.body.classList.add("console-modal-open");
+      requestAnimationFrame(() => {
+        const scrollBody = modalEl.querySelector(".form-grid");
+        if (scrollBody) scrollBody.scrollTop = 0;
+      });
     }
 
     function updateAdminCardUrlPreview() {
