@@ -3020,6 +3020,27 @@
             };
         }
 
+        async function waitForAdminAuthReadyForApi(timeoutMs = 3500) {
+            const started = Date.now();
+
+            while (Date.now() - started < timeoutMs) {
+                const mode = localStorage.getItem('tappie_admin_auth_mode') || ADMIN_AUTH_MODE || '';
+                const hasAdminKey = Boolean(ADMIN_SECRET || localStorage.getItem('tappie_admin_key'));
+                const hasValidAdminCard = isAdminCardTokenActive();
+                const pendingAdminCardUid = sessionStorage.getItem('tappie_pending_admin_card_uid') || '';
+
+                // 共用 key 已存在，或 admin card token 已完成，就可以打 API。
+                if (hasAdminKey || hasValidAdminCard) return true;
+
+                // 沒有 pending card，代表不是 adminCard 首次驗證流程，不要無限等。
+                if (!pendingAdminCardUid && mode !== 'admin_card') return false;
+
+                await new Promise(resolve => setTimeout(resolve, 120));
+            }
+
+            return Boolean(ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || isAdminCardTokenActive());
+        }
+
         function isAdminCardTokenActive() {
             const token = localStorage.getItem('tappie_admin_card_token') || '';
             const expiresAt = localStorage.getItem('tappie_admin_card_token_expires_at') || '';
@@ -6545,13 +6566,22 @@
         }
 
         async function fetchAdminQueryData(mode, extra = {}) {
-            const payload = {
+            if (!TappieAPI || typeof TappieAPI.adminGetQueryData !== 'function') {
+                throw new Error('adminGetQueryData API 尚未載入');
+            }
+
+            const ready = await waitForAdminAuthReadyForApi();
+            if (!ready) {
+                throw new Error('請提供管理員授權');
+            }
+
+            return await TappieAPI.adminGetQueryData({
                 schoolCode: CURRENT_SCHOOL,
                 mode,
-                rangeDays: 7,
                 ...getAdminAuthPayload(),
                 ...extra
-            };
+            });
+        };
             const api = window.TappieAPI;
             if (api && typeof api.adminGetQueryData === 'function') {
                 return await api.adminGetQueryData(payload);
