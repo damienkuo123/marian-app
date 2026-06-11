@@ -12,6 +12,7 @@ const TappieAPI = {
     submitPractice: "/submit-practice",
     claimPracticeChallenge: "/claim-practice-challenge",
     getDiagnosticReport: "/get-diagnostic-report",
+    adminCardAuth: "/admin-card-auth",
     adminGetData: "/admin-get-data",
     adminGetProgress: "/admin-get-progress",
     adminSaveStudents: "/admin-save-students",
@@ -182,6 +183,7 @@ const TappieAPI = {
 
     return await this._get(`${this.endpoints.getDiagnosticReport}?${qs.toString()}`);
   },
+  async adminCardAuth(payload = {}) { return await this._post(this.endpoints.adminCardAuth, payload); },
   async adminGetData(schoolCode = "TEST01", mode = "all") { return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`); },
   async adminGetProgress(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetProgress}?schoolCode=${encodeURIComponent(schoolCode)}`); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
