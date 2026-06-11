@@ -31,16 +31,33 @@
     <h2>讀取卡片中...</h2>
   </div>
 
-  <script src="./tappie-api.js"></script>
+  <script src="./tappie-api.js?v=admin-card-f3d"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const uid = urlParams.get('uid') || urlParams.get('id');
     const cardId = urlParams.get('cardId') || urlParams.get('cardid');
-    const adminAuth = localStorage.getItem('tappie_admin_key');
+    const ADMIN_REDIRECT_VERSION = "admin-card-f3d";
+
+    function isAdminCardTokenActive() {
+      const token = localStorage.getItem('tappie_admin_card_token') || '';
+      const expiresAt = localStorage.getItem('tappie_admin_card_token_expires_at') || '';
+      if (!token || !expiresAt) return false;
+      const expiresMs = new Date(expiresAt).getTime();
+      return Number.isFinite(expiresMs) && expiresMs > Date.now();
+    }
+
+    function hasAdminAuth() {
+      const adminKey = localStorage.getItem('tappie_admin_key');
+      if (adminKey) return true;
+      return isAdminCardTokenActive();
+    }
 
     function go(uidValue) {
-      if (adminAuth) window.location.replace(`/admin.html?id=${encodeURIComponent(uidValue)}`);
-      else window.location.replace(`/dashboard.html?id=${encodeURIComponent(uidValue)}`);
+      if (hasAdminAuth()) {
+        window.location.replace(`/admin.html?id=${encodeURIComponent(uidValue)}&v=${encodeURIComponent(ADMIN_REDIRECT_VERSION)}`);
+      } else {
+        window.location.replace(`/dashboard.html?id=${encodeURIComponent(uidValue)}`);
+      }
     }
 
     async function initTap() {
