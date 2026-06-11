@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./tappie-api.js?v=admin-card-f3d"></script>
     <script>
-    window.TAPPIE_ADMIN_BUILD_ID = "admin-card-f3d-cache-tap-fix";
+    window.TAPPIE_ADMIN_BUILD_ID = "admin-card-f3h-query-auth-guard-safe";
     console.log("✅ Tappie Admin build:", window.TAPPIE_ADMIN_BUILD_ID);
     </script>
 
@@ -3018,27 +3018,6 @@
                 adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
                 role
             };
-        }
-
-        async function waitForAdminAuthReadyForApi(timeoutMs = 3500) {
-            const started = Date.now();
-
-            while (Date.now() - started < timeoutMs) {
-                const mode = localStorage.getItem('tappie_admin_auth_mode') || ADMIN_AUTH_MODE || '';
-                const hasAdminKey = Boolean(ADMIN_SECRET || localStorage.getItem('tappie_admin_key'));
-                const hasValidAdminCard = isAdminCardTokenActive();
-                const pendingAdminCardUid = sessionStorage.getItem('tappie_pending_admin_card_uid') || '';
-
-                // 共用 key 已存在，或 admin card token 已完成，就可以打 API。
-                if (hasAdminKey || hasValidAdminCard) return true;
-
-                // 沒有 pending card，代表不是 adminCard 首次驗證流程，不要無限等。
-                if (!pendingAdminCardUid && mode !== 'admin_card') return false;
-
-                await new Promise(resolve => setTimeout(resolve, 120));
-            }
-
-            return Boolean(ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || isAdminCardTokenActive());
         }
 
         function isAdminCardTokenActive() {
@@ -6565,23 +6544,43 @@
             return (ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '') === 'super';
         }
 
+        async function waitForAdminQueryAuthReady(timeoutMs = 4000) {
+            const start = Date.now();
+
+            while (Date.now() - start < timeoutMs) {
+                const authPayload = getAdminAuthPayload ? getAdminAuthPayload() : {};
+                const hasAdminKey = Boolean(authPayload.adminKey || localStorage.getItem('tappie_admin_key'));
+                const hasAdminCardToken = Boolean(authPayload.adminCardToken || localStorage.getItem('tappie_admin_card_token'));
+                const pendingAdminCard = Boolean(sessionStorage.getItem('tappie_pending_admin_card_uid'));
+
+                if (hasAdminKey || (hasAdminCardToken && isAdminCardTokenActive())) return true;
+
+                // 只有 admin card 首次登入可能需要等；一般沒有授權時不要一直卡住。
+                if (!pendingAdminCard && !ADMIN_AUTH_READY) return false;
+
+                await new Promise(resolve => setTimeout(resolve, 120));
+            }
+
+            const finalPayload = getAdminAuthPayload ? getAdminAuthPayload() : {};
+            return Boolean(finalPayload.adminKey || finalPayload.adminCardToken || localStorage.getItem('tappie_admin_key') || localStorage.getItem('tappie_admin_card_token'));
+        }
+
         async function fetchAdminQueryData(mode, extra = {}) {
-            if (!TappieAPI || typeof TappieAPI.adminGetQueryData !== 'function') {
-                throw new Error('adminGetQueryData API 尚未載入');
+            const authReady = await waitForAdminQueryAuthReady();
+            if (!authReady) {
+                return {
+                    success: false,
+                    message: "請提供管理員授權"
+                };
             }
 
-            const ready = await waitForAdminAuthReadyForApi();
-            if (!ready) {
-                throw new Error('請提供管理員授權');
-            }
-
-            return await TappieAPI.adminGetQueryData({
+            const payload = {
                 schoolCode: CURRENT_SCHOOL,
                 mode,
+                rangeDays: 7,
                 ...getAdminAuthPayload(),
                 ...extra
-            });
-        };
+            };
             const api = window.TappieAPI;
             if (api && typeof api.adminGetQueryData === 'function') {
                 return await api.adminGetQueryData(payload);
