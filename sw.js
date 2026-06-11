@@ -10,8 +10,33 @@ self.addEventListener('activate', (e) => {
 });
 
 // Chrome 嚴格規定：必須有 fetch 監聽器才算合格的 PWA
+// 管理頁與入口頁必須永遠優先抓最新版，避免 adminCard / 權限切換被舊 HTML 或舊 API layer 卡住。
+const TAPPIE_NO_CACHE_PATHS = [
+    '/admin.html',
+    '/tap.html',
+    '/console.html',
+    '/station.html',
+    '/tappie-api.js'
+];
+
+function shouldBypassRuntimeCache(requestUrl) {
+    const url = new URL(requestUrl);
+    return TAPPIE_NO_CACHE_PATHS.some(path => url.pathname.endsWith(path));
+}
+
 self.addEventListener('fetch', (e) => {
-    // 這裡我們只做最簡單的網路通行，不影響你的 GAS / Supabase 運作
+    if (e.request.method !== 'GET') return;
+
+    if (shouldBypassRuntimeCache(e.request.url)) {
+        e.respondWith(
+            fetch(new Request(e.request, { cache: 'no-store' }))
+                .catch(() => fetch(e.request))
+                .catch(() => new Response("請檢查網路連線"))
+        );
+        return;
+    }
+
+    // 其他資源維持原本網路通行，避免影響 GAS / Supabase / Web Push。
     e.respondWith(fetch(e.request).catch(() => {
         return new Response("請檢查網路連線");
     }));
