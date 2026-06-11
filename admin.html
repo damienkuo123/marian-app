@@ -2725,11 +2725,15 @@
         // 🚀 【SaaS 核心狀態管理器】
         const urlSchool = params.get('school') ? params.get('school').toUpperCase() : null;
         const urlSecret = params.get('secret');
+        const urlAdminCard = params.get('adminCard') || params.get('admin_card') || params.get('cardUid') || params.get('card_uid');
+        if (urlAdminCard) {
+            try { sessionStorage.setItem('tappie_pending_admin_card_uid', decodeURIComponent(String(urlAdminCard))); } catch(e) {}
+        }
         const savedSchool = localStorage.getItem('tappie_school');
-        const savedAuth = localStorage.getItem('tappie_admin_key');
+        const savedAuth = localStorage.getItem('tappie_admin_key') || localStorage.getItem('tappie_admin_card_token');
 
         // 1. 🚨 強制清場邏輯：只要網址上的校區跟記憶中不同，或是網址帶了新密碼
-        if (urlSchool && (urlSchool !== savedSchool || urlSecret)) {
+        if (urlSchool && (urlSchool !== savedSchool || urlSecret || urlAdminCard)) {
              console.log("🚨 執行身分切換清場作業...");
              
              // 如果是換校區，且原本已經登入，跳出警告提醒
@@ -2740,12 +2744,21 @@
              // 徹底擦除舊記憶
              localStorage.removeItem('tappie_admin_key');
              localStorage.removeItem('tappie_admin_key_time');
+             localStorage.removeItem('tappie_admin_role');
+             localStorage.removeItem('tappie_admin_auth_mode');
+             localStorage.removeItem('tappie_admin_card_token');
+             localStorage.removeItem('tappie_admin_card_token_expires_at');
+             localStorage.removeItem('tappie_admin_card_login_time');
+             localStorage.removeItem('tappie_admin_card_id');
+             localStorage.removeItem('tappie_admin_card_uid');
+             localStorage.removeItem('tappie_admin_teacher_name');
              localStorage.setItem('tappie_school', urlSchool);
              
              // 如果網址有給新密碼，立刻存入
              if (urlSecret) {
                   localStorage.setItem('tappie_admin_key', urlSecret);
                   localStorage.setItem('tappie_admin_key_time', new Date().getTime());
+                  localStorage.setItem('tappie_admin_auth_mode', 'admin_key');
                   // 為了安全與美觀，存完後把密碼從網址隱藏
                   const cleanUrl = window.location.pathname + `?school=${urlSchool}`;
                   window.history.replaceState(null, null, cleanUrl);
@@ -2760,6 +2773,11 @@
         const CURRENT_SCHOOL = localStorage.getItem('tappie_school') || "TEST01";
         let ADMIN_SECRET = localStorage.getItem('tappie_admin_key');
         const authTime = localStorage.getItem('tappie_admin_key_time');
+        let ADMIN_CARD_TOKEN = localStorage.getItem('tappie_admin_card_token') || '';
+        let ADMIN_AUTH_MODE = localStorage.getItem('tappie_admin_auth_mode') || (ADMIN_CARD_TOKEN ? 'admin_card' : (ADMIN_SECRET ? 'admin_key' : ''));
+        const adminCardExpiresAt = localStorage.getItem('tappie_admin_card_token_expires_at') || '';
+        const ADMIN_KEY_TTL_MS = 12 * 60 * 60 * 1000;
+        const ADMIN_CARD_TTL_MS = 60 * 60 * 1000;
 
         // 🔐 Supabase Admin Auth：透過 school_settings 驗證 Admin_Password / Super_Admin_Password
         const USE_SUPABASE_ADMIN = !!(window.TappieAPI && TappieAPI.mode && TappieAPI.mode.indexOf('supabase') !== -1);
@@ -2861,15 +2879,26 @@
             localStorage.removeItem('tappie_admin_key_time');
             localStorage.removeItem('tappie_admin_role');
             localStorage.removeItem('tappie_admin_effective_features');
+            localStorage.removeItem('tappie_admin_auth_mode');
+            localStorage.removeItem('tappie_admin_card_token');
+            localStorage.removeItem('tappie_admin_card_token_expires_at');
+            localStorage.removeItem('tappie_admin_card_login_time');
+            localStorage.removeItem('tappie_admin_card_id');
+            localStorage.removeItem('tappie_admin_card_uid');
+            localStorage.removeItem('tappie_admin_teacher_name');
             localStorage.removeItem('tappie_attendance_mode');
             localStorage.removeItem('tappie_attendance_expires_at');
             localStorage.removeItem('tappie_admin_last_mode');
+            sessionStorage.removeItem('tappie_pending_admin_card_uid');
             sessionStorage.removeItem('tappie_attendance_mode');
             sessionStorage.removeItem('tappie_attendance_action');
             sessionStorage.removeItem('tappie_manual_attendance_action');
             sessionStorage.removeItem('tappie_admin_mode');
             ADMIN_SECRET = null;
+            ADMIN_CARD_TOKEN = '';
+            ADMIN_AUTH_MODE = '';
             ADMIN_ROLE = null;
+            ADMIN_AUTH_READY = false;
         }
 
         function showAdminUnauth(message = "請使用教師專用 NFC 卡感應進入") {
@@ -2892,7 +2921,17 @@
 
             const isSuper = role === "super";
             const roleText = document.getElementById('role-text');
-            if (roleText) roleText.innerText = isSuper ? "⭐ 超級管理員權限" : "專屬管理員權限";
+            const mode = authData.authMode || localStorage.getItem('tappie_admin_auth_mode') || ADMIN_AUTH_MODE || 'admin_key';
+            const teacherName = authData.teacherName || localStorage.getItem('tappie_admin_teacher_name') || '';
+            if (roleText) {
+                if (mode === 'admin_card') {
+                    roleText.innerText = isSuper
+                        ? `⭐ ${teacherName || '老師'}｜管理卡 Super`
+                        : `👤 ${teacherName || '老師'}｜管理卡授權`;
+                } else {
+                    roleText.innerText = isSuper ? "⭐ 超級管理員權限" : "共用管理員授權";
+                }
+            }
 
             document.querySelectorAll('.super-only').forEach(el => {
                 el.classList.toggle('super-visible', isSuper);
@@ -2919,42 +2958,201 @@
                 throw new Error(data.message || data.error || "管理員密碼錯誤");
             }
 
-            applyAdminRole(data.role === "super" ? "super" : "admin", data);
+            ADMIN_AUTH_MODE = 'admin_key';
+            localStorage.setItem('tappie_admin_auth_mode', 'admin_key');
+            localStorage.removeItem('tappie_admin_card_token');
+            localStorage.removeItem('tappie_admin_card_token_expires_at');
+            localStorage.removeItem('tappie_admin_card_login_time');
+            localStorage.removeItem('tappie_admin_card_id');
+            localStorage.removeItem('tappie_admin_card_uid');
+            localStorage.removeItem('tappie_admin_teacher_name');
+
+            applyAdminRole(data.role === "super" ? "super" : "admin", { ...data, authMode: 'admin_key' });
             console.log("✅ Admin Auth 驗證成功", { school: CURRENT_SCHOOL, role: data.role });
         }
 
-        // ⏳ 檢查是否超過 1 小時 (3600000毫秒)
-        if (ADMIN_SECRET && authTime) {
-            const now = new Date().getTime();
-            if (now - parseInt(authTime) > 3600000) {
-                clearAdminAuth();
-                alert("⚠️ 授權已過期（超過 1 小時），為保護系統安全，請重新感應管理員卡片！");
+        function getAdminAuthPayload() {
+            const mode = localStorage.getItem('tappie_admin_auth_mode') || ADMIN_AUTH_MODE || (localStorage.getItem('tappie_admin_card_token') ? 'admin_card' : 'admin_key');
+            const role = ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '';
+
+            if (mode === 'admin_card') {
+                return {
+                    authMode: 'admin_card',
+                    adminCardToken: localStorage.getItem('tappie_admin_card_token') || ADMIN_CARD_TOKEN || '',
+                    adminCardId: localStorage.getItem('tappie_admin_card_id') || '',
+                    adminCardUid: localStorage.getItem('tappie_admin_card_uid') || '',
+                    adminTeacherName: localStorage.getItem('tappie_admin_teacher_name') || '',
+                    role
+                };
+            }
+
+            return {
+                authMode: 'admin_key',
+                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
+                role
+            };
+        }
+
+        function isAdminCardTokenActive() {
+            const token = localStorage.getItem('tappie_admin_card_token') || '';
+            const expiresAt = localStorage.getItem('tappie_admin_card_token_expires_at') || '';
+            if (!token || !expiresAt) return false;
+            const expiresMs = new Date(expiresAt).getTime();
+            return Number.isFinite(expiresMs) && expiresMs > Date.now();
+        }
+
+        function extractAdminCardUidFromScan(rawInput) {
+            let raw = String(rawInput || '').trim();
+            if (!raw) return '';
+            try {
+                const url = raw.includes('://') ? new URL(raw) : null;
+                if (url) {
+                    return url.searchParams.get('adminCard') || url.searchParams.get('admin_card') || url.searchParams.get('cardUid') || url.searchParams.get('card_uid') || '';
+                }
+            } catch(e) {}
+            const patterns = ['adminCard=', 'admin_card=', 'cardUid=', 'card_uid='];
+            for (const pat of patterns) {
+                if (raw.includes(pat)) {
+                    return decodeURIComponent(raw.split(pat)[1].split('&')[0]).trim();
+                }
+            }
+            return raw;
+        }
+
+        async function verifySupabaseAdminCardAuth(cardUid) {
+            const cleanCardUid = extractAdminCardUidFromScan(cardUid);
+            if (!cleanCardUid) throw new Error('請提供管理卡 UID / 卡片代碼');
+
+            let data = null;
+            if (window.TappieAPI && typeof TappieAPI.adminCardAuth === 'function') {
+                data = await TappieAPI.adminCardAuth({
+                    schoolCode: CURRENT_SCHOOL,
+                    cardUid: cleanCardUid,
+                    source: 'admin'
+                });
+            } else {
+                const res = await fetch(`${getAdminAuthBaseUrl()}/admin-card-auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        schoolCode: CURRENT_SCHOOL,
+                        cardUid: cleanCardUid,
+                        source: 'admin'
+                    })
+                });
+                data = await res.json().catch(() => ({}));
+                if (!res.ok && (!data || !data.success)) {
+                    throw new Error(data.message || data.error || '管理卡驗證失敗');
+                }
+            }
+
+            if (!data || !data.success || !data.valid || !data.adminCardToken) {
+                throw new Error(data?.message || data?.error || '管理卡驗證失敗');
+            }
+
+            ADMIN_AUTH_MODE = 'admin_card';
+            ADMIN_CARD_TOKEN = data.adminCardToken;
+            ADMIN_SECRET = null;
+
+            localStorage.removeItem('tappie_admin_key');
+            localStorage.removeItem('tappie_admin_key_time');
+            localStorage.setItem('tappie_admin_auth_mode', 'admin_card');
+            localStorage.setItem('tappie_admin_card_token', data.adminCardToken);
+            localStorage.setItem('tappie_admin_card_token_expires_at', data.expiresAt || new Date(Date.now() + ADMIN_CARD_TTL_MS).toISOString());
+            localStorage.setItem('tappie_admin_card_login_time', String(Date.now()));
+            localStorage.setItem('tappie_admin_card_id', data.adminCardId || '');
+            localStorage.setItem('tappie_admin_card_uid', data.cardUid || cleanCardUid);
+            localStorage.setItem('tappie_admin_teacher_name', data.teacherName || '');
+            sessionStorage.removeItem('tappie_pending_admin_card_uid');
+
+            applyAdminRole(data.role === 'super' ? 'super' : 'admin', { ...data, authMode: 'admin_card' });
+            console.log("✅ Admin Card Auth 驗證成功", { school: CURRENT_SCHOOL, role: data.role, teacherName: data.teacherName });
+
+            try {
+                const cleanUrl = `${window.location.pathname}?school=${encodeURIComponent(CURRENT_SCHOOL)}`;
+                window.history.replaceState(null, null, cleanUrl);
+            } catch(e) {}
+
+            return data;
+        }
+
+        async function handleAdminAuthCardScanIfNeeded(rawInput) {
+            if (ADMIN_AUTH_READY || ADMIN_SECRET || isAdminCardTokenActive()) return false;
+            const cardUid = extractAdminCardUidFromScan(rawInput);
+            if (!cardUid || cardUid.length < 4) return false;
+
+            showAdminUnauth("管理卡驗證中，請稍候...");
+            try {
+                await verifySupabaseAdminCardAuth(cardUid);
+                return true;
+            } catch (err) {
+                console.warn("❌ Admin Card Auth 驗證失敗", err);
+                showAdminUnauth("管理卡驗證失敗：" + (err.message || err));
+                return true;
             }
         }
 
-        // 🚀 主動防禦背景監控：登入後每 10 秒檢查一次時間
-        if (ADMIN_SECRET && authTime) {
+        function startAdminAuthExpiryWatcher(ttlMs, label) {
             setInterval(() => {
-                const currentTime = new Date().getTime();
-                if (currentTime - parseInt(authTime) > 3600000) {
+                const mode = localStorage.getItem('tappie_admin_auth_mode') || ADMIN_AUTH_MODE;
+                if (mode === 'admin_card') {
+                    if (!isAdminCardTokenActive()) {
+                        clearAdminAuth();
+                        alert("⏱️ 管理卡授權已過期，請重新感應老師管理卡。");
+                        window.location.reload();
+                    }
+                    return;
+                }
+
+                const savedTime = parseInt(localStorage.getItem('tappie_admin_key_time') || '0', 10);
+                if (savedTime && Date.now() - savedTime > ttlMs) {
                     clearAdminAuth();
-                    alert("⏱️ 閒置時間過長！為保護系統安全，已自動強制登出。請重新感應卡片！");
+                    alert(`⏱️ ${label}授權已過期，請重新登入。`);
                     window.location.reload();
                 }
             }, 10000);
         }
 
-        // 🛡️ 權限驗證：不再接受 secret=dev，全部改走 school_settings
-        if (!ADMIN_SECRET) {
-            showAdminUnauth("請使用教師專用 NFC 卡感應進入");
+        // 🛡️ 權限驗證：支援共用 Admin Key 與個人 Admin Card 雙軌
+        const pendingAdminCardUid = sessionStorage.getItem('tappie_pending_admin_card_uid') || '';
+
+        if (ADMIN_AUTH_MODE === 'admin_card' && ADMIN_CARD_TOKEN) {
+            if (!isAdminCardTokenActive()) {
+                clearAdminAuth();
+                showAdminUnauth("管理卡授權已過期，請重新感應老師管理卡");
+            } else {
+                applyAdminRole(localStorage.getItem('tappie_admin_role') || 'admin', {
+                    authMode: 'admin_card',
+                    teacherName: localStorage.getItem('tappie_admin_teacher_name') || ''
+                });
+                startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡');
+            }
+        } else if (pendingAdminCardUid) {
+            showAdminUnauth("管理卡驗證中，請稍候...");
+            verifySupabaseAdminCardAuth(pendingAdminCardUid)
+                .then(() => startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡'))
+                .catch(err => {
+                    console.warn("❌ Admin Card Auth 驗證失敗", err);
+                    clearAdminAuth();
+                    showAdminUnauth("管理卡驗證失敗：" + (err.message || err));
+                    alert("⛔ 管理卡驗證失敗：" + (err.message || err));
+                });
+        } else if (!ADMIN_SECRET) {
+            showAdminUnauth("請使用教師管理卡或共用管理員 NFC 立牌感應進入");
+        } else if (authTime && Date.now() - parseInt(authTime, 10) > ADMIN_KEY_TTL_MS) {
+            clearAdminAuth();
+            showAdminUnauth("共用管理員授權已過期，請重新登入");
+            alert("⚠️ 共用管理員授權已過期（超過 12 小時），請重新登入！");
         } else if (USE_SUPABASE_ADMIN) {
             showAdminUnauth("權限驗證中，請稍候...");
-            verifySupabaseAdminAuth(ADMIN_SECRET).catch(err => {
-                console.warn("❌ Admin Auth 驗證失敗", err);
-                clearAdminAuth();
-                showAdminUnauth("管理員密碼錯誤或權限已失效，請重新登入");
-                alert("⛔ 管理員驗證失敗：" + (err.message || err));
-            });
+            verifySupabaseAdminAuth(ADMIN_SECRET)
+                .then(() => startAdminAuthExpiryWatcher(ADMIN_KEY_TTL_MS, '共用管理員'))
+                .catch(err => {
+                    console.warn("❌ Admin Auth 驗證失敗", err);
+                    clearAdminAuth();
+                    showAdminUnauth("管理員密碼錯誤或權限已失效，請重新登入");
+                    alert("⛔ 管理員驗證失敗：" + (err.message || err));
+                });
         } else {
             fetch(`${GAS_URL}?action=verify_auth&secret=${ADMIN_SECRET}&id=${CURRENT_SCHOOL}-ADMIN`)
                 .then(res => res.json())
@@ -2963,10 +3161,11 @@
                         showAdminUnauth("管理員密碼錯誤或權限已失效，請重新登入");
                         clearAdminAuth();
                     } else if (data.role === "super") {
-                        applyAdminRole("super");
+                        applyAdminRole("super", { authMode: 'admin_key' });
                     } else {
-                        applyAdminRole("admin");
+                        applyAdminRole("admin", { authMode: 'admin_key' });
                     }
+                    startAdminAuthExpiryWatcher(ADMIN_KEY_TTL_MS, '共用管理員');
                 })
                 .catch(err => {
                     alert("連線後端驗證失敗，請檢查網路連線。");
@@ -2994,14 +3193,14 @@
 
         async function adminSaveStudent(action, payload) {
             if (!window.TappieAPI || !TappieAPI.adminSaveStudents) throw new Error('TappieAPI.adminSaveStudents 尚未載入');
-            const data = await TappieAPI.adminSaveStudents({ schoolCode: CURRENT_SCHOOL, action, ...payload });
+            const data = await TappieAPI.adminSaveStudents({ schoolCode: CURRENT_SCHOOL, action, ...getAdminAuthPayload(), ...payload });
             if (!data.success) throw new Error(data.message || data.error || 'admin-save-students failed');
             return data;
         }
 
         async function adminSaveTask(action, payload) {
             if (!window.TappieAPI || !TappieAPI.adminSaveTasks) throw new Error('TappieAPI.adminSaveTasks 尚未載入');
-            const data = await TappieAPI.adminSaveTasks({ schoolCode: CURRENT_SCHOOL, action, ...payload });
+            const data = await TappieAPI.adminSaveTasks({ schoolCode: CURRENT_SCHOOL, action, ...getAdminAuthPayload(), ...payload });
             if (!data.success) throw new Error(data.message || data.error || 'admin-save-tasks failed');
             return data;
         }
@@ -3521,11 +3720,16 @@
             }
         }, 1000);
 
-        scanner.addEventListener('keydown', function(e) {
+        scanner.addEventListener('keydown', async function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault(); // 🚀 加上這行，防止瀏覽器以為你要跳轉網址！
                 clearTimeout(scanTimer);
-                const finalID = normalizeAdminV2ScannedId(scanner.value);
+                const rawScanValue = scanner.value;
+                if (await handleAdminAuthCardScanIfNeeded(rawScanValue)) {
+                    scanner.value = "";
+                    return;
+                }
+                const finalID = normalizeAdminV2ScannedId(rawScanValue);
                 if (finalID.length >= 4) { 
                     fetchStudent(finalID);
                 }
@@ -3535,8 +3739,13 @@
 
         scanner.addEventListener('input', function() {
             clearTimeout(scanTimer);
-            scanTimer = setTimeout(() => {
-                const finalID = normalizeAdminV2ScannedId(scanner.value);
+            scanTimer = setTimeout(async () => {
+                const rawScanValue = scanner.value;
+                if (await handleAdminAuthCardScanIfNeeded(rawScanValue)) {
+                    scanner.value = "";
+                    return;
+                }
+                const finalID = normalizeAdminV2ScannedId(rawScanValue);
                 if (finalID.length >= 4) { 
                     fetchStudent(finalID);
                 }
@@ -3846,16 +4055,7 @@
 
         function adminLogout() { 
             if (confirm("確定要登出嗎？")) { 
-                localStorage.removeItem('tappie_admin_key');
-                localStorage.removeItem('tappie_admin_key_time');
-                localStorage.removeItem('tappie_attendance_mode');
-                localStorage.removeItem('tappie_attendance_expires_at');
-                localStorage.removeItem('tappie_admin_last_mode');
-                sessionStorage.removeItem('tappie_admin_mode');
-                sessionStorage.removeItem('tappie_attendance_mode');
-                sessionStorage.removeItem('tappie_attendance_action');
-                sessionStorage.removeItem('tappie_manual_attendance_action');
-                localStorage.removeItem('tappie_admin_role');
+                clearAdminAuth();
                 window.location.reload(); 
             } 
         }
@@ -6323,8 +6523,7 @@
                 schoolCode: CURRENT_SCHOOL,
                 mode,
                 rangeDays: 7,
-                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
-                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                ...getAdminAuthPayload(),
                 ...extra
             };
             const api = window.TappieAPI;
@@ -6716,8 +6915,7 @@
             const data = await TappieAPI.adminGetAttendanceToday({
                 schoolCode: CURRENT_SCHOOL,
                 uid,
-                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
-                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || ''
+                ...getAdminAuthPayload()
             });
             if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取今日打卡狀態失敗');
             return data;
@@ -6786,8 +6984,7 @@
                 uid: currentStudentId,
                 eventType,
                 source,
-                adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
-                role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                ...getAdminAuthPayload(),
                 metadata: {
                     from: ADMIN_V2_FROM_TAP ? 'tap' : 'admin',
                     adminMode: ADMIN_V2_ACTIVE_MODE,
@@ -7794,8 +7991,7 @@ function getAdminQueryClassOptions() {
                     uid,
                     eventType: action,
                     source: 'admin_no_card',
-                    adminKey: ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '',
-                    role: ADMIN_ROLE || localStorage.getItem('tappie_admin_role') || '',
+                    ...getAdminAuthPayload(),
                     metadata: {
                         from: 'admin_query',
                         adminMode: 'query',
@@ -7852,6 +8048,10 @@ function getAdminQueryClassOptions() {
             }
 
             try {
+                const auth = getAdminAuthPayload();
+                if (auth.authMode === 'admin_card') {
+                    throw new Error('管理卡授權不會保存 Super Admin 密碼，請改用共用 Super Admin 授權進入 Console。');
+                }
                 const schoolCode = CURRENT_SCHOOL || '';
                 const password = ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '';
                 if (!schoolCode || !password) throw new Error('缺少校區或 Super Admin 授權資料');
