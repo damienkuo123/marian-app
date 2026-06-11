@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260611-admin-card-f5-console-bridge"></script>
+  <script src="./tappie-api.js?v=20260611-console-admin-cards-v2"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -1678,11 +1678,13 @@
     .modal-scroll-zone { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     #studentEditModal .form-grid,
     #studentBatchModal .form-grid,
+    #adminCardEditModal .form-grid,
     #curriculumScheduleModal .form-grid {
       flex: 1 1 auto;
       min-height: 0;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
     }
     #curriculumUnitModal .console-modal { max-height: min(92dvh, 860px); }
     #curriculumUnitModal .form-grid { flex: 0 0 auto; overflow: visible; }
@@ -1695,7 +1697,24 @@
     #curriculumUnitModal .modal-actions,
     #curriculumScheduleModal .modal-actions,
     #studentEditModal .modal-actions,
-    #studentBatchModal .modal-actions { flex: 0 0 auto; }
+    #studentBatchModal .modal-actions,
+    #adminCardEditModal .modal-actions { flex: 0 0 auto; }
+
+    #adminCardEditModal.show { align-items: center; }
+    #adminCardEditModal .console-modal { max-height: min(92dvh, 760px); }
+    #adminCardEditModal .console-modal,
+    #adminCardEditModal .form-grid {
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+    @media (max-width: 720px) {
+      #adminCardEditModal.show { align-items: flex-end; padding: 0; }
+      #adminCardEditModal .console-modal {
+        width: 100%;
+        max-height: 92dvh;
+        border-radius: 26px 26px 0 0;
+      }
+    }
     .word-list-shell { overflow: visible !important; }
     .unit-modal-section > div:first-child { padding-left: 4px !important; padding-right: 4px !important; }
     .calendar-day:not(.empty) { cursor: pointer; }
@@ -3063,7 +3082,6 @@
         <input type="hidden" id="editStudentId" />
         <div class="form-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" /></div>
         <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" /></div>
-        <div class="form-field full"><label>學生 NFC 連結</label><input id="editStudentNfcUrlPreview" readonly onclick="this.select()" /></div>
         <div class="form-field full"><label>學生類別</label><select id="editStudentType" class="select" onchange="toggleConsoleClassHint();"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
         <div class="form-field full" id="editStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="editStudentClass" placeholder="有班級學生需填班級，例如 A1" onkeydown="handleStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentClassFromInput()">新增</button><select id="editStudentExistingClass" onchange="setStudentClassFromSelect(this.value);"><option value="">選擇既有班級</option></select></div></div>
         <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput()">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
@@ -3072,12 +3090,13 @@
         <div class="form-field"><label>帳號狀態</label><select id="editStudentActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
         <div class="form-field"><label>目前點數</label><input id="editStudentPoints" type="number" inputmode="numeric" placeholder="0" /></div>
         <div class="form-field full"><label>Title / 榮譽標籤</label><input id="editStudentTitle" placeholder="可留空，Dashboard 榮譽榜通常即時計算" /></div>
+        <div class="form-field full"><label>學生 NFC 連結</label><input id="editStudentUrlPreview" readonly onclick="this.select()" /></div>
         <div class="form-field full"><div id="studentFormNote" class="form-note">新增學生會自動配發預設角色，並寫入 student_avatars。席位上限以啟用學生計算。</div></div>
       </div>
       <div class="modal-actions">
         <button id="studentDisableBtn" class="btn-compact danger" onclick="disableCurrentStudent()">停用學生</button>
         <div class="right">
-          <button class="btn-compact" onclick="copyStudentNfcUrlFromModal()">複製連結</button>
+          <button class="btn-compact" onclick="copyStudentUrlFromModal()">複製連結</button>
           <button class="btn-compact" onclick="hideStudentModal()">取消</button>
           <button id="studentSaveBtn" class="btn-compact primary" onclick="saveConsoleStudent()">儲存學生</button>
         </div>
@@ -5981,29 +6000,21 @@
       return (studentsCache?.students || []).find(s => String(s.id) === String(id)) || null;
     }
 
-    function normalizeStudentUidForLink(rawUid = "") {
-      let uid = String(rawUid || "").trim();
-      const schoolCode = currentConsoleSchoolCode();
-      if (schoolCode && uid && !uid.includes("-")) uid = `${schoolCode}-${uid}`;
-      return uid;
-    }
-
-    function studentNfcLoginUrl(uidValue = "") {
-      const uid = normalizeStudentUidForLink(uidValue);
+    function studentNfcUrl(uidValue) {
       const origin = location.origin || "https://www.tappieapp.com";
-      return `${origin}/tap.html?uid=${encodeURIComponent(uid || "")}`;
+      return `${origin}/tap.html?uid=${encodeURIComponent(uidValue || "")}`;
     }
 
-    function updateStudentNfcUrlPreview() {
-      const input = document.getElementById("editStudentNfcUrlPreview");
+    function updateStudentUrlPreview() {
+      const input = document.getElementById("editStudentUrlPreview");
       if (!input) return;
-      input.value = studentNfcLoginUrl(document.getElementById("editStudentUid")?.value || "");
+      input.value = studentNfcUrl(document.getElementById("editStudentUid")?.value || "");
     }
 
-    function copyStudentNfcUrlFromModal() {
-      updateStudentNfcUrlPreview();
-      const url = document.getElementById("editStudentNfcUrlPreview")?.value || "";
-      if (!url) return alert("請先輸入學生 UID。");
+    function copyStudentUrlFromModal() {
+      updateStudentUrlPreview();
+      const url = document.getElementById("editStudentUrlPreview")?.value || "";
+      if (!url) return alert("請先填寫學生 UID / 卡片代碼。");
       navigator.clipboard?.writeText(url).then(() => alert("已複製學生 NFC 連結。"), () => prompt("複製此連結：", url));
     }
 
@@ -6033,9 +6044,8 @@
       document.getElementById("editStudentId").value = s?.id || "";
       document.getElementById("editStudentName").value = s?.name || "";
       document.getElementById("editStudentUid").value = s?.uid || (currentConsoleSchoolCode() ? `${currentConsoleSchoolCode()}-` : "");
-      const uidInput = document.getElementById("editStudentUid");
-      if (uidInput) uidInput.oninput = updateStudentNfcUrlPreview;
-      updateStudentNfcUrlPreview();
+      updateStudentUrlPreview();
+      document.getElementById("editStudentUid").oninput = updateStudentUrlPreview;
       document.getElementById("editStudentType").value = normalizeStudentType(s?.student_type || "無班級");
       document.getElementById("editStudentClass").value = s?.class_code || "";
       const typeInput = document.getElementById("editStudentTypeInput");
@@ -6310,9 +6320,6 @@
               <button class="btn-compact primary" onclick="openAdminCardEditor(null)">新增老師</button>
             </div>
           </div>
-          <div class="console-query-tabs" style="margin-bottom:14px;">
-            <button class="active" type="button">老師</button>
-          </div>
           <div class="toolbar">
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <input id="adminTeacherSearchInput" class="search-input" placeholder="搜尋老師名稱 / 卡號 / 備註" oninput="adminTeacherSearch=this.value; renderAdminCardsTable();" style="min-width:260px;" />
@@ -6423,36 +6430,32 @@
       const rows = filteredAdminCards();
       const tableBody = rows.length ? rows.map(c => `
         <tr>
-          <td>
-            <strong>${escapeHtml(c.teacherName || "未命名老師")}</strong><br>
-            <span class="small-note">${escapeHtml(c.note || "—")}</span>
-            <div class="student-action-row" style="margin-top:10px;justify-content:flex-start;">
-              <button class="btn-compact" onclick="copyAdminCardUrl('${escapeHtml(c.cardUid)}')">複製連結</button>
-              <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
-              <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
-            </div>
-          </td>
+          <td><strong>${escapeHtml(c.teacherName || "未命名老師")}</strong>${c.note ? `<br><span class="small-note">${escapeHtml(c.note)}</span>` : ""}</td>
           <td><code>${escapeHtml(c.cardUid || "—")}</code></td>
           <td><span class="badge ${c.role === "super" ? "warn" : "ok"}">${adminCardRoleLabel(c.role)}</span></td>
           <td><span class="badge ${c.isActive ? "ok" : "danger"}">${c.isActive ? "啟用" : "停用"}</span></td>
           <td>${c.lastUsedAt ? formatDateTime(c.lastUsedAt) : "尚未使用"}</td>
+          <td>
+            <div class="student-action-row">
+              <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
+              <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
+            </div>
+          </td>
         </tr>
-      `).join("") : `<tr><td colspan="5" class="empty-state">沒有符合條件的老師管理卡。</td></tr>`;
+      `).join("") : `<tr><td colspan="6" class="empty-state">沒有符合條件的老師管理卡。</td></tr>`;
 
       const cardBody = rows.length ? rows.map(c => `
         <div class="student-mobile-card">
           <div class="student-mobile-head">
-            <div><strong>${escapeHtml(c.teacherName || "未命名老師")}</strong><div class="small-note">${escapeHtml(c.note || "—")}</div></div>
+            <div><strong>${escapeHtml(c.teacherName || "未命名老師")}</strong></div>
             <span class="badge ${c.isActive ? "ok" : "danger"}">${c.isActive ? "啟用" : "停用"}</span>
           </div>
           <div class="student-mobile-grid">
             <div class="student-mobile-field"><div class="student-mobile-label">卡號</div><div class="student-mobile-value">${escapeHtml(c.cardUid || "—")}</div></div>
             <div class="student-mobile-field"><div class="student-mobile-label">角色</div><div class="student-mobile-value">${adminCardRoleLabel(c.role)}</div></div>
             <div class="student-mobile-field"><div class="student-mobile-label">最後使用</div><div class="student-mobile-value">${c.lastUsedAt ? formatDateTime(c.lastUsedAt) : "尚未使用"}</div></div>
-            <div class="student-mobile-field"><div class="student-mobile-label">入口</div><div class="student-mobile-value">admin-card.html</div></div>
           </div>
           <div class="student-mobile-actions">
-            <button class="btn-compact" onclick="copyAdminCardUrl('${escapeHtml(c.cardUid)}')">複製連結</button>
             <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
             <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
           </div>
@@ -6462,7 +6465,7 @@
       wrap.innerHTML = `
         <div class="student-table-shell">
           <table class="student-list-table">
-            <thead><tr><th>老師</th><th>卡號</th><th>角色</th><th>狀態</th><th>最後使用</th></tr></thead>
+            <thead><tr><th>老師</th><th>卡號</th><th>角色</th><th>狀態</th><th>最後使用</th><th>操作</th></tr></thead>
             <tbody>${tableBody}</tbody>
           </table>
         </div>
