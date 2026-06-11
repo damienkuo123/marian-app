@@ -2727,7 +2727,24 @@
         const urlSecret = params.get('secret');
         const urlAdminCard = params.get('adminCard') || params.get('admin_card') || params.get('cardUid') || params.get('card_uid');
         if (urlAdminCard) {
-            try { sessionStorage.setItem('tappie_pending_admin_card_uid', decodeURIComponent(String(urlAdminCard))); } catch(e) {}
+            try {
+                sessionStorage.setItem('tappie_pending_admin_card_uid', decodeURIComponent(String(urlAdminCard)));
+
+                // Admin Card URL 是明確切換授權來源：
+                // 即使目前已經有共用 adminKey / super adminKey，也必須讓 adminCard 優先接管。
+                // 不清掉舊 key 的話，初始化會繼續走 ADMIN_SECRET 分支，導致老師卡切不進去。
+                localStorage.removeItem('tappie_admin_key');
+                localStorage.removeItem('tappie_admin_key_time');
+                localStorage.removeItem('tappie_admin_role');
+                localStorage.removeItem('tappie_admin_effective_features');
+                localStorage.removeItem('tappie_admin_auth_mode');
+                localStorage.removeItem('tappie_admin_card_token');
+                localStorage.removeItem('tappie_admin_card_token_expires_at');
+                localStorage.removeItem('tappie_admin_card_login_time');
+                localStorage.removeItem('tappie_admin_card_id');
+                localStorage.removeItem('tappie_admin_card_uid');
+                localStorage.removeItem('tappie_admin_teacher_name');
+            } catch(e) {}
         }
         const savedSchool = localStorage.getItem('tappie_school');
         const savedAuth = localStorage.getItem('tappie_admin_key') || localStorage.getItem('tappie_admin_card_token');
@@ -3116,7 +3133,19 @@
         // 🛡️ 權限驗證：支援共用 Admin Key 與個人 Admin Card 雙軌
         const pendingAdminCardUid = sessionStorage.getItem('tappie_pending_admin_card_uid') || '';
 
-        if (ADMIN_AUTH_MODE === 'admin_card' && ADMIN_CARD_TOKEN) {
+        // URL 帶 adminCard 時，永遠優先處理老師卡切換。
+        // 這讓「共用 admin / 共用 super admin → 個人老師卡」可以正常切換。
+        if (pendingAdminCardUid) {
+            showAdminUnauth("管理卡驗證中，請稍候...");
+            verifySupabaseAdminCardAuth(pendingAdminCardUid)
+                .then(() => startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡'))
+                .catch(err => {
+                    console.warn("❌ Admin Card Auth 驗證失敗", err);
+                    clearAdminAuth();
+                    showAdminUnauth("管理卡驗證失敗：" + (err.message || err));
+                    alert("⛔ 管理卡驗證失敗：" + (err.message || err));
+                });
+        } else if (ADMIN_AUTH_MODE === 'admin_card' && ADMIN_CARD_TOKEN) {
             if (!isAdminCardTokenActive()) {
                 clearAdminAuth();
                 showAdminUnauth("管理卡授權已過期，請重新感應老師管理卡");
@@ -3127,16 +3156,6 @@
                 });
                 startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡');
             }
-        } else if (pendingAdminCardUid) {
-            showAdminUnauth("管理卡驗證中，請稍候...");
-            verifySupabaseAdminCardAuth(pendingAdminCardUid)
-                .then(() => startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡'))
-                .catch(err => {
-                    console.warn("❌ Admin Card Auth 驗證失敗", err);
-                    clearAdminAuth();
-                    showAdminUnauth("管理卡驗證失敗：" + (err.message || err));
-                    alert("⛔ 管理卡驗證失敗：" + (err.message || err));
-                });
         } else if (!ADMIN_SECRET) {
             showAdminUnauth("請使用教師管理卡或共用管理員 NFC 立牌感應進入");
         } else if (authTime && Date.now() - parseInt(authTime, 10) > ADMIN_KEY_TTL_MS) {
