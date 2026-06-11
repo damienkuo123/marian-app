@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260603-console-query-v1"></script>
+  <script src="./tappie-api.js?v=20260611-console-admin-cards-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -425,6 +425,14 @@
     .subtle-card-title { font-weight: 760; letter-spacing: -0.02em; }
 
 
+
+
+    /* =======================================================
+       Admin Card / Teacher Manager Console
+       - Reuses Students page visual language
+       ======================================================= */
+    .admin-card-overview-grid { margin-top:18px; }
+    #adminCardsTableWrap code { font-family: var(--font-number); font-weight:850; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:5px 8px; }
 
     /* Step 9D-4.1｜Students Management Cards */
     .insight-grid { display:grid; grid-template-columns: 1.2fr .9fr .9fr .9fr; gap:18px; }
@@ -3075,6 +3083,37 @@
     </div>
   </div>
 
+
+  <div id="adminCardEditModal" class="modal-backdrop" onclick="closeAdminCardModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="adminCardModalTitle">編輯老師管理卡</h2>
+          <p id="adminCardModalSubtitle">設定老師名稱、卡片代碼與權限角色。</p>
+        </div>
+        <button class="btn-compact" onclick="hideAdminCardModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <input type="hidden" id="editAdminCardId" />
+        <div class="form-field"><label>老師名稱</label><input id="editAdminCardTeacherName" placeholder="例如：Amy 老師" /></div>
+        <div class="form-field"><label>管理卡代碼 / NFC UID</label><input id="editAdminCardUid" placeholder="例如：1234567890" /></div>
+        <div class="form-field"><label>權限角色</label><select id="editAdminCardRole"><option value="admin">Admin 老師</option><option value="super">Super Admin 老師</option></select></div>
+        <div class="form-field"><label>狀態</label><select id="editAdminCardActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
+        <div class="form-field full"><label>備註</label><input id="editAdminCardNote" placeholder="可留空，例如：三重五華 A 班老師" /></div>
+        <div class="form-field full"><label>老師管理卡 NFC 連結</label><input id="editAdminCardUrlPreview" readonly onclick="this.select()" /></div>
+        <div class="form-field full"><div class="form-note">建議將 NFC 寫入 admin-card.html 入口；這樣可以避開舊版 admin.html 快取，並穩定切換老師授權。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button id="adminCardDisableBtn" class="btn-compact danger" onclick="toggleCurrentAdminCardStatus()">停用老師卡</button>
+        <div class="right">
+          <button class="btn-compact" onclick="copyAdminCardUrlFromModal()">複製連結</button>
+          <button class="btn-compact" onclick="hideAdminCardModal()">取消</button>
+          <button id="adminCardSaveBtn" class="btn-compact primary" onclick="saveConsoleAdminCard()">儲存老師卡</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="studentBatchModal" class="modal-backdrop" onclick="closeBatchModal(event)">
     <div class="console-modal" onclick="event.stopPropagation()">
       <div class="modal-head">
@@ -3206,6 +3245,11 @@
     let overviewAnalyticsAbortController = null;
     let studentsCache = null;
     let studentsLoading = false;
+    let adminCardsCache = null;
+    let adminCardsLoading = false;
+    let adminTeacherSearch = "";
+    let adminTeacherRoleFilter = "all";
+    let adminTeacherStatusFilter = "active";
     let weeklyCache = null;
     let weeklyLoading = false;
     let learningCache = null;
@@ -3239,6 +3283,7 @@
 
     const SINGLE_SCHOOL_PAGES = new Set([
       "students",
+      "admins",
       "learning",
       "curriculum",
       "newsletters",
@@ -3598,6 +3643,9 @@
           ["students", "學生", "👥"],
           ["learning", "學習查詢", "📈"]
         ]},
+        { group: "管理員", items: [
+          ["admins", "老師", "🪪"]
+        ]},
         { group: "課程與任務", items: [
           ["curriculum", "單元排程", "🗓"]
         ]},
@@ -3892,6 +3940,7 @@
         overview: ["Overview", "校區營運、校區營運、資料健康、週報狀態總覽"],
         schools: ["Schools", "Owner 多校區狀態與資料信心值"],
         students: ["Students", "學生資料、點數、週報、角色狀態"],
+        admins: ["Admins", "老師管理卡、角色權限與 NFC 入口"],
         learning: ["Learning Query", "學習、加扣分與打卡三合一查詢"],
         curriculum: ["Curriculum", "班級、單元、單字與排程"],
         weekly: ["Weekly Reports", "週報設定、寄送狀態、收件人健康"],
@@ -3928,6 +3977,9 @@
       }
       if (page === "students") {
         loadStudentsData(false);
+      }
+      if (page === "admins") {
+        loadAdminCardsData(false);
       }
       if (page === "learning") {
         loadLearningData(false);
@@ -3969,6 +4021,7 @@
       const configs = {
         health: { title: "查看資料健康摘要", note: "Critical / High / Medium / 健康分數", selectors: [".grid.cards"] },
         students: { title: "查看學生分析", note: "席位、班級分布與資料檢查", selectors: [".student-ops-layout"] },
+        admins: { title: "查看老師卡摘要", note: "啟用、停用、角色與最近使用", selectors: [".admin-card-overview-grid"] },
         learning: { title: "查看學習摘要", note: "班級、學生、危險提醒與排行榜", selectors: [".grid.cards"] },
         weekly: { title: "查看週報狀態", note: "收件對象、寄送狀態與待發專欄", selectors: [".weekly-insight-strip"] },
         curriculum: { title: "查看單元排程分析", note: "單元數、排程狀態與覆蓋率", selectors: [".curriculum-overview-grid"] },
@@ -3996,6 +4049,7 @@
       if (page === "schools") return renderSchoolsConsole();
       if (page === "health") return renderHealth();
       if (page === "students") return renderStudents();
+      if (page === "admins") return renderAdmins();
       if (page === "learning") return renderLearning();
       if (page === "weekly") return renderWeekly();
       if (page === "curriculum") return renderCurriculum();
@@ -4010,6 +4064,7 @@
     function renderSingleSchoolGuard(page) {
       const title = {
         students: "學生管理",
+        admins: "老師管理",
         learning: "學習查詢",
         curriculum: "單元排程",
         newsletters: "專欄管理",
@@ -6181,6 +6236,314 @@
       finally { btn.disabled = false; btn.textContent = "確認批量修改"; }
     }
 
+
+
+    /* =======================================================
+       Admin Card / Teacher Manager Console
+       - Uses the same card/table/modal rhythm as Students page
+       ======================================================= */
+    function renderAdmins() {
+      return `
+        <div class="admin-card-overview-grid insight-grid">
+          <div class="insight-card primary">
+            <div class="insight-title">老師管理卡</div>
+            <div id="adminCardTotal" class="insight-main">—</div>
+            <div id="adminCardTotalNote" class="insight-sub">用於老師個人 Admin Card 授權</div>
+            <div class="progress-track"><div id="adminCardActiveFill" class="progress-fill"></div></div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-title">啟用中</div>
+            <div id="adminCardActiveCount" class="insight-main">—</div>
+            <div class="insight-sub">可登入 Admin 的老師卡</div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-title">Super 權限</div>
+            <div id="adminCardSuperCount" class="insight-main">—</div>
+            <div class="insight-sub">具備 Super Admin 操作權限</div>
+          </div>
+          <div class="insight-card">
+            <div class="insight-title">停用</div>
+            <div id="adminCardInactiveCount" class="insight-main">—</div>
+            <div class="insight-sub">保留紀錄但不可登入</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px;">
+          <div class="panel-title">
+            <div>
+              <h2>管理員</h2>
+              <p class="small-note">目前分頁：老師。管理老師個人 Admin Card、角色權限與 NFC 登入連結。</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+              <button class="btn-compact" onclick="loadAdminCardsData(true)">重新整理</button>
+              <button class="btn-compact primary" onclick="openAdminCardEditor(null)">新增老師</button>
+            </div>
+          </div>
+          <div class="console-query-tabs" style="margin-bottom:14px;">
+            <button class="active" type="button">老師</button>
+          </div>
+          <div class="toolbar">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <input id="adminTeacherSearchInput" class="search-input" placeholder="搜尋老師名稱 / 卡號 / 備註" oninput="adminTeacherSearch=this.value; renderAdminCardsTable();" style="min-width:260px;" />
+              <select id="adminTeacherRoleFilter" class="select" onchange="adminTeacherRoleFilter=this.value; renderAdminCardsTable();">
+                <option value="all">全部角色</option>
+                <option value="admin">Admin</option>
+                <option value="super">Super</option>
+              </select>
+              <select id="adminTeacherStatusFilter" class="select" onchange="adminTeacherStatusFilter=this.value; renderAdminCardsTable();">
+                <option value="active">啟用老師</option>
+                <option value="all">全部老師</option>
+                <option value="inactive">停用老師</option>
+              </select>
+            </div>
+          </div>
+          <div id="adminCardsTableWrap" class="table-wrap">
+            <div class="empty-state">正在讀取老師管理卡...</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getAdminCardsArray() {
+      return adminCardsCache?.adminCards || adminCardsCache?.cards || [];
+    }
+
+    async function loadAdminCardsData(force = false) {
+      if (!session || !session.token) return;
+      if (!isSingleSchoolMode()) return;
+      if (adminCardsLoading) return;
+      if (adminCardsCache && !force) { updateAdminCardsUI(); return; }
+      adminCardsLoading = true;
+      try {
+        const payload = { token: session.token, ...getActiveScopePayload() };
+        const data = await fetch(`${TappieAPI.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1"}/console-get-admin-cards`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.token}` },
+          body: JSON.stringify(payload)
+        }).then(r => r.json());
+        if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_admin_cards_failed");
+        adminCardsCache = data;
+        updateAdminCardsUI();
+      } catch (err) {
+        console.error("loadAdminCardsData failed", err);
+        const wrap = document.getElementById("adminCardsTableWrap") || document.getElementById("pageContent");
+        if (wrap) wrap.innerHTML = `<div class="empty-state">老師管理卡讀取失敗：${escapeHtml(err.message || err)}</div>`;
+      } finally {
+        adminCardsLoading = false;
+      }
+    }
+
+    function updateAdminCardsUI() {
+      const cards = getAdminCardsArray();
+      const active = cards.filter(c => c.is_active !== false).length;
+      const inactive = cards.length - active;
+      const superCount = cards.filter(c => String(c.role || "") === "super" && c.is_active !== false).length;
+      const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = String(value); };
+      setText("adminCardTotal", cards.length);
+      setText("adminCardActiveCount", active);
+      setText("adminCardInactiveCount", inactive);
+      setText("adminCardSuperCount", superCount);
+      const note = document.getElementById("adminCardTotalNote");
+      if (note) note.textContent = `${escapeHtml(currentConsoleSchoolCode())}｜${active} 張啟用中`;
+      const fill = document.getElementById("adminCardActiveFill");
+      if (fill) fill.style.width = cards.length ? `${Math.round(active / cards.length * 100)}%` : "0%";
+      renderAdminCardsTable();
+    }
+
+    function normalizeAdminCard(raw = {}) {
+      return {
+        id: raw.id || raw.adminCardId || "",
+        teacherName: raw.teacherName || raw.teacher_name || "",
+        cardUid: raw.cardUid || raw.card_uid || "",
+        role: raw.role === "super" ? "super" : "admin",
+        isActive: (raw.isActive ?? raw.is_active) === false ? false : true,
+        note: raw.note || "",
+        lastUsedAt: raw.lastUsedAt || raw.last_used_at || "",
+        createdAt: raw.createdAt || raw.created_at || "",
+        updatedAt: raw.updatedAt || raw.updated_at || ""
+      };
+    }
+
+    function filteredAdminCards() {
+      const q = String(adminTeacherSearch || document.getElementById("adminTeacherSearchInput")?.value || "").trim().toLowerCase();
+      const role = adminTeacherRoleFilter || document.getElementById("adminTeacherRoleFilter")?.value || "all";
+      const status = adminTeacherStatusFilter || document.getElementById("adminTeacherStatusFilter")?.value || "active";
+      let rows = getAdminCardsArray().map(normalizeAdminCard);
+      if (q) rows = rows.filter(c => [c.teacherName, c.cardUid, c.note].some(v => String(v || "").toLowerCase().includes(q)));
+      if (role !== "all") rows = rows.filter(c => c.role === role);
+      if (status === "active") rows = rows.filter(c => c.isActive);
+      if (status === "inactive") rows = rows.filter(c => !c.isActive);
+      return rows.sort((a,b) => Number(b.isActive) - Number(a.isActive) || String(a.teacherName).localeCompare(String(b.teacherName), "zh-Hant"));
+    }
+
+    function adminCardLoginUrl(cardUid) {
+      const school = currentConsoleSchoolCode();
+      const origin = location.origin || "https://www.tappieapp.com";
+      return `${origin}/admin-card.html?school=${encodeURIComponent(school)}&adminCard=${encodeURIComponent(cardUid || "")}`;
+    }
+
+    function adminCardRoleLabel(role) {
+      return role === "super" ? "Super Admin" : "Admin";
+    }
+
+    function renderAdminCardsTable() {
+      const wrap = document.getElementById("adminCardsTableWrap");
+      if (!wrap) return;
+      const rows = filteredAdminCards();
+      const tableBody = rows.length ? rows.map(c => `
+        <tr>
+          <td><strong>${escapeHtml(c.teacherName || "未命名老師")}</strong><br><span class="small-note">${escapeHtml(c.note || "—")}</span></td>
+          <td><code>${escapeHtml(c.cardUid || "—")}</code></td>
+          <td><span class="badge ${c.role === "super" ? "warn" : "ok"}">${adminCardRoleLabel(c.role)}</span></td>
+          <td><span class="badge ${c.isActive ? "ok" : "danger"}">${c.isActive ? "啟用" : "停用"}</span></td>
+          <td>${c.lastUsedAt ? formatDateTime(c.lastUsedAt) : "尚未使用"}</td>
+          <td>
+            <div class="student-action-row">
+              <button class="btn-compact" onclick="copyAdminCardUrl('${escapeHtml(c.cardUid)}')">複製連結</button>
+              <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
+              <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
+            </div>
+          </td>
+        </tr>
+      `).join("") : `<tr><td colspan="6" class="empty-state">沒有符合條件的老師管理卡。</td></tr>`;
+
+      const cardBody = rows.length ? rows.map(c => `
+        <div class="student-mobile-card">
+          <div class="student-mobile-head">
+            <div><strong>${escapeHtml(c.teacherName || "未命名老師")}</strong><div class="small-note">${escapeHtml(c.note || "—")}</div></div>
+            <span class="badge ${c.isActive ? "ok" : "danger"}">${c.isActive ? "啟用" : "停用"}</span>
+          </div>
+          <div class="student-mobile-grid">
+            <div class="student-mobile-field"><div class="student-mobile-label">卡號</div><div class="student-mobile-value">${escapeHtml(c.cardUid || "—")}</div></div>
+            <div class="student-mobile-field"><div class="student-mobile-label">角色</div><div class="student-mobile-value">${adminCardRoleLabel(c.role)}</div></div>
+            <div class="student-mobile-field"><div class="student-mobile-label">最後使用</div><div class="student-mobile-value">${c.lastUsedAt ? formatDateTime(c.lastUsedAt) : "尚未使用"}</div></div>
+            <div class="student-mobile-field"><div class="student-mobile-label">入口</div><div class="student-mobile-value">admin-card.html</div></div>
+          </div>
+          <div class="student-mobile-actions">
+            <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
+            <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
+          </div>
+        </div>
+      `).join("") : `<div class="empty-state">沒有符合條件的老師管理卡。</div>`;
+
+      wrap.innerHTML = `
+        <div class="student-table-shell">
+          <table class="student-list-table">
+            <thead><tr><th>老師</th><th>卡號</th><th>角色</th><th>狀態</th><th>最後使用</th><th>操作</th></tr></thead>
+            <tbody>${tableBody}</tbody>
+          </table>
+        </div>
+        <div class="student-card-list">${cardBody}</div>`;
+    }
+
+    function getAdminCardById(id) {
+      return getAdminCardsArray().map(normalizeAdminCard).find(c => String(c.id) === String(id)) || null;
+    }
+
+    function openAdminCardEditor(cardId) {
+      if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯老師管理卡。"); return; }
+      const isNew = !cardId;
+      const c = isNew ? null : getAdminCardById(cardId);
+      if (!isNew && !c) { alert("找不到老師卡資料，請重新整理後再試。"); return; }
+      document.getElementById("adminCardModalTitle").textContent = isNew ? "新增老師" : "編輯老師管理卡";
+      document.getElementById("adminCardModalSubtitle").textContent = isNew ? "新增後即可產生老師個人 Admin Card 登入連結。" : `${c.teacherName || c.cardUid}｜${currentConsoleSchoolCode()}`;
+      document.getElementById("editAdminCardId").value = c?.id || "";
+      document.getElementById("editAdminCardTeacherName").value = c?.teacherName || "";
+      document.getElementById("editAdminCardUid").value = c?.cardUid || "";
+      document.getElementById("editAdminCardRole").value = c?.role || "admin";
+      document.getElementById("editAdminCardActive").value = String(isNew ? true : c.isActive);
+      document.getElementById("editAdminCardNote").value = c?.note || "";
+      updateAdminCardUrlPreview();
+      document.getElementById("editAdminCardUid").oninput = updateAdminCardUrlPreview;
+      const disableBtn = document.getElementById("adminCardDisableBtn");
+      disableBtn.style.display = isNew ? "none" : "inline-flex";
+      disableBtn.textContent = c?.isActive ? "停用老師卡" : "重新啟用老師卡";
+      disableBtn.className = c?.isActive ? "btn-compact danger" : "btn-compact ok";
+      document.getElementById("adminCardEditModal").classList.add("show");
+      document.body.classList.add("console-modal-open");
+    }
+
+    function updateAdminCardUrlPreview() {
+      const input = document.getElementById("editAdminCardUrlPreview");
+      if (!input) return;
+      input.value = adminCardLoginUrl(document.getElementById("editAdminCardUid")?.value || "");
+    }
+
+    function closeAdminCardModal(event) {
+      if (event && event.target && event.target.id !== "adminCardEditModal") return;
+      hideAdminCardModal();
+    }
+    function hideAdminCardModal() {
+      document.getElementById("adminCardEditModal")?.classList.remove("show");
+      document.body.classList.remove("console-modal-open");
+    }
+
+    async function consoleSaveAdminCardAction(payload) {
+      const scopedPayload = { ...(payload || {}), ...getActiveScopePayload() };
+      return await fetch(`${TappieAPI.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1"}/console-save-admin-card`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.token}` },
+        body: JSON.stringify({ token: session.token, ...scopedPayload })
+      }).then(r => r.json());
+    }
+
+    async function saveConsoleAdminCard() {
+      const id = document.getElementById("editAdminCardId").value.trim();
+      const teacherName = document.getElementById("editAdminCardTeacherName").value.trim();
+      const cardUid = document.getElementById("editAdminCardUid").value.trim();
+      const role = document.getElementById("editAdminCardRole").value;
+      const isActive = document.getElementById("editAdminCardActive").value === "true";
+      const note = document.getElementById("editAdminCardNote").value.trim();
+      if (!teacherName) return alert("請輸入老師名稱。");
+      if (!cardUid) return alert("請輸入管理卡代碼 / NFC UID。");
+      const btn = document.getElementById("adminCardSaveBtn");
+      btn.disabled = true; btn.textContent = "儲存中...";
+      try {
+        const result = await consoleSaveAdminCardAction({ action: "save_admin_card", adminCard: { id: id || null, teacherName, cardUid, role, isActive, note } });
+        if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "save_admin_card_failed");
+        hideAdminCardModal();
+        adminCardsCache = null;
+        await loadAdminCardsData(true);
+      } catch (err) {
+        alert("老師卡儲存失敗：" + (err.message || err));
+      } finally {
+        btn.disabled = false; btn.textContent = "儲存老師卡";
+      }
+    }
+
+    async function setAdminCardStatus(id, active) {
+      const c = getAdminCardById(id);
+      if (!c) return alert("找不到老師卡資料。");
+      if (!active) {
+        const input = prompt(`請輸入「停用」確認停用老師卡：${c.teacherName || c.cardUid}`);
+        if (input !== "停用") return;
+      } else if (!confirm(`確定要重新啟用老師卡：${c.teacherName || c.cardUid}？`)) return;
+      try {
+        const result = await consoleSaveAdminCardAction({ action: active ? "enable_admin_card" : "disable_admin_card", id });
+        if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "admin_card_status_failed");
+        adminCardsCache = null;
+        await loadAdminCardsData(true);
+      } catch (err) {
+        alert("老師卡狀態修改失敗：" + (err.message || err));
+      }
+    }
+
+    function toggleCurrentAdminCardStatus() {
+      const id = document.getElementById("editAdminCardId").value.trim();
+      const c = getAdminCardById(id);
+      if (!c) return;
+      hideAdminCardModal();
+      setAdminCardStatus(id, !c.isActive);
+    }
+
+    function copyAdminCardUrl(cardUid) {
+      const url = adminCardLoginUrl(cardUid);
+      navigator.clipboard?.writeText(url).then(() => alert("已複製老師管理卡連結。"), () => prompt("複製此連結：", url));
+    }
+    function copyAdminCardUrlFromModal() {
+      const url = document.getElementById("editAdminCardUrlPreview")?.value || adminCardLoginUrl(document.getElementById("editAdminCardUid")?.value || "");
+      navigator.clipboard?.writeText(url).then(() => alert("已複製老師管理卡連結。"), () => prompt("複製此連結：", url));
+    }
 
     function renderLearningQueryTabsHtml() {
       const enabled = getEnabledLearningTabs();
