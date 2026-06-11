@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Tappie 管理卡登入中...</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f0f4f8;
+      color: #1a252f;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    .card {
+      width: min(420px, calc(100vw - 40px));
+      padding: 30px 24px;
+      border-radius: 28px;
+      background: rgba(255,255,255,.82);
+      box-shadow: 0 18px 44px rgba(16,24,40,.10);
+      text-align: center;
+      border: 1px solid rgba(255,255,255,.9);
+    }
+    .icon { font-size: 42px; margin-bottom: 12px; }
+    h1 { font-size: 24px; margin: 0 0 8px; letter-spacing: -.04em; }
+    p { color: #667085; line-height: 1.6; margin: 0; font-weight: 650; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🪪</div>
+    <h1>管理卡登入中</h1>
+    <p>正在切換老師授權，請稍候...</p>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const school = String(params.get("school") || params.get("schoolCode") || "TEST01").trim().toUpperCase();
+      const adminCard = String(
+        params.get("adminCard") ||
+        params.get("admin_card") ||
+        params.get("cardUid") ||
+        params.get("card_uid") ||
+        params.get("card") ||
+        ""
+      ).trim();
+
+      if (!adminCard) {
+        document.body.innerHTML = "<h2>❌ 缺少管理卡代碼</h2>";
+        return;
+      }
+
+      try {
+        // 這個入口的目的就是「切換成老師卡」；
+        // 所以不管手機目前是共用 admin / super admin / 舊老師卡，都先清掉。
+        localStorage.removeItem("tappie_admin_key");
+        localStorage.removeItem("tappie_admin_key_time");
+        localStorage.removeItem("tappie_admin_role");
+        localStorage.removeItem("tappie_admin_effective_features");
+        localStorage.removeItem("tappie_admin_auth_mode");
+        localStorage.removeItem("tappie_admin_card_token");
+        localStorage.removeItem("tappie_admin_card_token_expires_at");
+        localStorage.removeItem("tappie_admin_card_login_time");
+        localStorage.removeItem("tappie_admin_card_id");
+        localStorage.removeItem("tappie_admin_card_uid");
+        localStorage.removeItem("tappie_admin_teacher_name");
+        sessionStorage.setItem("tappie_pending_admin_card_uid", adminCard);
+      } catch (e) {}
+
+      // 用內部 cache-busting 轉跳保證一定抓新版 admin.html。
+      // 老師 NFC 寫入的網址可以保持乾淨：/admin-card.html?school=TP01&adminCard=xxxx
+      const version = "admin-card-entry-" + Date.now();
+      const target = `/admin.html?school=${encodeURIComponent(school)}&adminCard=${encodeURIComponent(adminCard)}&v=${encodeURIComponent(version)}`;
+      window.location.replace(target);
+    })();
+  </script>
+</body>
+</html>
