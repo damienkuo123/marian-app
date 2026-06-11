@@ -2732,8 +2732,11 @@
         const savedSchool = localStorage.getItem('tappie_school');
         const savedAuth = localStorage.getItem('tappie_admin_key') || localStorage.getItem('tappie_admin_card_token');
 
-        // 1. 🚨 強制清場邏輯：只要網址上的校區跟記憶中不同，或是網址帶了新密碼
-        if (urlSchool && (urlSchool !== savedSchool || urlSecret || urlAdminCard)) {
+        // 1. 🚨 強制清場邏輯：
+        // - school 不同：需要 reload，讓 CURRENT_SCHOOL 重新用正確校區初始化。
+        // - secret：共用密碼 URL 需要清掉舊授權並 reload。
+        // - adminCard：只先存 pending card，不可每次 reload；否則無痕 / 首次登入會因 URL 一直帶 adminCard 而無限閃爍。
+        if (urlSchool && (urlSchool !== savedSchool || urlSecret)) {
              console.log("🚨 執行身分切換清場作業...");
              
              // 如果是換校區，且原本已經登入，跳出警告提醒
@@ -3065,6 +3068,7 @@
             console.log("✅ Admin Card Auth 驗證成功", { school: CURRENT_SCHOOL, role: data.role, teacherName: data.teacherName });
 
             try {
+                // 驗證成功後移除 adminCard 參數，避免重新整理時再次觸發管理卡登入。
                 const cleanUrl = `${window.location.pathname}?school=${encodeURIComponent(CURRENT_SCHOOL)}`;
                 window.history.replaceState(null, null, cleanUrl);
             } catch(e) {}
