@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./tappie-api.js?v=admin-card-f3d"></script>
     <script>
-    window.TAPPIE_ADMIN_BUILD_ID = "admin-card-f3h-query-auth-guard-safe";
+    window.TAPPIE_ADMIN_BUILD_ID = "admin-card-f5-console-bridge";
     console.log("✅ Tappie Admin build:", window.TAPPIE_ADMIN_BUILD_ID);
     </script>
 
@@ -8104,25 +8104,41 @@ function getAdminQueryClassOptions() {
 
             try {
                 const auth = getAdminAuthPayload();
-                if (auth.authMode === 'admin_card') {
-                    throw new Error('管理卡授權不會保存 Super Admin 密碼，請改用共用 Super Admin 授權進入 Console。');
-                }
                 const schoolCode = CURRENT_SCHOOL || '';
-                const password = ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '';
-                if (!schoolCode || !password) throw new Error('缺少校區或 Super Admin 授權資料');
+                if (!schoolCode) throw new Error('缺少校區資料');
 
                 let result = null;
-                if (window.TappieAPI && typeof TappieAPI.consoleAuth === 'function') {
-                    result = await TappieAPI.consoleAuth({
+                let consolePayload = null;
+
+                if (auth.authMode === 'admin_card') {
+                    if ((auth.role || '') !== 'super') {
+                        throw new Error('只有 Super Admin 老師卡可以進入 Console。');
+                    }
+                    if (!isAdminCardTokenActive() || !auth.adminCardToken) {
+                        throw new Error('管理卡授權已過期，請重新感應老師管理卡。');
+                    }
+                    consolePayload = {
+                        mode: 'admin_card',
+                        schoolCode,
+                        adminCardToken: auth.adminCardToken
+                    };
+                } else {
+                    const password = ADMIN_SECRET || localStorage.getItem('tappie_admin_key') || '';
+                    if (!password) throw new Error('缺少 Super Admin 授權資料');
+                    consolePayload = {
                         mode: 'super_admin',
                         schoolCode,
                         password
-                    });
+                    };
+                }
+
+                if (window.TappieAPI && typeof TappieAPI.consoleAuth === 'function') {
+                    result = await TappieAPI.consoleAuth(consolePayload);
                 } else {
                     const res = await fetch(`${getAdminQueryBaseUrl()}/console-auth`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mode: 'super_admin', schoolCode, password })
+                        body: JSON.stringify(consolePayload)
                     });
                     result = await res.json().catch(() => ({}));
                 }

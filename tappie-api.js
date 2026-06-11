@@ -63,7 +63,9 @@ const TappieAPI = {
     consoleGetStudents: "/console-get-students",
     consoleSaveStudents: "/console-save-students",
     consoleSaveSchool: "/console-save-school",
-    consoleSaveFeatures: "/console-save-features"
+    consoleSaveFeatures: "/console-save-features",
+    consoleGetAdminCards: "/console-get-admin-cards",
+    consoleSaveAdminCard: "/console-save-admin-card"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -273,6 +275,16 @@ const TappieAPI = {
   async consoleSaveFeatures(payload = {}) {
     const { token, body } = this._extractConsolePayload(payload);
     return await this._consolePost(this.endpoints.consoleSaveFeatures, body, token);
+  },
+
+  async consoleGetAdminCards(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleGetAdminCards, body, token);
+  },
+
+  async consoleSaveAdminCard(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveAdminCard, body, token);
   },
 
   async consoleGetHealth({ token, schoolCode = "", scopeMode = "" } = {}) {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260611-console-admin-cards-v1"></script>
+  <script src="./tappie-api.js?v=20260611-admin-card-f5-console-bridge"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3063,6 +3063,7 @@
         <input type="hidden" id="editStudentId" />
         <div class="form-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" /></div>
         <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" /></div>
+        <div class="form-field full"><label>學生 NFC 連結</label><input id="editStudentNfcUrlPreview" readonly onclick="this.select()" /></div>
         <div class="form-field full"><label>學生類別</label><select id="editStudentType" class="select" onchange="toggleConsoleClassHint();"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
         <div class="form-field full" id="editStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="editStudentClass" placeholder="有班級學生需填班級，例如 A1" onkeydown="handleStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentClassFromInput()">新增</button><select id="editStudentExistingClass" onchange="setStudentClassFromSelect(this.value);"><option value="">選擇既有班級</option></select></div></div>
         <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput()">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
@@ -3076,6 +3077,7 @@
       <div class="modal-actions">
         <button id="studentDisableBtn" class="btn-compact danger" onclick="disableCurrentStudent()">停用學生</button>
         <div class="right">
+          <button class="btn-compact" onclick="copyStudentNfcUrlFromModal()">複製連結</button>
           <button class="btn-compact" onclick="hideStudentModal()">取消</button>
           <button id="studentSaveBtn" class="btn-compact primary" onclick="saveConsoleStudent()">儲存學生</button>
         </div>
@@ -3101,7 +3103,7 @@
         <div class="form-field"><label>狀態</label><select id="editAdminCardActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
         <div class="form-field full"><label>備註</label><input id="editAdminCardNote" placeholder="可留空，例如：三重五華 A 班老師" /></div>
         <div class="form-field full"><label>老師管理卡 NFC 連結</label><input id="editAdminCardUrlPreview" readonly onclick="this.select()" /></div>
-        <div class="form-field full"><div class="form-note">建議將 NFC 寫入 admin-card.html 入口；這樣可以避開舊版 admin.html 快取，並穩定切換老師授權。</div></div>
+        <div class="form-field full"><div class="form-note">請不要將連結貼給其他人，以避免帳號外流。</div></div>
       </div>
       <div class="modal-actions">
         <button id="adminCardDisableBtn" class="btn-compact danger" onclick="toggleCurrentAdminCardStatus()">停用老師卡</button>
@@ -5979,6 +5981,32 @@
       return (studentsCache?.students || []).find(s => String(s.id) === String(id)) || null;
     }
 
+    function normalizeStudentUidForLink(rawUid = "") {
+      let uid = String(rawUid || "").trim();
+      const schoolCode = currentConsoleSchoolCode();
+      if (schoolCode && uid && !uid.includes("-")) uid = `${schoolCode}-${uid}`;
+      return uid;
+    }
+
+    function studentNfcLoginUrl(uidValue = "") {
+      const uid = normalizeStudentUidForLink(uidValue);
+      const origin = location.origin || "https://www.tappieapp.com";
+      return `${origin}/tap.html?uid=${encodeURIComponent(uid || "")}`;
+    }
+
+    function updateStudentNfcUrlPreview() {
+      const input = document.getElementById("editStudentNfcUrlPreview");
+      if (!input) return;
+      input.value = studentNfcLoginUrl(document.getElementById("editStudentUid")?.value || "");
+    }
+
+    function copyStudentNfcUrlFromModal() {
+      updateStudentNfcUrlPreview();
+      const url = document.getElementById("editStudentNfcUrlPreview")?.value || "";
+      if (!url) return alert("請先輸入學生 UID。");
+      navigator.clipboard?.writeText(url).then(() => alert("已複製學生 NFC 連結。"), () => prompt("複製此連結：", url));
+    }
+
     function canAddActiveStudent() {
       const summary = studentsCache?.summary || {};
       const limit = Number(summary.studentLimit || 0);
@@ -6005,6 +6033,9 @@
       document.getElementById("editStudentId").value = s?.id || "";
       document.getElementById("editStudentName").value = s?.name || "";
       document.getElementById("editStudentUid").value = s?.uid || (currentConsoleSchoolCode() ? `${currentConsoleSchoolCode()}-` : "");
+      const uidInput = document.getElementById("editStudentUid");
+      if (uidInput) uidInput.oninput = updateStudentNfcUrlPreview;
+      updateStudentNfcUrlPreview();
       document.getElementById("editStudentType").value = normalizeStudentType(s?.student_type || "無班級");
       document.getElementById("editStudentClass").value = s?.class_code || "";
       const typeInput = document.getElementById("editStudentTypeInput");
@@ -6392,20 +6423,21 @@
       const rows = filteredAdminCards();
       const tableBody = rows.length ? rows.map(c => `
         <tr>
-          <td><strong>${escapeHtml(c.teacherName || "未命名老師")}</strong><br><span class="small-note">${escapeHtml(c.note || "—")}</span></td>
-          <td><code>${escapeHtml(c.cardUid || "—")}</code></td>
-          <td><span class="badge ${c.role === "super" ? "warn" : "ok"}">${adminCardRoleLabel(c.role)}</span></td>
-          <td><span class="badge ${c.isActive ? "ok" : "danger"}">${c.isActive ? "啟用" : "停用"}</span></td>
-          <td>${c.lastUsedAt ? formatDateTime(c.lastUsedAt) : "尚未使用"}</td>
           <td>
-            <div class="student-action-row">
+            <strong>${escapeHtml(c.teacherName || "未命名老師")}</strong><br>
+            <span class="small-note">${escapeHtml(c.note || "—")}</span>
+            <div class="student-action-row" style="margin-top:10px;justify-content:flex-start;">
               <button class="btn-compact" onclick="copyAdminCardUrl('${escapeHtml(c.cardUid)}')">複製連結</button>
               <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
               <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
             </div>
           </td>
+          <td><code>${escapeHtml(c.cardUid || "—")}</code></td>
+          <td><span class="badge ${c.role === "super" ? "warn" : "ok"}">${adminCardRoleLabel(c.role)}</span></td>
+          <td><span class="badge ${c.isActive ? "ok" : "danger"}">${c.isActive ? "啟用" : "停用"}</span></td>
+          <td>${c.lastUsedAt ? formatDateTime(c.lastUsedAt) : "尚未使用"}</td>
         </tr>
-      `).join("") : `<tr><td colspan="6" class="empty-state">沒有符合條件的老師管理卡。</td></tr>`;
+      `).join("") : `<tr><td colspan="5" class="empty-state">沒有符合條件的老師管理卡。</td></tr>`;
 
       const cardBody = rows.length ? rows.map(c => `
         <div class="student-mobile-card">
@@ -6420,6 +6452,7 @@
             <div class="student-mobile-field"><div class="student-mobile-label">入口</div><div class="student-mobile-value">admin-card.html</div></div>
           </div>
           <div class="student-mobile-actions">
+            <button class="btn-compact" onclick="copyAdminCardUrl('${escapeHtml(c.cardUid)}')">複製連結</button>
             <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
             <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
           </div>
@@ -6429,7 +6462,7 @@
       wrap.innerHTML = `
         <div class="student-table-shell">
           <table class="student-list-table">
-            <thead><tr><th>老師</th><th>卡號</th><th>角色</th><th>狀態</th><th>最後使用</th><th>操作</th></tr></thead>
+            <thead><tr><th>老師</th><th>卡號</th><th>角色</th><th>狀態</th><th>最後使用</th></tr></thead>
             <tbody>${tableBody}</tbody>
           </table>
         </div>
