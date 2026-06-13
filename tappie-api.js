@@ -34,7 +34,13 @@ const TappieAPI = {
     claimGacha: "/claim-gacha",
     purchaseAvatar: "/purchase-avatar",
     getStudentActivity: "/get-student-activity",
-    updateWeeklyReport: "/update-weekly-report",    adminRecordAttendance: "/admin-record-attendance",
+    updateWeeklyReport: "/update-weekly-report",
+    adminGetBranding: "/admin-get-branding",
+    adminUploadBrandingAsset: "/admin-upload-branding-asset",
+    adminDeleteBrandingAsset: "/admin-delete-branding-asset",
+    adminNewsletters: "/admin-newsletters",
+    adminWeeklyReports: "/admin-weekly-reports",
+    adminRecordAttendance: "/admin-record-attendance",
     adminGetQueryData: "/admin-get-query-data",
     savePushSubscription: "/save-push-subscription",
     sendTestPush: "/send-test-push",
@@ -221,6 +227,38 @@ const TappieAPI = {
   async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
   async updateWeeklyReport(payload = {}) { return await this._post(this.endpoints.updateWeeklyReport, payload); },
+  async adminGetBranding(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminGetBranding, { schoolCode, ...authPayload }); },
+  async adminUploadBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminUploadBrandingAsset, payload); },
+  async adminDeleteBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminDeleteBrandingAsset, payload); },
+  async adminGetNewsletters(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminNewsletters, { schoolCode, action: "list", ...authPayload }); },
+  async adminAddNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "add" }); },
+  async adminUpdateNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "update" }); },
+  async adminDeleteNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "delete" }); },
+  async adminReorderNewsletters(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "reorder" }); },
+
+
+  async adminGetWeeklyReports(schoolCode = "TEST01", authPayload = {}) {
+    return await this._post(this.endpoints.adminWeeklyReports, { schoolCode, action: "get_status", ...authPayload });
+  },
+  async adminWeeklyReportAction(payload = {}) {
+    return await this._post(this.endpoints.adminWeeklyReports, payload);
+  },
+  async adminSaveWeeklyReportConfig(schoolCode = "TEST01", config = {}, authPayload = {}) {
+    return await this.adminWeeklyReportAction({ action: "save_config", schoolCode, config, ...authPayload });
+  },
+  async adminPreviewWeeklyReport(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "preview" });
+  },
+  async adminSendWeeklyReportTest(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "send_test" });
+  },
+  async adminSendWeeklyReportNow(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "send_now" });
+  },
+  async adminForceResendWeeklyReport(payload = {}) {
+    return await this.adminWeeklyReportAction({ ...payload, action: "force_resend" });
+  },
+
   async consoleAuth(payload = {}) {
     return await this._post(this.endpoints.consoleAuth, payload);
   },
