@@ -52,7 +52,7 @@ const TappieAPI = {
     consoleGetQueryData: "/console-get-query-data",
     consoleGetBranding: "/console-get-branding",
     consoleUploadBrandingAsset: "/console-upload-branding-asset",
-    consoleDeleteBrandingAsset: "/console-delete-branding-asset",
+    consoleDeleteBrandingAsset: "/console-delete-branding",
     consoleGetGamification: "/console-get-gamification",
     consoleSaveTasks: "/console-save-tasks",
     consoleWeeklyReports: "/console-weekly-reports",
