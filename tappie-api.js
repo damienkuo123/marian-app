@@ -1,5 +1,6 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
 // Micro Polish v3 - unit_id first learning progress + safe weekly report
+// Security v1C6 - legacy admin Console-only methods disconnected
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -16,7 +17,7 @@ const TappieAPI = {
     adminGetData: "/admin-get-data",
     adminGetProgress: "/admin-get-progress",
     adminSaveStudents: "/admin-save-students",
-    adminSaveTasks: "/admin-save-tasks",
+    // Security v1C6 removed legacy admin endpoint: adminSaveTasks
     getLobbyData: "/get-lobby-data",
     createBattleRoom: "/create-battle-room",
     joinBattleRoom: "/join-battle-room",
@@ -36,10 +37,10 @@ const TappieAPI = {
     getStudentActivity: "/get-student-activity",
     updateWeeklyReport: "/update-weekly-report",
     adminGetBranding: "/admin-get-branding",
-    adminUploadBrandingAsset: "/admin-upload-branding-asset",
-    adminDeleteBrandingAsset: "/admin-delete-branding-asset",
-    adminNewsletters: "/admin-newsletters",
-    adminWeeklyReports: "/admin-weekly-reports",
+    // Security v1C6 removed legacy admin endpoint: adminUploadBrandingAsset
+    // Security v1C6 removed legacy admin endpoint: adminDeleteBrandingAsset
+    // Security v1C6 removed legacy admin endpoint: adminNewsletters
+    // Security v1C6 removed legacy admin endpoint: adminWeeklyReports
     adminRecordAttendance: "/admin-record-attendance",
     adminGetQueryData: "/admin-get-query-data",
     savePushSubscription: "/save-push-subscription",
@@ -189,7 +190,8 @@ const TappieAPI = {
   async adminGetData(schoolCode = "TEST01", mode = "all", authPayload = {}) { return await this._post(this.endpoints.adminGetData, { schoolCode, mode, ...authPayload }); },
   async adminGetProgress(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminGetProgress, { schoolCode, ...authPayload }); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
-  async adminSaveTasks(payload) { return await this._post(this.endpoints.adminSaveTasks, payload); },
+
+  // Security v1C6 removed legacy admin method: adminSaveTasks
   async adminRecordAttendance(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, payload); },
   async adminGetQueryData(payload = {}) { return await this._post(this.endpoints.adminGetQueryData, payload); },
   async adminGetAttendanceToday(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, { ...payload, action: "get_today" }); },
@@ -228,37 +230,33 @@ const TappieAPI = {
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
   async updateWeeklyReport(payload = {}) { return await this._post(this.endpoints.updateWeeklyReport, payload); },
   async adminGetBranding(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminGetBranding, { schoolCode, ...authPayload }); },
-  async adminUploadBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminUploadBrandingAsset, payload); },
-  async adminDeleteBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminDeleteBrandingAsset, payload); },
-  async adminGetNewsletters(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminNewsletters, { schoolCode, action: "list", ...authPayload }); },
-  async adminAddNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "add" }); },
-  async adminUpdateNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "update" }); },
-  async adminDeleteNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "delete" }); },
-  async adminReorderNewsletters(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "reorder" }); },
 
+  // Security v1C6 removed legacy admin method: adminUploadBrandingAsset
 
-  async adminGetWeeklyReports(schoolCode = "TEST01", authPayload = {}) {
-    return await this._post(this.endpoints.adminWeeklyReports, { schoolCode, action: "get_status", ...authPayload });
-  },
-  async adminWeeklyReportAction(payload = {}) {
-    return await this._post(this.endpoints.adminWeeklyReports, payload);
-  },
-  async adminSaveWeeklyReportConfig(schoolCode = "TEST01", config = {}, authPayload = {}) {
-    return await this.adminWeeklyReportAction({ action: "save_config", schoolCode, config, ...authPayload });
-  },
-  async adminPreviewWeeklyReport(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "preview" });
-  },
-  async adminSendWeeklyReportTest(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "send_test" });
-  },
-  async adminSendWeeklyReportNow(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "send_now" });
-  },
-  async adminForceResendWeeklyReport(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "force_resend" });
-  },
+  // Security v1C6 removed legacy admin method: adminDeleteBrandingAsset
 
+  // Security v1C6 removed legacy admin method: adminGetNewsletters
+
+  // Security v1C6 removed legacy admin method: adminAddNewsletter
+
+  // Security v1C6 removed legacy admin method: adminUpdateNewsletter
+
+  // Security v1C6 removed legacy admin method: adminDeleteNewsletter
+
+  // Security v1C6 removed legacy admin method: adminReorderNewsletters
+ // Security v1C6 removed legacy admin method: adminGetWeeklyReports
+
+  // Security v1C6 removed legacy admin method: adminWeeklyReportAction
+
+  // Security v1C6 removed legacy admin method: adminSaveWeeklyReportConfig
+
+  // Security v1C6 removed legacy admin method: adminPreviewWeeklyReport
+
+  // Security v1C6 removed legacy admin method: adminSendWeeklyReportTest
+
+  // Security v1C6 removed legacy admin method: adminSendWeeklyReportNow
+
+  // Security v1C6 removed legacy admin method: adminForceResendWeeklyReport
   async consoleAuth(payload = {}) {
     return await this._post(this.endpoints.consoleAuth, payload);
   },
