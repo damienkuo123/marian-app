@@ -15,9 +15,9 @@
   
     <link rel="apple-touch-icon" href="/assets/app-icon.png">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="./tappie-api.js?v=security-v1c-admin-auth"></script>
+    <script src="./tappie-api.js?v=security-v1c4b-admin-card-reauth-branding"></script>
     <script>
-    window.TAPPIE_ADMIN_BUILD_ID = "admin-card-f5-console-bridge";
+    window.TAPPIE_ADMIN_BUILD_ID = "security-v1c4b-admin-card-reauth-branding";
     console.log("✅ Tappie Admin build:", window.TAPPIE_ADMIN_BUILD_ID);
     </script>
 
@@ -2938,6 +2938,24 @@
             document.querySelectorAll('.super-only').forEach(el => el.style.display = 'none');
         }
 
+        function refreshAdminV2BrandingAfterAuth() {
+            const run = () => {
+                try {
+                    if (typeof initAdminV2Branding === 'function') {
+                        initAdminV2Branding();
+                    }
+                } catch (err) {
+                    console.warn('[admin v2 branding] refresh after auth failed', err);
+                }
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', run, { once: true });
+            } else {
+                setTimeout(run, 0);
+            }
+        }
+
         function applyAdminRole(role, authData = {}) {
             ADMIN_ROLE = role;
             ADMIN_AUTH_READY = true;
@@ -2967,6 +2985,7 @@
             });
             applyAdminFeatureSettings(authData);
             try { updatePointPickerFabVisibility(); } catch(e) {}
+            refreshAdminV2BrandingAfterAuth();
         }
 
         async function verifySupabaseAdminAuth(secret) {
@@ -3157,11 +3176,21 @@
                 clearAdminAuth();
                 showAdminUnauth("管理卡授權已過期，請重新感應老師管理卡");
             } else {
-                applyAdminRole(localStorage.getItem('tappie_admin_role') || 'admin', {
-                    authMode: 'admin_card',
-                    teacherName: localStorage.getItem('tappie_admin_teacher_name') || ''
-                });
-                startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡');
+                const savedAdminCardUid = localStorage.getItem('tappie_admin_card_uid') || '';
+                if (!savedAdminCardUid) {
+                    clearAdminAuth();
+                    showAdminUnauth("缺少管理卡資料，請重新感應老師管理卡");
+                } else {
+                    showAdminUnauth("管理卡權限重新驗證中，請稍候...");
+                    verifySupabaseAdminCardAuth(savedAdminCardUid)
+                        .then(() => startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡'))
+                        .catch(err => {
+                            console.warn("❌ Admin Card 權限重新驗證失敗", err);
+                            clearAdminAuth();
+                            showAdminUnauth("管理卡權限已失效，請重新感應老師管理卡");
+                            alert("⛔ 管理卡權限已失效：" + (err.message || err));
+                        });
+                }
             }
         } else if (!ADMIN_SECRET) {
             showAdminUnauth("請使用教師管理卡或共用管理員 NFC 立牌感應進入");
