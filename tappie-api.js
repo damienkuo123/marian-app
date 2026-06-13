@@ -186,8 +186,8 @@ const TappieAPI = {
     return await this._get(`${this.endpoints.getDiagnosticReport}?${qs.toString()}`);
   },
   async adminCardAuth(payload = {}) { return await this._post(this.endpoints.adminCardAuth, payload); },
-  async adminGetData(schoolCode = "TEST01", mode = "all") { return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`); },
-  async adminGetProgress(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetProgress}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminGetData(schoolCode = "TEST01", mode = "all", authPayload = {}) { return await this._post(this.endpoints.adminGetData, { schoolCode, mode, ...authPayload }); },
+  async adminGetProgress(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminGetProgress, { schoolCode, ...authPayload }); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
   async adminSaveTasks(payload) { return await this._post(this.endpoints.adminSaveTasks, payload); },
   async adminRecordAttendance(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, payload); },
@@ -227,24 +227,24 @@ const TappieAPI = {
   async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
   async updateWeeklyReport(payload = {}) { return await this._post(this.endpoints.updateWeeklyReport, payload); },
-  async adminGetBranding(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetBranding}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminGetBranding(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminGetBranding, { schoolCode, ...authPayload }); },
   async adminUploadBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminUploadBrandingAsset, payload); },
   async adminDeleteBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminDeleteBrandingAsset, payload); },
-  async adminGetNewsletters(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminNewsletters}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminGetNewsletters(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminNewsletters, { schoolCode, action: "list", ...authPayload }); },
   async adminAddNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "add" }); },
   async adminUpdateNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "update" }); },
   async adminDeleteNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "delete" }); },
   async adminReorderNewsletters(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "reorder" }); },
 
 
-  async adminGetWeeklyReports(schoolCode = "TEST01") {
-    return await this._get(`${this.endpoints.adminWeeklyReports}?schoolCode=${encodeURIComponent(schoolCode)}`);
+  async adminGetWeeklyReports(schoolCode = "TEST01", authPayload = {}) {
+    return await this._post(this.endpoints.adminWeeklyReports, { schoolCode, action: "get_status", ...authPayload });
   },
   async adminWeeklyReportAction(payload = {}) {
     return await this._post(this.endpoints.adminWeeklyReports, payload);
   },
-  async adminSaveWeeklyReportConfig(schoolCode = "TEST01", config = {}) {
-    return await this.adminWeeklyReportAction({ action: "save_config", schoolCode, config });
+  async adminSaveWeeklyReportConfig(schoolCode = "TEST01", config = {}, authPayload = {}) {
+    return await this.adminWeeklyReportAction({ action: "save_config", schoolCode, config, ...authPayload });
   },
   async adminPreviewWeeklyReport(payload = {}) {
     return await this.adminWeeklyReportAction({ ...payload, action: "preview" });

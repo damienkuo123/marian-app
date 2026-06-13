@@ -15,7 +15,7 @@
   
     <link rel="apple-touch-icon" href="/assets/app-icon.png">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="./tappie-api.js?v=admin-card-f3d"></script>
+    <script src="./tappie-api.js?v=security-v1c-admin-auth"></script>
     <script>
     window.TAPPIE_ADMIN_BUILD_ID = "admin-card-f5-console-bridge";
     console.log("✅ Tappie Admin build:", window.TAPPIE_ADMIN_BUILD_ID);
@@ -38,8 +38,8 @@
         api.endpoints.adminDeleteBrandingAsset = api.endpoints.adminDeleteBrandingAsset || "/admin-delete-branding-asset";
     
         if (typeof api.adminGetBranding !== "function") {
-          api.adminGetBranding = async function(schoolCode = "TEST01") {
-            return await this._get(`${this.endpoints.adminGetBranding}?schoolCode=${encodeURIComponent(schoolCode)}`);
+          api.adminGetBranding = async function(schoolCode = "TEST01", authPayload = {}) {
+            return await this._post(this.endpoints.adminGetBranding, { schoolCode, ...authPayload });
           };
         }
     
@@ -3211,7 +3211,7 @@
 
         async function adminGetData(mode = 'all') {
             if (!window.TappieAPI || !TappieAPI.adminGetData) throw new Error('TappieAPI.adminGetData 尚未載入');
-            const data = await TappieAPI.adminGetData(CURRENT_SCHOOL, mode);
+            const data = await TappieAPI.adminGetData(CURRENT_SCHOOL, mode, getAdminAuthPayload());
             if (!data.success) throw new Error(data.message || data.error || 'admin-get-data failed');
             applyAdminFeatureSettings(data);
             return data;
@@ -3238,8 +3238,11 @@
         }
 
         async function adminGetGamification() {
-            const url = `${getSupabaseFunctionBaseUrl()}/admin-get-gamification?schoolCode=${encodeURIComponent(CURRENT_SCHOOL)}`;
-            const res = await fetch(url, { method: 'GET' });
+            const res = await fetch(`${getSupabaseFunctionBaseUrl()}/admin-get-gamification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ schoolCode: CURRENT_SCHOOL, ...getAdminAuthPayload() })
+            });
             const data = await res.json().catch(() => ({}));
             if (!data.success) throw new Error(data.message || data.error || 'admin-get-gamification failed');
             return data;
@@ -3251,6 +3254,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     schoolCode: CURRENT_SCHOOL,
+                    ...getAdminAuthPayload(),
                     key: 'Gamification_Config',
                     config
                 })
@@ -3267,6 +3271,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     schoolCode: CURRENT_SCHOOL,
+                    ...getAdminAuthPayload(),
                     avatarId,
                     cost: Number(cost)
                 })
@@ -3283,6 +3288,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     schoolCode: CURRENT_SCHOOL,
+                    ...getAdminAuthPayload(),
                     avatarId,
                     cost: Number(cost),
                     category
@@ -3516,6 +3522,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     schoolCode: CURRENT_SCHOOL,
+                    ...getAdminAuthPayload(),
                     action,
                     ...payload
                 })
@@ -4101,7 +4108,7 @@
             statusEl.style.color = "#94a3b8";
 
             try {
-                const config = await TappieAPI.adminGetBranding(CURRENT_SCHOOL);
+                const config = await TappieAPI.adminGetBranding(CURRENT_SCHOOL, getAdminAuthPayload());
                 if (!config || !config.success) {
                     throw new Error(config?.message || config?.error || "讀取設定失敗");
                 }
@@ -4165,6 +4172,7 @@
                 const base64 = String(dataUrl).includes(',') ? String(dataUrl).split(',')[1] : String(dataUrl);
                 const data = await TappieAPI.adminUploadBrandingAsset({
                     schoolCode: CURRENT_SCHOOL,
+                    ...getAdminAuthPayload(),
                     assetType: type,
                     fileName: filename,
                     mimeType,
@@ -4196,6 +4204,7 @@
             try {
                 const data = await TappieAPI.adminDeleteBrandingAsset({
                     schoolCode: CURRENT_SCHOOL,
+                    ...getAdminAuthPayload(),
                     assetType: type
                 });
 
@@ -6211,7 +6220,7 @@
             }
             setWeeklyStatus('⏳ 正在讀取自動通知設定...', '#ffd700');
             try {
-                const data = await TappieAPI.adminGetWeeklyReports(CURRENT_SCHOOL);
+                const data = await TappieAPI.adminGetWeeklyReports(CURRENT_SCHOOL, getAdminAuthPayload());
                 if (!data || !data.success) throw new Error(data?.message || data?.error || '讀取失敗');
                 WEEKLY_ADMIN_STATE = data;
                 renderWeeklyAutomationStatus(data);
@@ -6312,7 +6321,7 @@
                     rollingDays: Number(document.getElementById('weekly-rolling-days').value || 7),
                     sendTimezone: 'Asia/Taipei'
                 };
-                const data = await TappieAPI.adminSaveWeeklyReportConfig(CURRENT_SCHOOL, config);
+                const data = await TappieAPI.adminSaveWeeklyReportConfig(CURRENT_SCHOOL, config, getAdminAuthPayload());
                 if (!data.success) throw new Error(data.message || data.error || '儲存失敗');
                 alert('✅ 週報設定已儲存');
                 await loadWeeklyAutomationStatus();
@@ -6327,6 +6336,7 @@
                 const data = await TappieAPI.adminWeeklyReportAction({
                     action: 'save_notifications',
                     schoolCode: CURRENT_SCHOOL,
+                    ...getAdminAuthPayload(),
                     config: {
                         settlementNotificationEnabled: document.getElementById('weekly-notify-enabled').checked,
                         missionReportEmail: document.getElementById('weekly-mission-email').value.trim()
@@ -6374,7 +6384,7 @@
             if (!confirm('確定要寄一封測試週報到 ' + testEmail + ' 嗎？\n測試寄送不會寄給家長，也不會移動專欄順位。')) return;
             const old = btn.innerText; btn.innerText = '寄送中...'; btn.style.pointerEvents = 'none';
             try {
-                const data = await TappieAPI.adminSendWeeklyReportTest({ schoolCode: CURRENT_SCHOOL, testEmail });
+                const data = await TappieAPI.adminSendWeeklyReportTest({ schoolCode: CURRENT_SCHOOL, testEmail, ...getAdminAuthPayload() });
                 if (!data.success) throw new Error(data.message || data.error || '測試寄送失敗');
                 const chosen = data.chosenStudent || data.cron?.results?.[0]?.chosenStudent || data.cron?.results?.[0]?.results?.[0] || {};
                 const chosenName = chosen.name || chosen.uid || '';
@@ -6392,7 +6402,7 @@
             if (!confirm('確定要正式寄出今日週報嗎？\n將寄給 ' + count + ' 位家長。\n正式寄送成功後，今日不得再次寄送，且第 1 順位專欄會自動封存並遞補。')) return;
             const old = btn.innerText; btn.innerText = '正式寄送中...'; btn.style.pointerEvents = 'none';
             try {
-                const data = await TappieAPI.adminSendWeeklyReportNow({ schoolCode: CURRENT_SCHOOL });
+                const data = await TappieAPI.adminSendWeeklyReportNow({ schoolCode: CURRENT_SCHOOL, ...getAdminAuthPayload() });
                 if (!data.success) throw new Error(data.message || data.error || '正式寄送失敗');
                 alert('✅ 正式寄送流程完成');
                 await loadWeeklyAutomationStatus();
@@ -8078,7 +8088,7 @@ function getAdminQueryClassOptions() {
             if (logoEl) logoEl.src = '/assets/logo.webp';
             if (!window.TappieAPI || typeof TappieAPI.adminGetBranding !== 'function') return;
             try {
-                const config = await TappieAPI.adminGetBranding(CURRENT_SCHOOL);
+                const config = await TappieAPI.adminGetBranding(CURRENT_SCHOOL, getAdminAuthPayload());
                 if (!config || !config.success) return;
                 const schoolName = config.schoolName || config.school_name || config.name || config.school?.name || config.settings?.schoolName || CURRENT_SCHOOL;
                 const logoUrl = config.logoUrl || config.logo_url || config.logo || config.assets?.logoUrl || '/assets/logo.webp';
