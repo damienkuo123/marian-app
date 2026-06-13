@@ -15,9 +15,9 @@
   
     <link rel="apple-touch-icon" href="/assets/app-icon.png">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="./tappie-api.js?v=security-v1c-admin-auth"></script>
+    <script src="./tappie-api.js?v=security-v1c4-admin-role-reverify"></script>
     <script>
-    window.TAPPIE_ADMIN_BUILD_ID = "security-v1c3-console-only-admin-cleanup";
+    window.TAPPIE_ADMIN_BUILD_ID = "security-v1c4-admin-role-reverify";
     console.log("✅ Tappie Admin build:", window.TAPPIE_ADMIN_BUILD_ID);
     </script>
     <style>
@@ -2837,6 +2837,69 @@
             }, 10000);
         }
 
+        async function verifySavedAdminCardSession() {
+            if (!isAdminCardTokenActive()) {
+                throw new Error("管理卡授權已過期，請重新感應老師管理卡");
+            }
+
+            const token = localStorage.getItem('tappie_admin_card_token') || ADMIN_CARD_TOKEN || '';
+            if (!token) throw new Error("缺少管理卡授權 token");
+
+            let data = null;
+            if (window.TappieAPI && typeof TappieAPI.adminGetData === 'function') {
+                data = await TappieAPI.adminGetData(CURRENT_SCHOOL, 'auth', {
+                    authMode: 'admin_card',
+                    adminCardToken: token
+                });
+            } else {
+                const res = await fetch(`${getAdminAuthBaseUrl()}/admin-get-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        schoolCode: CURRENT_SCHOOL,
+                        mode: 'auth',
+                        authMode: 'admin_card',
+                        adminCardToken: token
+                    })
+                });
+                data = await res.json().catch(() => ({}));
+                if (!res.ok && (!data || !data.success)) throw new Error(data.message || data.error || '管理卡授權驗證失敗');
+            }
+
+            if (!data || !data.success) {
+                throw new Error(data?.message || data?.error || "管理卡授權驗證失敗");
+            }
+
+            const auth = data.auth || {};
+            if (auth.authMode && auth.authMode !== 'admin_card') {
+                throw new Error("管理卡授權類型異常，請重新感應老師管理卡");
+            }
+
+            ADMIN_AUTH_MODE = 'admin_card';
+            ADMIN_CARD_TOKEN = token;
+            localStorage.setItem('tappie_admin_auth_mode', 'admin_card');
+
+            if (auth.teacherName) localStorage.setItem('tappie_admin_teacher_name', auth.teacherName);
+            if (auth.adminCardId) localStorage.setItem('tappie_admin_card_id', auth.adminCardId);
+            if (auth.cardUid) localStorage.setItem('tappie_admin_card_uid', auth.cardUid);
+
+            const role = auth.role === "super" ? "super" : "admin";
+            applyAdminRole(role, {
+                ...data,
+                ...auth,
+                authMode: 'admin_card',
+                effectiveFeatures: data.effectiveFeatures || data.features
+            });
+
+            console.log("✅ Admin Card token 重新驗證成功", {
+                school: CURRENT_SCHOOL,
+                role,
+                teacherName: auth.teacherName || ''
+            });
+
+            return data;
+        }
+
         // 🛡️ 權限驗證：支援共用 Admin Key 與個人 Admin Card 雙軌
         const pendingAdminCardUid = sessionStorage.getItem('tappie_pending_admin_card_uid') || '';
 
@@ -2853,16 +2916,15 @@
                     alert("⛔ 管理卡驗證失敗：" + (err.message || err));
                 });
         } else if (ADMIN_AUTH_MODE === 'admin_card' && ADMIN_CARD_TOKEN) {
-            if (!isAdminCardTokenActive()) {
-                clearAdminAuth();
-                showAdminUnauth("管理卡授權已過期，請重新感應老師管理卡");
-            } else {
-                applyAdminRole(localStorage.getItem('tappie_admin_role') || 'admin', {
-                    authMode: 'admin_card',
-                    teacherName: localStorage.getItem('tappie_admin_teacher_name') || ''
+            showAdminUnauth("管理卡授權重新驗證中，請稍候...");
+            verifySavedAdminCardSession()
+                .then(() => startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡'))
+                .catch(err => {
+                    console.warn("❌ Admin Card token 重新驗證失敗", err);
+                    clearAdminAuth();
+                    showAdminUnauth("管理卡授權已失效，請重新感應老師管理卡");
+                    alert("⛔ 管理卡授權已失效：" + (err.message || err));
                 });
-                startAdminAuthExpiryWatcher(ADMIN_CARD_TTL_MS, '管理卡');
-            }
         } else if (!ADMIN_SECRET) {
             showAdminUnauth("請使用教師管理卡或共用管理員 NFC 立牌感應進入");
         } else if (authTime && Date.now() - parseInt(authTime, 10) > ADMIN_KEY_TTL_MS) {
@@ -2934,7 +2996,7 @@
 
         // Console-only legacy gamification/avatar API adapter removed from admin.html.
 
-        function toAdminStudentPayload(s) {        function toAdminStudentPayload(s) {
+        function toAdminStudentPayload(s) {
             return {
                 studentName: s.name || s.studentName || '-',
                 currentPoints: Number(s.points || s.currentPoints || 0),
