@@ -3228,33 +3228,40 @@
     /* Curriculum Pack v1D｜auto schedule UI alignment + mobile scroll */
     .auto-schedule-unit-row {
       display: grid !important;
-      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      justify-content: start !important;
-      column-gap: 10px;
+      justify-content: stretch !important;
+      column-gap: 12px;
       text-align: left;
     }
     .auto-schedule-order-actions {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      justify-self: end;
       flex: 0 0 auto;
     }
     .auto-schedule-order-btn {
-      width: 28px;
-      height: 28px;
-      border-radius: 9px;
+      min-width: 36px;
+      height: 32px;
+      border-radius: 999px;
       border: 1px solid var(--border);
       background: var(--surface-2);
       color: var(--muted);
       cursor: pointer;
+      font-size: 13px;
       font-weight: 950;
       line-height: 1;
+      padding: 0 8px;
     }
-    .auto-schedule-order-btn:hover {
+    .auto-schedule-order-btn:hover:not(:disabled) {
       color: var(--primary);
       border-color: rgba(37,99,235,.35);
       background: rgba(37,99,235,.08);
+    }
+    .auto-schedule-order-btn:disabled {
+      opacity: .36;
+      cursor: not-allowed;
     }
     .auto-schedule-unit-row .auto-schedule-unit-check {
       justify-self: start;
@@ -3331,11 +3338,12 @@
         overflow: visible;
       }
       #curriculumAutoScheduleModal .auto-schedule-unit-row {
-        grid-template-columns: auto auto minmax(0, 1fr);
+        grid-template-columns: 42px minmax(0, 1fr) auto;
         row-gap: 5px;
+        column-gap: 10px;
       }
       #curriculumAutoScheduleModal .auto-schedule-unit-row .auto-schedule-unit-status {
-        grid-column: 3;
+        grid-column: 2 / 4;
         justify-self: start;
         text-align: left;
         white-space: normal;
@@ -6726,20 +6734,12 @@
     function getStudentClassRegistryOptions() {
       const rows = [];
 
-      // Priority 1: classes table returned by console-get-students, if that API already supports it.
+      // Single source of truth: active rows from classes table.
+      // Do not fallback to students.class_code here, because inactive / old student classes
+      // should not appear as selectable existing classes.
       rows.push(...normalizeClassRegistryRows(studentsCache?.classes || []));
-
-      // Priority 2: classes table fetched from console-get-data mode=tasks.
       rows.push(...normalizeClassRegistryRows(studentClassRegistryCache || []));
-
-      // Priority 3: curriculum cache classes, also from classes table in current curriculum logic.
       rows.push(...normalizeClassRegistryRows(curriculumCache?.classes || []));
-
-      // Safety fallback: active / inactive student rows. This only prevents UI from losing older class codes.
-      (studentsCache?.students || []).forEach(s => {
-        const code = s?.class_code || s?.classCode || "";
-        if (code) rows.push({ classId: normalizeEventClassCode(code), name: normalizeEventClassCode(code) });
-      });
 
       return normalizeClassRegistryRows(rows);
     }
@@ -9208,12 +9208,12 @@
         const checkId = `autoScheduleUnit_${String(unit.id || index).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
         return `
           <div class="auto-schedule-unit-row" data-unit-id="${escapeHtml(unit.id)}">
-            <span class="auto-schedule-order-actions">
-              <button type="button" class="auto-schedule-order-btn" title="往上移" onclick="moveAutoScheduleUnitRow(this, -1)">↑</button>
-              <button type="button" class="auto-schedule-order-btn" title="往下移" onclick="moveAutoScheduleUnitRow(this, 1)">↓</button>
-            </span>
             <input id="${escapeHtml(checkId)}" class="auto-schedule-unit-check" type="checkbox" value="${escapeHtml(unit.id)}" checked onchange="updateAutoSchedulePreview()" data-scheduled="${schedule ? "1" : "0"}" />
             <label class="auto-schedule-unit-name" for="${escapeHtml(checkId)}">${escapeHtml(unit.unitName)}</label>
+            <span class="auto-schedule-order-actions">
+              <button type="button" class="auto-schedule-order-btn" title="往上移" onclick="moveAutoScheduleUnitRow(this, -1)">上</button>
+              <button type="button" class="auto-schedule-order-btn" title="往下移" onclick="moveAutoScheduleUnitRow(this, 1)">下</button>
+            </span>
             <span class="auto-schedule-unit-status">${scheduledText}</span>
           </div>
         `;
