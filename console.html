@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1e"></script>
+  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1f"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3540,6 +3540,93 @@
       }
     }
 
+  
+    /* Curriculum Pack v1F｜CSV tools + robust modal scroll */
+    #curriculumPackEditorModal.modal-backdrop.show,
+    #curriculumCsvModal.modal-backdrop.show {
+      display: flex;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #curriculumPackEditorModal .console-modal,
+    #curriculumCsvModal .console-modal {
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #curriculumPackEditorModal .modal-head,
+    #curriculumPackEditorModal .modal-actions,
+    #curriculumCsvModal .modal-head,
+    #curriculumCsvModal .modal-actions {
+      flex: 0 0 auto;
+    }
+    #curriculumPackEditorModal .pack-editor-grid,
+    #curriculumCsvModal .form-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+    .csv-tool-textarea {
+      width: 100%;
+      min-height: 320px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      box-sizing: border-box;
+    }
+    .csv-tool-note {
+      padding: 12px 14px;
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 780;
+      line-height: 1.65;
+    }
+    .csv-tool-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    @media (max-width:720px) {
+      #curriculumPackEditorModal,
+      #curriculumCsvModal {
+        align-items: flex-end;
+        padding: 0;
+      }
+      #curriculumPackEditorModal .console-modal,
+      #curriculumCsvModal .console-modal {
+        width: 100%;
+        height: 92dvh;
+        max-height: 92dvh;
+        border-radius: 26px 26px 0 0;
+      }
+      #curriculumPackEditorModal .pack-editor-grid,
+      #curriculumCsvModal .form-grid {
+        display: block;
+        height: calc(92dvh - 174px);
+        max-height: calc(92dvh - 174px);
+        padding: 18px 20px;
+      }
+      #curriculumPackEditorModal .form-field,
+      #curriculumCsvModal .form-field {
+        margin-bottom: 14px;
+      }
+      .csv-tool-textarea {
+        min-height: 50dvh;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -3855,6 +3942,8 @@
             </div>
             <div class="pack-editor-actions">
               <button class="btn-compact" type="button" onclick="addCurriculumPackUnit()">新增單元</button>
+              <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('export')">下載 CSV</button>
+              <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('import')">匯入 CSV</button>
               <button class="btn-compact" type="button" onclick="fillCurriculumPackEditorSample()">填入範例</button>
             </div>
           </div>
@@ -3972,7 +4061,37 @@
     </div>
   </div>
 
-  <div id="newsletterEditorModal" class="modal-backdrop" onclick="closeNewsletterEditorModal(event)">
+  
+  <div id="curriculumCsvModal" class="modal-backdrop" onclick="closeCurriculumCsvModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="curriculumCsvTitle">CSV 工具</h2>
+          <p id="curriculumCsvSubtitle">下載或匯入 CSV。匯入前請先確認欄位格式。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumCsvModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <input id="curriculumCsvMode" type="hidden" />
+        <div class="form-field full">
+          <div id="curriculumCsvNote" class="csv-tool-note">請選擇 CSV 工具。</div>
+        </div>
+        <div class="form-field full">
+          <label>CSV 內容</label>
+          <textarea id="curriculumCsvTextarea" class="csv-tool-textarea"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideCurriculumCsvModal()">取消</button>
+        <div class="right csv-tool-actions">
+          <button class="btn-compact" onclick="downloadCurriculumCsvFromModal()">下載 CSV</button>
+          <button id="curriculumCsvImportBtn" class="btn-compact primary" onclick="importCurriculumCsvFromModal()">匯入 CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div id="newsletterEditorModal" class="modal-backdrop" onclick="closeNewsletterEditorModal(event)">
     <div class="console-modal" onclick="event.stopPropagation()">
       <div class="modal-head">
         <div>
@@ -9061,6 +9180,275 @@
     }
 
 
+
+    function csvEscape(value) {
+      const s = String(value ?? "");
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cur = "";
+      let inQuotes = false;
+      const s = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        const next = s[i + 1];
+        if (inQuotes) {
+          if (ch === '"' && next === '"') { cur += '"'; i++; }
+          else if (ch === '"') inQuotes = false;
+          else cur += ch;
+        } else {
+          if (ch === '"') inQuotes = true;
+          else if (ch === ",") { row.push(cur); cur = ""; }
+          else if (ch === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+          else cur += ch;
+        }
+      }
+      row.push(cur);
+      if (row.length > 1 || row[0]) rows.push(row);
+      return rows;
+    }
+
+    function objectsToCsv(rows, headers) {
+      const lines = [headers.map(h => csvEscape(h)).join(",")];
+      rows.forEach(row => lines.push(headers.map(h => csvEscape(row[h] ?? "")).join(",")));
+      return lines.join("\n");
+    }
+
+    function csvToObjects(text) {
+      const rows = parseCsv(text).filter(r => r.some(c => String(c || "").trim()));
+      if (!rows.length) return [];
+      const headers = rows[0].map(h => String(h || "").trim());
+      return rows.slice(1).map(r => {
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = r[i] ?? ""; });
+        return obj;
+      });
+    }
+
+    function downloadTextFile(filename, text, mime = "text/csv;charset=utf-8") {
+      const blob = new Blob([text], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+    }
+
+    function currentDateStamp() {
+      return new Date().toISOString().slice(0,10).replace(/-/g, "");
+    }
+
+    function exportPackEditorCsv() {
+      syncCurriculumPackEditorUnitsFromDom();
+      const rows = [];
+      currentCurriculumPackEditorUnits.forEach((unit, ui) => {
+        (unit.words || []).forEach((w, wi) => rows.push({
+          unit_key: unit.unitKey || `unit-${ui + 1}`,
+          unit_name: unit.unitName || `Unit ${ui + 1}`,
+          unit_order: ui + 1,
+          word_text: w.wordText || "",
+          chinese_text: w.chineseText || "",
+          phonics_hint: w.phonicsHint || "",
+          word_order: wi + 1
+        }));
+      });
+      return objectsToCsv(rows, ["unit_key","unit_name","unit_order","word_text","chinese_text","phonics_hint","word_order"]);
+    }
+
+    function importPackEditorCsvText(text) {
+      const rows = csvToObjects(text);
+      if (!rows.length) throw new Error("CSV 沒有資料");
+      const unitMap = new Map();
+      rows.forEach((r, i) => {
+        const unitName = String(r.unit_name || r.unitName || r.unit || "").trim();
+        const wordText = String(r.word_text || r.wordText || r.word || r.en || "").trim();
+        if (!unitName || !wordText) return;
+        const unitKey = String(r.unit_key || r.unitKey || unitName.toLowerCase().replace(/\s+/g, "-")).trim();
+        const unitOrder = Number(r.unit_order || r.unitOrder || 9999) || 9999;
+        const key = unitKey || unitName;
+        if (!unitMap.has(key)) unitMap.set(key, { unitKey: key, unitName, displayOrder: unitOrder, words: [] });
+        const unit = unitMap.get(key);
+        unit.words.push({
+          wordText,
+          chineseText: String(r.chinese_text || r.chineseText || r.zh || "").trim(),
+          phonicsHint: String(r.phonics_hint || r.phonicsHint || "").trim(),
+          displayOrder: Number(r.word_order || r.wordOrder || i + 1) || i + 1,
+          isActive: true
+        });
+      });
+      const units = Array.from(unitMap.values()).sort((a,b) => Number(a.displayOrder||0)-Number(b.displayOrder||0));
+      if (!units.length) throw new Error("找不到可匯入的 unit_name / word_text");
+      currentCurriculumPackEditorUnits = units.map((u, i) => ({ ...u, displayOrder: i + 1, words: u.words.sort((a,b)=>Number(a.displayOrder||0)-Number(b.displayOrder||0)) }));
+      renderCurriculumPackUnitEditor();
+    }
+
+    function openPackEditorCsvTool(mode) {
+      const modalMode = `pack_${mode}`;
+      document.getElementById("curriculumCsvMode").value = modalMode;
+      document.getElementById("curriculumCsvTitle").textContent = mode === "export" ? "下載教材包 CSV" : "匯入教材包 CSV";
+      document.getElementById("curriculumCsvSubtitle").textContent = "欄位：unit_key, unit_name, unit_order, word_text, chinese_text, phonics_hint, word_order";
+      document.getElementById("curriculumCsvNote").innerHTML = "教材包 CSV 只影響目前開啟的教材包編輯彈窗，匯入後仍需按「儲存教材包」才會寫入資料庫。";
+      document.getElementById("curriculumCsvTextarea").value = mode === "export" ? exportPackEditorCsv() : "unit_key,unit_name,unit_order,word_text,chinese_text,phonics_hint,word_order\nanimals,Animals,1,cat,貓,,1\nanimals,Animals,1,dog,狗,,2";
+      document.getElementById("curriculumCsvImportBtn").style.display = mode === "import" ? "inline-flex" : "none";
+      showModal("curriculumCsvModal");
+    }
+
+    function exportCurriculumUnitsCsv() {
+      const units = (curriculumCache?.units || []).filter(u => !curriculumFilter || u.classCode === curriculumFilter);
+      const rows = [];
+      units.forEach((u, ui) => {
+        (u.words || []).forEach((w, wi) => rows.push({
+          class_code: u.classCode || "",
+          unit_name: u.unitName || "",
+          unit_type: u.unitType || "normal",
+          unit_order: u.displayOrder || ui + 1,
+          word_text: w.en || "",
+          chinese_text: w.zh || "",
+          word_order: w.displayOrder || wi + 1
+        }));
+      });
+      return objectsToCsv(rows, ["class_code","unit_name","unit_type","unit_order","word_text","chinese_text","word_order"]);
+    }
+
+    function exportCurriculumSchedulesCsv() {
+      const schedules = (curriculumCache?.schedules || []).filter(s => !curriculumFilter || s.classCode === curriculumFilter);
+      const rows = schedules.map(s => ({
+        class_code: s.classCode || "",
+        unit_name: s.unitName || "",
+        start_date: s.startDate || "",
+        end_date: s.endDate || "",
+        event_avatar_id: s.eventAvatarId || "",
+        is_event: s.isEvent ? "true" : "false"
+      }));
+      return objectsToCsv(rows, ["class_code","unit_name","start_date","end_date","event_avatar_id","is_event"]);
+    }
+
+    function openCurriculumCsvTool(mode) {
+      const isSchedules = curriculumTab === "schedules";
+      const modalMode = `${isSchedules ? "schedule" : "unit"}_${mode}`;
+      document.getElementById("curriculumCsvMode").value = modalMode;
+      document.getElementById("curriculumCsvTitle").textContent = `${isSchedules ? "排程管理" : "單元資料庫"} ${mode === "export" ? "下載 CSV" : "匯入 CSV"}`;
+      document.getElementById("curriculumCsvSubtitle").textContent = isSchedules
+        ? "排程欄位：class_code, unit_name, start_date, end_date, event_avatar_id, is_event"
+        : "單元欄位：class_code, unit_name, unit_type, unit_order, word_text, chinese_text, word_order";
+      document.getElementById("curriculumCsvNote").innerHTML = isSchedules
+        ? "匯入排程前，對應的單元必須已存在。若日期重疊，系統會阻擋。"
+        : "匯入單元會逐筆建立 / 儲存單元與單字。若同名單元已存在，會走既有儲存流程更新內容。";
+      document.getElementById("curriculumCsvTextarea").value = mode === "export"
+        ? (isSchedules ? exportCurriculumSchedulesCsv() : exportCurriculumUnitsCsv())
+        : (isSchedules
+          ? "class_code,unit_name,start_date,end_date,event_avatar_id,is_event\nA1,Animals,2026-07-01,2026-07-07,,false"
+          : "class_code,unit_name,unit_type,unit_order,word_text,chinese_text,word_order\nA1,Animals,normal,1,cat,貓,1\nA1,Animals,normal,1,dog,狗,2");
+      document.getElementById("curriculumCsvImportBtn").style.display = mode === "import" ? "inline-flex" : "none";
+      showModal("curriculumCsvModal");
+    }
+
+    function downloadCurriculumCsvFromModal() {
+      const mode = document.getElementById("curriculumCsvMode")?.value || "csv";
+      const text = document.getElementById("curriculumCsvTextarea")?.value || "";
+      downloadTextFile(`tappie_${mode}_${currentDateStamp()}.csv`, text);
+    }
+
+    async function importCurriculumCsvFromModal() {
+      const mode = document.getElementById("curriculumCsvMode")?.value || "";
+      const text = document.getElementById("curriculumCsvTextarea")?.value || "";
+      try {
+        if (mode === "pack_import") {
+          importPackEditorCsvText(text);
+          hideCurriculumCsvModal();
+          toast("CSV 已匯入教材包編輯器，請記得儲存教材包");
+          return;
+        }
+        if (mode === "unit_import") {
+          await importSchoolUnitsCsv(text);
+          hideCurriculumCsvModal();
+          return;
+        }
+        if (mode === "schedule_import") {
+          await importSchoolSchedulesCsv(text);
+          hideCurriculumCsvModal();
+          return;
+        }
+        alert("目前模式不支援匯入。");
+      } catch (err) {
+        alert("CSV 匯入失敗：" + (err.message || err));
+      }
+    }
+
+    async function importSchoolUnitsCsv(text) {
+      const rows = csvToObjects(text);
+      if (!rows.length) throw new Error("CSV 沒有資料");
+      const groups = new Map();
+      rows.forEach((r, i) => {
+        const classCode = normalizeEventClassCode(r.class_code || r.classCode || "");
+        const unitName = String(r.unit_name || r.unitName || "").trim();
+        const wordText = String(r.word_text || r.wordText || r.word || "").trim();
+        if (!classCode || !unitName || !wordText) return;
+        const key = `${classCode}__${unitName}`;
+        if (!groups.has(key)) groups.set(key, { classCode, unitName, unitType: r.unit_type || r.unitType || "normal", words: [] });
+        groups.get(key).words.push({ en: wordText, zh: String(r.chinese_text || r.chineseText || r.zh || "").trim() });
+      });
+      const list = Array.from(groups.values());
+      if (!list.length) throw new Error("找不到可匯入的 class_code / unit_name / word_text");
+      if (!confirm(`即將匯入 ${list.length} 個單元。確定繼續？`)) return;
+      for (const unit of list) {
+        const existing = (curriculumCache?.units || []).find(u => u.classCode === unit.classCode && u.unitName === unit.unitName);
+        await saveCurriculumAction("save_unit", {
+          unit: {
+            id: existing?.id || null,
+            unitId: existing?.id || null,
+            classCode: unit.classCode,
+            unitName: unit.unitName,
+            oldUnitName: existing?.unitName || "",
+            oldClassCode: existing?.classCode || "",
+            unitType: isEventClassCode(unit.classCode) ? "event" : "normal",
+            displayOrder: 0,
+            words: unit.words
+          }
+        }, "");
+      }
+      toast(`已匯入 ${list.length} 個單元`);
+    }
+
+    async function importSchoolSchedulesCsv(text) {
+      const rows = csvToObjects(text);
+      if (!rows.length) throw new Error("CSV 沒有資料");
+      const list = rows.map(r => ({
+        classCode: normalizeEventClassCode(r.class_code || r.classCode || ""),
+        unitName: String(r.unit_name || r.unitName || "").trim(),
+        startDate: String(r.start_date || r.startDate || "").slice(0,10),
+        endDate: String(r.end_date || r.endDate || "").slice(0,10),
+        eventAvatarId: String(r.event_avatar_id || r.eventAvatarId || "").trim(),
+        isEvent: String(r.is_event || r.isEvent || "").toLowerCase() === "true"
+      })).filter(r => r.classCode && r.unitName && r.startDate && r.endDate);
+      if (!list.length) throw new Error("找不到可匯入的 class_code / unit_name / start_date / end_date");
+      if (!confirm(`即將匯入 ${list.length} 筆排程。若日期重疊會被阻擋。確定繼續？`)) return;
+      for (const s of list) {
+        const unit = (curriculumCache?.units || []).find(u => u.classCode === s.classCode && u.unitName === s.unitName);
+        if (!unit) throw new Error(`找不到單元：${s.classCode} / ${s.unitName}`);
+        await saveCurriculumAction("save_schedule", {
+          schedule: {
+            id: null,
+            unitId: unit.id || unit.unitId || null,
+            classCode: s.classCode,
+            unitName: s.unitName,
+            startDate: s.startDate,
+            endDate: s.endDate,
+            eventAvatarId: s.eventAvatarId,
+            isEvent: s.isEvent || isEventClassCode(s.classCode)
+          }
+        }, "");
+      }
+      toast(`已匯入 ${list.length} 筆排程`);
+    }
+
+
     function renderCurriculum() {
       return `
         <div class="curriculum-overview-grid">
@@ -9125,6 +9513,8 @@
             <div class="curriculum-actions">
               <button id="curNewUnitBtn" class="btn-compact btn-success" onclick="openCurriculumUnitModal()">新增單元</button>
               <button id="curImportPackBtn" class="btn-compact" onclick="openCurriculumPackImportModal()">預設組合</button>
+              <button id="curCsvExportBtn" class="btn-compact" onclick="openCurriculumCsvTool('export')">下載 CSV</button>
+              <button id="curCsvImportBtn" class="btn-compact" onclick="openCurriculumCsvTool('import')">匯入 CSV</button>
               <button id="curAutoScheduleBtn" class="btn-compact" style="display:none;" onclick="openCurriculumAutoScheduleModal()">自動排程</button>
             </div>
           </div>
@@ -9220,8 +9610,12 @@
       const newBtn = document.getElementById("curNewUnitBtn");
       const importBtn = document.getElementById("curImportPackBtn");
       const autoBtn = document.getElementById("curAutoScheduleBtn");
+      const csvExportBtn = document.getElementById("curCsvExportBtn");
+      const csvImportBtn = document.getElementById("curCsvImportBtn");
       if (newBtn) newBtn.style.display = tab === "units" ? "inline-flex" : "none";
       if (importBtn) importBtn.style.display = tab === "units" ? "inline-flex" : "none";
+      if (csvExportBtn) csvExportBtn.style.display = "inline-flex";
+      if (csvImportBtn) csvImportBtn.style.display = "inline-flex";
       if (autoBtn) autoBtn.style.display = (tab === "schedules" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
       const hint = document.getElementById("curriculumModeHint");
       if (hint) {
@@ -9747,7 +10141,7 @@ function openCurriculumUnitModal(unitId = "") {
       if (!data || data.success === false) throw new Error(data?.message || data?.error || "操作失敗");
       curriculumCache = null;
       await loadCurriculumData(true);
-      toast(okMessage || "已完成");
+      if (okMessage !== "") toast(okMessage || "已完成");
       return data;
     }
     function showModal(id) {
@@ -9774,6 +10168,8 @@ function openCurriculumUnitModal(unitId = "") {
     function closeCurriculumPackImportModal(event) { if (event.target.id === "curriculumPackImportModal") hideCurriculumPackImportModal(); }
     function hideCurriculumAutoScheduleModal() { hideModal("curriculumAutoScheduleModal"); }
     function closeCurriculumAutoScheduleModal(event) { if (event.target.id === "curriculumAutoScheduleModal") hideCurriculumAutoScheduleModal(); }
+    function hideCurriculumCsvModal() { hideModal("curriculumCsvModal"); }
+    function closeCurriculumCsvModal(event) { if (event.target.id === "curriculumCsvModal") hideCurriculumCsvModal(); }
     function syncCurriculumEventHint() { /* reserved for future event UI hint */ }
     function toast(message) {
       const el = document.createElement("div");
