@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1d2"></script>
+  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1d3"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3325,6 +3325,66 @@
     #autoScheduleInfiniteFields .small-note,
     #curriculumAutoScheduleModal .small-note {
       line-height: 1.65;
+    }
+
+  
+    /* Curriculum Pack v1D3｜schedule cycle manager */
+    .schedule-cycle-panel {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 22px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .schedule-cycle-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .schedule-cycle-head h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 950;
+      color: var(--text);
+    }
+    .schedule-cycle-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+    .schedule-cycle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .schedule-cycle-card {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      border-radius: 18px;
+      padding: 14px;
+    }
+    .schedule-cycle-title {
+      font-size: 15px;
+      font-weight: 950;
+      color: var(--text);
+      margin-bottom: 7px;
+    }
+    .schedule-cycle-meta {
+      color: var(--muted);
+      font-size: 12.5px;
+      font-weight: 780;
+      line-height: 1.65;
+    }
+    .schedule-cycle-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
     }
 
   </style>
@@ -8643,6 +8703,7 @@
         const data = await TappieAPI.consoleGetData({ token: session?.token || "", schoolCode, mode: "tasks", scopeMode: getActiveScopePayload().scopeMode });
         if (!data || data.success === false) throw new Error(data?.message || data?.error || "讀取失敗");
         curriculumCache = normalizeCurriculumData(data);
+        await loadScheduleCyclesForCurriculum(schoolCode);
         renderCurriculumData();
       } catch (err) {
         console.error(err);
@@ -8782,6 +8843,97 @@
       if (s.endDate && String(s.endDate) < today) return { key:"ended", label:"已結束", cls:"ended" };
       return { key:"ongoing", label:"進行中", cls:"ongoing" };
     }
+
+    async function loadScheduleCyclesForCurriculum(schoolCode) {
+      if (!curriculumCache) return;
+      curriculumCache.scheduleCycles = [];
+      if (!schoolCode || !window.TappieAPI || typeof TappieAPI.consoleGetScheduleCycles !== "function") return;
+      try {
+        const data = await TappieAPI.consoleGetScheduleCycles({
+          token: session?.token || "",
+          schoolCode,
+          scopeMode: getActiveScopePayload().scopeMode
+        });
+        if (data && data.success !== false) {
+          curriculumCache.scheduleCycles = Array.isArray(data.cycles) ? data.cycles : [];
+        }
+      } catch (err) {
+        console.warn("load schedule cycles failed", err);
+      }
+    }
+
+    function renderScheduleCyclePanel() {
+      if (!curriculumFilter || isEventClassCode(curriculumFilter)) return "";
+      const cycles = (curriculumCache?.scheduleCycles || []).filter(c => {
+        const cClass = normalizeEventClassCode(c.classCode || c.class_code || "");
+        return cClass === normalizeEventClassCode(curriculumFilter) && c.isActive !== false && c.is_active !== false;
+      });
+      if (!cycles.length) return `
+        <div class="schedule-cycle-panel">
+          <div class="schedule-cycle-head">
+            <div>
+              <h3>無限循環排程</h3>
+              <p>目前這個班級沒有啟用中的循環排程。可按「自動排程」建立。</p>
+            </div>
+          </div>
+        </div>
+      `;
+      return `
+        <div class="schedule-cycle-panel">
+          <div class="schedule-cycle-head">
+            <div>
+              <h3>無限循環排程</h3>
+              <p>循環排程只會接在該班級排程最後方；cron 會在尾端結束後自動補下一個單元。</p>
+            </div>
+            <button class="btn-compact" onclick="loadCurriculumData(true)">重新整理</button>
+          </div>
+          <div class="schedule-cycle-grid">
+            ${cycles.map(renderScheduleCycleCard).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderScheduleCycleCard(cycle) {
+      const id = cycle.id || "";
+      const unitCount = Array.isArray(cycle.unitIds || cycle.unit_ids) ? (cycle.unitIds || cycle.unit_ids).length : 0;
+      const days = Number(cycle.daysPerUnit || cycle.days_per_unit || 0);
+      const tail = cycle.lastGeneratedUntil || cycle.last_generated_until || "—";
+      const nextIndex = Number(cycle.nextUnitIndex ?? cycle.next_unit_index ?? 0);
+      return `
+        <div class="schedule-cycle-card">
+          <div class="schedule-cycle-title">${escapeHtml(cycle.cycleName || cycle.cycle_name || "循環排程")}</div>
+          <div class="schedule-cycle-meta">
+            班級：${escapeHtml(classLabel(cycle.classCode || cycle.class_code || ""))}<br>
+            單元數：${unitCount}｜每單元：${days || "—"} 天<br>
+            已排到：${escapeHtml(String(tail).slice(0,10))}<br>
+            下一個索引：${nextIndex + 1}
+          </div>
+          <div class="schedule-cycle-actions">
+            <button class="btn-compact btn-danger" onclick="deactivateScheduleCycle('${escapeJs(id)}')">停用循環</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function deactivateScheduleCycle(cycleId) {
+      if (!cycleId) return;
+      if (!confirm("確定要停用這個無限循環嗎？\\n\\n這只會停止後續自動接排程；已經建立的 unit_schedules 不會被刪除。")) return;
+      try {
+        const data = await TappieAPI.consoleSaveScheduleCycle({
+          token: session?.token || "",
+          action: "deactivate",
+          cycleId
+        });
+        if (!data || data.success === false) throw new Error(data?.message || data?.detail || data?.error || "停用失敗");
+        curriculumCache = null;
+        await loadCurriculumData(true);
+        toast("循環排程已停用");
+      } catch (err) {
+        alert("停用循環排程失敗：" + (err.message || err));
+      }
+    }
+
     function renderScheduleList(box) {
       const schedules = curriculumCache.schedules.filter(s => {
         if (curriculumFilter && s.classCode !== curriculumFilter) return false;
@@ -8799,7 +8951,7 @@
       const ongoing = schedules.filter(s => getScheduleState(s).key === "ongoing");
       const upcoming = schedules.filter(s => getScheduleState(s).key === "upcoming");
       const ended = schedules.filter(s => getScheduleState(s).key === "ended");
-      const parts = [viewTools];
+      const parts = [viewTools, renderScheduleCyclePanel()];
       if (!schedules.length && !unscheduled.length) {
         parts.push('<div class="curriculum-empty">目前沒有符合條件的排程或未排程單元。</div>');
       } else {
