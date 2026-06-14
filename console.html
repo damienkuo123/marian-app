@@ -7072,6 +7072,7 @@
         if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "save_student_failed");
         hideStudentModal();
         studentsCache = null;
+        curriculumCache = null;
         await loadStudentsData(true);
       } catch (err) {
         alert("學生儲存失敗：" + (err.message || err));
@@ -7098,6 +7099,7 @@
         if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "student_status_failed");
         hideStudentModal();
         studentsCache = null;
+        curriculumCache = null;
         await loadStudentsData(true);
       } catch (err) { alert("狀態修改失敗：" + (err.message || err)); }
     }
@@ -8501,7 +8503,9 @@
     }
     function classLabel(value) {
       const v = normalizeEventClassCode(value);
-      return v === "EVENT" ? "🎪 活動 EVENT" : (v || "未分班");
+      if (v === "EVENT") return "🎪 活動 EVENT";
+      const label = curriculumCache?.classNameMap?.[v] || "";
+      return label && label !== v ? `${label}（${v}）` : (v || "未分班");
     }
     function getSchoolCodeForAdmin() {
       return getActiveSchoolCode();
@@ -8940,6 +8944,7 @@
     async function openCurriculumPackImportModal() {
       if (!isSingleSchoolMode()) return alert("請先選擇單一校區再匯入預設組合。");
       showModal("curriculumPackImportModal");
+      if (!curriculumCache) await loadCurriculumData(true);
       const classInput = document.getElementById("packImportClassCode");
       const classSelect = document.getElementById("packImportExistingClass");
       if (classInput) classInput.value = curriculumFilter && !isEventClassCode(curriculumFilter) ? curriculumFilter : "";
@@ -9913,9 +9918,19 @@
       }));
       const eventAvatars = data.eventAvatars || data.event_avatars || [];
       const classSet = new Set(["EVENT"]);
+      const classNameMap = {};
+
+      // 正式班級主資料來自 classes 表；即使該班級目前沒有單元 / 排程，也要能在課程與預設套組中被選到。
+      (data.classes || []).forEach(c => {
+        const code = normalizeEventClassCode(typeof c === "string" ? c : (c?.classId || c?.classCode || c?.class_code || ""));
+        if (!code) return;
+        classSet.add(code);
+        if (typeof c === "object" && c?.name) classNameMap[code] = c.name;
+      });
+
       units.forEach(u => { if (u.classCode) classSet.add(u.classCode); });
       schedules.forEach(s => { if (s.classCode) classSet.add(s.classCode); });
-      return { units, schedules, eventAvatars, classes: Array.from(classSet).sort((a,b)=>a==='EVENT'?-1:b==='EVENT'?1:String(a).localeCompare(String(b),'zh-Hant')) };
+      return { units, schedules, eventAvatars, classNameMap, classes: Array.from(classSet).sort((a,b)=>a==='EVENT'?-1:b==='EVENT'?1:String(a).localeCompare(String(b),'zh-Hant')) };
     }
     function renderCurriculumData() {
       if (!curriculumCache) return;
@@ -9940,12 +9955,10 @@
       const select = document.getElementById("curClassFilter");
       if (select) {
         const classes = (curriculumCache.classes || []).filter(Boolean);
+        const previous = select.value || curriculumFilter || "";
         select.innerHTML = classes.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(classLabel(c))}</option>`).join("");
-        if (!curriculumFilter || !classes.includes(curriculumFilter)) {
-          curriculumFilter = classes[0] || "";
-        }
+        curriculumFilter = previous && classes.includes(previous) ? previous : (classes[0] || "");
         select.value = curriculumFilter;
-        select.dataset.ready = "1";
       }
       renderCurriculumList();
     }
@@ -10301,13 +10314,12 @@
     
     function getCurriculumExistingClassOptions() {
       const set = new Set();
-      (curriculumCache?.classes || []).forEach(c => { if (c) set.add(normalizeEventClassCode(c)); });
+      (curriculumCache?.classes || []).forEach(c => {
+        const code = typeof c === "string" ? c : (c?.classId || c?.classCode || c?.class_code || "");
+        if (code) set.add(normalizeEventClassCode(code));
+      });
       (curriculumCache?.units || []).forEach(u => { if (u?.classCode) set.add(normalizeEventClassCode(u.classCode)); });
       (curriculumCache?.schedules || []).forEach(s => { if (s?.classCode) set.add(normalizeEventClassCode(s.classCode)); });
-      (studentsCache?.students || []).forEach(s => {
-        const c = s?.class_code || s?.classCode || "";
-        if (c) set.add(normalizeEventClassCode(c));
-      });
       return Array.from(set).filter(Boolean).sort((a,b)=>a==='EVENT'?-1:b==='EVENT'?1:String(a).localeCompare(String(b), "zh-Hant"));
     }
 
