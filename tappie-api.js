@@ -69,7 +69,8 @@ const TappieAPI = {
     consoleSaveAdminCard: "/console-save-admin-card",
     consoleGetCurriculumPacks: "/console-get-curriculum-packs",
     consoleSaveCurriculumPack: "/console-save-curriculum-pack",
-    consoleImportCurriculumPack: "/console-import-curriculum-pack"
+    consoleImportCurriculumPack: "/console-import-curriculum-pack",
+    consoleAutoScheduleUnits: "/console-auto-schedule-units"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -457,6 +458,11 @@ const TappieAPI = {
   async consoleImportCurriculumPack(payload = {}) {
     const { token, body } = this._extractConsolePayload(payload);
     return await this._consolePost(this.endpoints.consoleImportCurriculumPack, body, token);
+  },
+
+  async consoleAutoScheduleUnits(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleAutoScheduleUnits, body, token);
   },
 
   toLegacyDashboard(data) {

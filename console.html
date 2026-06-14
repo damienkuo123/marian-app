@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1b2"></script>
+  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1c"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3125,6 +3125,32 @@
       }
     }
 
+  
+    /* Curriculum Pack v1C｜single auto scheduler */
+    .auto-schedule-unit-list { display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; padding-right:4px; }
+    .auto-schedule-unit-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface); font-size:13px; }
+    .auto-schedule-unit-row label { display:flex; align-items:center; gap:9px; min-width:0; font-weight:780; color:var(--text); }
+    .auto-schedule-unit-row span { color:var(--muted); font-weight:700; white-space:nowrap; }
+    .auto-schedule-preview-list { display:flex; flex-direction:column; gap:7px; margin-top:10px; max-height:260px; overflow:auto; }
+    .auto-schedule-preview-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:13px; background:var(--surface); font-size:13px; }
+    .auto-schedule-preview-row strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .auto-schedule-preview-row span { color:var(--muted); font-weight:750; white-space:nowrap; }
+    #curriculumAutoScheduleModal .form-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    @media (max-width:720px){
+      #curriculumAutoScheduleModal { align-items:flex-end; padding:0; }
+      #curriculumAutoScheduleModal .console-modal { width:100%; max-height:92dvh; border-radius:26px 26px 0 0; }
+      #curriculumAutoScheduleModal .modal-head,
+      #curriculumAutoScheduleModal .modal-actions { flex:0 0 auto; }
+      #curriculumAutoScheduleModal .modal-actions { padding-bottom:max(20px, env(safe-area-inset-bottom)); }
+      .auto-schedule-preview-row { grid-template-columns:1fr; }
+    }
+
   </style>
 </head>
 <body>
@@ -3435,6 +3461,64 @@
     </div>
   </div>
 
+
+
+  <div id="curriculumAutoScheduleModal" class="modal-backdrop" onclick="closeCurriculumAutoScheduleModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2>單次自動排程</h2>
+          <p>選擇班級、單元與日期區間，系統會平均分配時間並建立 unit_schedules。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumAutoScheduleModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>班級</label>
+          <input id="autoScheduleClassCode" readonly />
+        </div>
+        <div class="form-field">
+          <label>模式</label>
+          <select id="autoScheduleMode" onchange="updateAutoSchedulePreview()">
+            <option value="single_even">單次循環｜平均分配</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>開始日期</label>
+          <input id="autoScheduleStart" type="date" onchange="updateAutoSchedulePreview()" />
+        </div>
+        <div class="form-field">
+          <label>結束日期</label>
+          <input id="autoScheduleEnd" type="date" onchange="updateAutoSchedulePreview()" />
+        </div>
+        <div class="form-field full">
+          <label>單元範圍</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <button class="btn-compact" type="button" onclick="setAutoScheduleUnitChecks(true)">全選</button>
+            <button class="btn-compact" type="button" onclick="setAutoScheduleUnitChecks(false)">清除</button>
+            <button class="btn-compact" type="button" onclick="setAutoScheduleUnscheduledOnly()">只選尚未排程</button>
+          </div>
+          <div id="autoScheduleUnitList" class="auto-schedule-unit-list"></div>
+        </div>
+        <div class="form-field full">
+          <label style="display:flex;gap:9px;align-items:center;">
+            <input id="autoScheduleReplaceExisting" type="checkbox" onchange="updateAutoSchedulePreview()" />
+            取代同班級在這個日期區間內的舊排程
+          </label>
+          <div class="small-note">不勾選時，如果日期區間已有排程，後端會拒絕建立，避免重疊。</div>
+        </div>
+        <div class="form-field full">
+          <div id="autoSchedulePreview" class="pack-import-preview">請選擇日期與單元。</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideCurriculumAutoScheduleModal()">取消</button>
+        <div class="right">
+          <button id="autoScheduleSubmitBtn" class="btn-compact primary" onclick="saveAutoScheduleUnits()">建立排程</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="newsletterEditorModal" class="modal-backdrop" onclick="closeNewsletterEditorModal(event)">
     <div class="console-modal" onclick="event.stopPropagation()">
@@ -7898,7 +7982,7 @@
           </div>
           <div class="pack-actions">
             <button class="btn-compact" onclick="openCurriculumPackEditor('${escapeJs(id)}')">JSON 編輯</button>
-            <button class="btn-compact ${active ? "danger" : "ok"}" onclick="setCurriculumPackActive('${escapeJs(id)}', ${active ? "false" : "true"})">${active ? "停用" : "啟用"}</button>
+            <button class="btn-compact ${active ? "danger" : "ok"}" onclick="setCurriculumPackActive('${escapeJs(id)}', ${active ? "false" : "true"})">${active ? "停用模板" : "重新啟用"}</button>
           </div>
         </div>
       `;
@@ -7948,9 +8032,18 @@
 
     async function setCurriculumPackActive(packId, isActive) {
       if (!packId) return;
-      if (!confirm(isActive ? "確定要啟用這個教材包嗎？" : "確定要停用這個教材包嗎？")) return;
+      const message = isActive
+        ? "確定要重新啟用這個教材包嗎？重新啟用後，各校區又可以匯入。"
+        : "確定要停用這個教材包模板嗎？\n\n這只會讓校區之後不能再匯入這個 pack；已經匯入到各校區的 word_units / unit_words / unit_schedules 都不會被刪除。";
+      if (!confirm(message)) return;
       try {
-        const data = await TappieAPI.consoleSaveCurriculumPack({ token: session?.token || "", action: "set_active", packId, isActive });
+        const data = await TappieAPI.consoleSaveCurriculumPack({
+          token: session?.token || "",
+          action: "set_active",
+          packId,
+          isActive,
+          scopeMode: "all"
+        });
         if (!data || data.success === false) throw new Error(data?.message || data?.detail || data?.error || "更新失敗");
         curriculumPackCache = null;
         await loadCurriculumPacksConsole(true);
@@ -8057,6 +8150,185 @@
     }
 
 
+
+    function ymdToDate(ymd) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd || ""))) return null;
+      const d = new Date(`${ymd}T00:00:00Z`);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function dateToYmd(d) {
+      return d.toISOString().slice(0, 10);
+    }
+
+    function addDaysYmd(ymd, days) {
+      const d = ymdToDate(ymd);
+      if (!d) return "";
+      d.setUTCDate(d.getUTCDate() + days);
+      return dateToYmd(d);
+    }
+
+    function inclusiveDays(startYmd, endYmd) {
+      const s = ymdToDate(startYmd);
+      const e = ymdToDate(endYmd);
+      if (!s || !e) return 0;
+      return Math.floor((e.getTime() - s.getTime()) / 86400000) + 1;
+    }
+
+    function getAutoScheduleClassUnits() {
+      const cls = normalizeEventClassCode(curriculumFilter || document.getElementById("autoScheduleClassCode")?.value || "");
+      return (curriculumCache?.units || [])
+        .filter(u => normalizeEventClassCode(u.classCode) === cls && !isEventClassCode(u.classCode))
+        .sort((a,b) => Number(a.displayOrder || a.display_order || 0) - Number(b.displayOrder || b.display_order || 0));
+    }
+
+    function openCurriculumAutoScheduleModal() {
+      if (!isSingleSchoolMode()) return alert("請先選擇單一校區。");
+      if (!curriculumFilter || isEventClassCode(curriculumFilter)) return alert("請先在班級篩選器選擇一般班級。");
+      const units = getAutoScheduleClassUnits();
+      if (!units.length) return alert("這個班級目前沒有可排程的單元。");
+      showModal("curriculumAutoScheduleModal");
+      const cls = normalizeEventClassCode(curriculumFilter);
+      const classInput = document.getElementById("autoScheduleClassCode");
+      if (classInput) classInput.value = cls;
+      const today = new Date();
+      const start = dateToYmd(today);
+      const end = dateToYmd(new Date(today.getTime() + Math.max(6, units.length * 7 - 1) * 86400000));
+      const startEl = document.getElementById("autoScheduleStart");
+      const endEl = document.getElementById("autoScheduleEnd");
+      if (startEl && !startEl.value) startEl.value = start;
+      if (endEl && !endEl.value) endEl.value = end;
+      renderAutoScheduleUnitChecks(units);
+      updateAutoSchedulePreview();
+    }
+
+    function renderAutoScheduleUnitChecks(units) {
+      const box = document.getElementById("autoScheduleUnitList");
+      if (!box) return;
+      box.innerHTML = units.map(unit => {
+        const schedule = findScheduleForUnit(unit);
+        const scheduledText = schedule ? `${escapeHtml(schedule.startDate)}～${escapeHtml(schedule.endDate)}` : "尚未排程";
+        return `
+          <div class="auto-schedule-unit-row">
+            <label>
+              <input class="auto-schedule-unit-check" type="checkbox" value="${escapeHtml(unit.id)}" checked onchange="updateAutoSchedulePreview()" data-scheduled="${schedule ? "1" : "0"}" />
+              <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(unit.unitName)}</span>
+            </label>
+            <span>${scheduledText}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function setAutoScheduleUnitChecks(checked) {
+      document.querySelectorAll(".auto-schedule-unit-check").forEach(el => { el.checked = !!checked; });
+      updateAutoSchedulePreview();
+    }
+
+    function setAutoScheduleUnscheduledOnly() {
+      document.querySelectorAll(".auto-schedule-unit-check").forEach(el => {
+        el.checked = el.dataset.scheduled !== "1";
+      });
+      updateAutoSchedulePreview();
+    }
+
+    function getSelectedAutoScheduleUnitIds() {
+      return Array.from(document.querySelectorAll(".auto-schedule-unit-check:checked")).map(el => el.value).filter(Boolean);
+    }
+
+    function buildAutoSchedulePreviewPlan(units, startDate, endDate) {
+      const total = inclusiveDays(startDate, endDate);
+      if (!startDate || !endDate || total <= 0 || !units.length) return [];
+      return units.map((u, index) => {
+        const sOffset = Math.floor(index * total / units.length);
+        const nOffset = Math.floor((index + 1) * total / units.length);
+        const s = addDaysYmd(startDate, sOffset);
+        const e = addDaysYmd(startDate, nOffset - 1);
+        return { unit: u, startDate: s, endDate: e, days: inclusiveDays(s, e) };
+      });
+    }
+
+    function updateAutoSchedulePreview() {
+      const box = document.getElementById("autoSchedulePreview");
+      const submit = document.getElementById("autoScheduleSubmitBtn");
+      if (!box) return;
+      const ids = new Set(getSelectedAutoScheduleUnitIds());
+      const units = getAutoScheduleClassUnits().filter(u => ids.has(String(u.id)));
+      const startDate = document.getElementById("autoScheduleStart")?.value || "";
+      const endDate = document.getElementById("autoScheduleEnd")?.value || "";
+      const total = inclusiveDays(startDate, endDate);
+
+      if (submit) submit.disabled = false;
+
+      if (!units.length) {
+        box.innerHTML = "請至少選擇一個單元。";
+        if (submit) submit.disabled = true;
+        return;
+      }
+      if (!startDate || !endDate || total <= 0) {
+        box.innerHTML = "請選擇正確的開始與結束日期。";
+        if (submit) submit.disabled = true;
+        return;
+      }
+      if (total < units.length) {
+        box.innerHTML = `<span style="color:var(--red);">日期區間太短：${units.length} 個單元至少需要 ${units.length} 天，目前只有 ${total} 天。</span>`;
+        if (submit) submit.disabled = true;
+        return;
+      }
+
+      const plan = buildAutoSchedulePreviewPlan(units, startDate, endDate);
+      box.innerHTML = `
+        <div><strong>${escapeHtml(classLabel(document.getElementById("autoScheduleClassCode")?.value || ""))}</strong>｜${units.length} 個單元｜${total} 天｜平均每單元約 ${Math.round(total / units.length * 10) / 10} 天</div>
+        <div class="auto-schedule-preview-list">
+          ${plan.map(p => `<div class="auto-schedule-preview-row"><strong>${escapeHtml(p.unit.unitName)}</strong><span>${escapeHtml(p.startDate)}～${escapeHtml(p.endDate)}｜${p.days} 天</span></div>`).join("")}
+        </div>
+      `;
+    }
+
+    async function saveAutoScheduleUnits() {
+      try {
+        if (!window.TappieAPI || typeof TappieAPI.consoleAutoScheduleUnits !== "function") throw new Error("TappieAPI.consoleAutoScheduleUnits 尚未載入，請先部署 v1C 的 tappie-api.js");
+        const classCode = normalizeEventClassCode(document.getElementById("autoScheduleClassCode")?.value || "");
+        const startDate = document.getElementById("autoScheduleStart")?.value || "";
+        const endDate = document.getElementById("autoScheduleEnd")?.value || "";
+        const unitIds = getSelectedAutoScheduleUnitIds();
+        const replaceExisting = !!document.getElementById("autoScheduleReplaceExisting")?.checked;
+        if (!classCode) throw new Error("請選擇班級");
+        if (!unitIds.length) throw new Error("請至少選擇一個單元");
+        if (!startDate || !endDate) throw new Error("請選擇開始與結束日期");
+        if (replaceExisting && !confirm("確定要取代這個班級在指定日期區間內的舊排程嗎？舊排程會被設為停用，不會刪除單元。")) return;
+
+        const btn = document.getElementById("autoScheduleSubmitBtn");
+        const old = btn?.textContent || "建立排程";
+        if (btn) { btn.disabled = true; btn.textContent = "建立中..."; }
+        try {
+          const data = await TappieAPI.consoleAutoScheduleUnits({
+            token: session?.token || "",
+            schoolCode: getActiveSchoolCode(),
+            scopeMode: getActiveScopePayload().scopeMode,
+            classCode,
+            unitIds,
+            startDate,
+            endDate,
+            replaceExisting
+          });
+          if (!data || data.success === false) {
+            const extra = data?.conflicts?.length ? `\n\n衝突排程：\n${data.conflicts.map(s => `${s.start_date || s.startDate}～${s.end_date || s.endDate} ${s.unit_name || s.unitName}`).join("\n")}` : "";
+            throw new Error((data?.message || data?.detail || data?.error || "建立排程失敗") + extra);
+          }
+          hideCurriculumAutoScheduleModal();
+          curriculumCache = null;
+          await loadCurriculumData(true);
+          toast(`已建立 ${data.scheduleCount || 0} 筆排程`);
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = old; }
+        }
+      } catch (err) {
+        alert("自動排程失敗：" + (err.message || err));
+      }
+    }
+
+
     function renderCurriculum() {
       return `
         <div class="curriculum-overview-grid">
@@ -8121,6 +8393,7 @@
             <div class="curriculum-actions">
               <button id="curNewUnitBtn" class="btn-compact btn-success" onclick="openCurriculumUnitModal()">新增單元</button>
               <button id="curImportPackBtn" class="btn-compact" onclick="openCurriculumPackImportModal()">預設組合</button>
+              <button id="curAutoScheduleBtn" class="btn-compact" onclick="openCurriculumAutoScheduleModal()">自動排程</button>
             </div>
           </div>
           <div class="curriculum-filter-row">
@@ -8213,8 +8486,10 @@
       document.getElementById("curTabSchedules")?.classList.toggle("active", tab === "schedules");
       const newBtn = document.getElementById("curNewUnitBtn");
       const importBtn = document.getElementById("curImportPackBtn");
+      const autoBtn = document.getElementById("curAutoScheduleBtn");
       if (newBtn) newBtn.style.display = tab === "units" ? "inline-flex" : "none";
       if (importBtn) importBtn.style.display = tab === "units" ? "inline-flex" : "none";
+      if (autoBtn) autoBtn.style.display = (tab === "units" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
       const hint = document.getElementById("curriculumModeHint");
       if (hint) hint.textContent = tab === "units"
         ? "單元資料庫：只管理單元與單字內容，不在這裡調整排程。"
@@ -8225,6 +8500,8 @@
       curriculumSearch = (document.getElementById("curSearch")?.value || "").trim().toLowerCase();
       curriculumFilter = document.getElementById("curClassFilter")?.value || "";
       if (!curriculumFilter && curriculumScheduleView !== "list") curriculumScheduleView = "list";
+      const autoBtn = document.getElementById("curAutoScheduleBtn");
+      if (autoBtn) autoBtn.style.display = (curriculumTab === "units" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
       renderCurriculumList();
     }
     function matchCurriculumText(text) { return !curriculumSearch || String(text||"").toLowerCase().includes(curriculumSearch); }
@@ -8665,6 +8942,8 @@ function openCurriculumUnitModal(unitId = "") {
     function closeCurriculumPackEditorModal(event) { if (event.target.id === "curriculumPackEditorModal") hideCurriculumPackEditorModal(); }
     function hideCurriculumPackImportModal() { hideModal("curriculumPackImportModal"); }
     function closeCurriculumPackImportModal(event) { if (event.target.id === "curriculumPackImportModal") hideCurriculumPackImportModal(); }
+    function hideCurriculumAutoScheduleModal() { hideModal("curriculumAutoScheduleModal"); }
+    function closeCurriculumAutoScheduleModal(event) { if (event.target.id === "curriculumAutoScheduleModal") hideCurriculumAutoScheduleModal(); }
     function syncCurriculumEventHint() { /* reserved for future event UI hint */ }
     function toast(message) {
       const el = document.createElement("div");
