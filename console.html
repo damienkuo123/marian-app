@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1c"></script>
+  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1c2"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3149,6 +3149,79 @@
       #curriculumAutoScheduleModal .modal-actions { flex:0 0 auto; }
       #curriculumAutoScheduleModal .modal-actions { padding-bottom:max(20px, env(safe-area-inset-bottom)); }
       .auto-schedule-preview-row { grid-template-columns:1fr; }
+    }
+
+  
+    /* Curriculum Pack v1C2｜auto schedule placement, unit name, mobile scroll */
+    .auto-schedule-unit-row label {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .auto-schedule-unit-name {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .auto-schedule-unit-row > span {
+      flex: 0 0 auto;
+      margin-left: auto;
+    }
+    #curriculumAutoScheduleModal.modal-backdrop.show {
+      display: flex;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #curriculumAutoScheduleModal .console-modal {
+      min-height: 0;
+      overflow: hidden;
+    }
+    #curriculumAutoScheduleModal .modal-head,
+    #curriculumAutoScheduleModal .modal-actions {
+      flex: 0 0 auto;
+    }
+    #curriculumAutoScheduleModal .form-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+    @media (max-width:720px) {
+      #curriculumAutoScheduleModal.modal-backdrop.show {
+        align-items: flex-end;
+        padding: 0;
+      }
+      #curriculumAutoScheduleModal .console-modal {
+        width: 100%;
+        height: 92dvh;
+        max-height: 92dvh;
+        border-radius: 26px 26px 0 0;
+      }
+      #curriculumAutoScheduleModal .form-grid {
+        display: block;
+        padding: 18px 20px;
+      }
+      #curriculumAutoScheduleModal .form-field {
+        margin-bottom: 14px;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-list,
+      #curriculumAutoScheduleModal .auto-schedule-preview-list {
+        max-height: none;
+        overflow: visible;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-row {
+        align-items: flex-start;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-row > span {
+        white-space: normal;
+        text-align: right;
+        max-width: 42%;
+      }
     }
 
   </style>
@@ -8212,7 +8285,7 @@
           <div class="auto-schedule-unit-row">
             <label>
               <input class="auto-schedule-unit-check" type="checkbox" value="${escapeHtml(unit.id)}" checked onchange="updateAutoSchedulePreview()" data-scheduled="${schedule ? "1" : "0"}" />
-              <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(unit.unitName)}</span>
+              <span class="auto-schedule-unit-name">${escapeHtml(unit.unitName)}</span>
             </label>
             <span>${scheduledText}</span>
           </div>
@@ -8393,7 +8466,7 @@
             <div class="curriculum-actions">
               <button id="curNewUnitBtn" class="btn-compact btn-success" onclick="openCurriculumUnitModal()">新增單元</button>
               <button id="curImportPackBtn" class="btn-compact" onclick="openCurriculumPackImportModal()">預設組合</button>
-              <button id="curAutoScheduleBtn" class="btn-compact" onclick="openCurriculumAutoScheduleModal()">自動排程</button>
+              <button id="curAutoScheduleBtn" class="btn-compact" style="display:none;" onclick="openCurriculumAutoScheduleModal()">自動排程</button>
             </div>
           </div>
           <div class="curriculum-filter-row">
@@ -8489,7 +8562,7 @@
       const autoBtn = document.getElementById("curAutoScheduleBtn");
       if (newBtn) newBtn.style.display = tab === "units" ? "inline-flex" : "none";
       if (importBtn) importBtn.style.display = tab === "units" ? "inline-flex" : "none";
-      if (autoBtn) autoBtn.style.display = (tab === "units" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
+      if (autoBtn) autoBtn.style.display = (tab === "schedules" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
       const hint = document.getElementById("curriculumModeHint");
       if (hint) hint.textContent = tab === "units"
         ? "單元資料庫：只管理單元與單字內容，不在這裡調整排程。"
@@ -8501,7 +8574,7 @@
       curriculumFilter = document.getElementById("curClassFilter")?.value || "";
       if (!curriculumFilter && curriculumScheduleView !== "list") curriculumScheduleView = "list";
       const autoBtn = document.getElementById("curAutoScheduleBtn");
-      if (autoBtn) autoBtn.style.display = (curriculumTab === "units" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
+      if (autoBtn) autoBtn.style.display = (curriculumTab === "schedules" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
       renderCurriculumList();
     }
     function matchCurriculumText(text) { return !curriculumSearch || String(text||"").toLowerCase().includes(curriculumSearch); }
