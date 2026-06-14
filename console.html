@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1d"></script>
+  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1d2"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3320,6 +3320,13 @@
       }
     }
 
+  
+    /* Curriculum Pack v1D2｜cycle UI cleanup */
+    #autoScheduleInfiniteFields .small-note,
+    #curriculumAutoScheduleModal .small-note {
+      line-height: 1.65;
+    }
+
   </style>
 </head>
 <body>
@@ -3662,17 +3669,13 @@
           <input id="autoScheduleEnd" type="date" onchange="updateAutoSchedulePreview()" />
         </div>
         <div id="autoScheduleInfiniteFields" class="form-field full hidden">
-          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:12px;">
             <div class="form-field">
               <label>每單元天數</label>
               <input id="autoScheduleDaysPerUnit" type="number" min="1" max="90" value="7" onchange="updateAutoSchedulePreview()" />
             </div>
-            <div class="form-field">
-              <label>先建立未來幾天</label>
-              <input id="autoScheduleLookaheadDays" type="number" min="7" max="365" value="60" onchange="updateAutoSchedulePreview()" />
-            </div>
           </div>
-          <div class="small-note">無限循環會先建立一段未來排程，之後由 cron 接續補上。v1D 不會一次產生多年資料。</div>
+          <div class="small-note">無限循環只會先建立第一輪；第二輪之後由 cron 在上一輪結束後接續到最後方。</div>
         </div>
         <div class="form-field full">
           <label>單元範圍</label>
@@ -3684,11 +3687,7 @@
           <div id="autoScheduleUnitList" class="auto-schedule-unit-list"></div>
         </div>
         <div class="form-field full">
-          <label style="display:flex;gap:9px;align-items:center;">
-            <input id="autoScheduleReplaceExisting" type="checkbox" onchange="updateAutoSchedulePreview()" />
-            取代同班級在這個日期區間內的舊排程
-          </label>
-          <div class="small-note">不勾選時，如果日期區間已有排程，後端會拒絕建立，避免重疊。</div>
+          <div class="small-note">若指定區間已有同班級排程，系統會拒絕建立，避免重疊；請先調整日期或手動停用舊排程。</div>
         </div>
         <div class="form-field full">
           <div id="autoSchedulePreview" class="pack-import-preview">請選擇日期與單元。</div>
@@ -8371,16 +8370,9 @@
       const endField = document.getElementById("autoScheduleEndField");
       const infiniteFields = document.getElementById("autoScheduleInfiniteFields");
       const submit = document.getElementById("autoScheduleSubmitBtn");
-      const replaceHint = document.getElementById("autoScheduleReplaceExisting")?.closest(".form-field");
       if (endField) endField.style.display = mode === "infinite_cycle" ? "none" : "";
       if (infiniteFields) infiniteFields.classList.toggle("hidden", mode !== "infinite_cycle");
       if (submit) submit.textContent = mode === "infinite_cycle" ? "建立循環排程" : "建立排程";
-      if (replaceHint) {
-        const note = replaceHint.querySelector(".small-note");
-        if (note) note.textContent = mode === "infinite_cycle"
-          ? "不勾選時，如果起始建立區間已有排程，後端會拒絕建立，避免重疊。"
-          : "不勾選時，如果日期區間已有排程，後端會拒絕建立，避免重疊。";
-      }
     }
 
     function openCurriculumAutoScheduleModal() {
@@ -8459,8 +8451,7 @@
       const startDate = document.getElementById("autoScheduleStart")?.value || "";
       const endDate = document.getElementById("autoScheduleEnd")?.value || "";
       const daysPerUnit = Math.max(1, Math.min(90, Number(document.getElementById("autoScheduleDaysPerUnit")?.value || 7)));
-      const lookaheadDays = Math.max(7, Math.min(365, Number(document.getElementById("autoScheduleLookaheadDays")?.value || 60)));
-      const total = mode === "infinite_cycle" ? lookaheadDays : inclusiveDays(startDate, endDate);
+      const total = mode === "infinite_cycle" ? (units.length * daysPerUnit) : inclusiveDays(startDate, endDate);
 
       if (submit) submit.disabled = false;
 
@@ -8469,7 +8460,7 @@
         if (submit) submit.disabled = true;
         return;
       }
-      if (!startDate || total <= 0 || (mode !== "infinite_cycle" && !endDate)) {
+      if (!startDate || (mode !== "infinite_cycle" && !endDate)) {
         box.innerHTML = "請選擇正確的開始與結束日期。";
         if (submit) submit.disabled = true;
         return;
@@ -8481,21 +8472,15 @@
       }
 
       if (mode === "infinite_cycle") {
-        const previewEnd = addDaysYmd(startDate, lookaheadDays - 1);
-        let cursor = startDate;
-        const plan = [];
-        let unitIndex = 0;
-        while (plan.length < 18 && cursor && String(cursor) <= String(previewEnd)) {
-          const unit = units[unitIndex % units.length];
-          const s = cursor;
+        const firstRoundEnd = addDaysYmd(startDate, total - 1);
+        const plan = units.map((unit, index) => {
+          const s = addDaysYmd(startDate, index * daysPerUnit);
           const e = addDaysYmd(s, daysPerUnit - 1);
-          plan.push({ unit, startDate: s, endDate: e, days: daysPerUnit });
-          cursor = addDaysYmd(e, 1);
-          unitIndex++;
-        }
+          return { unit, startDate: s, endDate: e, days: daysPerUnit };
+        });
         box.innerHTML = `
           <div><strong>${escapeHtml(classLabel(document.getElementById("autoScheduleClassCode")?.value || ""))}</strong>｜無限循環｜${units.length} 個單元｜每單元 ${daysPerUnit} 天</div>
-          <div>系統會先建立到 <strong>${escapeHtml(previewEnd)}</strong>，之後由 cron 接續補上。以下顯示前 ${plan.length} 筆預覽。</div>
+          <div>第一輪預計到 <strong>${escapeHtml(firstRoundEnd)}</strong> 結束。第二輪開始會由 cron 接續到循環最後方，不會一次建立多年排程。</div>
           <div class="auto-schedule-preview-list">
             ${plan.map(p => `<div class="auto-schedule-preview-row"><strong>${escapeHtml(p.unit.unitName)}</strong><span>${escapeHtml(p.startDate)}～${escapeHtml(p.endDate)}｜${p.days} 天</span></div>`).join("")}
           </div>
@@ -8520,14 +8505,11 @@
         const startDate = document.getElementById("autoScheduleStart")?.value || "";
         const endDate = document.getElementById("autoScheduleEnd")?.value || "";
         const unitIds = getSelectedAutoScheduleUnitIds();
-        const replaceExisting = !!document.getElementById("autoScheduleReplaceExisting")?.checked;
         const daysPerUnit = Math.max(1, Math.min(90, Number(document.getElementById("autoScheduleDaysPerUnit")?.value || 7)));
-        const lookaheadDays = Math.max(7, Math.min(365, Number(document.getElementById("autoScheduleLookaheadDays")?.value || 60)));
         if (!classCode) throw new Error("請選擇班級");
         if (!unitIds.length) throw new Error("請至少選擇一個單元");
         if (!startDate) throw new Error("請選擇開始日期");
         if (mode !== "infinite_cycle" && !endDate) throw new Error("請選擇結束日期");
-        if (replaceExisting && !confirm("確定要取代這個班級在指定日期區間內的舊排程嗎？舊排程會被設為停用，不會刪除單元。")) return;
 
         const btn = document.getElementById("autoScheduleSubmitBtn");
         const old = btn?.textContent || "建立排程";
@@ -8539,23 +8521,22 @@
             scopeMode: getActiveScopePayload().scopeMode,
             classCode,
             unitIds,
-            startDate,
-            replaceExisting
+            startDate
           };
 
           let data;
           if (mode === "infinite_cycle") {
-            if (!window.TappieAPI || typeof TappieAPI.consoleSaveScheduleCycle !== "function") throw new Error("TappieAPI.consoleSaveScheduleCycle 尚未載入，請先部署 v1D 的 tappie-api.js");
+            if (!window.TappieAPI || typeof TappieAPI.consoleSaveScheduleCycle !== "function") throw new Error("TappieAPI.consoleSaveScheduleCycle 尚未載入，請先部署 v1D2 的 tappie-api.js");
             data = await TappieAPI.consoleSaveScheduleCycle({
               ...commonPayload,
               action: "create",
-              daysPerUnit,
-              lookaheadDays
+              daysPerUnit
             });
           } else {
             data = await TappieAPI.consoleAutoScheduleUnits({
               ...commonPayload,
-              endDate
+              endDate,
+              replaceExisting: false
             });
           }
 
@@ -8566,7 +8547,7 @@
           hideCurriculumAutoScheduleModal();
           curriculumCache = null;
           await loadCurriculumData(true);
-          toast(mode === "infinite_cycle" ? `已建立循環排程，先產生 ${data.scheduleCount || 0} 筆` : `已建立 ${data.scheduleCount || 0} 筆排程`);
+          toast(mode === "infinite_cycle" ? `已建立循環排程第一輪，共 ${data.scheduleCount || 0} 筆` : `已建立 ${data.scheduleCount || 0} 筆排程`);
         } finally {
           if (btn) { btn.disabled = false; btn.textContent = old; }
         }
