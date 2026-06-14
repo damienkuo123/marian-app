@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1c2"></script>
+  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1d"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3224,6 +3224,102 @@
       }
     }
 
+  
+    /* Curriculum Pack v1D｜auto schedule UI alignment + mobile scroll */
+    .auto-schedule-unit-row {
+      display: grid !important;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      justify-content: start !important;
+      column-gap: 12px;
+      text-align: left;
+    }
+    .auto-schedule-unit-row .auto-schedule-unit-check {
+      justify-self: start;
+      margin: 0;
+      width: 24px;
+      height: 24px;
+      accent-color: var(--primary);
+    }
+    .auto-schedule-unit-row .auto-schedule-unit-name {
+      justify-self: start;
+      text-align: left;
+      min-width: 0;
+      width: 100%;
+      color: var(--text);
+      font-weight: 850;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .auto-schedule-unit-row .auto-schedule-unit-status {
+      justify-self: end;
+      text-align: right;
+      color: var(--muted);
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    #curriculumAutoScheduleModal.modal-backdrop.show {
+      display: flex;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #curriculumAutoScheduleModal .console-modal {
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #curriculumAutoScheduleModal .modal-head,
+    #curriculumAutoScheduleModal .modal-actions {
+      flex: 0 0 auto;
+    }
+    #curriculumAutoScheduleModal .form-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
+    @media (max-width:720px) {
+      #curriculumAutoScheduleModal.modal-backdrop.show {
+        align-items: flex-end;
+        padding: 0;
+      }
+      #curriculumAutoScheduleModal .console-modal {
+        width: 100%;
+        height: 92dvh;
+        max-height: 92dvh;
+        border-radius: 26px 26px 0 0;
+      }
+      #curriculumAutoScheduleModal .form-grid {
+        display: block;
+        padding: 18px 20px;
+        height: calc(92dvh - 174px);
+        max-height: calc(92dvh - 174px);
+      }
+      #curriculumAutoScheduleModal .form-field {
+        margin-bottom: 14px;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-list,
+      #curriculumAutoScheduleModal .auto-schedule-preview-list {
+        max-height: none;
+        overflow: visible;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-row {
+        grid-template-columns: auto minmax(0, 1fr);
+        row-gap: 5px;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-row .auto-schedule-unit-status {
+        grid-column: 2;
+        justify-self: start;
+        text-align: left;
+        white-space: normal;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -3552,17 +3648,31 @@
         </div>
         <div class="form-field">
           <label>模式</label>
-          <select id="autoScheduleMode" onchange="updateAutoSchedulePreview()">
+          <select id="autoScheduleMode" onchange="updateAutoScheduleModeUI(); updateAutoSchedulePreview();">
             <option value="single_even">單次循環｜平均分配</option>
+            <option value="infinite_cycle">無限循環｜固定天數</option>
           </select>
         </div>
         <div class="form-field">
           <label>開始日期</label>
           <input id="autoScheduleStart" type="date" onchange="updateAutoSchedulePreview()" />
         </div>
-        <div class="form-field">
+        <div id="autoScheduleEndField" class="form-field">
           <label>結束日期</label>
           <input id="autoScheduleEnd" type="date" onchange="updateAutoSchedulePreview()" />
+        </div>
+        <div id="autoScheduleInfiniteFields" class="form-field full hidden">
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
+            <div class="form-field">
+              <label>每單元天數</label>
+              <input id="autoScheduleDaysPerUnit" type="number" min="1" max="90" value="7" onchange="updateAutoSchedulePreview()" />
+            </div>
+            <div class="form-field">
+              <label>先建立未來幾天</label>
+              <input id="autoScheduleLookaheadDays" type="number" min="7" max="365" value="60" onchange="updateAutoSchedulePreview()" />
+            </div>
+          </div>
+          <div class="small-note">無限循環會先建立一段未來排程，之後由 cron 接續補上。v1D 不會一次產生多年資料。</div>
         </div>
         <div class="form-field full">
           <label>單元範圍</label>
@@ -8255,6 +8365,24 @@
         .sort((a,b) => Number(a.displayOrder || a.display_order || 0) - Number(b.displayOrder || b.display_order || 0));
     }
 
+
+    function updateAutoScheduleModeUI() {
+      const mode = document.getElementById("autoScheduleMode")?.value || "single_even";
+      const endField = document.getElementById("autoScheduleEndField");
+      const infiniteFields = document.getElementById("autoScheduleInfiniteFields");
+      const submit = document.getElementById("autoScheduleSubmitBtn");
+      const replaceHint = document.getElementById("autoScheduleReplaceExisting")?.closest(".form-field");
+      if (endField) endField.style.display = mode === "infinite_cycle" ? "none" : "";
+      if (infiniteFields) infiniteFields.classList.toggle("hidden", mode !== "infinite_cycle");
+      if (submit) submit.textContent = mode === "infinite_cycle" ? "建立循環排程" : "建立排程";
+      if (replaceHint) {
+        const note = replaceHint.querySelector(".small-note");
+        if (note) note.textContent = mode === "infinite_cycle"
+          ? "不勾選時，如果起始建立區間已有排程，後端會拒絕建立，避免重疊。"
+          : "不勾選時，如果日期區間已有排程，後端會拒絕建立，避免重疊。";
+      }
+    }
+
     function openCurriculumAutoScheduleModal() {
       if (!isSingleSchoolMode()) return alert("請先選擇單一校區。");
       if (!curriculumFilter || isEventClassCode(curriculumFilter)) return alert("請先在班級篩選器選擇一般班級。");
@@ -8272,22 +8400,22 @@
       if (startEl && !startEl.value) startEl.value = start;
       if (endEl && !endEl.value) endEl.value = end;
       renderAutoScheduleUnitChecks(units);
+      updateAutoScheduleModeUI();
       updateAutoSchedulePreview();
     }
 
     function renderAutoScheduleUnitChecks(units) {
       const box = document.getElementById("autoScheduleUnitList");
       if (!box) return;
-      box.innerHTML = units.map(unit => {
+      box.innerHTML = units.map((unit, index) => {
         const schedule = findScheduleForUnit(unit);
         const scheduledText = schedule ? `${escapeHtml(schedule.startDate)}～${escapeHtml(schedule.endDate)}` : "尚未排程";
+        const checkId = `autoScheduleUnit_${String(unit.id || index).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
         return `
           <div class="auto-schedule-unit-row">
-            <label>
-              <input class="auto-schedule-unit-check" type="checkbox" value="${escapeHtml(unit.id)}" checked onchange="updateAutoSchedulePreview()" data-scheduled="${schedule ? "1" : "0"}" />
-              <span class="auto-schedule-unit-name">${escapeHtml(unit.unitName)}</span>
-            </label>
-            <span>${scheduledText}</span>
+            <input id="${escapeHtml(checkId)}" class="auto-schedule-unit-check" type="checkbox" value="${escapeHtml(unit.id)}" checked onchange="updateAutoSchedulePreview()" data-scheduled="${schedule ? "1" : "0"}" />
+            <label class="auto-schedule-unit-name" for="${escapeHtml(checkId)}">${escapeHtml(unit.unitName)}</label>
+            <span class="auto-schedule-unit-status">${scheduledText}</span>
           </div>
         `;
       }).join("");
@@ -8325,11 +8453,14 @@
       const box = document.getElementById("autoSchedulePreview");
       const submit = document.getElementById("autoScheduleSubmitBtn");
       if (!box) return;
+      const mode = document.getElementById("autoScheduleMode")?.value || "single_even";
       const ids = new Set(getSelectedAutoScheduleUnitIds());
       const units = getAutoScheduleClassUnits().filter(u => ids.has(String(u.id)));
       const startDate = document.getElementById("autoScheduleStart")?.value || "";
       const endDate = document.getElementById("autoScheduleEnd")?.value || "";
-      const total = inclusiveDays(startDate, endDate);
+      const daysPerUnit = Math.max(1, Math.min(90, Number(document.getElementById("autoScheduleDaysPerUnit")?.value || 7)));
+      const lookaheadDays = Math.max(7, Math.min(365, Number(document.getElementById("autoScheduleLookaheadDays")?.value || 60)));
+      const total = mode === "infinite_cycle" ? lookaheadDays : inclusiveDays(startDate, endDate);
 
       if (submit) submit.disabled = false;
 
@@ -8338,14 +8469,37 @@
         if (submit) submit.disabled = true;
         return;
       }
-      if (!startDate || !endDate || total <= 0) {
+      if (!startDate || total <= 0 || (mode !== "infinite_cycle" && !endDate)) {
         box.innerHTML = "請選擇正確的開始與結束日期。";
         if (submit) submit.disabled = true;
         return;
       }
-      if (total < units.length) {
+      if (mode !== "infinite_cycle" && total < units.length) {
         box.innerHTML = `<span style="color:var(--red);">日期區間太短：${units.length} 個單元至少需要 ${units.length} 天，目前只有 ${total} 天。</span>`;
         if (submit) submit.disabled = true;
+        return;
+      }
+
+      if (mode === "infinite_cycle") {
+        const previewEnd = addDaysYmd(startDate, lookaheadDays - 1);
+        let cursor = startDate;
+        const plan = [];
+        let unitIndex = 0;
+        while (plan.length < 18 && cursor && String(cursor) <= String(previewEnd)) {
+          const unit = units[unitIndex % units.length];
+          const s = cursor;
+          const e = addDaysYmd(s, daysPerUnit - 1);
+          plan.push({ unit, startDate: s, endDate: e, days: daysPerUnit });
+          cursor = addDaysYmd(e, 1);
+          unitIndex++;
+        }
+        box.innerHTML = `
+          <div><strong>${escapeHtml(classLabel(document.getElementById("autoScheduleClassCode")?.value || ""))}</strong>｜無限循環｜${units.length} 個單元｜每單元 ${daysPerUnit} 天</div>
+          <div>系統會先建立到 <strong>${escapeHtml(previewEnd)}</strong>，之後由 cron 接續補上。以下顯示前 ${plan.length} 筆預覽。</div>
+          <div class="auto-schedule-preview-list">
+            ${plan.map(p => `<div class="auto-schedule-preview-row"><strong>${escapeHtml(p.unit.unitName)}</strong><span>${escapeHtml(p.startDate)}～${escapeHtml(p.endDate)}｜${p.days} 天</span></div>`).join("")}
+          </div>
+        `;
         return;
       }
 
@@ -8361,30 +8515,50 @@
     async function saveAutoScheduleUnits() {
       try {
         if (!window.TappieAPI || typeof TappieAPI.consoleAutoScheduleUnits !== "function") throw new Error("TappieAPI.consoleAutoScheduleUnits 尚未載入，請先部署 v1C 的 tappie-api.js");
+        const mode = document.getElementById("autoScheduleMode")?.value || "single_even";
         const classCode = normalizeEventClassCode(document.getElementById("autoScheduleClassCode")?.value || "");
         const startDate = document.getElementById("autoScheduleStart")?.value || "";
         const endDate = document.getElementById("autoScheduleEnd")?.value || "";
         const unitIds = getSelectedAutoScheduleUnitIds();
         const replaceExisting = !!document.getElementById("autoScheduleReplaceExisting")?.checked;
+        const daysPerUnit = Math.max(1, Math.min(90, Number(document.getElementById("autoScheduleDaysPerUnit")?.value || 7)));
+        const lookaheadDays = Math.max(7, Math.min(365, Number(document.getElementById("autoScheduleLookaheadDays")?.value || 60)));
         if (!classCode) throw new Error("請選擇班級");
         if (!unitIds.length) throw new Error("請至少選擇一個單元");
-        if (!startDate || !endDate) throw new Error("請選擇開始與結束日期");
+        if (!startDate) throw new Error("請選擇開始日期");
+        if (mode !== "infinite_cycle" && !endDate) throw new Error("請選擇結束日期");
         if (replaceExisting && !confirm("確定要取代這個班級在指定日期區間內的舊排程嗎？舊排程會被設為停用，不會刪除單元。")) return;
 
         const btn = document.getElementById("autoScheduleSubmitBtn");
         const old = btn?.textContent || "建立排程";
         if (btn) { btn.disabled = true; btn.textContent = "建立中..."; }
         try {
-          const data = await TappieAPI.consoleAutoScheduleUnits({
+          const commonPayload = {
             token: session?.token || "",
             schoolCode: getActiveSchoolCode(),
             scopeMode: getActiveScopePayload().scopeMode,
             classCode,
             unitIds,
             startDate,
-            endDate,
             replaceExisting
-          });
+          };
+
+          let data;
+          if (mode === "infinite_cycle") {
+            if (!window.TappieAPI || typeof TappieAPI.consoleSaveScheduleCycle !== "function") throw new Error("TappieAPI.consoleSaveScheduleCycle 尚未載入，請先部署 v1D 的 tappie-api.js");
+            data = await TappieAPI.consoleSaveScheduleCycle({
+              ...commonPayload,
+              action: "create",
+              daysPerUnit,
+              lookaheadDays
+            });
+          } else {
+            data = await TappieAPI.consoleAutoScheduleUnits({
+              ...commonPayload,
+              endDate
+            });
+          }
+
           if (!data || data.success === false) {
             const extra = data?.conflicts?.length ? `\n\n衝突排程：\n${data.conflicts.map(s => `${s.start_date || s.startDate}～${s.end_date || s.endDate} ${s.unit_name || s.unitName}`).join("\n")}` : "";
             throw new Error((data?.message || data?.detail || data?.error || "建立排程失敗") + extra);
@@ -8392,7 +8566,7 @@
           hideCurriculumAutoScheduleModal();
           curriculumCache = null;
           await loadCurriculumData(true);
-          toast(`已建立 ${data.scheduleCount || 0} 筆排程`);
+          toast(mode === "infinite_cycle" ? `已建立循環排程，先產生 ${data.scheduleCount || 0} 筆` : `已建立 ${data.scheduleCount || 0} 筆排程`);
         } finally {
           if (btn) { btn.disabled = false; btn.textContent = old; }
         }
@@ -8564,9 +8738,15 @@
       if (importBtn) importBtn.style.display = tab === "units" ? "inline-flex" : "none";
       if (autoBtn) autoBtn.style.display = (tab === "schedules" && curriculumFilter && !isEventClassCode(curriculumFilter)) ? "inline-flex" : "none";
       const hint = document.getElementById("curriculumModeHint");
-      if (hint) hint.textContent = tab === "units"
-        ? "單元資料庫：只管理單元與單字內容，不在這裡調整排程。"
-        : "排程管理：安排班級單元期間；同一班級同一天只能有一個進行中的單元。";
+      if (hint) {
+        if (tab === "units") {
+          hint.textContent = "單元資料庫：只管理單元與單字內容，不在這裡調整排程。";
+          hint.style.display = "";
+        } else {
+          hint.textContent = "";
+          hint.style.display = "none";
+        }
+      }
       renderCurriculumList();
     }
     function updateCurriculumFilters() {
