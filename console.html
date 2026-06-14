@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1d3"></script>
+  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1e"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3387,6 +3387,159 @@
       margin-top: 12px;
     }
 
+  
+    /* Curriculum Pack v1E｜formal Owner pack editor */
+    .pack-editor-modal {
+      max-width: min(1120px, calc(100vw - 32px));
+    }
+    .pack-editor-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    .form-grid.compact {
+      margin-top: 0;
+    }
+    .pack-editor-section {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      border-radius: 22px;
+      padding: 16px;
+    }
+    .pack-editor-section.full {
+      grid-column: 1 / -1;
+    }
+    .pack-editor-section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .pack-editor-section-head h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 950;
+      color: var(--text);
+    }
+    .pack-editor-section-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+    .pack-editor-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .pack-editor-small-textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+    .pack-editor-stats {
+      border: 1px dashed var(--border);
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 850;
+      margin-bottom: 12px;
+    }
+    .pack-editor-unit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pack-editor-unit-card {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 14px;
+    }
+    .pack-editor-unit-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, .4fr) auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 10px;
+    }
+    .pack-editor-unit-head .unit-title-field {
+      min-width: 0;
+    }
+    .pack-editor-unit-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .pack-editor-word-textarea {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      box-sizing: border-box;
+    }
+    .pack-editor-word-help {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+      margin-top: 7px;
+      line-height: 1.55;
+    }
+    @media (max-width: 720px) {
+      #curriculumPackEditorModal {
+        align-items: flex-end;
+        padding: 0;
+      }
+      #curriculumPackEditorModal .console-modal {
+        width: 100%;
+        height: 92dvh;
+        max-height: 92dvh;
+        border-radius: 26px 26px 0 0;
+      }
+      #curriculumPackEditorModal .modal-head,
+      #curriculumPackEditorModal .modal-actions {
+        flex: 0 0 auto;
+      }
+      #curriculumPackEditorModal .modal-actions {
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+      }
+      .pack-editor-grid {
+        display: block;
+        padding: 18px 20px;
+      }
+      .pack-editor-section {
+        margin-bottom: 14px;
+      }
+      .pack-editor-section-head {
+        flex-direction: column;
+      }
+      .pack-editor-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .pack-editor-unit-head {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+      .pack-editor-unit-actions {
+        justify-content: flex-start;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -3635,7 +3788,7 @@
 
 
   <div id="curriculumPackEditorModal" class="modal-backdrop" onclick="closeCurriculumPackEditorModal(event)">
-    <div class="console-modal" onclick="event.stopPropagation()">
+    <div class="console-modal pack-editor-modal" onclick="event.stopPropagation()">
       <div class="modal-head">
         <div>
           <h2 id="curriculumPackEditorTitle">編輯預設教材包</h2>
@@ -3643,19 +3796,76 @@
         </div>
         <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">關閉</button>
       </div>
-      <div class="form-grid">
-        <div class="form-field full">
-          <label>教材包 JSON</label>
-          <textarea id="curriculumPackJsonEditor" class="pack-json-editor"></textarea>
+      <div class="form-grid pack-editor-grid">
+        <input id="packEditorId" type="hidden" />
+        <div class="pack-editor-section full">
+          <div class="pack-editor-section-head">
+            <div>
+              <h3>基本資料</h3>
+              <p>這些資料會顯示在 Owner 教材包列表與單校區匯入彈窗。</p>
+            </div>
+          </div>
+          <div class="form-grid compact">
+            <div class="form-field">
+              <label>教材包名稱</label>
+              <input id="packEditorName" placeholder="例如 Tappie 國小基礎 400" />
+            </div>
+            <div class="form-field">
+              <label>教材包 Key</label>
+              <input id="packEditorKey" placeholder="例如 tappie-basic-400" />
+            </div>
+            <div class="form-field">
+              <label>等級</label>
+              <input id="packEditorLevel" placeholder="Starter / Basic / GEPT Kids" />
+            </div>
+            <div class="form-field">
+              <label>適用年級</label>
+              <input id="packEditorTargetGrade" placeholder="低年級 / 中年級 / 高年級" />
+            </div>
+            <div class="form-field">
+              <label>版本</label>
+              <input id="packEditorVersion" placeholder="v1" />
+            </div>
+            <div class="form-field">
+              <label>排序</label>
+              <input id="packEditorDisplayOrder" type="number" value="0" />
+            </div>
+            <div class="form-field full">
+              <label>描述</label>
+              <textarea id="packEditorDescription" class="pack-editor-small-textarea" placeholder="簡短說明教材包用途"></textarea>
+            </div>
+            <div class="form-field full">
+              <label>來源 / 設計備註</label>
+              <textarea id="packEditorSourceNote" class="pack-editor-small-textarea" placeholder="例如：參考 108 課綱方向、常見小學教材與內部教學經驗整理"></textarea>
+            </div>
+            <div class="form-field full">
+              <label style="display:flex;gap:9px;align-items:center;">
+                <input id="packEditorIsActive" type="checkbox" checked />
+                啟用此教材包
+              </label>
+            </div>
+          </div>
         </div>
-        <div class="form-field full">
-          <div class="form-note">v1B 先使用 JSON 編輯器，避免 UI 太早綁死資料格式。下一版再做視覺化單元 / 單字編輯器。</div>
+
+        <div class="pack-editor-section full">
+          <div class="pack-editor-section-head">
+            <div>
+              <h3>單元與單字</h3>
+              <p>每個單元可貼上多行單字。每行格式：英文, 中文, phonics hint。也支援 Tab 分隔。</p>
+            </div>
+            <div class="pack-editor-actions">
+              <button class="btn-compact" type="button" onclick="addCurriculumPackUnit()">新增單元</button>
+              <button class="btn-compact" type="button" onclick="fillCurriculumPackEditorSample()">填入範例</button>
+            </div>
+          </div>
+          <div id="packEditorStats" class="pack-editor-stats">—</div>
+          <div id="packEditorUnitList" class="pack-editor-unit-list"></div>
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn-compact" onclick="fillCurriculumPackEditorSample()">填入範例</button>
+        <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">取消</button>
         <div class="right">
-          <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">取消</button>
+          <button class="btn-compact" onclick="previewCurriculumPackEditor()">更新預覽</button>
           <button class="btn-compact primary" onclick="saveCurriculumPackFromEditor()">儲存教材包</button>
         </div>
       </div>
@@ -8196,7 +8406,7 @@
       if (status) status.textContent = `共 ${packs.length} 個教材包`;
       if (!box) return;
       if (!packs.length) {
-        box.innerHTML = `<div class="curriculum-empty">尚未建立教材包。可以先建立 Tappie Starter 12 測試包。</div>`;
+        box.innerHTML = `<div class="curriculum-empty">尚未建立教材包。可以先新增一個教材包，或用 Starter 範例快速建立。</div>`;
         return;
       }
       box.innerHTML = packs.map(p => renderCurriculumPackCard(p)).join("");
@@ -8223,21 +8433,251 @@
             <span class="pack-meta-chip">${escapeHtml(p.version || "v1")}</span>
           </div>
           <div class="pack-actions">
-            <button class="btn-compact" onclick="openCurriculumPackEditor('${escapeJs(id)}')">JSON 編輯</button>
+            <button class="btn-compact" onclick="openCurriculumPackEditor('${escapeJs(id)}')">編輯教材包</button>
             <button class="btn-compact ${active ? "danger" : "ok"}" onclick="setCurriculumPackActive('${escapeJs(id)}', ${active ? "false" : "true"})">${active ? "停用模板" : "重新啟用"}</button>
           </div>
         </div>
       `;
     }
 
+
+    let currentCurriculumPackEditorUnits = [];
+    let currentCurriculumPackEditorRaw = null;
+
+    function normalizePackForEditor(pack = {}) {
+      return {
+        id: pack.id || "",
+        packKey: pack.packKey || pack.pack_key || "",
+        packName: pack.packName || pack.pack_name || pack.name || "",
+        description: pack.description || "",
+        level: pack.level || "",
+        targetGrade: pack.targetGrade || pack.target_grade || "",
+        targetAge: pack.targetAge || pack.target_age || "",
+        sourceNote: pack.sourceNote || pack.source_note || "",
+        version: pack.version || "v1",
+        displayOrder: Number(pack.displayOrder ?? pack.display_order ?? 0) || 0,
+        isActive: pack.isActive ?? pack.is_active ?? true,
+        isPublic: pack.isPublic ?? pack.is_public ?? true,
+        units: Array.isArray(pack.units) ? pack.units.map((u, index) => ({
+          unitKey: u.unitKey || u.unit_key || `unit-${index + 1}`,
+          unitName: u.unitName || u.unit_name || u.name || `Unit ${index + 1}`,
+          displayOrder: Number(u.displayOrder ?? u.display_order ?? index + 1) || index + 1,
+          words: Array.isArray(u.words) ? u.words.map((w, wi) => ({
+            wordText: w.wordText || w.word_text || w.text || w.word || "",
+            chineseText: w.chineseText || w.chinese_text || w.zh || w.chinese || "",
+            phonicsHint: w.phonicsHint || w.phonics_hint || "",
+            imageUrl: w.imageUrl || w.image_url || "",
+            displayOrder: Number(w.displayOrder ?? w.display_order ?? wi + 1) || wi + 1,
+            isActive: w.isActive ?? w.is_active ?? true
+          })).filter(w => w.wordText) : []
+        })) : []
+      };
+    }
+
+    function setPackEditorField(id, value) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === "checkbox") el.checked = value !== false;
+      else el.value = value ?? "";
+    }
+
+    function getPackEditorField(id) {
+      const el = document.getElementById(id);
+      if (!el) return "";
+      return el.type === "checkbox" ? !!el.checked : el.value;
+    }
+
+    function fillCurriculumPackEditorFields(pack) {
+      setPackEditorField("packEditorId", pack.id || "");
+      setPackEditorField("packEditorName", pack.packName || "");
+      setPackEditorField("packEditorKey", pack.packKey || "");
+      setPackEditorField("packEditorLevel", pack.level || "");
+      setPackEditorField("packEditorTargetGrade", pack.targetGrade || "");
+      setPackEditorField("packEditorVersion", pack.version || "v1");
+      setPackEditorField("packEditorDisplayOrder", pack.displayOrder || 0);
+      setPackEditorField("packEditorDescription", pack.description || "");
+      setPackEditorField("packEditorSourceNote", pack.sourceNote || "");
+      setPackEditorField("packEditorIsActive", pack.isActive !== false);
+      currentCurriculumPackEditorUnits = Array.isArray(pack.units) ? pack.units : [];
+      renderCurriculumPackUnitEditor();
+    }
+
+    function unitWordsToText(words = []) {
+      return (words || []).map(w => {
+        const cols = [
+          w.wordText || "",
+          w.chineseText || "",
+          w.phonicsHint || ""
+        ];
+        return cols.map(x => String(x || "").replace(/\t/g, " ").trim()).join("\t").replace(/\t+$/g, "");
+      }).join("\n");
+    }
+
+    function parseUnitWordsText(text) {
+      return String(text || "")
+        .split(/\r?\n/g)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          const cols = line.includes("\t") ? line.split("\t") : line.split(",");
+          return {
+            wordText: (cols[0] || "").trim(),
+            chineseText: (cols[1] || "").trim(),
+            phonicsHint: (cols[2] || "").trim(),
+            displayOrder: index + 1,
+            isActive: true
+          };
+        })
+        .filter(w => w.wordText);
+    }
+
+    function syncCurriculumPackEditorUnitsFromDom() {
+      currentCurriculumPackEditorUnits = (currentCurriculumPackEditorUnits || []).map((unit, index) => {
+        const name = document.getElementById(`packUnitName_${index}`)?.value || unit.unitName || `Unit ${index + 1}`;
+        const key = document.getElementById(`packUnitKey_${index}`)?.value || unit.unitKey || `unit-${index + 1}`;
+        const wordsText = document.getElementById(`packUnitWords_${index}`)?.value || "";
+        return {
+          ...unit,
+          unitName: name.trim(),
+          unitKey: key.trim() || `unit-${index + 1}`,
+          displayOrder: index + 1,
+          words: parseUnitWordsText(wordsText)
+        };
+      });
+    }
+
+    function renderCurriculumPackUnitEditor() {
+      const box = document.getElementById("packEditorUnitList");
+      if (!box) return;
+      const units = currentCurriculumPackEditorUnits || [];
+      if (!units.length) {
+        box.innerHTML = `<div class="curriculum-empty">尚未建立單元。請點「新增單元」，或使用「填入範例」。</div>`;
+        updateCurriculumPackEditorStats();
+        return;
+      }
+      box.innerHTML = units.map((unit, index) => `
+        <div class="pack-editor-unit-card">
+          <div class="pack-editor-unit-head">
+            <div class="form-field unit-title-field">
+              <label>單元名稱</label>
+              <input id="packUnitName_${index}" value="${escapeHtml(unit.unitName || "")}" oninput="updateCurriculumPackEditorStats()" />
+            </div>
+            <div class="form-field">
+              <label>Unit Key</label>
+              <input id="packUnitKey_${index}" value="${escapeHtml(unit.unitKey || `unit-${index + 1}`)}" />
+            </div>
+            <div class="pack-editor-unit-actions">
+              <button class="btn-compact" type="button" onclick="moveCurriculumPackUnit(${index}, -1)">↑</button>
+              <button class="btn-compact" type="button" onclick="moveCurriculumPackUnit(${index}, 1)">↓</button>
+              <button class="btn-compact btn-danger" type="button" onclick="removeCurriculumPackUnit(${index})">刪除</button>
+            </div>
+          </div>
+          <label style="font-weight:900;color:var(--muted);font-size:13px;">單字列表</label>
+          <textarea id="packUnitWords_${index}" class="pack-editor-word-textarea" oninput="updateCurriculumPackEditorStats()" placeholder="apple, 蘋果&#10;banana, 香蕉">${escapeHtml(unitWordsToText(unit.words || []))}</textarea>
+          <div class="pack-editor-word-help">每行一個單字。建議格式：英文, 中文, phonics hint。第三欄可空白。</div>
+        </div>
+      `).join("");
+      updateCurriculumPackEditorStats();
+    }
+
+    function updateCurriculumPackEditorStats() {
+      const stats = document.getElementById("packEditorStats");
+      if (!stats) return;
+      const unitCount = currentCurriculumPackEditorUnits.length;
+      let wordCount = 0;
+      currentCurriculumPackEditorUnits.forEach((unit, index) => {
+        const text = document.getElementById(`packUnitWords_${index}`)?.value || unitWordsToText(unit.words || []);
+        wordCount += parseUnitWordsText(text).length;
+      });
+      stats.textContent = `目前 ${unitCount} 個單元，約 ${wordCount} 個單字。`;
+    }
+
+    function addCurriculumPackUnit() {
+      syncCurriculumPackEditorUnitsFromDom();
+      const next = currentCurriculumPackEditorUnits.length + 1;
+      currentCurriculumPackEditorUnits.push({
+        unitKey: `unit-${next}`,
+        unitName: `Unit ${next}`,
+        displayOrder: next,
+        words: []
+      });
+      renderCurriculumPackUnitEditor();
+    }
+
+    function removeCurriculumPackUnit(index) {
+      syncCurriculumPackEditorUnitsFromDom();
+      currentCurriculumPackEditorUnits.splice(index, 1);
+      currentCurriculumPackEditorUnits = currentCurriculumPackEditorUnits.map((u, i) => ({ ...u, displayOrder: i + 1 }));
+      renderCurriculumPackUnitEditor();
+    }
+
+    function moveCurriculumPackUnit(index, delta) {
+      syncCurriculumPackEditorUnitsFromDom();
+      const target = index + delta;
+      if (target < 0 || target >= currentCurriculumPackEditorUnits.length) return;
+      const arr = currentCurriculumPackEditorUnits;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      currentCurriculumPackEditorUnits = arr.map((u, i) => ({ ...u, displayOrder: i + 1 }));
+      renderCurriculumPackUnitEditor();
+    }
+
+    function collectCurriculumPackEditorPayload() {
+      syncCurriculumPackEditorUnitsFromDom();
+      const packName = String(getPackEditorField("packEditorName") || "").trim();
+      if (!packName) throw new Error("請輸入教材包名稱");
+      const units = currentCurriculumPackEditorUnits
+        .map((u, index) => ({
+          unitKey: u.unitKey || `unit-${index + 1}`,
+          unitName: u.unitName || `Unit ${index + 1}`,
+          displayOrder: index + 1,
+          words: (u.words || []).map((w, wi) => ({
+            wordText: w.wordText,
+            chineseText: w.chineseText || "",
+            phonicsHint: w.phonicsHint || "",
+            displayOrder: wi + 1,
+            isActive: true
+          }))
+        }))
+        .filter(u => u.unitName && u.words.length);
+      if (!units.length) throw new Error("請至少建立一個含單字的單元");
+      return {
+        action: "save_pack",
+        pack: {
+          id: getPackEditorField("packEditorId") || undefined,
+          packName,
+          packKey: String(getPackEditorField("packEditorKey") || "").trim(),
+          level: String(getPackEditorField("packEditorLevel") || "").trim(),
+          targetGrade: String(getPackEditorField("packEditorTargetGrade") || "").trim(),
+          version: String(getPackEditorField("packEditorVersion") || "v1").trim(),
+          displayOrder: Number(getPackEditorField("packEditorDisplayOrder") || 0) || 0,
+          description: String(getPackEditorField("packEditorDescription") || "").trim(),
+          sourceNote: String(getPackEditorField("packEditorSourceNote") || "").trim(),
+          isActive: !!getPackEditorField("packEditorIsActive"),
+          isPublic: true,
+          units
+        }
+      };
+    }
+
+    function previewCurriculumPackEditor() {
+      try {
+        const payload = collectCurriculumPackEditorPayload();
+        const units = payload.pack.units || [];
+        const wordCount = units.reduce((sum, u) => sum + (u.words || []).length, 0);
+        const names = units.map(u => `${u.unitName}（${u.words.length} 字）`).join("\\n");
+        alert(`教材包：${payload.pack.packName}\\n單元：${units.length}\\n單字：${wordCount}\\n\\n${names}`);
+      } catch (err) {
+        alert(err.message || err);
+      }
+    }
+
     async function openCurriculumPackEditor(packId = "") {
       showModal("curriculumPackEditorModal");
       const title = document.getElementById("curriculumPackEditorTitle");
-      const editor = document.getElementById("curriculumPackJsonEditor");
       if (title) title.textContent = packId ? "編輯預設教材包" : "新增預設教材包";
-      if (!editor) return;
+      currentCurriculumPackEditorRaw = null;
       if (!packId) {
-        editor.value = JSON.stringify(curriculumPackStarterJson(), null, 2);
+        fillCurriculumPackEditorFields(normalizePackForEditor(curriculumPackStarterJson().pack));
         return;
       }
       try {
@@ -8245,22 +8685,26 @@
         if (!data || data.success === false) throw new Error(data?.message || data?.error || "讀取教材包失敗");
         const pack = (data.packs || [])[0] || null;
         if (!pack) throw new Error("找不到教材包");
-        editor.value = JSON.stringify({ action: "save_pack", pack }, null, 2);
+        currentCurriculumPackEditorRaw = pack;
+        fillCurriculumPackEditorFields(normalizePackForEditor(pack));
       } catch (err) {
-        editor.value = JSON.stringify({ error: String(err.message || err) }, null, 2);
+        alert("讀取教材包失敗：" + (err.message || err));
+        fillCurriculumPackEditorFields(normalizePackForEditor(curriculumPackStarterJson().pack));
       }
     }
 
     function fillCurriculumPackEditorSample() {
-      const editor = document.getElementById("curriculumPackJsonEditor");
-      if (editor) editor.value = JSON.stringify(curriculumPackStarterJson(), null, 2);
+      if (!confirm("要用 Starter 範例覆蓋目前編輯內容嗎？")) return;
+      const currentId = getPackEditorField("packEditorId");
+      const sample = normalizePackForEditor(curriculumPackStarterJson().pack);
+      sample.id = currentId || "";
+      fillCurriculumPackEditorFields(sample);
     }
 
     async function saveCurriculumPackFromEditor() {
       try {
-        const editor = document.getElementById("curriculumPackJsonEditor");
-        const payload = JSON.parse(editor?.value || "{}");
         if (!window.TappieAPI || typeof TappieAPI.consoleSaveCurriculumPack !== "function") throw new Error("TappieAPI.consoleSaveCurriculumPack 尚未載入");
+        const payload = collectCurriculumPackEditorPayload();
         const data = await TappieAPI.consoleSaveCurriculumPack({ token: session?.token || "", ...payload });
         if (!data || data.success === false) throw new Error(data?.message || data?.detail || data?.error || "儲存失敗");
         hideCurriculumPackEditorModal();
