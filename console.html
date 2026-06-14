@@ -3228,11 +3228,33 @@
     /* Curriculum Pack v1D｜auto schedule UI alignment + mobile scroll */
     .auto-schedule-unit-row {
       display: grid !important;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
       align-items: center;
       justify-content: start !important;
-      column-gap: 12px;
+      column-gap: 10px;
       text-align: left;
+    }
+    .auto-schedule-order-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto;
+    }
+    .auto-schedule-order-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 950;
+      line-height: 1;
+    }
+    .auto-schedule-order-btn:hover {
+      color: var(--primary);
+      border-color: rgba(37,99,235,.35);
+      background: rgba(37,99,235,.08);
     }
     .auto-schedule-unit-row .auto-schedule-unit-check {
       justify-self: start;
@@ -3309,11 +3331,11 @@
         overflow: visible;
       }
       #curriculumAutoScheduleModal .auto-schedule-unit-row {
-        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-columns: auto auto minmax(0, 1fr);
         row-gap: 5px;
       }
       #curriculumAutoScheduleModal .auto-schedule-unit-row .auto-schedule-unit-status {
-        grid-column: 2;
+        grid-column: 3;
         justify-self: start;
         text-align: left;
         white-space: normal;
@@ -4212,6 +4234,8 @@
     const learningQueryCaches = { learning: null, points: null, attendance: null };
     let curriculumCache = null;
     let curriculumLoading = false;
+    let studentClassRegistryCache = null;
+    let studentClassRegistryLoading = false;
     let curriculumPackCache = null;
     let curriculumPackLoading = false;
     let curriculumTab = "units";
@@ -6463,6 +6487,7 @@
             }).then(r => r.json());
         if (!data || !data.success) throw new Error(data?.message || data?.error || "console_get_students_failed");
         studentsCache = data;
+        await ensureStudentClassRegistry(false);
         updateStudentsUI();
       } catch (err) {
         console.error("loadStudentsData failed", err);
@@ -6680,11 +6705,84 @@
       if (["all", "__untagged", ...tags].includes(current)) select.value = current;
     }
 
+    function normalizeClassRegistryRows(rows = []) {
+      const map = new Map();
+
+      function add(code, name = "") {
+        const classId = normalizeEventClassCode(code);
+        if (!classId || isEventClassCode(classId)) return;
+        const prev = map.get(classId) || { classId, name: "" };
+        map.set(classId, { classId, name: name || prev.name || classId });
+      }
+
+      (rows || []).forEach(c => {
+        if (typeof c === "string") add(c, c);
+        else add(c?.classId || c?.classCode || c?.class_code || "", c?.name || "");
+      });
+
+      return Array.from(map.values()).sort((a,b)=>String(a.classId).localeCompare(String(b.classId), "zh-Hant"));
+    }
+
+    function getStudentClassRegistryOptions() {
+      const rows = [];
+
+      // Priority 1: classes table returned by console-get-students, if that API already supports it.
+      rows.push(...normalizeClassRegistryRows(studentsCache?.classes || []));
+
+      // Priority 2: classes table fetched from console-get-data mode=tasks.
+      rows.push(...normalizeClassRegistryRows(studentClassRegistryCache || []));
+
+      // Priority 3: curriculum cache classes, also from classes table in current curriculum logic.
+      rows.push(...normalizeClassRegistryRows(curriculumCache?.classes || []));
+
+      // Safety fallback: active / inactive student rows. This only prevents UI from losing older class codes.
+      (studentsCache?.students || []).forEach(s => {
+        const code = s?.class_code || s?.classCode || "";
+        if (code) rows.push({ classId: normalizeEventClassCode(code), name: normalizeEventClassCode(code) });
+      });
+
+      return normalizeClassRegistryRows(rows);
+    }
+
+    function studentClassOptionLabel(item) {
+      const classId = typeof item === "string" ? normalizeEventClassCode(item) : normalizeEventClassCode(item?.classId || "");
+      const name = typeof item === "object" ? String(item?.name || "").trim() : "";
+      return name && name !== classId ? `${name}（${classId}）` : classId;
+    }
+
+    async function ensureStudentClassRegistry(force = false) {
+      if (!isSingleSchoolMode()) return [];
+      if (!force && studentClassRegistryCache) return studentClassRegistryCache;
+      if (studentClassRegistryLoading) return studentClassRegistryCache || [];
+      if (!session?.token || !window.TappieAPI || typeof TappieAPI.consoleGetData !== "function") return studentClassRegistryCache || [];
+
+      studentClassRegistryLoading = true;
+      try {
+        const data = await TappieAPI.consoleGetData({
+          token: session.token,
+          schoolCode: getActiveSchoolCode(),
+          mode: "tasks",
+          scopeMode: getActiveScopePayload().scopeMode
+        });
+        if (data && data.success !== false) {
+          studentClassRegistryCache = normalizeClassRegistryRows(data.classes || []);
+        }
+      } catch (err) {
+        console.warn("[Student Classes] registry load failed", err);
+      } finally {
+        studentClassRegistryLoading = false;
+      }
+      return studentClassRegistryCache || [];
+    }
+
     function setupStudentFormPickers() {
-      const students = studentsCache?.students || [];
-      const classes = [...new Set(students.map(s => s.class_code || s.classCode).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant'));
+      const classOptions = getStudentClassRegistryOptions();
       const classSelect = document.getElementById("editStudentExistingClass");
-      if (classSelect) classSelect.innerHTML = `<option value="">選擇既有班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      if (classSelect) {
+        const current = classSelect.value || "";
+        classSelect.innerHTML = `<option value="">選擇既有班級</option>` + classOptions.map(c => `<option value="${escapeHtml(c.classId)}">${escapeHtml(studentClassOptionLabel(c))}</option>`).join("");
+        if (current && classOptions.some(c => c.classId === current)) classSelect.value = current;
+      }
       const typeSelect = document.getElementById("editStudentType");
       const currentType = normalizeStudentType(typeSelect?.value || "無班級");
       if (typeSelect) {
@@ -6694,7 +6792,11 @@
       const tagSelect = document.getElementById("editStudentExistingTag");
       if (tagSelect) tagSelect.innerHTML = `<option value="">選擇既有標籤</option>` + getAllStudentTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
       const batchClassSelect = document.getElementById("batchStudentExistingClass");
-      if (batchClassSelect) batchClassSelect.innerHTML = `<option value="">選擇既有班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      if (batchClassSelect) {
+        const current = batchClassSelect.value || "";
+        batchClassSelect.innerHTML = `<option value="">選擇既有班級</option>` + classOptions.map(c => `<option value="${escapeHtml(c.classId)}">${escapeHtml(studentClassOptionLabel(c))}</option>`).join("");
+        if (current && classOptions.some(c => c.classId === current)) batchClassSelect.value = current;
+      }
       const batchTagSelect = document.getElementById("batchStudentExistingTag");
       if (batchTagSelect) batchTagSelect.innerHTML = `<option value="">選擇既有標籤</option>` + getAllStudentTags().map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
     }
@@ -6785,8 +6887,9 @@
       const select = document.getElementById("studentClassFilter");
       if (!select || !studentsCache) return;
       const current = select.value || "all";
-      const classes = [...new Set((studentsCache.students || []).map(s => s.class_code || s.classCode).filter(Boolean))].sort();
-      select.innerHTML = `<option value="all">全部班級</option>` + classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      const classOptions = getStudentClassRegistryOptions();
+      const classes = classOptions.map(c => c.classId);
+      select.innerHTML = `<option value="all">全部班級</option>` + classOptions.map(c => `<option value="${escapeHtml(c.classId)}">${escapeHtml(studentClassOptionLabel(c))}</option>`).join("");
       if (["all", ...classes].includes(current)) select.value = current;
     }
 
@@ -7073,6 +7176,7 @@
         hideStudentModal();
         studentsCache = null;
         curriculumCache = null;
+        studentClassRegistryCache = null;
         await loadStudentsData(true);
       } catch (err) {
         alert("學生儲存失敗：" + (err.message || err));
@@ -7100,6 +7204,7 @@
         hideStudentModal();
         studentsCache = null;
         curriculumCache = null;
+        studentClassRegistryCache = null;
         await loadStudentsData(true);
       } catch (err) { alert("狀態修改失敗：" + (err.message || err)); }
     }
@@ -7217,7 +7322,7 @@
         const result = await consoleSaveStudentsAction({ action: "batch_update_students", studentIds: Array.from(selectedStudentIds), patch });
         if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "batch_update_failed");
         hideBatchModal();
-        studentBatchMode = false; selectedStudentIds.clear(); studentsCache = null;
+        studentBatchMode = false; selectedStudentIds.clear(); studentsCache = null; curriculumCache = null; studentClassRegistryCache = null;
         await loadStudentsData(true);
       } catch (err) { alert("批量修改失敗：" + (err.message || err)); }
       finally { btn.disabled = false; btn.textContent = "確認批量修改"; }
@@ -9102,13 +9207,40 @@
         const scheduledText = schedule ? `${escapeHtml(schedule.startDate)}～${escapeHtml(schedule.endDate)}` : "尚未排程";
         const checkId = `autoScheduleUnit_${String(unit.id || index).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
         return `
-          <div class="auto-schedule-unit-row">
+          <div class="auto-schedule-unit-row" data-unit-id="${escapeHtml(unit.id)}">
+            <span class="auto-schedule-order-actions">
+              <button type="button" class="auto-schedule-order-btn" title="往上移" onclick="moveAutoScheduleUnitRow(this, -1)">↑</button>
+              <button type="button" class="auto-schedule-order-btn" title="往下移" onclick="moveAutoScheduleUnitRow(this, 1)">↓</button>
+            </span>
             <input id="${escapeHtml(checkId)}" class="auto-schedule-unit-check" type="checkbox" value="${escapeHtml(unit.id)}" checked onchange="updateAutoSchedulePreview()" data-scheduled="${schedule ? "1" : "0"}" />
             <label class="auto-schedule-unit-name" for="${escapeHtml(checkId)}">${escapeHtml(unit.unitName)}</label>
             <span class="auto-schedule-unit-status">${scheduledText}</span>
           </div>
         `;
       }).join("");
+      refreshAutoScheduleOrderButtons();
+    }
+
+    function refreshAutoScheduleOrderButtons() {
+      const rows = Array.from(document.querySelectorAll("#autoScheduleUnitList .auto-schedule-unit-row"));
+      rows.forEach((row, index) => {
+        const buttons = row.querySelectorAll(".auto-schedule-order-btn");
+        if (buttons[0]) buttons[0].disabled = index === 0;
+        if (buttons[1]) buttons[1].disabled = index === rows.length - 1;
+      });
+    }
+
+    function moveAutoScheduleUnitRow(button, direction) {
+      const row = button?.closest?.(".auto-schedule-unit-row");
+      const list = document.getElementById("autoScheduleUnitList");
+      if (!row || !list) return;
+      if (direction < 0 && row.previousElementSibling) {
+        list.insertBefore(row, row.previousElementSibling);
+      } else if (direction > 0 && row.nextElementSibling) {
+        list.insertBefore(row.nextElementSibling, row);
+      }
+      refreshAutoScheduleOrderButtons();
+      updateAutoSchedulePreview();
     }
 
     function setAutoScheduleUnitChecks(checked) {
@@ -9124,7 +9256,13 @@
     }
 
     function getSelectedAutoScheduleUnitIds() {
-      return Array.from(document.querySelectorAll(".auto-schedule-unit-check:checked")).map(el => el.value).filter(Boolean);
+      return Array.from(document.querySelectorAll("#autoScheduleUnitList .auto-schedule-unit-check:checked")).map(el => el.value).filter(Boolean);
+    }
+
+    function getSelectedAutoScheduleUnitsInOrder() {
+      const ids = getSelectedAutoScheduleUnitIds();
+      const unitMap = new Map(getAutoScheduleClassUnits().map(u => [String(u.id), u]));
+      return ids.map(id => unitMap.get(String(id))).filter(Boolean);
     }
 
     function buildAutoSchedulePreviewPlan(units, startDate, endDate) {
@@ -9144,8 +9282,7 @@
       const submit = document.getElementById("autoScheduleSubmitBtn");
       if (!box) return;
       const mode = document.getElementById("autoScheduleMode")?.value || "single_even";
-      const ids = new Set(getSelectedAutoScheduleUnitIds());
-      const units = getAutoScheduleClassUnits().filter(u => ids.has(String(u.id)));
+      const units = getSelectedAutoScheduleUnitsInOrder();
       const startDate = document.getElementById("autoScheduleStart")?.value || "";
       const endDate = document.getElementById("autoScheduleEnd")?.value || "";
       const daysPerUnit = Math.max(1, Math.min(90, Number(document.getElementById("autoScheduleDaysPerUnit")?.value || 7)));
@@ -9180,7 +9317,7 @@
           <div><strong>${escapeHtml(classLabel(document.getElementById("autoScheduleClassCode")?.value || ""))}</strong>｜無限循環｜${units.length} 個單元｜每單元 ${daysPerUnit} 天</div>
           <div>第一輪預計到 <strong>${escapeHtml(firstRoundEnd)}</strong> 結束。第二輪開始會由 cron 接續到循環最後方，不會一次建立多年排程。</div>
           <div class="auto-schedule-preview-list">
-            ${plan.map(p => `<div class="auto-schedule-preview-row"><strong>${escapeHtml(p.unit.unitName)}</strong><span>${escapeHtml(p.startDate)}～${escapeHtml(p.endDate)}｜${p.days} 天</span></div>`).join("")}
+            ${plan.map((p, idx) => `<div class="auto-schedule-preview-row"><strong>${idx + 1}. ${escapeHtml(p.unit.unitName)}</strong><span>${escapeHtml(p.startDate)}～${escapeHtml(p.endDate)}｜${p.days} 天</span></div>`).join("")}
           </div>
         `;
         return;
@@ -9190,7 +9327,7 @@
       box.innerHTML = `
         <div><strong>${escapeHtml(classLabel(document.getElementById("autoScheduleClassCode")?.value || ""))}</strong>｜${units.length} 個單元｜${total} 天｜平均每單元約 ${Math.round(total / units.length * 10) / 10} 天</div>
         <div class="auto-schedule-preview-list">
-          ${plan.map(p => `<div class="auto-schedule-preview-row"><strong>${escapeHtml(p.unit.unitName)}</strong><span>${escapeHtml(p.startDate)}～${escapeHtml(p.endDate)}｜${p.days} 天</span></div>`).join("")}
+          ${plan.map((p, idx) => `<div class="auto-schedule-preview-row"><strong>${idx + 1}. ${escapeHtml(p.unit.unitName)}</strong><span>${escapeHtml(p.startDate)}～${escapeHtml(p.endDate)}｜${p.days} 天</span></div>`).join("")}
         </div>
       `;
     }
