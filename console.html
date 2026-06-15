@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <script src="./tappie-api.js?v=20260614-curriculum-pack-v1g"></script>
+  <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -3351,7 +3351,76 @@
     }
 
   
-    /* Curriculum Pack v1D2｜cycle UI cleanup */
+
+
+    /* =======================================================
+       Class Pack Fix v6｜Mobile auto-schedule row boundary hard fix
+       - Keep 上/下 order buttons inside the modal on narrow screens.
+       - Uses a strict 3-column mobile grid: checkbox / unit name / compact actions.
+       ======================================================= */
+    #curriculumAutoScheduleModal .auto-schedule-unit-list {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    #curriculumAutoScheduleModal .auto-schedule-unit-row {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    @media (max-width: 720px) {
+      #curriculumAutoScheduleModal .auto-schedule-unit-row {
+        grid-template-columns: 30px minmax(0, 1fr) 70px !important;
+        column-gap: 8px !important;
+        row-gap: 5px !important;
+        padding: 10px !important;
+        align-items: center !important;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-row .auto-schedule-unit-check {
+        width: 22px !important;
+        height: 22px !important;
+        justify-self: center !important;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-row .auto-schedule-unit-name {
+        display: block !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        line-height: 1.35 !important;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-order-actions {
+        width: 70px !important;
+        max-width: 70px !important;
+        min-width: 0 !important;
+        display: grid !important;
+        grid-template-columns: 32px 32px !important;
+        gap: 6px !important;
+        justify-self: end !important;
+        margin-left: 0 !important;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-order-btn {
+        width: 32px !important;
+        min-width: 0 !important;
+        height: 30px !important;
+        padding: 0 !important;
+        font-size: 12px !important;
+      }
+      #curriculumAutoScheduleModal .auto-schedule-unit-row .auto-schedule-unit-status {
+        grid-column: 2 / 4 !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        justify-self: start !important;
+        text-align: left !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        font-size: 12px !important;
+      }
+    }
+
+      /* Curriculum Pack v1D2｜cycle UI cleanup */
     #autoScheduleInfiniteFields .small-note,
     #curriculumAutoScheduleModal .small-note {
       line-height: 1.65;
@@ -6680,12 +6749,19 @@
       return [];
     }
 
-    function getAllStudentTags() {
+    function getStudentTagRegistryOptions(sourceRows = null) {
+      // 標籤索引規則：只要目前學生資料中還有學生帶有該標籤，該標籤就存在並可被篩選 / 選用。
+      // 不再從 point log / 歷史查詢項目建立標籤索引，避免已不存在的舊標籤污染下拉選單。
+      const rows = Array.isArray(sourceRows) ? sourceRows : (studentsCache?.students || []);
       const tags = new Set();
-      for (const s of studentsCache?.students || []) {
-        normalizeStudentTags(s.tags).forEach(tag => tags.add(tag));
+      for (const s of rows || []) {
+        normalizeStudentTags(s?.tags || s?.studentTags || s?.tagList || []).forEach(tag => tags.add(tag));
       }
-      return Array.from(tags).sort((a,b) => a.localeCompare(b, "zh-Hant"));
+      return Array.from(tags).filter(Boolean).sort((a,b) => a.localeCompare(b, "zh-Hant"));
+    }
+
+    function getAllStudentTags() {
+      return getStudentTagRegistryOptions(studentsCache?.students || []);
     }
 
     function renderStudentTags(tags, limit = 3) {
@@ -7754,16 +7830,41 @@
       return Array.from(set).filter(Boolean).sort((a, b) => (a === "無班級" ? 1 : b === "無班級" ? -1 : a.localeCompare(b, 'zh-Hant')));
     }
 
-    function consoleQueryStudentTags(obj) {
+    function getConsoleQueryStudentPools(data = learningCache) {
+      const pools = [];
+      if (Array.isArray(studentsCache?.students)) pools.push(...studentsCache.students);
+      if (Array.isArray(data?.students)) pools.push(...data.students);
+      if (Array.isArray(data?.classes)) {
+        data.classes.forEach(c => {
+          if (Array.isArray(c?.students)) pools.push(...c.students);
+        });
+      }
+      return pools;
+    }
+
+    function findConsoleQueryStudentForTags(obj = {}, data = learningCache) {
+      const uid = String(obj?.uid || obj?.studentUid || obj?.student_uid || "").trim();
+      const id = String(obj?.studentId || obj?.student_id || obj?.id || "").trim();
+      if (!uid && !id) return null;
+      return getConsoleQueryStudentPools(data).find(s => {
+        const suid = String(s?.uid || s?.studentUid || s?.student_uid || "").trim();
+        const sid = String(s?.studentId || s?.student_id || s?.id || "").trim();
+        return (uid && suid === uid) || (id && sid === id);
+      }) || null;
+    }
+
+    function consoleQueryStudentTags(obj, data = learningCache) {
+      // 查詢頁顯示 / 篩選時，以學生目前資料上的 tags 為標籤索引來源；
+      // point log 或歷史項目若帶有舊 tags，不再優先使用，避免舊標籤殘留。
+      const matched = findConsoleQueryStudentForTags(obj || {}, data);
+      if (matched && matched !== obj) {
+        return normalizeStudentTags(matched?.tags || matched?.studentTags || matched?.tagList || []);
+      }
       return normalizeStudentTags(obj?.tags || obj?.studentTags || obj?.tagList || []);
     }
 
     function consoleQueryTagOptions(data = learningCache) {
-      const set = new Set();
-      (data?.students || []).forEach(s => consoleQueryStudentTags(s).forEach(t => set.add(t)));
-      (data?.items || []).forEach(s => consoleQueryStudentTags(s).forEach(t => set.add(t)));
-      (data?.classes || []).forEach(c => (c.students || []).forEach(s => consoleQueryStudentTags(s).forEach(t => set.add(t))));
-      return Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+      return getStudentTagRegistryOptions(getConsoleQueryStudentPools(data));
     }
 
     function consoleQueryHasTag(obj, tag) {

@@ -7,6 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Tappie中控台 (Admin)</title>
+    <!-- Class Pack Fix v6: admin query tag index uses current student tags only. -->
     <meta name="apple-mobile-web-app-capable" content="yes">
   
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -4084,48 +4085,39 @@ function getAdminQueryClassOptions() {
             return [];
         }
 
+        function getAdminQueryStudentPools() {
+            const pools = [];
+            if (Array.isArray(ADMIN_V2_QUERY_ALL_STUDENTS)) pools.push(...ADMIN_V2_QUERY_ALL_STUDENTS);
+            const attendanceStudents = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
+                ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students
+                : [];
+            pools.push(...attendanceStudents);
+            pools.push(...flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE));
+            return pools;
+        }
+
         function findAdminQueryStudentByUid(uid = '') {
             const safeUid = String(uid || '').trim();
             if (!safeUid) return null;
-            const pools = [
-                ADMIN_V2_QUERY_ALL_STUDENTS,
-                Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students) ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students : [],
-                flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE)
-            ];
-            for (const pool of pools) {
-                const found = (Array.isArray(pool) ? pool : []).find(s => String(s.uid || s.studentUid || '').trim() === safeUid);
-                if (found) return found;
-            }
-            return null;
+            return getAdminQueryStudentPools().find(s => String(s.uid || s.studentUid || '').trim() === safeUid) || null;
         }
 
         function getAdminStudentTags(student = {}) {
-            const direct = normalizeAdminStudentTagsValue(student.tags || student.studentTags || student.labels || []);
-            if (direct.length) return direct;
+            // 標籤索引規則與 Console 一致：以「目前學生資料上的標籤」為準。
+            // 加扣點 log / 學習紀錄若保存舊 tags，只能用來找學生，不再作為標籤索引來源。
             const uid = student.uid || student.studentUid || '';
             const matched = findAdminQueryStudentByUid(uid);
             if (matched && matched !== student) {
                 return normalizeAdminStudentTagsValue(matched.tags || matched.studentTags || matched.labels || []);
             }
-            return [];
+            return normalizeAdminStudentTagsValue(student.tags || student.studentTags || student.labels || []);
         }
 
         function getAdminQueryTagOptions() {
             const tagSet = new Set();
-
-            flattenAdminProgressStudents(ADMIN_V2_QUERY_STATE).forEach(s => getAdminStudentTags(s).forEach(tag => tagSet.add(tag)));
-
-            (Array.isArray(ADMIN_V2_QUERY_POINTS_STATE) ? ADMIN_V2_QUERY_POINTS_STATE : []).forEach(log => {
-                getAdminStudentTags(log).forEach(tag => tagSet.add(tag));
+            getAdminQueryStudentPools().forEach(s => {
+                normalizeAdminStudentTagsValue(s?.tags || s?.studentTags || s?.labels || []).forEach(tag => tagSet.add(tag));
             });
-
-            const attendanceStudents = Array.isArray(ADMIN_V2_QUERY_ATTENDANCE_STATE?.students)
-                ? ADMIN_V2_QUERY_ATTENDANCE_STATE.students
-                : [];
-            attendanceStudents.forEach(s => getAdminStudentTags(s).forEach(tag => tagSet.add(tag)));
-
-            ADMIN_V2_QUERY_ALL_STUDENTS.forEach(s => getAdminStudentTags(s).forEach(tag => tagSet.add(tag)));
-
             return Array.from(tagSet).filter(Boolean).sort((a,b) => String(a).localeCompare(String(b), 'zh-Hant'));
         }
 
