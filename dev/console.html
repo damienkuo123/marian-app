@@ -6207,6 +6207,90 @@
       .r7-gami-anchor-row, .r8-learning-panel-head p, .table-hint-row span:first-child { display: none !important; }
     }
 
+
+    /* =======================================================
+       R19｜Final Detail Polish
+       - restore Avatar entry
+       - remove double mobile collapses
+       - flatten mobile main cards
+       - make curriculum primary action clear
+       ======================================================= */
+    .r11-avatar-page .console-main-card { overflow: visible; }
+    .r11-avatar-page .avatar-overview-grid { margin: 0 !important; }
+    .console-summary-body > .avatar-overview-grid,
+    .console-summary-body > .weekly-insight-strip,
+    .console-summary-body > .gami-rule-metrics,
+    .console-summary-body > .r8-learning-metrics,
+    .console-summary-body > .r9-system-metrics,
+    .console-summary-body > .curriculum-overview-grid,
+    .console-summary-body > .brand-summary-grid { margin: 0 !important; }
+    @media (max-width: 760px) {
+      .mobile-insight-collapse { display: none !important; }
+      .console-main-card {
+        border: 0;
+        box-shadow: none;
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        overflow: visible;
+      }
+      .console-main-card > .console-main-head {
+        padding: 0 2px;
+        margin-bottom: 12px;
+      }
+      .console-main-card > .console-main-head h3 { font-size: 17px; }
+      .console-main-card > .console-main-head p { display: none; }
+      .console-summary-body .card,
+      .console-summary-body .weekly-insight,
+      .console-summary-body .gami-rule-metric,
+      .console-summary-body .avatar-overview-card,
+      .console-summary-body .curriculum-overview-card,
+      .console-summary-body .brand-summary-card,
+      .console-summary-body .student-seat-card,
+      .console-summary-body .student-analysis-card {
+        box-shadow: none !important;
+        border-radius: 14px !important;
+        padding: 12px !important;
+      }
+      .console-summary-body .metric-value,
+      .console-summary-body .value,
+      .console-summary-body .avatar-overview-value,
+      .console-summary-body .curriculum-overview-value {
+        font-size: 24px !important;
+      }
+      .weekly-console-grid,
+      .r16-weekly-grid,
+      .r7-gami-layout,
+      .r9-automation-grid,
+      .brand-center-layout { gap: 12px !important; }
+      .weekly-panel,
+      .r7-gami-card,
+      .gami-gacha-section,
+      .brand-panel-v2,
+      .analytics-card,
+      .avatar-card,
+      .r2-workspace-main > .card {
+        border-radius: 18px !important;
+        box-shadow: 0 8px 18px rgba(16,24,40,.035) !important;
+      }
+      .curriculum-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+      }
+      #curNewUnitBtn {
+        grid-column: 1 / -1;
+        min-height: 48px;
+        font-size: 15px;
+        font-weight: 900;
+      }
+      .curriculum-actions .btn-compact { width: 100%; justify-content: center; }
+      .avatar-toolbar,
+      .avatar-filter-row { display: grid !important; grid-template-columns: 1fr; width: 100%; }
+      .avatar-filter-row .btn-compact { width: 100%; justify-content: center; }
+    }
+
   </style>
 </head>
 <body>
@@ -6952,9 +7036,9 @@
       return { kicker:"學習", title:"學習查詢", description:"查詢班級與學生的練習進度、完成狀態與學習表現。" };
     }
     function getGamificationPageCopy(page = currentConsolePage) {
-      if (page === "settingsBattle") return { kicker:"系統", title:"競技模式", description:"管理對戰勝利抽卡次數與盲盒獎池機率。" };
-      if (page === "settingsFeatures") return { kicker:"設定", title:"功能狀態", description:"管理此校區目前已授權功能的啟用狀態。" };
-      return { kicker:"系統", title:"今日挑戰", description:"管理今日挑戰、單元任務結算與排行榜獎勵規則。" };
+      if (page === "settingsBattle") return { kicker:"系統", title:"競技模式", description:"管理對戰勝利後抽卡次數與盲盒獎池機率。", summaryTitle:"競技摘要", summaryNote:"點擊展開查看盲盒與對戰抽卡狀態" };
+      if (page === "settingsFeatures") return { kicker:"設定", title:"功能狀態", description:"管理此校區目前已授權功能的啟用狀態。", summaryTitle:"功能狀態摘要", summaryNote:"點擊展開查看已啟用功能" };
+      return { kicker:"系統", title:"今日挑戰", description:"管理今日挑戰、單元任務結算與排行榜獎勵規則。", summaryTitle:"今日挑戰摘要", summaryNote:"點擊展開查看挑戰、任務與排行榜設定" };
     }
 
     function renderFeatureDisabledCard(title = "此功能未啟用", message = "此校區目前未啟用此功能，請至「設定」調整校區功能啟用。") {
@@ -7111,6 +7195,7 @@
         renderNav();
         if (!isConsolePageAllowedByFeatures(currentConsolePage)) showPage("overview");
         setFeatureConfigStatus("功能啟用設定已儲存。", "ok");
+        updateFeatureSummaryMetrics();
       } catch (err) {
         setFeatureConfigStatus("⚠️ 儲存失敗：" + (err?.message || err), "danger");
       } finally {
@@ -7158,6 +7243,7 @@
         { group: "系統", items: [
           ["settingsDaily", "今日挑戰", "🏆"],
           ["settingsBattle", "競技模式", "⚔"],
+          ["avatars", "角色收集", "🎭"],
           ["automation", "自動化", "⚙"]
         ]},
         { group: "設定", items: [
@@ -7188,7 +7274,8 @@
         ]},
         { group: "系統", items: [
           ["settingsDaily", "今日挑戰", "🏆"],
-          ["settingsBattle", "競技模式", "⚔"]
+          ["settingsBattle", "競技模式", "⚔"],
+          ["avatars", "角色收集", "🎭"]
         ]},
         { group: "設定", items: [
           ["branding", "品牌", "◈"],
@@ -7576,7 +7663,7 @@
         curriculumPacks: ["預設教材包", "Owner 全校區教材包模板"],
         weekly: ["週報", "家長週報設定、測試寄送與正式寄送"],
         newsletters: ["專欄", "教育專欄排序、預覽與封存"],
-        avatars: ["角色", "角色定價、稀有度、素材與類型狀態"],
+        avatars: ["角色收集", "角色定價、稀有度、素材與類型狀態"],
         branding: ["品牌", "校區 Logo、手機入口 Icon 與品牌預覽"],
         settings: ["今日挑戰", "今日挑戰、單元任務與排行榜規則"],
         settingsDaily: ["今日挑戰", "今日挑戰、單元任務與排行榜規則"],
@@ -7643,6 +7730,7 @@
           const host = document.getElementById("featureConfigPanelHost");
           if (host) host.innerHTML = renderFeatureConfigPanelHtml();
           setFeatureConfigStatus("功能設定已同步。", "ok");
+          updateFeatureSummaryMetrics();
         });
         loadGamificationConsole(false);
       }
@@ -7653,6 +7741,7 @@
 
 
     function setupMobileInsightCollapse(page) {
+      return;
       if (page === "overview") return;
       const content = document.getElementById("pageContent");
       if (!content) return;
@@ -8124,7 +8213,6 @@
           <div class="overview-hero-side">
             <button class="btn-compact primary" onclick="refreshOverviewAll()">重新整理</button>
             <button class="btn-compact" onclick="showPage('health')">資料健康</button>
-            <button class="btn-compact" onclick="showPage('weekly')">週報設定</button>
           </div>
         </div>
 
@@ -8311,18 +8399,18 @@
           <div class="muted-text">篩選資料健康項目。</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <select id="healthSeverityFilter" class="select" onchange="renderHealthTable()">
-              <option value="all">全部等級</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+              <option value="all">全部等級</option><option value="critical">嚴重</option><option value="high">高風險</option><option value="medium">中風險</option><option value="low">低風險</option>
             </select>
             <select id="healthCategoryFilter" class="select" onchange="renderHealthTable()"><option value="all">全部類別</option></select>
           </div>
         </div>
         <div id="healthTableWrap" class="table-wrap">
-          <table><thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead><tbody><tr><td colspan="6">正在讀取資料健康...</td></tr></tbody></table>
+          <table><thead><tr><th>校區</th><th>等級</th><th>類別</th><th>問題代碼</th><th>對象</th><th>建議</th></tr></thead><tbody><tr><td colspan="6">正在讀取資料健康...</td></tr></tbody></table>
         </div>`;
       return `<div class="console-page-standard r9-system-page console-ui-page">
         ${renderConsolePageIntro({ group: "總覽", title: "資料健康", description: "查看資料健康檢查結果，優先處理高風險項目。", actions: `<button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>` })}
         ${renderConsoleSummaryToggle({ id: "healthSummaryToggle", title: "資料健康摘要", note: "點擊展開查看各等級統計", body: metrics })}
-        ${renderConsoleMainCard({ title: "資料健康清單", description: "等級、類別、Issue Code 與建議維持在同一張報表中。", body: table })}
+        ${renderConsoleMainCard({ title: "資料健康清單", description: "依嚴重程度篩選資料項目，逐項確認需要處理的資料。", body: table })}
       </div>`;
     }
 
@@ -13724,88 +13812,70 @@ function isAvatarLockedForConsole(a){
 function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsConsoleList(); }
 
     function renderAvatarsConsole() {
-      return `
-        <div class="console-ui-page r11-avatar-page">
-          ${renderConsolePageHero({
-            kicker: "角色",
-            title: "角色定價與素材管理",
-            description: "管理本校一般角色、活動角色、兌換點數、角色類型與素材狀態。預設角色與基礎 AI 對手維持系統鎖定，不在 Console 中改價或改類型。",
-            actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`
-          })}
-          ${renderConsoleRulesStrip("角色管理", "管理角色價格、類型、稀有度與素材狀態。", "角色")}
-
-          <div class="avatar-overview-grid">
-            <div class="avatar-overview-card primary">
-              <div class="avatar-overview-label">角色素材中心</div>
-              <div id="avatarTotalCount" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">角色圖片與 Mask 會影響盲盒、對戰結果與學生端顯示。</div>
-              <div class="avatar-overview-metrics">
-                <div class="avatar-overview-mini"><span>可編輯</span><strong id="avatarEditableCount">—</strong></div>
-                <div class="avatar-overview-mini"><span>系統鎖定</span><strong id="avatarLockedCount">—</strong></div>
-                <div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>
-              </div>
-            </div>
-            <div class="avatar-overview-card">
-              <div class="avatar-overview-label">一般角色</div>
-              <div id="avatarNormalCount" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">學生兌換與盲盒獎池主要來源。</div>
-            </div>
-            <div class="avatar-overview-card">
-              <div class="avatar-overview-label">活動角色</div>
-              <div id="avatarEventCount" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">活動 Boss / 特殊活動使用。</div>
-            </div>
-            <div class="avatar-overview-card">
-              <div class="avatar-overview-label">平均價格</div>
-              <div id="avatarAvgCost" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">只計算可編輯角色兌換點數。</div>
+      const summary = `
+        <div class="avatar-overview-grid">
+          <div class="avatar-overview-card primary">
+            <div class="avatar-overview-label">角色總數</div>
+            <div id="avatarTotalCount" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">目前可在本校使用的角色。</div>
+            <div class="avatar-overview-metrics">
+              <div class="avatar-overview-mini"><span>可編輯</span><strong id="avatarEditableCount">—</strong></div>
+              <div class="avatar-overview-mini"><span>系統鎖定</span><strong id="avatarLockedCount">—</strong></div>
+              <div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>
             </div>
           </div>
-
-          ${renderConsoleSectionCard({
-            title: "角色列表",
-            description: "可在卡片或表格模式調整本校一般 / 活動角色的兌換點數與類型。鎖定角色會顯示原因，但不開放直接編輯。",
-            actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`,
-            body: `
-              <div class="avatar-source-note">
-                <span>本校一般 / 活動角色：可改價格與類型</span>
-                <span>本校預設角色：系統保護</span>
-                <span>AI_EASY / AI_MED / AI_HARD（含校區前綴）：核心 AI 對手鎖定</span>
-              </div>
-              <div class="avatar-toolbar">
-                <div class="avatar-filter-row">
-                  <input id="avatarSearch" class="console-input" placeholder="搜尋角色名稱 / ID" oninput="renderAvatarsConsoleList()" />
-                  <select id="avatarCategoryFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-                    <option value="">全部類型</option>
-                    <option value="一般">一般</option>
-                    <option value="活動">活動</option>
-                    <option value="預設">預設</option>
-                    <option value="locked">鎖定角色</option>
-                    <option value="assetIssue">素材缺漏</option>
-                  </select>
-                  <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-                    <option value="">全部稀有度</option>
-                    <option value="N">N</option><option value="R">R</option><option value="SR">SR</option><option value="SSR">SSR</option><option value="UR">UR</option>
-                  </select>
-                  <select id="avatarScopeFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-                    <option value="">全部來源</option>
-                    <option value="school">本校角色</option>
-                    <option value="global">全域角色</option>
-                  </select>
-                </div>
-                <div class="avatar-filter-row">
-                  <button id="avatarViewCardsBtn" class="btn-compact" onclick="setAvatarConsoleView('cards')">卡片</button>
-                  <button id="avatarViewTableBtn" class="btn-compact" onclick="setAvatarConsoleView('table')">表格</button>
-                </div>
-              </div>
-              <div id="avatarsConsoleStatus" class="metric-note" style="margin-bottom:12px;">正在讀取角色...</div>
-              <div id="avatarsConsoleList" class="empty-state">正在讀取...</div>
-            `
-          })}
+          <div class="avatar-overview-card">
+            <div class="avatar-overview-label">一般角色</div>
+            <div id="avatarNormalCount" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">學生兌換與盲盒獎池主要來源。</div>
+          </div>
+          <div class="avatar-overview-card">
+            <div class="avatar-overview-label">活動角色</div>
+            <div id="avatarEventCount" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">活動或特殊對戰使用。</div>
+          </div>
+          <div class="avatar-overview-card">
+            <div class="avatar-overview-label">平均價格</div>
+            <div id="avatarAvgCost" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">只計算可編輯角色兌換點數。</div>
+          </div>
+        </div>`;
+      const body = `
+        <div class="avatar-toolbar">
+          <div class="avatar-filter-row">
+            <input id="avatarSearch" class="console-input" placeholder="搜尋角色名稱 / ID" oninput="renderAvatarsConsoleList()" />
+            <select id="avatarCategoryFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+              <option value="">全部類型</option>
+              <option value="一般">一般</option>
+              <option value="活動">活動</option>
+              <option value="預設">預設</option>
+              <option value="locked">鎖定角色</option>
+              <option value="assetIssue">素材缺漏</option>
+            </select>
+            <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+              <option value="">全部稀有度</option>
+              <option value="N">N</option><option value="R">R</option><option value="SR">SR</option><option value="SSR">SSR</option><option value="UR">UR</option>
+            </select>
+            <select id="avatarScopeFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+              <option value="">全部來源</option>
+              <option value="school">本校角色</option>
+              <option value="global">全域角色</option>
+            </select>
+          </div>
+          <div class="avatar-filter-row">
+            <button id="avatarViewCardsBtn" class="btn-compact" onclick="setAvatarConsoleView('cards')">卡片</button>
+            <button id="avatarViewTableBtn" class="btn-compact" onclick="setAvatarConsoleView('table')">表格</button>
+          </div>
         </div>
-      `;
+        <div id="avatarsConsoleStatus" class="metric-note" style="margin-bottom:12px;">正在讀取角色...</div>
+        <div id="avatarsConsoleList" class="empty-state">正在讀取...</div>`;
+      return `<div class="console-page-standard r11-avatar-page console-ui-page">
+        ${renderConsolePageIntro({ group: "系統", title: "角色收集", description: "管理本校角色的兌換點數、類型與素材狀態。", actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>` })}
+        ${renderConsoleSummaryToggle({ id: "avatarSummaryToggle", title: "角色摘要", note: "點擊展開查看角色數量與素材狀態", body: summary })}
+        ${renderConsoleMainCard({ title: "角色列表", description: "可調整本校一般 / 活動角色；系統鎖定角色只顯示狀態。", actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`, body })}
+      </div>`;
     }
-    
+
     async function loadAvatarsConsole(force=false){
       const statusEl = document.getElementById("avatarsConsoleStatus");
       const listEl = document.getElementById("avatarsConsoleList");
@@ -14489,19 +14559,33 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         if(data && data.success !== false) gamificationAvatarCache = Array.isArray(data.avatars) ? data.avatars : [];
       }catch(err){ console.warn('[loadGamificationSchoolAvatars]', err); gamificationAvatarCache = []; }
     }
+    function updateFeatureSummaryMetrics() {
+      const inputs = Array.from(document.querySelectorAll('input[data-feature-config-key]'));
+      const totalEl = document.getElementById('gamiFeatureTotalMetric');
+      const enabledEl = document.getElementById('gamiFeatureEnabledMetric');
+      if (!totalEl && !enabledEl) return;
+      const enabled = inputs.filter(input => input.checked).length;
+      if (totalEl) totalEl.textContent = inputs.length || '—';
+      if (enabledEl) enabledEl.textContent = inputs.length ? enabled : '—';
+    }
+
+    function renderGamificationSummaryHtml(viewPage = currentConsolePage) {
+      if (viewPage === "settingsFeatures") {
+        return `<div id="featureSummaryOnly" class="gami-rule-metrics"><div class="gami-rule-metric"><span>授權功能</span><strong id="gamiFeatureTotalMetric">—</strong><small>目前可管理的功能</small></div><div class="gami-rule-metric"><span>已啟用</span><strong id="gamiFeatureEnabledMetric">—</strong><small>校區目前開啟中</small></div></div>`;
+      }
+      if (viewPage === "settingsBattle") {
+        return `<div class="gami-rule-metrics"><div class="gami-rule-metric"><span>盲盒總機率</span><strong id="gamiProbMetric">—</strong><small>總和需等於 100%</small></div><div class="gami-rule-metric"><span>對戰抽卡</span><strong id="gamiBattlePickMetric">—</strong><small>玩家 / AI 勝利抽卡次數</small></div></div>`;
+      }
+      return `<div class="gami-rule-metrics"><div class="gami-rule-metric"><span>今日挑戰最高階</span><strong id="gamiDailyMetric">—</strong><small>最高分對應點數</small></div><div class="gami-rule-metric"><span>任務結算門檻</span><strong id="gamiMissionMetric">—</strong><small>未達標 / 良好 / 完美</small></div><div class="gami-rule-metric"><span>排行榜前三</span><strong id="gamiLeaderboardMetric">—</strong><small>前三名加分</small></div></div>`;
+    }
+
     function renderGamificationConsole(viewPage = currentConsolePage){
       const copy = getGamificationPageCopy(viewPage);
       const pageClass = viewPage === "settingsBattle" ? "gami-page-battle" : (viewPage === "settingsFeatures" ? "gami-page-features" : "gami-page-daily");
       return `
         <div class="console-page-standard r7-gami-page ${pageClass}">
           ${renderConsolePageIntro({ group: copy.kicker, title: copy.title, description: copy.description, actions: `<button class="btn-compact" onclick="loadGamificationConsole(true)">重新整理</button><button id="gamiSaveBtnTop" class="btn-compact primary" onclick="saveGamificationConsole(document.getElementById('gamiSaveBtn') || this)">儲存設定</button>` })}
-          ${renderConsoleSummaryToggle({ id: "gamiSummaryToggle", title: "設定摘要", note: "點擊展開查看目前設定摘要", body: `
-          <div class="gami-rule-metrics">
-            <div class="gami-rule-metric"><span>今日挑戰最高階</span><strong id="gamiDailyMetric">—</strong><small>最高分對應點數</small></div>
-            <div class="gami-rule-metric"><span>任務結算門檻</span><strong id="gamiMissionMetric">—</strong><small>未達標 / 良好 / 完美</small></div>
-            <div class="gami-rule-metric"><span>排行榜前三</span><strong id="gamiLeaderboardMetric">—</strong><small>前三名加分</small></div>
-            <div class="gami-rule-metric"><span>盲盒總機率</span><strong id="gamiProbMetric">—</strong><small>總和需等於 100%</small></div>
-          </div>` })}
+          ${renderConsoleSummaryToggle({ id: "gamiSummaryToggle", title: copy.summaryTitle, note: copy.summaryNote, body: renderGamificationSummaryHtml(viewPage) })}
           ${renderConsoleMainCard({ title: copy.title, description: "調整完成後請儲存設定。", body: `
           <div class="r7-gami-layout">
             <div class="r7-gami-main">
@@ -14747,6 +14831,9 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const daily=document.getElementById('gamiDailyMetric'); if(daily) daily.textContent=`${g.dailyChallenge.tiers[0].min}+`;
       const mission=document.getElementById('gamiMissionMetric'); if(mission) mission.textContent=`${g.mission.failThreshold}/${g.mission.goodThreshold}/${g.mission.perfectThreshold}`;
       const lb=document.getElementById('gamiLeaderboardMetric'); if(lb) lb.textContent=g.leaderboard.join('/');
+      const battlePickMetric=document.getElementById('gamiBattlePickMetric');
+      if (battlePickMetric) battlePickMetric.textContent = `${g.gachaPicks['玩家對戰']} / ${g.gachaPicks['初階Ai']} / ${g.gachaPicks['中階Ai']} / ${g.gachaPicks['高階Ai']}`;
+      updateFeatureSummaryMetrics();
     }
     document.addEventListener('input', (e)=>{ if(e.target && String(e.target.id||'').startsWith('gami')) updateGamificationPreview(); });
     async function saveGamificationConsole(btn){
