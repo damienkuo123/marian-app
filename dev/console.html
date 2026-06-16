@@ -13392,6 +13392,96 @@ function openCurriculumUnitModal(unitId = "") {
     // =======================================================
     let avatarsConsoleCache = null;
     let avatarsConsoleView = "cards";
+
+
+    // =======================================================
+    // R15 HOTFIX｜Avatar helper functions restored from console(60).html
+    // These helpers are required by renderAvatarsConsoleList / cards / table.
+    // R14 accidentally removed them while normalizing the Avatar page shell.
+    // =======================================================
+function avatarNameOf(a){ return String(a.name || a.avatarName || avatarIdOf(a) || "未命名角色"); }
+
+function avatarIdOf(a){ return String(a.id || a.avatarId || a.avatar_id || ""); }
+
+function avatarImgOf(a){ return a.fullImg || a.full_img_url || a.image || a.img || a.image_url || "/assets/gacha-box.png"; }
+
+function avatarRarityOf(a){ return String(a.rarity || "N").trim().toUpperCase() || "N"; }
+
+function avatarScopeOf(a){
+      const explicit = String(a.avatarScope || a.avatar_scope || a.avatar_source || "").toLowerCase();
+      if (["global", "global_role", "global_avatar"].includes(explicit)) return "global";
+      if (["school", "school_specific", "school_role", "school_avatar"].includes(explicit)) return "school";
+      if (a.school_id === null || a.schoolId === null) return "global";
+      if (a.school_id || a.schoolId) return "school";
+      if (String(a.owner_school_code || "").toUpperCase() === "GLOBAL") return "global";
+      if (a.owner_school_code) return "school";
+      return "unknown";
+    }
+
+function avatarMaskOf(a){ return a.mask || a.mask_url || a.maskUrl || a.mask_img_url || a.maskImg || ""; }
+
+function normalizeAvatarCategoryForConsole(category){
+      const raw=String(category||"").trim();
+      const key=raw.toLowerCase();
+      if (raw === "活動" || key === "event") return "活動";
+      if (raw === "預設" || key === "default") return "預設";
+      return "一般";
+    }
+
+function isCoreAiAvatarIdForConsole(id){
+      const upperId = String(id || "").trim().toUpperCase();
+      return ["AI_EASY", "AI_MED", "AI_HARD"].includes(upperId)
+        || upperId.endsWith("_AI_EASY")
+        || upperId.endsWith("_AI_MED")
+        || upperId.endsWith("_AI_HARD");
+    }
+
+function avatarTypeLabelForConsole(a){
+      const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
+      const upperId = avatarIdOf(a).toUpperCase();
+      if (isCoreAiAvatarIdForConsole(upperId)) return "AI 對手";
+      return category;
+    }
+
+function avatarNeedsMask(a){ return avatarRarityOf(a) !== "N"; }
+
+function avatarHasImage(a){ const img = String(avatarImgOf(a) || ""); return Boolean(img && img !== "/assets/gacha-box.png"); }
+
+function avatarHasMask(a){ return Boolean(String(avatarMaskOf(a) || "").trim()); }
+
+function avatarMaskLabel(a){
+      if (!avatarNeedsMask(a)) return "不需";
+      return avatarHasMask(a) ? "OK" : "缺少";
+    }
+
+function avatarMaskAssetClass(a){
+      if (!avatarNeedsMask(a)) return "neutral";
+      return avatarHasMask(a) ? "ok" : "warn";
+    }
+
+function avatarHasAssetIssue(a){ return !avatarHasImage(a) || (avatarNeedsMask(a) && !avatarHasMask(a)); }
+
+function avatarLockReasonForConsole(a){
+      const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
+      const upperId = avatarIdOf(a).toUpperCase();
+      if (isCoreAiAvatarIdForConsole(upperId)) return "核心 AI 對手，系統保護";
+      if (category === "預設") return "預設角色，系統保護";
+      return "可編輯本校角色";
+    }
+
+function isAvatarLockedForConsole(a){
+      // Console 鎖定規則：
+      // 1) category = 預設：鎖定，標籤顯示「預設」。
+      // 2) id 僅限 AI_EASY / AI_MED / AI_HARD：鎖定。
+      // 其他角色即使名稱或 category 含 AI，也不鎖定。
+      const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
+      const upperId = avatarIdOf(a).toUpperCase();
+      const isBaseAi = isCoreAiAvatarIdForConsole(upperId);
+      return category === "預設" || isBaseAi;
+    }
+
+function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsConsoleList(); }
+
     function renderAvatarsConsole() {
       return `
         <div class="console-ui-page r11-avatar-page">
