@@ -5947,6 +5947,266 @@
       }
     }
 
+  
+
+    /* =======================================================
+       R18｜Template-first Layout Refactor
+       - every function page follows the same visible structure
+       - intro card -> collapsed summary -> main function
+       - editor mode becomes a true page mode, not an appended block
+       ======================================================= */
+    .console-page-standard {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .console-page-intro-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      padding: 24px 26px;
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(37,99,235,.08), rgba(245,158,11,.05)), var(--surface);
+      box-shadow: 0 12px 28px rgba(16,24,40,.045);
+      margin: 0 0 0;
+    }
+    .console-page-intro-card .intro-group {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 7px 11px;
+      margin-bottom: 12px;
+      background: rgba(37,99,235,.10);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 850;
+      line-height: 1;
+    }
+    .console-page-intro-card h2 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.18;
+      letter-spacing: -.05em;
+      font-weight: 880;
+      color: var(--text);
+    }
+    .console-page-intro-card p {
+      max-width: 760px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14.5px;
+      line-height: 1.7;
+      font-weight: 560;
+    }
+    .console-page-intro-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .console-summary-toggle {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: 0 8px 22px rgba(16,24,40,.035);
+      overflow: hidden;
+    }
+    .console-summary-toggle summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 15px 18px;
+      color: var(--text);
+      font-weight: 820;
+    }
+    .console-summary-toggle summary::-webkit-details-marker { display: none; }
+    .console-summary-title { display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .console-summary-title strong { font-size: 15px; letter-spacing: -.02em; }
+    .console-summary-title span { color: var(--muted); font-size: 12.5px; font-weight: 620; line-height: 1.45; }
+    .console-summary-chevron { color: var(--muted); font-weight: 900; }
+    .console-summary-toggle[open] .console-summary-chevron { transform: rotate(180deg); }
+    .console-summary-body { padding: 0 18px 18px; }
+    .console-main-card {
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: 0 12px 28px rgba(16,24,40,.045);
+      padding: 20px;
+      overflow: hidden;
+    }
+    .console-main-card > .console-main-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .console-main-card h3 {
+      margin: 0;
+      color: var(--text);
+      font-size: 18px;
+      letter-spacing: -.035em;
+      line-height: 1.25;
+      font-weight: 840;
+    }
+    .console-main-card p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      font-weight: 560;
+    }
+    .console-editor-page {
+      min-height: calc(100vh - 150px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .console-editor-page .r2-workspace {
+      margin: 0;
+      min-height: calc(100vh - 160px);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+    .console-editor-page .r2-workspace-head {
+      padding: 22px 24px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(37,99,235,.08), rgba(245,158,11,.04)), var(--surface);
+      box-shadow: 0 10px 24px rgba(16,24,40,.04);
+    }
+    .console-editor-page .r2-workspace-kicker {
+      display:inline-flex;
+      width:fit-content;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(37,99,235,.10);
+      color:var(--primary);
+      font-size:12px;
+      font-weight:850;
+      margin-bottom:10px;
+    }
+    .console-editor-page .r2-workspace-title {
+      margin:0;
+      font-size:30px;
+      line-height:1.18;
+      letter-spacing:-.05em;
+      font-weight:880;
+    }
+    .console-editor-page .r2-workspace-subtitle {
+      max-width:760px;
+      margin:9px 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.65;
+      font-weight:560;
+    }
+    .console-editor-page .r2-workspace-body {
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) minmax(280px, 340px);
+      gap:18px;
+      align-items:start;
+    }
+    .console-editor-page .r2-workspace-main > .card,
+    .console-editor-page .r2-side-card {
+      border-radius:24px;
+      box-shadow:0 10px 24px rgba(16,24,40,.04);
+    }
+    .console-editor-page .r2-sticky-actions,
+    .console-editor-page .console-sticky-actions {
+      position: sticky;
+      bottom: 16px;
+      z-index: 30;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 42px rgba(16,24,40,.12);
+    }
+    html[data-theme="dark"] .console-editor-page .r2-sticky-actions,
+    html[data-theme="dark"] .console-editor-page .console-sticky-actions { background: rgba(17,24,39,.92); }
+    .console-editor-page .r2-sticky-actions .right,
+    .console-editor-page .console-sticky-actions .right,
+    .console-editor-actions-right { display:flex; justify-content:flex-end; align-items:center; gap:8px; flex-wrap:wrap; }
+
+    /* R18: existing page aliases normalized into the same shell */
+    .student-ops-layout,
+    .admin-card-summary-section .insight-grid,
+    .weekly-insight-strip,
+    .gami-rule-metrics,
+    .curriculum-overview-grid,
+    .brand-summary-grid,
+    .r9-system-metrics,
+    .r8-learning-metrics { margin: 0 !important; }
+
+    .student-card-list { display: none !important; }
+    @media (max-width: 760px) {
+      .console-page-standard { gap: 12px; }
+      .console-page-intro-card {
+        display: block;
+        padding: 18px;
+        border-radius: 22px;
+      }
+      .console-page-intro-card h2 { font-size: 24px; }
+      .console-page-intro-card p { font-size: 13px; line-height: 1.55; }
+      .console-page-intro-actions { justify-content: flex-start; margin-top: 14px; }
+      .console-summary-toggle { border-radius: 18px; }
+      .console-summary-toggle:not([open]) .console-summary-body { display: none; }
+      .console-summary-body { padding: 0 12px 12px; }
+      .console-summary-body .grid.cards,
+      .console-summary-body .weekly-insight-strip,
+      .console-summary-body .gami-rule-metrics,
+      .console-summary-body .curriculum-overview-grid,
+      .console-summary-body .brand-summary-grid,
+      .console-summary-body .student-ops-layout,
+      .console-summary-body .insight-grid,
+      .console-summary-body .r9-system-metrics,
+      .console-summary-body .r8-learning-metrics { display: grid; grid-template-columns: 1fr !important; gap: 10px !important; }
+      .console-main-card { padding: 14px; border-radius: 20px; }
+      .console-main-card > .console-main-head { display: block; }
+      .console-main-card > .console-main-head .console-page-actions { justify-content: flex-start; margin-top: 12px; }
+      .student-list-table, .student-table-shell table { display: none !important; }
+      .student-card-list { display: grid !important; gap: 10px; }
+      .console-editor-page { min-height: calc(100vh - 110px); }
+      .console-editor-page .r2-workspace-head { border-radius: 22px; padding: 18px; }
+      .console-editor-page .r2-workspace-title { font-size: 24px; }
+      .console-editor-page .r2-workspace-body { grid-template-columns: 1fr; gap: 12px; }
+      .console-editor-page .r2-workspace-side { order: 2; }
+      .console-editor-page .r2-side-card { display: none; }
+      .console-editor-page .r2-side-card:first-child { display: block; }
+      .console-editor-page .r2-sticky-actions,
+      .console-editor-page .console-sticky-actions {
+        left: 10px;
+        right: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        border-radius: 18px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .console-editor-page .r2-sticky-actions .right,
+      .console-editor-page .console-sticky-actions .right { width:100%; display:grid; grid-template-columns: 1fr; }
+      .console-editor-page .btn-compact { width: 100%; justify-content: center; }
+      .r7-gami-anchor-row, .r8-learning-panel-head p, .table-hint-row span:first-child { display: none !important; }
+    }
+
   </style>
 </head>
 <body>
@@ -5955,11 +6215,11 @@
       <div class="brand"><span class="brand-dot"></span> Tappie Console</div>
       <div>
         <h1 class="hero-title">專業後台，<br><span>集中管理</span>每一個校區。</h1>
-        <p class="hero-copy">Owner 與 Super Admin 專用後台。Owner 可查看全部校區，Super Admin 只管理自己的校區。</p>
+        <p class="hero-copy">Owner 與 Super Admin 專用的 SaaS 後台框架。第一版已接上 Overview 與 Data Health 真實資料，Owner 可看全部校區，Super Admin 僅看自己校區。</p>
         <div class="hero-pills">
           <span class="pill">Owner 總控台</span>
           <span class="pill">Super Admin 後台</span>
-          <span class="pill">資料健康</span>
+          <span class="pill">Data Health</span>
           <span class="pill">Weekly Reports</span>
         </div>
       </div>
@@ -6105,7 +6365,7 @@
       <div class="modal-head">
         <div>
           <h2>批量修改學生</h2>
-          <p id="batchModalSubtitle">只會修改有選擇的欄位；留空或選擇不修改會保留原資料。</p>
+          <p id="batchWorkspaceSubtitle">只會修改有選擇的欄位；留空或選擇不修改會保留原資料。</p>
         </div>
         <button class="btn-compact" onclick="hideBatchModal()">關閉</button>
       </div>
@@ -7212,6 +7472,37 @@
         </div>`;
     }
 
+
+    // R18｜Template-first helpers
+    function renderConsolePageIntro({ group = "", title = "", description = "", actions = "" } = {}) {
+      return `
+        <section class="console-page-intro-card">
+          <div>
+            ${group ? `<div class="intro-group">${escapeHtml(group)}</div>` : ""}
+            ${title ? `<h2>${escapeHtml(title)}</h2>` : ""}
+            ${description ? `<p>${escapeHtml(description)}</p>` : ""}
+          </div>
+          ${actions ? `<div class="console-page-intro-actions">${actions}</div>` : ""}
+        </section>`;
+    }
+    function renderConsoleSummaryToggle({ id = "", title = "狀態摘要", note = "點擊展開查看摘要", body = "", open = false } = {}) {
+      return `
+        <details ${id ? `id="${escapeHtml(id)}"` : ""} class="console-summary-toggle" ${open ? "open" : ""}>
+          <summary><span class="console-summary-title"><strong>${escapeHtml(title)}</strong>${note ? `<span>${escapeHtml(note)}</span>` : ""}</span><span class="console-summary-chevron">⌄</span></summary>
+          <div class="console-summary-body">${body || ""}</div>
+        </details>`;
+    }
+    function renderConsoleMainCard({ title = "", description = "", actions = "", body = "", className = "" } = {}) {
+      return `
+        <section class="console-main-card ${className}">
+          ${(title || description || actions) ? `<div class="console-main-head"><div>${title ? `<h3>${escapeHtml(title)}</h3>` : ""}${description ? `<p>${escapeHtml(description)}</p>` : ""}</div>${actions ? `<div class="console-page-actions">${actions}</div>` : ""}</div>` : ""}
+          ${body || ""}
+        </section>`;
+    }
+    function renderConsoleEditorFrame(body = "") {
+      return `<div class="console-editor-page">${body || ""}</div>`;
+    }
+
     function renderNav() {
       const groups = getConsoleNavGroups();
       const nav = document.getElementById("sideNav");
@@ -8008,171 +8299,56 @@
     }
 
     function renderHealth() {
-      return `
-        <div class="r9-system-page console-ui-page">
-          <div class="r9-system-hero console-page-hero compact">
-            <div>
-              <div class="r9-system-kicker console-page-kicker">總覽</div>
-              <h2>資料健康</h2>
-              <p>查看目前資料檢查結果，優先處理高風險項目。</p>
-            </div>
-            <div class="r9-system-actions console-page-actions">
-              <button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>
-            </div>
-          </div>
-
-          <div class="grid cards r9-system-metrics">
-            <div class="card"><div class="metric-label">嚴重</div><div id="healthCritical" class="metric-value">—</div><div class="metric-note">需優先處理</div></div>
-            <div class="card"><div class="metric-label">高風險</div><div id="healthHigh" class="metric-value">—</div><div class="metric-note">建議盡快確認</div></div>
-            <div class="card"><div class="metric-label">中風險</div><div id="healthMedium" class="metric-value">—</div><div class="metric-note">例行檢查項目</div></div>
-            <div class="card"><div class="metric-label">健康分數</div><div id="healthScore" class="metric-value">—</div><div class="metric-note">資料健康分數</div></div>
-          </div>
-
-          <div class="r9-system-panel console-section-card">
-            <div class="r9-system-panel-head">
-              <div>
-                <h3>資料健康問題清單</h3>
-                <p>依等級與類別篩選需要處理的資料項目。</p>
-              </div>
-            </div>
-            <div class="r9-system-toolbar">
-              <div class="muted-text">依條件篩選資料健康項目。</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <select id="healthSeverityFilter" class="select" onchange="renderHealthTable()">
-                  <option value="all">全部等級</option>
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-                <select id="healthCategoryFilter" class="select" onchange="renderHealthTable()">
-                  <option value="all">全部類別</option>
-                </select>
-              </div>
-            </div>
-            <div id="healthTableWrap" class="table-wrap">
-              <table>
-                <thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead>
-                <tbody><tr><td colspan="6">正在讀取 health views...</td></tr></tbody>
-              </table>
-            </div>
+      const metrics = `
+        <div class="grid cards r9-system-metrics">
+          <div class="card"><div class="metric-label">嚴重</div><div id="healthCritical" class="metric-value">—</div><div class="metric-note">需優先處理</div></div>
+          <div class="card"><div class="metric-label">高風險</div><div id="healthHigh" class="metric-value">—</div><div class="metric-note">建議盡快確認</div></div>
+          <div class="card"><div class="metric-label">中風險</div><div id="healthMedium" class="metric-value">—</div><div class="metric-note">例行檢查項目</div></div>
+          <div class="card"><div class="metric-label">健康分數</div><div id="healthScore" class="metric-value">—</div><div class="metric-note">資料健康分數</div></div>
+        </div>`;
+      const table = `
+        <div class="r9-system-toolbar">
+          <div class="muted-text">篩選資料健康項目。</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="healthSeverityFilter" class="select" onchange="renderHealthTable()">
+              <option value="all">全部等級</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+            </select>
+            <select id="healthCategoryFilter" class="select" onchange="renderHealthTable()"><option value="all">全部類別</option></select>
           </div>
         </div>
-      `;
+        <div id="healthTableWrap" class="table-wrap">
+          <table><thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead><tbody><tr><td colspan="6">正在讀取資料健康...</td></tr></tbody></table>
+        </div>`;
+      return `<div class="console-page-standard r9-system-page console-ui-page">
+        ${renderConsolePageIntro({ group: "總覽", title: "資料健康", description: "查看資料健康檢查結果，優先處理高風險項目。", actions: `<button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>` })}
+        ${renderConsoleSummaryToggle({ id: "healthSummaryToggle", title: "資料健康摘要", note: "點擊展開查看各等級統計", body: metrics })}
+        ${renderConsoleMainCard({ title: "資料健康清單", description: "等級、類別、Issue Code 與建議維持在同一張報表中。", body: table })}
+      </div>`;
     }
 
     function renderStudents() {
-      return `
+      if (studentWorkspace) return renderConsoleEditorFrame(renderStudentWorkspace());
+      const summary = `
         <div class="student-ops-layout">
-          <div class="student-seat-card">
-            <div>
-              <div class="student-seat-top">
-                <div>
-                  <div class="student-seat-title">學生席位</div>
-                  <div class="student-seat-value"><span id="stuSeatActive" class="student-seat-active">—</span><span class="student-seat-limit">/ <span id="stuSeatLimit">—</span></span></div>
-                  <div id="stuSeatNote" class="student-seat-note">以啟用學生計算，不包含停用學生</div>
-                </div>
-                <div id="stuSeatState" class="student-seat-state ok">狀態判斷中</div>
-              </div>
-              <div class="progress-track"><div id="stuSeatFill" class="progress-fill"></div></div>
-            </div>
-            <div class="student-seat-meta">
-              <div class="student-mini-stat">
-                <div class="student-mini-label">剩餘名額</div>
-                <div id="stuRemaining" class="student-mini-value">—</div>
-              </div>
-              <div class="student-mini-stat">
-                <div class="student-mini-label">停用學生</div>
-                <div id="stuInactiveCount" class="student-mini-value">—</div>
-              </div>
-              <div class="student-mini-stat">
-                <div class="student-mini-label">資料總筆數</div>
-                <div id="stuTotalRows" class="student-mini-value">—</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="student-ops-side">
-            <div class="student-analysis-card">
-              <div class="student-analysis-head">
-                <div>
-                  <div class="student-analysis-title">班級分布</div>
-                  <div id="stuClassSummary" class="student-analysis-sub">正在統計班級結構</div>
-                </div>
-                <div id="stuClassCount" class="student-analysis-number">—</div>
-              </div>
-              <div id="stuClassBars" class="class-bars"><div class="insight-sub">正在統計...</div></div>
-            </div>
-          </div>
+          <div class="student-seat-card"><div><div class="student-seat-top"><div><div class="student-seat-title">學生席位</div><div class="student-seat-value"><span id="stuSeatActive" class="student-seat-active">—</span><span class="student-seat-limit">/ <span id="stuSeatLimit">—</span></span></div><div id="stuSeatNote" class="student-seat-note">以啟用學生計算，不包含停用學生</div></div><div id="stuSeatState" class="student-seat-state ok">狀態判斷中</div></div><div class="progress-track"><div id="stuSeatFill" class="progress-fill"></div></div></div><div class="student-seat-meta"><div class="student-mini-stat"><div class="student-mini-label">剩餘名額</div><div id="stuRemaining" class="student-mini-value">—</div></div><div class="student-mini-stat"><div class="student-mini-label">停用學生</div><div id="stuInactiveCount" class="student-mini-value">—</div></div><div class="student-mini-stat"><div class="student-mini-label">資料總筆數</div><div id="stuTotalRows" class="student-mini-value">—</div></div></div></div>
+          <div class="student-ops-side"><div class="student-analysis-card"><div class="student-analysis-head"><div><div class="student-analysis-title">班級分布</div><div id="stuClassSummary" class="student-analysis-sub">正在統計班級結構</div></div><div id="stuClassCount" class="student-analysis-number">—</div></div><div id="stuClassBars" class="class-bars"><div class="insight-sub">正在統計...</div></div></div></div>
         </div>
-
-        <div id="studentAlertStrip" class="student-check-strip ok">
-          <span id="studentCheckSummary">正在檢查學生資料狀態...</span>
-          <button class="btn-compact" onclick="toggleStudentDataCheck()">一鍵檢查學生資料</button>
-        </div>
-        <div id="studentDataCheckPanel" class="student-data-check-panel hidden"></div>
-
-        <div id="studentWorkspaceHost" class="student-workspace-host ${studentWorkspace ? "" : "hidden"}">
-          ${studentWorkspace ? renderStudentWorkspace() : ""}
-        </div>
-
-        <div id="studentListSection" class="card student-list-section ${studentWorkspace ? "hidden" : ""}" style="margin-top:18px;">
-          <div class="panel-title">
-            <h2>學生資料管理</h2>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-              <button class="btn-compact" onclick="loadStudentsData(true)">重新整理</button>
-              <button class="btn-compact" onclick="toggleStudentBatchMode()" id="studentBatchToggleBtn">${studentBatchMode ? "結束批量" : "批量模式"}</button>
-              <button class="btn-compact primary" onclick="openStudentEditor(null)">新增學生</button>
-            </div>
-          </div>
-          <div class="table-hint-row">
-            <span>這裡是查找、編輯與批量管理學生資料用。上方會先提示席位、班級與資料狀態。</span>
-            <span id="studentTableNote">正在讀取學生資料...</span>
-          </div>
-          <div class="toolbar">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <input id="studentSearchInput" class="search-input" placeholder="搜尋姓名 / UID / 卡號 / Email" oninput="renderStudentsTable()" style="min-width:260px;" />
-              <select id="studentClassFilter" class="select" onchange="renderStudentsTable()"><option value="all">全部班級</option></select>
-              <select id="studentTagFilter" class="select" onchange="renderStudentsTable()"><option value="all">全部標籤</option></select>
-              <select id="studentStatusFilter" class="select" onchange="renderStudentsTable()">
-                <option value="active">啟用學生</option>
-                <option value="all">全部學生</option>
-                <option value="inactive">停用學生</option>
-              </select>
-              <select id="studentWeeklyFilter" class="select" onchange="renderStudentsTable()">
-                <option value="all">週報狀態</option>
-                <option value="enabled">週報啟用</option>
-                <option value="disabled">週報未啟用</option>
-                <option value="invalid_email">Email 異常</option>
-              </select>
-              <select id="studentIssueFilter" class="select" onchange="renderStudentsTable()">
-                <option value="all">資料狀態</option>
-                <option value="needs_check">需要檢查</option>
-                <option value="missing_class">未分班</option>
-                <option value="missing_card">卡號缺漏</option>
-                <option value="email_issue">Email 異常</option>
-              </select>
-            </div>
-          </div>
-          <div id="studentBatchActions" class="batch-actions ${studentBatchMode ? "show" : ""}">
-            <div><strong id="studentSelectedCount">已選 0 位</strong><div class="small-note">批量修改只會處理目前勾選學生</div></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn-compact" onclick="selectVisibleStudents(true)">勾選目前列表</button>
-              <button class="btn-compact" onclick="clearStudentSelection()">清除</button>
-              <button class="btn-compact primary" onclick="openBatchStudentEditor()">設定修改</button>
-            </div>
-          </div>
-          <div id="studentsTableWrap" class="table-wrap">
-            <table>
-              <thead><tr><th style="width:42px;">選取</th><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
-              <tbody><tr><td colspan="8">正在讀取 students...</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      `;
+        <div id="studentAlertStrip" class="student-check-strip ok"><span id="studentCheckSummary">正在檢查學生資料狀態...</span><button class="btn-compact" onclick="toggleStudentDataCheck()">查看資料檢查</button></div>
+        <div id="studentDataCheckPanel" class="student-data-check-panel hidden"></div>`;
+      const actions = `<button class="btn-compact" onclick="loadStudentsData(true)">重新整理</button><button class="btn-compact" onclick="toggleStudentBatchMode()" id="studentBatchToggleBtn">${studentBatchMode ? "結束批量" : "批量模式"}</button><button class="btn-compact primary" onclick="openStudentEditor(null)">新增學生</button>`;
+      const body = `
+        <div id="studentListSection" class="student-list-section">
+          <div class="toolbar"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><input id="studentSearchInput" class="search-input" placeholder="搜尋姓名 / UID / 卡號 / Email" oninput="renderStudentsTable()" style="min-width:260px;" /><select id="studentClassFilter" class="select" onchange="renderStudentsTable()"><option value="all">全部班級</option></select><select id="studentTagFilter" class="select" onchange="renderStudentsTable()"><option value="all">全部標籤</option></select><select id="studentStatusFilter" class="select" onchange="renderStudentsTable()"><option value="active">啟用學生</option><option value="all">全部學生</option><option value="inactive">停用學生</option></select><select id="studentWeeklyFilter" class="select" onchange="renderStudentsTable()"><option value="all">週報狀態</option><option value="enabled">週報啟用</option><option value="disabled">週報未啟用</option><option value="invalid_email">Email 異常</option></select><select id="studentIssueFilter" class="select" onchange="renderStudentsTable()"><option value="all">資料狀態</option><option value="needs_check">需要檢查</option><option value="missing_class">未分班</option><option value="missing_card">卡號缺漏</option><option value="email_issue">Email 異常</option></select></div></div>
+          <div id="studentBatchActions" class="batch-actions ${studentBatchMode ? "show" : ""}"><div><strong id="studentSelectedCount">已選 0 位</strong><div class="small-note">批量修改只會處理目前勾選學生</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-compact" onclick="selectVisibleStudents(true)">勾選目前列表</button><button class="btn-compact" onclick="clearStudentSelection()">清除</button><button class="btn-compact primary" onclick="openBatchStudentEditor()">設定修改</button></div></div>
+          <div id="studentsTableWrap" class="table-wrap"><table><thead><tr><th style="width:42px;">選取</th><th>學生</th><th>班級</th><th>點數</th><th>週報 / Email</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead><tbody><tr><td colspan="8">正在讀取 students...</td></tr></tbody></table></div>
+        </div>`;
+      return `<div class="console-page-standard">
+        ${renderConsolePageIntro({ group: "學生", title: "學生編輯", description: "管理學生資料、班級、標籤、週報狀態與 NFC 連結。", actions })}
+        ${renderConsoleSummaryToggle({ id: "studentSummaryToggle", title: "學生摘要", note: "點擊展開查看席位、班級與資料檢查", body: summary })}
+        ${renderConsoleMainCard({ title: "學生列表", description: "查找、編輯與批量管理學生資料。", body })}
+      </div>`;
     }
 
-    
     function normalizeStudentType(value) {
       const raw = String(value || "").trim();
       if (["有班級", "美語資優生", "elite", "advanced", "class", "classed"].includes(raw)) return "有班級";
@@ -9569,7 +9745,7 @@
                 </div>
               </div>
               <div class="r2-side-card r3-student-help">
-                <div class="tappie-alert info"><strong>操作規則</strong><br>學生、班級與標籤仍保留在同一個學生管理脈絡中；這裡只是把新增 / 編輯從大型彈窗改成頁面內工作區。</div>
+                <div class="tappie-alert info"><strong>編輯提醒</strong><br>修改完成後請按下儲存，返回列表或切換分頁前會提醒未儲存內容。</div>
                 <div id="r3StudentDirtyNote" class="r2-dirty-note">${studentWorkspaceDirty ? "有尚未儲存的變更" : ""}</div>
               </div>
             </aside>
@@ -9594,7 +9770,7 @@
             <div>
               <div class="r2-workspace-kicker">學生資料管理</div>
               <h2 class="r2-workspace-title">批量修改學生</h2>
-              <p id="batchModalSubtitle" class="r2-workspace-subtitle">即將修改 ${selectedStudentIds.size} 位學生。只會修改有設定的欄位；留空或選擇不修改會保留原資料。</p>
+              <p id="batchWorkspaceSubtitle" class="r2-workspace-subtitle">即將修改 ${selectedStudentIds.size} 位學生。只會修改有設定的欄位；留空或選擇不修改會保留原資料。</p>
             </div>
             <button class="btn-compact" onclick="closeStudentWorkspace()">返回列表</button>
           </div>
@@ -9873,68 +10049,15 @@
        - Uses the same card/table/modal rhythm as Students page
        ======================================================= */
     function renderAdmins() {
-      return `
-        <div id="adminCardWorkspaceHost" class="admin-card-workspace-host ${adminCardWorkspace ? "" : "hidden"}">
-          ${adminCardWorkspace ? renderAdminCardWorkspace() : ""}
-        </div>
-
-        <div id="adminCardSummarySection" class="admin-card-summary-section ${adminCardWorkspace ? "hidden" : ""}">
-          <div class="admin-card-overview-grid insight-grid">
-            <div class="insight-card primary">
-              <div class="insight-title">老師管理卡</div>
-              <div id="adminCardTotal" class="insight-main">—</div>
-              <div id="adminCardTotalNote" class="insight-sub">用於老師個人 Admin Card 授權</div>
-              <div class="progress-track"><div id="adminCardActiveFill" class="progress-fill"></div></div>
-            </div>
-            <div class="insight-card">
-              <div class="insight-title">啟用中</div>
-              <div id="adminCardActiveCount" class="insight-main">—</div>
-              <div class="insight-sub">可登入 Admin 的老師卡</div>
-            </div>
-            <div class="insight-card">
-              <div class="insight-title">Super 權限</div>
-              <div id="adminCardSuperCount" class="insight-main">—</div>
-              <div class="insight-sub">具備 Super Admin 操作權限</div>
-            </div>
-            <div class="insight-card">
-              <div class="insight-title">停用</div>
-              <div id="adminCardInactiveCount" class="insight-main">—</div>
-              <div class="insight-sub">保留紀錄但不可登入</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="adminCardListSection" class="card admin-card-list-section ${adminCardWorkspace ? "hidden" : ""}" style="margin-top:18px;">
-          <div class="panel-title">
-            <div>
-              <h2>老師管理卡</h2>
-              <p class="small-note">管理老師個人 Admin Card、角色權限與 NFC 登入連結。新增與編輯會進入頁面內工作區。</p>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-              <button class="btn-compact" onclick="loadAdminCardsData(true)">重新整理</button>
-              <button class="btn-compact primary" onclick="openAdminCardEditor(null)">新增老師</button>
-            </div>
-          </div>
-          <div class="toolbar">
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <input id="adminTeacherSearchInput" class="search-input" placeholder="搜尋老師名稱 / 卡號 / 備註" value="${escapeHtml(adminTeacherSearch || "")}" oninput="adminTeacherSearch=this.value; renderAdminCardsTable();" style="min-width:260px;" />
-              <select id="adminTeacherRoleFilter" class="select" onchange="adminTeacherRoleFilter=this.value; renderAdminCardsTable();">
-                <option value="all" ${adminTeacherRoleFilter === "all" ? "selected" : ""}>全部角色</option>
-                <option value="admin" ${adminTeacherRoleFilter === "admin" ? "selected" : ""}>Admin</option>
-                <option value="super" ${adminTeacherRoleFilter === "super" ? "selected" : ""}>Super</option>
-              </select>
-              <select id="adminTeacherStatusFilter" class="select" onchange="adminTeacherStatusFilter=this.value; renderAdminCardsTable();">
-                <option value="active" ${adminTeacherStatusFilter === "active" ? "selected" : ""}>啟用老師</option>
-                <option value="all" ${adminTeacherStatusFilter === "all" ? "selected" : ""}>全部老師</option>
-                <option value="inactive" ${adminTeacherStatusFilter === "inactive" ? "selected" : ""}>停用老師</option>
-              </select>
-            </div>
-          </div>
-          <div id="adminCardsTableWrap" class="table-wrap">
-            <div class="empty-state">正在讀取老師管理卡...</div>
-          </div>
-        </div>
-      `;
+      if (adminCardWorkspace) return renderConsoleEditorFrame(renderAdminCardWorkspace());
+      const summary = `<div class="admin-card-overview-grid insight-grid"><div class="insight-card primary"><div class="insight-title">老師管理卡</div><div id="adminCardTotal" class="insight-main">—</div><div id="adminCardTotalNote" class="insight-sub">用於老師個人 Admin Card 授權</div><div class="progress-track"><div id="adminCardActiveFill" class="progress-fill"></div></div></div><div class="insight-card"><div class="insight-title">啟用中</div><div id="adminCardActiveCount" class="insight-main">—</div><div class="insight-sub">可登入 Admin 的老師卡</div></div><div class="insight-card"><div class="insight-title">Super 權限</div><div id="adminCardSuperCount" class="insight-main">—</div><div class="insight-sub">具備 Super Admin 操作權限</div></div><div class="insight-card"><div class="insight-title">停用</div><div id="adminCardInactiveCount" class="insight-main">—</div><div class="insight-sub">保留紀錄但不可登入</div></div></div>`;
+      const actions = `<button class="btn-compact" onclick="loadAdminCardsData(true)">重新整理</button><button class="btn-compact primary" onclick="openAdminCardEditor(null)">新增老師</button>`;
+      const body = `<div class="toolbar"><div style="display:flex;gap:10px;flex-wrap:wrap;"><input id="adminTeacherSearchInput" class="search-input" placeholder="搜尋老師名稱 / 卡號 / 備註" value="${escapeHtml(adminTeacherSearch || "")}" oninput="adminTeacherSearch=this.value; renderAdminCardsTable();" style="min-width:260px;" /><select id="adminTeacherRoleFilter" class="select" onchange="adminTeacherRoleFilter=this.value; renderAdminCardsTable();"><option value="all" ${adminTeacherRoleFilter === "all" ? "selected" : ""}>全部角色</option><option value="admin" ${adminTeacherRoleFilter === "admin" ? "selected" : ""}>Admin</option><option value="super" ${adminTeacherRoleFilter === "super" ? "selected" : ""}>Super</option></select><select id="adminTeacherStatusFilter" class="select" onchange="adminTeacherStatusFilter=this.value; renderAdminCardsTable();"><option value="active" ${adminTeacherStatusFilter === "active" ? "selected" : ""}>啟用老師</option><option value="all" ${adminTeacherStatusFilter === "all" ? "selected" : ""}>全部老師</option><option value="inactive" ${adminTeacherStatusFilter === "inactive" ? "selected" : ""}>停用老師</option></select></div></div><div id="adminCardsTableWrap" class="table-wrap"><div class="empty-state">正在讀取老師管理卡...</div></div>`;
+      return `<div class="console-page-standard">
+        ${renderConsolePageIntro({ group: "老師", title: "老師編輯", description: "管理老師個人 Admin Card、權限角色與 NFC 登入連結。", actions })}
+        ${renderConsoleSummaryToggle({ id: "adminSummaryToggle", title: "老師卡摘要", note: "點擊展開查看啟用、停用與權限數量", body: summary })}
+        ${renderConsoleMainCard({ title: "老師管理卡列表", description: "新增、編輯或停用老師管理卡。", body })}
+      </div>`;
     }
 
     function getAdminCardsArray() {
@@ -10315,44 +10438,13 @@
     function renderLearning() {
       learningQueryTab = normalizeLearningQueryTab();
       const copy = getLearningPageCopy(currentConsolePage);
-      return `
-        <div class="r8-learning-page console-ui-page">
-          <div class="r8-learning-hero">
-            <div>
-              <div class="r8-learning-kicker">${escapeHtml(copy.kicker)}</div>
-              <h2>${escapeHtml(copy.title)}</h2>
-              <p>${escapeHtml(copy.description)}</p>
-            </div>
-            <div class="r8-learning-actions">
-              <button class="btn-compact" onclick="loadLearningData(true)">重新整理</button>
-            </div>
-          </div>
-
-          <div class="grid cards r8-learning-metrics">
-            <div class="card"><div class="metric-label" id="lpMetric1Label">班級數</div><div id="lpMetric1" class="metric-value">—</div><div class="metric-note" id="lpMetric1Note">目前有學習進度的班級</div></div>
-            <div class="card"><div class="metric-label" id="lpMetric2Label">學生數</div><div id="lpMetric2" class="metric-value">—</div><div class="metric-note" id="lpMetric2Note">啟用學生 / 進度追蹤</div></div>
-            <div class="card"><div class="metric-label" id="lpMetric3Label">危險提醒</div><div id="lpMetric3" class="metric-value">—</div><div class="metric-note" id="lpMetric3Note">少於任務基礎次數</div></div>
-            <div class="card"><div class="metric-label" id="lpMetric4Label">排行榜上榜</div><div id="lpMetric4" class="metric-value">—</div><div class="metric-note" id="lpMetric4Note">目前單元 Top 3</div></div>
-          </div>
-
-          <div class="r8-learning-panel console-section-card">
-            <div class="r8-learning-panel-head">
-              <div>
-                <h3>查詢結果</h3>
-                <p>設定條件後查看紀錄，點擊列可展開明細。</p>
-              </div>
-              <span class="r8-learning-note" id="learningTableNote">正在讀取查詢資料...</span>
-            </div>
-            <div class="learning-thresholds" id="learningThresholds"></div>
-            <div class="learning-toolbar">
-              <div class="learning-filter-row" id="learningFilterRow"></div>
-            </div>
-            <div id="learningClassGrid" class="learning-class-grid">
-              <div class="empty-state">正在讀取查詢資料...</div>
-            </div>
-          </div>
-        </div>
-      `;
+      const summary = `<div class="grid cards r8-learning-metrics"><div class="card"><div class="metric-label" id="lpMetric1Label">班級數</div><div id="lpMetric1" class="metric-value">—</div><div class="metric-note" id="lpMetric1Note">目前有學習進度的班級</div></div><div class="card"><div class="metric-label" id="lpMetric2Label">學生數</div><div id="lpMetric2" class="metric-value">—</div><div class="metric-note" id="lpMetric2Note">啟用學生 / 進度追蹤</div></div><div class="card"><div class="metric-label" id="lpMetric3Label">提醒</div><div id="lpMetric3" class="metric-value">—</div><div class="metric-note" id="lpMetric3Note">需要留意的項目</div></div><div class="card"><div class="metric-label" id="lpMetric4Label">狀態</div><div id="lpMetric4" class="metric-value">—</div><div class="metric-note" id="lpMetric4Note">目前查詢摘要</div></div></div>`;
+      const body = `<div class="learning-thresholds" id="learningThresholds"></div><div class="learning-toolbar"><div class="learning-filter-row" id="learningFilterRow"></div></div><div id="learningClassGrid" class="learning-class-grid"><div class="empty-state">正在讀取查詢資料...</div></div>`;
+      return `<div class="console-page-standard r8-learning-page console-ui-page">
+        ${renderConsolePageIntro({ group: "學習", title: copy.title, description: copy.description, actions: `<button class="btn-compact" onclick="loadLearningData(true)">重新整理</button>` })}
+        ${renderConsoleSummaryToggle({ id: "learningSummaryToggle", title: "查詢摘要", note: "點擊展開查看目前查詢統計", body: summary })}
+        ${renderConsoleMainCard({ title: "查詢結果", description: "設定條件後查看紀錄，點擊列可展開明細。", body })}
+      </div>`;
     }
 
     function learningFailThreshold(gami) { return Number(gami?.mission?.failThreshold ?? 5); }
@@ -10410,7 +10502,7 @@
         } else if (learningQueryTab === "learning") {
           data = await TappieAPI.consoleGetProgress({ token, schoolCode, scopeMode });
         } else {
-          throw new Error("console_get_query_data_not_available");
+          throw new Error("查詢功能尚未載入");
         }
         if (!data || !data.success) throw new Error(data?.message || data?.error || "console_query_data_failed");
         learningQueryCaches[learningQueryTab] = data;
@@ -10905,64 +10997,14 @@
     }
 
     function renderWeekly() {
-      if (isOwnerAllMode()) {
-        return renderOwnerAllWeeklyOperations();
-      }
-      return `
-        <div class="weekly-insight-strip">
-          <div class="weekly-insight"><div class="label">週報對象</div><div id="wkEnabledStudents" class="value">—</div><div id="wkEnabledNote" class="note">已啟用週報學生</div><div class="weekly-progress"><div id="wkRecipientBar"></div></div></div>
-          <div class="weekly-insight"><div class="label">可寄送</div><div id="wkEligibleStudents" class="value">—</div><div class="note">有效 Parent Email</div></div>
-          <div class="weekly-insight"><div class="label">待發專欄</div><div id="wkNewsletter" class="value">—</div><div id="wkNewsletterNote" class="note">display_order = 1</div></div>
-        </div>
-
-        <div class="weekly-console-grid r16-weekly-grid">
-          <div class="weekly-panel">
-            <div class="weekly-panel-head">
-              <div><h3>自動寄送排程</h3><p>設定家長週報是否自動寄送、寄送星期與整點時間。正式週報統計區間為寄送當下往前 7 天。</p></div>
-              <span id="wkConfigBadge" class="badge warn">讀取中</span>
-            </div>
-            <div class="weekly-toggle">
-              <div><strong>啟用家長週報</strong><span>關閉時，系統不會自動正式寄送週報給家長。</span></div>
-              <input type="checkbox" id="wkEnabled" />
-            </div>
-            <div class="weekly-form-grid two" style="margin-top:14px;">
-              <div class="weekly-field"><label>寄送星期</label><select id="wkSendDay"><option value="MON">週一</option><option value="TUE">週二</option><option value="WED">週三</option><option value="THU">週四</option><option value="FRI">週五</option><option value="SAT">週六</option><option value="SUN">週日</option></select></div>
-              <div class="weekly-field"><label>寄送時間（整點）</label><select id="wkSendHour"></select></div>
-              <div class="weekly-field"><label>統計區間</label><select id="wkRollingDays"><option value="7">往前 7 天</option></select></div>
-              <div class="weekly-field"><label>時區</label><input value="Asia/Taipei" disabled /></div>
-            </div>
-            <div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyConfig(this)">儲存週報設定</button></div>
-          </div>
-
-          <div class="weekly-panel">
-            <div class="weekly-panel-head"><div><h3>測試與正式寄送</h3><p>先寄測試信確認內容；正式寄送成功後，今日內不可再次正式寄送。</p></div></div>
-            <div class="weekly-status-inline">
-              <div class="weekly-status-title"><span id="wkTodayStatus" class="badge warn">—</span></div>
-              <div id="wkTodayNote" class="weekly-status-sub">今日 report_key</div>
-              <div id="wkTodayBox" class="weekly-status-card">正在讀取...</div>
-            </div>
-            <div class="weekly-field" style="margin-top:14px;"><label>測試收件信箱</label><input id="wkTestEmail" placeholder="輸入你的測試信箱" /></div>
-            <div class="weekly-send-actions"><button class="weekly-btn purple" onclick="sendConsoleWeeklyTest(this)">測試寄給自己</button><button id="wkSendNowBtn" class="weekly-btn orange" onclick="sendConsoleWeeklyNow(this)">正式寄送</button></div>
-            <div id="wkActionResult" class="weekly-result-box hidden"></div>
-          </div>
-
-          <div class="weekly-panel wide">
-            <div class="weekly-panel-head"><div><h3>收件人健康檢查</h3><p>確認會收到週報的學生，以及缺少信箱或格式異常的學生。</p></div><span id="wkRecipientBadge" class="badge warn">—</span></div>
-            <div id="wkRecipientSummary" class="weekly-status-sub"></div>
-            <div id="wkRecipientList" class="weekly-mini-list" style="margin-top:10px;"></div>
-          </div>
-
-          <div class="weekly-panel">
-            <div class="weekly-panel-head"><div><h3>本週週報專欄</h3><p>正式寄送只取第 1 順位且未封存的校區專欄。測試寄送不會封存。</p></div></div>
-            <div id="wkNewsletterBox" class="weekly-status-card">正在讀取...</div>
-          </div>
-
-          <div class="weekly-panel">
-            <div class="weekly-panel-head"><div><h3>最近寄送紀錄</h3><p>可點擊成功 / 失敗 / 略過查看明細。</p></div><button class="weekly-btn" onclick="loadWeeklyData(true)">重新整理</button></div>
-            <div id="wkJobList" class="weekly-mini-list">正在讀取...</div>
-          </div>
-        </div>
-      `;
+      if (isOwnerAllMode()) return renderOwnerAllWeeklyOperations();
+      const summary = `<div class="weekly-insight-strip"><div class="weekly-insight"><div class="label">週報對象</div><div id="wkEnabledStudents" class="value">—</div><div id="wkEnabledNote" class="note">已啟用週報學生</div><div class="weekly-progress"><div id="wkRecipientBar"></div></div></div><div class="weekly-insight"><div class="label">可寄送</div><div id="wkEligibleStudents" class="value">—</div><div class="note">有效 Parent Email</div></div><div class="weekly-insight"><div class="label">待發專欄</div><div id="wkNewsletter" class="value">—</div><div id="wkNewsletterNote" class="note">第 1 順位專欄</div></div></div>`;
+      const body = `<div class="weekly-console-grid r16-weekly-grid"><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>自動寄送排程</h3><p>設定家長週報是否自動寄送、寄送星期與整點時間。</p></div><span id="wkConfigBadge" class="badge warn">讀取中</span></div><div class="weekly-toggle"><div><strong>啟用家長週報</strong><span>關閉時，系統不會自動正式寄送週報給家長。</span></div><input type="checkbox" id="wkEnabled" /></div><div class="weekly-form-grid two" style="margin-top:14px;"><div class="weekly-field"><label>寄送星期</label><select id="wkSendDay"><option value="MON">週一</option><option value="TUE">週二</option><option value="WED">週三</option><option value="THU">週四</option><option value="FRI">週五</option><option value="SAT">週六</option><option value="SUN">週日</option></select></div><div class="weekly-field"><label>寄送時間（整點）</label><select id="wkSendHour"></select></div><div class="weekly-field"><label>統計區間</label><select id="wkRollingDays"><option value="7">往前 7 天</option></select></div><div class="weekly-field"><label>時區</label><input value="Asia/Taipei" disabled /></div></div><div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyConfig(this)">儲存週報設定</button></div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>測試與正式寄送</h3><p>先寄測試信確認內容；正式寄送成功後，今日內不可再次正式寄送。</p></div></div><div class="weekly-status-inline"><div class="weekly-status-title"><span id="wkTodayStatus" class="badge warn">—</span></div><div id="wkTodayNote" class="weekly-status-sub">今日 report_key</div><div id="wkTodayBox" class="weekly-status-card">正在讀取...</div></div><div class="weekly-field" style="margin-top:14px;"><label>測試收件信箱</label><input id="wkTestEmail" placeholder="輸入你的測試信箱" /></div><div class="weekly-send-actions"><button class="weekly-btn purple" onclick="sendConsoleWeeklyTest(this)">測試寄給自己</button><button id="wkSendNowBtn" class="weekly-btn orange" onclick="sendConsoleWeeklyNow(this)">正式寄送</button></div><div id="wkActionResult" class="weekly-result-box hidden"></div></div><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>收件人健康檢查</h3><p>確認會收到週報的學生，以及缺少信箱或格式異常的學生。</p></div><span id="wkRecipientBadge" class="badge warn">—</span></div><div id="wkRecipientSummary" class="weekly-status-sub"></div><div id="wkRecipientList" class="weekly-mini-list" style="margin-top:10px;"></div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>本週週報專欄</h3><p>正式寄送只取第 1 順位且未封存的校區專欄。</p></div></div><div id="wkNewsletterBox" class="weekly-status-card">正在讀取...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>最近寄送紀錄</h3><p>可查看最近成功、失敗與略過紀錄。</p></div><button class="weekly-btn" onclick="loadWeeklyData(true)">重新整理</button></div><div id="wkJobList" class="weekly-mini-list">正在讀取...</div></div></div>`;
+      return `<div class="console-page-standard">
+        ${renderConsolePageIntro({ group: "家長", title: "週報", description: "設定家長週報寄送規則、測試信與正式寄送狀態。", actions: `<button class="btn-compact" onclick="loadWeeklyData(true)">重新整理</button>` })}
+        ${renderConsoleSummaryToggle({ id: "weeklySummaryToggle", title: "週報摘要", note: "點擊展開查看收件人、可寄送與待發專欄", body: summary })}
+        ${renderConsoleMainCard({ title: "週報管理", description: "先確認排程與測試信，再執行正式寄送。", body })}
+      </div>`;
     }
 
     function getConsoleSchoolCode() { return getActiveSchoolCode(); }
@@ -12695,83 +12737,19 @@
 
 
     function renderCurriculum() {
-      return `
-        <div class="curriculum-overview-grid">
-          <div class="curriculum-overview-card primary">
-            <div class="curriculum-overview-label">單元資料庫</div>
-            <div class="curriculum-overview-value"><span id="curUnitCount">—</span> 個單元</div>
-            <div class="curriculum-overview-note">管理每個班級的單元名稱、單字內容與活動單元。單元本身不代表正在上課，排程才決定實際期間。</div>
-            <div class="curriculum-mini-grid">
-              <div class="curriculum-mini-box"><div class="curriculum-mini-label">單字總數</div><div id="curWordCount" class="curriculum-mini-value">—</div></div>
-              <div class="curriculum-mini-box"><div class="curriculum-mini-label">班級 / 活動</div><div id="curClassCount" class="curriculum-mini-value">—</div></div>
-            </div>
-          </div>
-          <div class="curriculum-overview-card">
-            <div class="curriculum-overview-label">排程狀態</div>
-            <div class="curriculum-overview-value"><span id="curScheduleCount">—</span> 筆</div>
-            <div class="curriculum-overview-note">目前啟用中的單元排程。已結算或取消的排程會由後端標記為停用，不會出現在這裡。</div>
-            <div class="curriculum-mini-grid">
-              <div class="curriculum-mini-box"><div class="curriculum-mini-label">進行中</div><div id="curOngoingCount" class="curriculum-mini-value">—</div></div>
-              <div class="curriculum-mini-box"><div class="curriculum-mini-label">即將開始</div><div id="curUpcomingCount" class="curriculum-mini-value">—</div></div>
-            </div>
-          </div>
-          <div class="curriculum-overview-card">
-            <div class="curriculum-overview-label">排程覆蓋率</div>
-            <div class="curriculum-overview-value"><span id="curScheduleRate">—</span>%</div>
-            <div class="curriculum-overview-note">已有排程的單元比例。未排程單元會在「排程管理」中提醒，方便補上日期。</div>
-            <div class="curriculum-progress"><div id="curScheduleRateBar"></div></div>
-          </div>
-        </div>
-
-        <div class="curriculum-settlement-panel weekly-panel" style="margin-top:18px;">
-          <div class="weekly-panel-head">
-            <div>
-              <h3>單元結算通知</h3>
-              <p>單元結束並完成結算後，系統可寄送未達標名單與排行榜摘要給校區管理信箱。這是單元排程完成後的通知設定。</p>
-            </div>
-            <span id="wkNotifyBadge" class="badge warn">讀取中</span>
-          </div>
-          <div class="weekly-toggle">
-            <div><strong>啟用單元結算通知</strong><span>結算完成後通知校區管理者，方便追蹤未達標學生與獎勵結果。</span></div>
-            <input type="checkbox" id="wkNotifyEnabled" />
-          </div>
-          <div class="weekly-form-grid two" style="margin-top:14px;">
-            <div class="weekly-field"><label>校區通知信箱</label><input id="wkMissionEmail" placeholder="例如：admin@school.com" /></div>
-            <div class="weekly-field"><label>通知內容</label><input value="未達標名單與排行榜摘要" disabled /></div>
-          </div>
-          <div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyNotification(this)">儲存結算通知設定</button></div>
-        </div>
-
-        <div class="card" style="margin-top:18px;">
-          <div class="curriculum-panel-intro">
-            <div>
-              <h2>單元與排程管理</h2>
-              <p>先在「單元資料庫」維護單字內容，再到「排程管理」安排班級日期；月曆 / 年曆只在單一班級或 EVENT 視角顯示。</p>
-            </div>
-            <button class="btn-compact" onclick="loadCurriculumData(true)">重新整理</button>
-          </div>
-          <div class="curriculum-toolbar">
-            <div class="curriculum-tabs">
-              <button id="curTabUnits" class="curriculum-tab active" onclick="setCurriculumTab('units')">單元資料庫</button>
-              <button id="curTabSchedules" class="curriculum-tab" onclick="setCurriculumTab('schedules')">排程管理</button>
-            </div>
-            <div class="curriculum-actions">
-              <button id="curNewUnitBtn" class="btn-compact btn-success" onclick="openCurriculumUnitModal()">新增單元</button>
-              <button id="curImportPackBtn" class="btn-compact" onclick="openCurriculumPackImportModal()">預設組合</button>
-              <button id="curCsvExportBtn" class="btn-compact" onclick="openCurriculumCsvTool('export')">下載範本</button>
-              <button id="curCsvImportBtn" class="btn-compact" onclick="openCurriculumCsvTool('import')">匯入檔案</button>
-              <button id="curAutoScheduleBtn" class="btn-compact" style="display:none;" onclick="openCurriculumAutoScheduleModal()">自動排程</button>
-            </div>
-          </div>
-          <div class="curriculum-filter-row">
-            <input id="curSearch" class="console-input" placeholder="搜尋班級、單元或單字" oninput="updateCurriculumFilters()" />
-            <select id="curClassFilter" class="console-select" onchange="updateCurriculumFilters()"></select>
-          </div>
-          <div id="curriculumModeHint" class="curriculum-mode-hint">單元資料庫：只管理單元與單字內容，不在這裡調整排程。</div>
-          <div id="curriculumContent"><div class="curriculum-empty">正在讀取單元資料...</div></div>
-        </div>
-      `;
+      if (curriculumWorkspace) return renderConsoleEditorFrame(renderCurriculumWorkspace());
+      const summary = `<div class="curriculum-overview-grid"><div class="curriculum-overview-card primary"><div class="curriculum-overview-label">單元資料庫</div><div class="curriculum-overview-value"><span id="curUnitCount">—</span> 個單元</div><div class="curriculum-overview-note">目前已建立的單元與單字內容。</div><div class="curriculum-mini-grid"><div class="curriculum-mini-box"><div class="curriculum-mini-label">單字總數</div><div id="curWordCount" class="curriculum-mini-value">—</div></div><div class="curriculum-mini-box"><div class="curriculum-mini-label">班級 / 活動</div><div id="curClassCount" class="curriculum-mini-value">—</div></div></div></div><div class="curriculum-overview-card"><div class="curriculum-overview-label">排程狀態</div><div class="curriculum-overview-value"><span id="curScheduleCount">—</span> 筆</div><div class="curriculum-overview-note">目前啟用中的單元排程。</div><div class="curriculum-mini-grid"><div class="curriculum-mini-box"><div class="curriculum-mini-label">進行中</div><div id="curOngoingCount" class="curriculum-mini-value">—</div></div><div class="curriculum-mini-box"><div class="curriculum-mini-label">即將開始</div><div id="curUpcomingCount" class="curriculum-mini-value">—</div></div></div></div><div class="curriculum-overview-card"><div class="curriculum-overview-label">排程覆蓋率</div><div class="curriculum-overview-value"><span id="curScheduleRate">—</span>%</div><div class="curriculum-overview-note">已有排程的單元比例。</div><div class="curriculum-progress"><div id="curScheduleRateBar"></div></div></div></div>`;
+      const actions = `<button class="btn-compact" onclick="loadCurriculumData(true)">重新整理</button>`;
+      const body = `<div class="curriculum-toolbar"><div class="curriculum-tabs"><button id="curTabUnits" class="curriculum-tab active" onclick="setCurriculumTab('units')">單元資料庫</button><button id="curTabSchedules" class="curriculum-tab" onclick="setCurriculumTab('schedules')">排程管理</button></div><div class="curriculum-actions"><button id="curNewUnitBtn" class="btn-compact btn-success" onclick="openCurriculumUnitModal()">新增單元</button><button id="curImportPackBtn" class="btn-compact" onclick="openCurriculumPackImportModal()">預設組合</button><button id="curCsvExportBtn" class="btn-compact" onclick="openCurriculumCsvTool('export')">下載範本</button><button id="curCsvImportBtn" class="btn-compact" onclick="openCurriculumCsvTool('import')">匯入檔案</button><button id="curAutoScheduleBtn" class="btn-compact" style="display:none;" onclick="openCurriculumAutoScheduleModal()">自動排程</button></div></div><div class="curriculum-filter-row"><input id="curSearch" class="console-input" placeholder="搜尋班級、單元或單字" oninput="updateCurriculumFilters()" /><select id="curClassFilter" class="console-select" onchange="updateCurriculumFilters()"></select></div><div id="curriculumModeHint" class="curriculum-mode-hint">單元資料庫：只管理單元與單字內容，不在這裡調整排程。</div><div id="curriculumContent"><div class="curriculum-empty">正在讀取單元資料...</div></div>`;
+      const settlement = `<div class="curriculum-settlement-panel weekly-panel" style="margin-top:18px;"><div class="weekly-panel-head"><div><h3>單元結算通知</h3><p>單元結束並完成結算後，可通知校區管理信箱。</p></div><span id="wkNotifyBadge" class="badge warn">讀取中</span></div><div class="weekly-toggle"><div><strong>啟用單元結算通知</strong><span>結算完成後通知校區管理者。</span></div><input type="checkbox" id="wkNotifyEnabled" /></div><div class="weekly-form-grid two" style="margin-top:14px;"><div class="weekly-field"><label>校區通知信箱</label><input id="wkMissionEmail" placeholder="例如：admin@school.com" /></div><div class="weekly-field"><label>通知內容</label><input value="未達標名單與排行榜摘要" disabled /></div></div><div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyNotification(this)">儲存結算通知設定</button></div></div>`;
+      return `<div class="console-page-standard">
+        ${renderConsolePageIntro({ group: "學習", title: "單元排程", description: "管理單元資料、單字內容與班級排程。", actions })}
+        ${renderConsoleSummaryToggle({ id: "curriculumSummaryToggle", title: "單元與排程摘要", note: "點擊展開查看目前單元、排程與覆蓋率", body: summary })}
+        ${renderConsoleMainCard({ title: "單元與排程管理", description: "先維護單元與單字，再安排班級排程。", body })}
+        ${settlement}
+      </div>`;
     }
+
     async function loadCurriculumData(force = false) {
       if (curriculumLoading) return;
       if (curriculumCache && !force) { renderCurriculumData(); return; }
@@ -13339,7 +13317,7 @@ function openCurriculumUnitModal(unitId = "") {
             </div>
             <aside class="r2-workspace-side">
               <div class="r2-side-card"><strong>目前狀態</strong>${isEdit ? `正在編輯「${escapeHtml(unit.unitName || "未命名單元")}」` : "正在建立新的單元。"}</div>
-              <div class="r2-side-card"><strong>操作規則</strong>儲存後會寫入單元與單字；刪除單元仍使用確認提示，避免誤刪。</div>
+              <div class="r2-side-card"><strong>編輯提醒</strong>儲存後會更新單元與單字內容；刪除單元前系統會再次確認。</div>
               <div class="r2-side-card"><strong>排程關係</strong>${isEdit && findScheduleForUnit(unit) ? "這個單元目前已有排程。若要調整日期，請回到排程管理。" : "這個單元尚未排程或正在新增。"}</div>
             </aside>
           </div>
@@ -13507,7 +13485,7 @@ function openCurriculumUnitModal(unitId = "") {
             </div>
             <aside class="r2-workspace-side">
               <div class="r2-side-card"><strong>目前單元</strong>${escapeHtml(classLabel(classCode))}<br>${escapeHtml(unitName || "未命名單元")}</div>
-              <div class="r2-side-card"><strong>操作規則</strong>排程會影響單元挑戰、結算與週報統計；取消排程會保留單元本身。</div>
+              <div class="r2-side-card"><strong>排程提醒</strong>排程日期會影響單元挑戰、結算與週報統計；取消排程不會刪除單元。</div>
               <div class="r2-side-card"><strong>日期檢查</strong>修改日期時會即時檢查同班級重疊排程。</div>
             </aside>
           </div>
@@ -14111,53 +14089,15 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     function renderNewslettersConsole() {
-      const inWorkspace = !!newsletterWorkspace;
-      return `
-        <div id="newsletterWorkspaceHost" class="newsletter-workspace-host ${inWorkspace ? "" : "hidden"}">
-          ${inWorkspace ? renderNewsletterWorkspace() : ""}
-        </div>
-
-        <div id="newsletterDashboardSection" class="newsletter-dashboard ${inWorkspace ? "hidden" : ""}">
-          <div class="insight-card"><div class="insight-title">待發專欄</div><div id="nlActiveCount" class="insight-main">—</div><div class="insight-sub">尚未封存，依排序寄出</div></div>
-          <div class="insight-card"><div class="insight-title">第 1 順位</div><div id="nlNextTitle" class="insight-main" style="font-size:20px;line-height:1.3;letter-spacing:-.03em;">—</div><div class="insight-sub">正式週報會使用這篇</div></div>
-          <div class="insight-card"><div class="insight-title">已封存</div><div id="nlArchivedCount" class="insight-main">—</div><div class="insight-sub">已寄出或手動封存</div></div>
-          <div class="insight-card"><div class="insight-title">標籤類型</div><div id="nlTagCount" class="insight-main">—</div><div class="insight-sub">僅供管理員辨識</div></div>
-        </div>
-
-        <div id="newsletterMainSection" class="newsletter-main-section ${inWorkspace ? "hidden" : ""}">
-          <div class="newsletter-toolbar">
-            <div>
-              <h2 style="margin:0;font-size:20px;letter-spacing:-.03em;">教育專欄</h2>
-              <div class="small-note">專欄標題取自 content_html 的第一個 h3；topic/source_url 只屬於來源新聞，不在此處顯示。</div>
-            </div>
-            <div class="newsletter-actions">
-              <button class="btn-compact" onclick="loadNewslettersConsole(true)">重新整理</button>
-              <button class="btn-compact" onclick="openNewsletterCreateModal()">手動新增</button>
-              <button class="btn-compact primary" onclick="createAiNewsletterConsole(this)">AI 自動寫一篇</button>
-            </div>
-          </div>
-          <div class="newsletter-layout">
-            <div class="card">
-              <div class="panel-title"><h2>待發順序</h2><span class="badge ok">display_order</span></div>
-              <div id="newsletterActiveList" class="newsletter-list"><div class="empty-state">正在讀取專欄...</div></div>
-              <details class="newsletter-archive-fold" style="margin-top:22px;">
-                <summary class="newsletter-archive-summary">
-                  <span>已封存專欄</span>
-                  <span class="badge warn">點開查看</span>
-                </summary>
-                <div id="newsletterArchivedList" class="newsletter-list" style="margin-top:12px;"><div class="empty-state">正在讀取封存專欄...</div></div>
-              </details>
-            </div>
-            <div class="newsletter-preview-card">
-              <div class="newsletter-preview-head">
-                <div><h3 id="newsletterPreviewTitle">專欄預覽</h3><p id="newsletterPreviewMeta">選擇左側專欄查看內容</p></div>
-                <button class="btn-compact" onclick="clearNewsletterPreview()">清空</button>
-              </div>
-              <div id="newsletterPreviewBody" class="newsletter-preview-body"><div class="newsletter-empty">尚未選擇專欄</div></div>
-            </div>
-          </div>
-        </div>
-      `;
+      if (newsletterWorkspace) return renderConsoleEditorFrame(renderNewsletterWorkspace());
+      const summary = `<div class="newsletter-dashboard"><div class="insight-card"><div class="insight-title">待發專欄</div><div id="nlActiveCount" class="insight-main">—</div><div class="insight-sub">尚未封存，依排序寄出</div></div><div class="insight-card"><div class="insight-title">第 1 順位</div><div id="nlNextTitle" class="insight-main" style="font-size:20px;line-height:1.3;letter-spacing:-.03em;">—</div><div class="insight-sub">正式週報會使用這篇</div></div><div class="insight-card"><div class="insight-title">已封存</div><div id="nlArchivedCount" class="insight-main">—</div><div class="insight-sub">已寄出或手動封存</div></div><div class="insight-card"><div class="insight-title">標籤類型</div><div id="nlTagCount" class="insight-main">—</div><div class="insight-sub">僅供管理員辨識</div></div></div>`;
+      const actions = `<button class="btn-compact" onclick="loadNewslettersConsole(true)">重新整理</button><button class="btn-compact" onclick="openNewsletterCreateModal()">手動新增</button><button class="btn-compact primary" onclick="createAiNewsletterConsole(this)">AI 自動寫一篇</button>`;
+      const body = `<div class="newsletter-layout"><div class="card"><div class="panel-title"><h2>待發順序</h2><span class="badge ok">排序</span></div><div id="newsletterActiveList" class="newsletter-list"><div class="empty-state">正在讀取專欄...</div></div><details class="newsletter-archive-fold" style="margin-top:22px;"><summary class="newsletter-archive-summary"><span>已封存專欄</span><span class="badge warn">點開查看</span></summary><div id="newsletterArchivedList" class="newsletter-list" style="margin-top:12px;"><div class="empty-state">正在讀取封存專欄...</div></div></details></div><div class="newsletter-preview-card"><div class="newsletter-preview-head"><div><h3 id="newsletterPreviewTitle">專欄預覽</h3><p id="newsletterPreviewMeta">選擇左側專欄查看內容</p></div><button class="btn-compact" onclick="clearNewsletterPreview()">清空</button></div><div id="newsletterPreviewBody" class="newsletter-preview-body"><div class="newsletter-empty">尚未選擇專欄</div></div></div></div>`;
+      return `<div class="console-page-standard">
+        ${renderConsolePageIntro({ group: "家長", title: "專欄", description: "管理本週週報使用的教育專欄、待發順序與封存紀錄。", actions })}
+        ${renderConsoleSummaryToggle({ id: "newsletterSummaryToggle", title: "專欄摘要", note: "點擊展開查看待發、封存與第 1 順位專欄", body: summary })}
+        ${renderConsoleMainCard({ title: "教育專欄", description: "第 1 順位專欄會用於正式家長週報。", body })}
+      </div>`;
     }
 
     async function loadNewslettersConsole(force = false) {
@@ -14358,8 +14298,8 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
                 </div>
               </div>
               <div class="r2-side-card">
-                <strong>操作規則</strong>
-                <div class="tappie-alert info" style="margin-top:10px;"><strong>工作區編輯</strong><span>專欄新增與編輯在頁面內完成；封存、AI 產生與排序仍維持原本安全操作。</span></div>
+                <strong>專欄提醒</strong>
+                <div class="tappie-alert info" style="margin-top:10px;"><strong>儲存後生效</strong><span>第 1 順位專欄會用於正式週報；封存前系統會再次確認。</span></div>
               </div>
             </aside>
           </div>
@@ -14553,35 +14493,16 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const copy = getGamificationPageCopy(viewPage);
       const pageClass = viewPage === "settingsBattle" ? "gami-page-battle" : (viewPage === "settingsFeatures" ? "gami-page-features" : "gami-page-daily");
       return `
-        <div class="r7-gami-page ${pageClass}">
-          <div class="gami-rule-hero">
-            <div class="gami-rule-hero-main">
-              <div class="r7-gami-kicker">${escapeHtml(copy.kicker)}</div>
-              <h2>${escapeHtml(copy.title)}</h2>
-              <p>${escapeHtml(copy.description)}</p>
-            </div>
-            <div class="gami-hero-actions">
-              <button class="btn-compact" onclick="loadGamificationConsole(true)">重新整理</button>
-              <button id="gamiSaveBtnTop" class="btn-compact primary" onclick="saveGamificationConsole(document.getElementById('gamiSaveBtn') || this)">儲存設定</button>
-            </div>
-          </div>
-
-
+        <div class="console-page-standard r7-gami-page ${pageClass}">
+          ${renderConsolePageIntro({ group: copy.kicker, title: copy.title, description: copy.description, actions: `<button class="btn-compact" onclick="loadGamificationConsole(true)">重新整理</button><button id="gamiSaveBtnTop" class="btn-compact primary" onclick="saveGamificationConsole(document.getElementById('gamiSaveBtn') || this)">儲存設定</button>` })}
+          ${renderConsoleSummaryToggle({ id: "gamiSummaryToggle", title: "設定摘要", note: "點擊展開查看目前設定摘要", body: `
           <div class="gami-rule-metrics">
             <div class="gami-rule-metric"><span>今日挑戰最高階</span><strong id="gamiDailyMetric">—</strong><small>最高分對應點數</small></div>
             <div class="gami-rule-metric"><span>任務結算門檻</span><strong id="gamiMissionMetric">—</strong><small>未達標 / 良好 / 完美</small></div>
             <div class="gami-rule-metric"><span>排行榜前三</span><strong id="gamiLeaderboardMetric">—</strong><small>前三名加分</small></div>
             <div class="gami-rule-metric"><span>盲盒總機率</span><strong id="gamiProbMetric">—</strong><small>總和需等於 100%</small></div>
-          </div>
-
-          <div class="r7-gami-anchor-row" aria-label="遊戲化設定區塊導覽">
-            <button onclick="document.getElementById('gamiFeatureSection')?.scrollIntoView({behavior:'smooth',block:'start'})">功能狀態</button>
-            <button onclick="document.getElementById('gamiDailySection')?.scrollIntoView({behavior:'smooth',block:'start'})">今日挑戰</button>
-            <button onclick="document.getElementById('gamiMissionSection')?.scrollIntoView({behavior:'smooth',block:'start'})">單元任務結算</button>
-            <button onclick="document.getElementById('gamiRewardSection')?.scrollIntoView({behavior:'smooth',block:'start'})">排行榜 / 對戰抽卡</button>
-            <button onclick="document.getElementById('gamiGachaSection')?.scrollIntoView({behavior:'smooth',block:'start'})">盲盒獎池</button>
-          </div>
-
+          </div>` })}
+          ${renderConsoleMainCard({ title: copy.title, description: "調整完成後請儲存設定。", body: `
           <div class="r7-gami-layout">
             <div class="r7-gami-main">
               <section id="gamiFeatureSection" class="r7-feature-host">
@@ -14690,7 +14611,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
                 <button class="btn-compact" onclick="loadGamificationConsole(true)">取消變更 / 重新整理</button>
               </div>
             </aside>
-          </div>
+          </div>` })}
         </div>`;
     }
 
@@ -14862,26 +14783,8 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const schoolCode = getConsoleSchoolCode() || '—';
       return `
         <div class="r6-branding-page">
-          <div class="brand-center-hero">
-            <div class="brand-center-title">
-              <div class="r6-branding-section-label">品牌設定</div>
-              <h2>校區品牌中心</h2>
-              <p>管理校區 Logo 與手機入口 Icon。素材會套用到家長週報、學生 Dashboard 與手機入口預覽。</p>
-            </div>
-            <div class="brand-center-mark">
-              <div class="brand-center-logo-pill"><img id="brandingHeroLogo" src="/assets/logo.webp" alt="Brand logo"></div>
-              <img id="brandingHeroIcon" class="brand-center-icon-pill" src="/assets/app-icon.png" alt="App icon">
-            </div>
-          </div>
-
-          <div class="r6-branding-guard">
-            <div>
-              <strong>品牌素材設定</strong>
-              請在此上傳或移除校區 Logo 與手機入口 Icon。移除素材前系統會再次確認。
-            </div>
-            <span class="badge ok">Inline settings</span>
-          </div>
-
+          ${renderConsolePageIntro({ group: "設定", title: "品牌", description: "管理校區 Logo 與手機入口 Icon。素材會套用到週報、學生頁面與手機入口。", actions: `<button class="btn-compact" onclick="loadBrandingConsole(true)">重新整理</button>` })}
+          ${renderConsoleSummaryToggle({ id: "brandingSummaryToggle", title: "品牌素材摘要", note: "點擊展開查看目前素材狀態與上傳限制", body: `
           <div class="brand-summary-grid">
             <div id="brandingLogoSummary" class="brand-summary-card">
               <div class="label">校區 Logo</div>
@@ -14903,7 +14806,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
               <div class="value">1MB</div>
               <div class="note">支援 PNG / JPG / WEBP。</div>
             </div>
-          </div>
+          </div>` })}
 
           <div class="brand-center-layout">
             <div>
@@ -15100,70 +15003,15 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     function renderAutomationConsole() {
       if (!isOwnerAllMode()) {
-        return `
-          <div class="r9-system-single-card">
-            <div class="r9-system-kicker">Automation</div>
-            <div class="panel-title"><h2>自動化監控</h2><span class="badge warn">Owner 全校區模式</span></div>
-            <p class="muted-text">自動化監控中心目前設計給 Owner 全校區模式使用，用來查看週報、任務結算與日常清理的跨校區執行狀態。</p>
-            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
-              <button class="btn-compact primary" onclick="changeConsoleScope('all'); showPage('automation');">切回全部校區</button>
-              <button class="btn-compact" onclick="showPage('weekly')">查看單校週報</button>
-            </div>
-          </div>`;
+        return `${renderConsolePageIntro({ group: "系統", title: "自動化監控", description: "此頁僅供 Owner 全校區模式查看跨校區自動化狀態。", actions: `<button class="btn-compact primary" onclick="changeConsoleScope('all'); showPage('automation');">切回全部校區</button><button class="btn-compact" onclick="showPage('weekly')">查看單校週報</button>` })}`;
       }
-      return `
-        <div class="r9-system-page console-ui-page">
-          <div class="r9-system-hero">
-            <div>
-              <div class="r9-system-kicker">Automation Monitor</div>
-              <h2>自動化監控中心</h2>
-              <p>這裡只監控跨校區排程工作，不直接觸發 cron。重點是確認週報、自動結算與清理是否正常運作。</p>
-            </div>
-            <div class="r9-system-actions">
-              <button class="btn-compact primary" onclick="loadAutomationData(true)">重新整理</button>
-            </div>
-          </div>
-
-          <div class="r9-system-guard">
-            <div>
-              <strong>自動化狀態</strong>
-              查看週報、任務結算與清理排程的最近執行情況。
-            </div>
-            <span class="badge ok">監控</span>
-          </div>
-
-          <div class="weekly-insight-strip automation-insight-strip">
-            <div class="weekly-insight"><div class="label">週報自動化</div><div id="autoWeeklyStatus" class="value" style="font-size:26px;">—</div><div id="autoWeeklyNote" class="note">最近一次週報 job</div></div>
-            <div class="weekly-insight"><div class="label">任務自動結算</div><div id="autoSettlementStatus" class="value" style="font-size:26px;">—</div><div id="autoSettlementNote" class="note">mission_settlements 最近紀錄</div></div>
-            <div class="weekly-insight"><div class="label">每日清理</div><div id="autoCleanupStatus" class="value" style="font-size:26px;">未接入</div><div id="autoCleanupNote" class="note">目前 cron-daily-cleanup 尚未寫入 DB log</div></div>
-            <div class="weekly-insight"><div class="label">需要注意</div><div id="autoRiskCount" class="value">—</div><div id="autoRiskNote" class="note">異常 / 過久未執行 / 失敗</div></div>
-          </div>
-
-          <div class="weekly-console-grid r9-automation-grid">
-            <div class="weekly-panel wide">
-              <div class="weekly-panel-head">
-                <div><h3>自動化摘要</h3><p>查看目前跨校區自動化是否有延遲、失敗或缺少監控紀錄。</p></div>
-              </div>
-              <div id="autoSummaryBox" class="weekly-status-card">正在讀取自動化狀態...</div>
-            </div>
-
-            <div class="weekly-panel">
-              <div class="weekly-panel-head"><div><h3>週報 Jobs</h3><p>最近全校區週報產生 / 寄送紀錄。</p></div></div>
-              <div id="autoWeeklyJobList" class="weekly-mini-list">正在讀取...</div>
-            </div>
-
-            <div class="weekly-panel">
-              <div class="weekly-panel-head"><div><h3>任務結算紀錄</h3><p>最近自動結算產生的 mission_settlements。</p></div></div>
-              <div id="autoSettlementList" class="weekly-mini-list">正在讀取...</div>
-            </div>
-
-            <div class="weekly-panel wide">
-              <div class="weekly-panel-head"><div><h3>需要 Owner 介入</h3><p>系統會列出排程失敗、太久未執行、或缺少監控紀錄的項目。</p></div></div>
-              <div id="autoActionList" class="weekly-mini-list">正在讀取...</div>
-            </div>
-          </div>
-        </div>
-      `;
+      const summary = `<div class="weekly-insight-strip automation-insight-strip"><div class="weekly-insight"><div class="label">週報自動化</div><div id="autoWeeklyStatus" class="value" style="font-size:26px;">—</div><div id="autoWeeklyNote" class="note">最近一次週報 job</div></div><div class="weekly-insight"><div class="label">任務自動結算</div><div id="autoSettlementStatus" class="value" style="font-size:26px;">—</div><div id="autoSettlementNote" class="note">mission_settlements 最近紀錄</div></div><div class="weekly-insight"><div class="label">每日清理</div><div id="autoCleanupStatus" class="value" style="font-size:26px;">未接入</div><div id="autoCleanupNote" class="note">目前 cron-daily-cleanup 尚未寫入 DB log</div></div><div class="weekly-insight"><div class="label">需要注意</div><div id="autoRiskCount" class="value">—</div><div id="autoRiskNote" class="note">異常 / 過久未執行 / 失敗</div></div></div>`;
+      const body = `<div class="weekly-console-grid r9-automation-grid"><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>自動化摘要</h3><p>查看跨校區自動化是否有延遲、失敗或缺少監控紀錄。</p></div></div><div id="autoSummaryBox" class="weekly-status-card">正在讀取自動化狀態...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>週報 Jobs</h3><p>最近全校區週報產生 / 寄送紀錄。</p></div></div><div id="autoWeeklyJobList" class="weekly-mini-list">正在讀取...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>任務結算紀錄</h3><p>最近自動結算產生的 mission_settlements。</p></div></div><div id="autoSettlementList" class="weekly-mini-list">正在讀取...</div></div><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>需要 Owner 介入</h3><p>系統會列出排程失敗、太久未執行或缺少監控紀錄的項目。</p></div></div><div id="autoActionList" class="weekly-mini-list">正在讀取...</div></div></div>`;
+      return `<div class="console-page-standard r9-system-page console-ui-page">
+        ${renderConsolePageIntro({ group: "系統", title: "自動化監控", description: "查看週報、自動結算與每日清理的跨校區狀態。", actions: `<button class="btn-compact primary" onclick="loadAutomationData(true)">重新整理</button>` })}
+        ${renderConsoleSummaryToggle({ id: "automationSummaryToggle", title: "自動化摘要", note: "點擊展開查看最近狀態與需要注意的項目", body: summary })}
+        ${renderConsoleMainCard({ title: "自動化紀錄", description: "查看最近週報、結算與需要 Owner 介入的項目。", body })}
+      </div>`;
     }
 
     function automationStatusText(status) {
