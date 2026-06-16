@@ -5466,6 +5466,12 @@
     let adminTeacherSearch = "";
     let adminTeacherRoleFilter = "all";
     let adminTeacherStatusFilter = "active";
+    let adminCardWorkspaceState = {
+      active: false,
+      type: "",
+      mode: "",
+      dirty: false
+    };
     let weeklyCache = null;
     let weeklyLoading = false;
     let learningCache = null;
@@ -5496,6 +5502,12 @@
     let selectedStudentIds = new Set();
     let currentEditingStudentTags = [];
     let currentBatchStudentTags = [];
+    let studentWorkspaceState = {
+      active: false,
+      type: "",
+      mode: "",
+      dirty: false
+    };
     let currentConsolePage = "overview";
     let featureSettingsCache = null;
     let featureSettingsLoading = false;
@@ -6167,7 +6179,13 @@
     function showPage(page) {
       const targetPage = page || "overview";
       if (currentConsolePage === "curriculum" && targetPage !== "curriculum" && !confirmDiscardCurriculumWorkspace()) return;
+      if (currentConsolePage === "students" && targetPage !== "students" && !confirmDiscardStudentWorkspace()) return;
+      if (currentConsolePage === "admins" && targetPage !== "admins" && !confirmDiscardAdminCardWorkspace()) return;
+      if (currentConsolePage === "newsletters" && targetPage !== "newsletters" && !confirmDiscardNewsletterWorkspace()) return;
       if (currentConsolePage === "curriculum" && targetPage !== "curriculum") clearCurriculumWorkspaceState();
+      if (currentConsolePage === "students" && targetPage !== "students") clearStudentWorkspaceState();
+      if (currentConsolePage === "admins" && targetPage !== "admins") clearAdminCardWorkspaceState();
+      if (currentConsolePage === "newsletters" && targetPage !== "newsletters") clearNewsletterWorkspaceState();
       currentConsolePage = targetPage;
       setActive(currentConsolePage);
       const titleMap = {
@@ -6896,7 +6914,8 @@
           <div class="card"><div class="metric-label">Medium</div><div id="healthMedium" class="metric-value">—</div><div class="metric-note">建議檢查</div></div>
           <div class="card"><div class="metric-label">健康分數</div><div id="healthScore" class="metric-value">—</div><div class="metric-note">資料健康分數</div></div>
         </div>
-        <div class="card" style="margin-top:18px;">
+        <div id="adminCardWorkspaceHost"></div>
+        <div id="adminCardListWorkspace" class="card" style="margin-top:18px;">
           <div class="panel-title"><h2>資料健康問題清單</h2><button class="badge ok" onclick="loadHealthData(true)">重新檢查</button></div>
           <div class="toolbar">
             <div class="muted-text">Owner 可查看全部校區；Super Admin 只會看到登入校區。</div>
@@ -6974,7 +6993,9 @@
         </div>
         <div id="studentDataCheckPanel" class="student-data-check-panel hidden"></div>
 
-        <div class="card" style="margin-top:18px;">
+        <div id="studentWorkspaceHost" class="student-workspace-host"></div>
+
+        <div id="studentListWorkspace" class="card" style="margin-top:18px;">
           <div class="panel-title">
             <h2>學生資料管理</h2>
             <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
@@ -8086,6 +8107,7 @@
     function setStudentClassFromSelect(value) {
       const input = document.getElementById("editStudentClass");
       if (input && value) input.value = value;
+      markStudentWorkspaceDirty();
     }
 
     function handleStudentClassInputKey(event) {
@@ -8108,6 +8130,7 @@
       if (!tags.includes(value)) tags.push(value);
       currentEditingStudentTags = tags.slice(0, 20);
       renderStudentTagEditor();
+      markStudentWorkspaceDirty();
     }
 
     function addStudentTagFromInput() {
@@ -8123,6 +8146,7 @@
       tags.splice(index, 1);
       currentEditingStudentTags = tags;
       renderStudentTagEditor();
+      markStudentWorkspaceDirty();
     }
 
     function handleStudentTagInputKey(event) {
@@ -8323,8 +8347,140 @@
       return { ok: true, active, limit };
     }
 
+        /* =======================================================
+       Students Workspace-first Editor v1
+       新增 / 編輯 / 批量修改使用頁面內工作區；modal 僅保留為確認與警示。
+       ======================================================= */
+    function markStudentWorkspaceDirty() {
+      if (!studentWorkspaceState.active) return;
+      studentWorkspaceState.dirty = true;
+      document.querySelector(".student-workspace")?.classList.add("is-dirty");
+    }
+    function clearStudentWorkspaceState() {
+      studentWorkspaceState = { active: false, type: "", mode: "", dirty: false };
+    }
+    function confirmDiscardStudentWorkspace() {
+      if (!studentWorkspaceState.active || !studentWorkspaceState.dirty) return true;
+      return confirm("目前有尚未儲存的學生資料變更，離開後將不會保留。確定離開嗎？");
+    }
+    function closeStudentWorkspaceSilently() {
+      clearStudentWorkspaceState();
+      const host = document.getElementById("studentWorkspaceHost");
+      if (host) host.innerHTML = "";
+      const list = document.getElementById("studentListWorkspace");
+      if (list) list.style.display = "";
+    }
+    function cancelStudentWorkspace() {
+      if (!confirmDiscardStudentWorkspace()) return;
+      closeStudentWorkspaceSilently();
+    }
+    function renderStudentEditorWorkspaceShell(isNew, student) {
+      const host = document.getElementById("studentWorkspaceHost");
+      const list = document.getElementById("studentListWorkspace");
+      if (!host) return false;
+      if (list) list.style.display = "none";
+      const subtitle = isNew
+        ? "新增後會自動配發預設角色，並受 student_limit 約束。"
+        : `${escapeHtml(student?.name || student?.uid || "學生")}｜${escapeHtml(student?.school_code || currentConsoleSchoolCode())}`;
+      host.innerHTML = `
+        <section class="curriculum-workspace student-workspace" data-workspace="student">
+          <div class="curriculum-workspace-head">
+            <div>
+              <div class="curriculum-workspace-kicker">${isNew ? "新增介面" : "編輯介面"}</div>
+              <h2 class="curriculum-workspace-title">${isNew ? "新增學生" : "編輯學生資料"}</h2>
+              <p class="curriculum-workspace-subtitle">${subtitle} 這裡採用頁面內工作區，不再使用大型彈窗。若中途切換分頁，系統會提醒尚未儲存的變更。</p>
+            </div>
+            <div class="curriculum-workspace-actions">
+              <button class="btn-compact" onclick="cancelStudentWorkspace()">返回列表</button>
+              <button id="studentSaveTopBtn" class="btn-compact primary" onclick="saveConsoleStudent()">儲存學生</button>
+            </div>
+          </div>
+          <div class="curriculum-workspace-body">
+            <div class="curriculum-workspace-note">LINE 官方帳號式操作：新增 / 編輯視為進入一個工作頁，而不是跳出大彈窗。彈窗只用於停用確認、未儲存提醒與錯誤警示。</div>
+            <div class="curriculum-workspace-section">
+              <h3>基本資料</h3>
+              <p>設定學生姓名、UID / 卡片代碼、班級與標籤。UID 會產生 NFC 入口連結。</p>
+              <input type="hidden" id="editStudentId" />
+              <div class="curriculum-workspace-grid">
+                <div class="curriculum-workspace-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" oninput="markStudentWorkspaceDirty()" /></div>
+                <div class="curriculum-workspace-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" oninput="updateStudentUrlPreview(); markStudentWorkspaceDirty();" /></div>
+                <div class="curriculum-workspace-field full"><label>學生類別</label><select id="editStudentType" class="select" onchange="markStudentWorkspaceDirty(); toggleConsoleClassHint();"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
+                <div class="curriculum-workspace-field full" id="editStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="editStudentClass" placeholder="有班級學生需填班級，例如 A1" oninput="markStudentWorkspaceDirty()" onkeydown="handleStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentClassFromInput(); markStudentWorkspaceDirty();">新增</button><select id="editStudentExistingClass" onchange="setStudentClassFromSelect(this.value); markStudentWorkspaceDirty();"><option value="">選擇既有班級</option></select></div></div>
+                <div class="curriculum-workspace-field full"><label>標籤</label><div class="student-form-line"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput(); markStudentWorkspaceDirty();">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value=''; markStudentWorkspaceDirty();"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
+              </div>
+            </div>
+            <div class="curriculum-workspace-section">
+              <h3>週報、狀態與點數</h3>
+              <p>調整家長收件信箱、週報狀態、帳號狀態與目前點數。</p>
+              <div class="curriculum-workspace-grid">
+                <div class="curriculum-workspace-field"><label>Parent Email</label><input id="editStudentEmail" placeholder="parent@example.com" oninput="markStudentWorkspaceDirty()" /></div>
+                <div class="curriculum-workspace-field"><label>週報狀態</label><select id="editStudentWeekly" onchange="markStudentWorkspaceDirty()"><option value="true">啟用週報</option><option value="false">不啟用週報</option></select></div>
+                <div class="curriculum-workspace-field"><label>帳號狀態</label><select id="editStudentActive" onchange="markStudentWorkspaceDirty()"><option value="true">啟用</option><option value="false">停用</option></select></div>
+                <div class="curriculum-workspace-field"><label>目前點數</label><input id="editStudentPoints" type="number" inputmode="numeric" placeholder="0" oninput="markStudentWorkspaceDirty()" /></div>
+                <div class="curriculum-workspace-field full"><label>Title / 榮譽標籤</label><input id="editStudentTitle" placeholder="可留空，Dashboard 榮譽榜通常即時計算" oninput="markStudentWorkspaceDirty()" /></div>
+                <div class="curriculum-workspace-field full"><label>學生 NFC 連結</label><input id="editStudentUrlPreview" readonly onclick="this.select()" /></div>
+                <div class="curriculum-workspace-field full"><div id="studentFormNote" class="form-note">新增學生會自動配發預設角色，並寫入 student_avatars。席位上限以啟用學生計算。</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="curriculum-workspace-sticky-actions">
+            <span class="curriculum-workspace-dirty">● 尚未儲存</span>
+            <div class="right">
+              <button id="studentDisableBtn" class="btn-compact danger" onclick="disableCurrentStudent()">停用學生</button>
+              <button class="btn-compact" onclick="copyStudentUrlFromModal()">複製連結</button>
+              <button class="btn-compact" onclick="cancelStudentWorkspace()">取消</button>
+              <button id="studentSaveBtn" class="btn-compact primary" onclick="saveConsoleStudent()">儲存學生</button>
+            </div>
+          </div>
+        </section>`;
+      return true;
+    }
+    function renderStudentBatchWorkspaceShell() {
+      const host = document.getElementById("studentWorkspaceHost");
+      const list = document.getElementById("studentListWorkspace");
+      if (!host) return false;
+      if (list) list.style.display = "none";
+      host.innerHTML = `
+        <section class="curriculum-workspace student-workspace" data-workspace="student-batch">
+          <div class="curriculum-workspace-head">
+            <div>
+              <div class="curriculum-workspace-kicker">批量編輯介面</div>
+              <h2 class="curriculum-workspace-title">批量修改學生</h2>
+              <p class="curriculum-workspace-subtitle">即將修改 ${selectedStudentIds.size} 位學生。只會修改有設定的欄位；空白或「不修改」會保留原資料。</p>
+            </div>
+            <div class="curriculum-workspace-actions">
+              <button class="btn-compact" onclick="cancelStudentWorkspace()">返回列表</button>
+              <button id="batchSaveTopBtn" class="btn-compact primary" onclick="saveBatchStudents()">確認批量修改</button>
+            </div>
+          </div>
+          <div class="curriculum-workspace-body">
+            <div class="curriculum-workspace-note">批量修改屬於高影響操作，因此改為頁面內工作區。系統只會送出你實際設定的欄位。</div>
+            <div class="curriculum-workspace-section">
+              <h3>批量欄位</h3>
+              <p>UID / 姓名不支援批量覆蓋，避免誤傷正式學生資料。</p>
+              <div class="curriculum-workspace-grid">
+                <div class="curriculum-workspace-field full"><label>學生類別</label><select id="batchStudentType" class="select" onchange="markStudentWorkspaceDirty(); toggleBatchClassHint()"><option value="__nochange">不修改</option><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
+                <div class="curriculum-workspace-field full" id="batchStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="batchStudentClass" placeholder="不修改請留空；有班級學生需填班級，例如 A1" oninput="markStudentWorkspaceDirty()" onkeydown="handleBatchStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addBatchStudentClassFromInput(); markStudentWorkspaceDirty();">新增</button><select id="batchStudentExistingClass" onchange="setBatchStudentClassFromSelect(this.value); markStudentWorkspaceDirty();"><option value="">選擇既有班級</option></select></div></div>
+                <div class="curriculum-workspace-field full"><label>標籤</label><div class="student-form-line"><input id="batchStudentTagInput" placeholder="不修改請留空；輸入後將覆蓋所選學生標籤" onkeydown="handleBatchStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addBatchStudentTagFromInput(); markStudentWorkspaceDirty();">新增</button><select id="batchStudentExistingTag" onchange="addBatchStudentTagFromSelect(this.value); this.value=''; markStudentWorkspaceDirty();"><option value="">選擇既有標籤</option></select></div><div id="batchStudentTagChips" class="student-tag-chip-row"></div><div class="form-note">批量標籤有加入項目時，會以這組標籤覆蓋所選學生；沒有加入標籤則不修改標籤。</div></div>
+                <div class="curriculum-workspace-field"><label>帳號狀態</label><select id="batchStudentActive" onchange="markStudentWorkspaceDirty()"><option value="__nochange">不修改</option><option value="true">啟用</option><option value="false">停用</option></select></div>
+                <div class="curriculum-workspace-field"><label>週報狀態</label><select id="batchStudentWeekly" onchange="markStudentWorkspaceDirty()"><option value="__nochange">不修改</option><option value="true">啟用週報</option><option value="false">關閉週報</option></select></div>
+              </div>
+            </div>
+          </div>
+          <div class="curriculum-workspace-sticky-actions">
+            <span class="curriculum-workspace-dirty">● 尚未儲存</span>
+            <div class="right">
+              <button class="btn-compact" onclick="cancelStudentWorkspace()">取消</button>
+              <button id="batchSaveBtn" class="btn-compact primary" onclick="saveBatchStudents()">確認批量修改</button>
+            </div>
+          </div>
+        </section>`;
+      return true;
+    }
+
     function openStudentEditor(studentId) {
       if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯學生。"); return; }
+      if (studentWorkspaceState.active && !confirmDiscardStudentWorkspace()) return;
       const isNew = !studentId;
       if (isNew) {
         const seat = canAddActiveStudent();
@@ -8335,13 +8491,15 @@
       }
       const s = isNew ? null : getStudentById(studentId);
       if (!isNew && !s) { alert("找不到學生資料，請重新整理後再試。"); return; }
-      document.getElementById("studentModalTitle").textContent = isNew ? "新增學生" : "編輯學生資料";
-      document.getElementById("studentModalSubtitle").textContent = isNew ? "新增後會自動配發預設角色，並受 student_limit 約束。" : `${s.name || s.uid}｜${s.school_code || currentConsoleSchoolCode()}`;
+      studentWorkspaceState = { active: true, type: "student", mode: isNew ? "create" : "edit", dirty: false };
+      renderStudentEditorWorkspaceShell(isNew, s);
+      document.getElementById("studentModalTitle") && (document.getElementById("studentModalTitle").textContent = isNew ? "新增學生" : "編輯學生資料");
+      document.getElementById("studentModalSubtitle") && (document.getElementById("studentModalSubtitle").textContent = isNew ? "新增後會自動配發預設角色，並受 student_limit 約束。" : `${s.name || s.uid}｜${s.school_code || currentConsoleSchoolCode()}`);
       document.getElementById("editStudentId").value = s?.id || "";
       document.getElementById("editStudentName").value = s?.name || "";
       document.getElementById("editStudentUid").value = s?.uid || (currentConsoleSchoolCode() ? `${currentConsoleSchoolCode()}-` : "");
       updateStudentUrlPreview();
-      document.getElementById("editStudentUid").oninput = updateStudentUrlPreview;
+      document.getElementById("editStudentUid").oninput = () => { updateStudentUrlPreview(); markStudentWorkspaceDirty(); };
       document.getElementById("editStudentType").value = normalizeStudentType(s?.student_type || "無班級");
       document.getElementById("editStudentClass").value = s?.class_code || "";
       const typeInput = document.getElementById("editStudentTypeInput");
@@ -8358,15 +8516,18 @@
       delBtn.style.display = isNew ? "none" : "inline-flex";
       delBtn.textContent = s?.is_active ? "停用學生" : "重新啟用學生";
       delBtn.className = s?.is_active ? "btn-compact danger" : "btn-compact ok";
-      document.getElementById("studentEditModal").classList.add("show");
       toggleConsoleClassHint();
+      document.querySelector(".student-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function closeStudentModal(event) {
       if (event && event.target && event.target.id !== "studentEditModal") return;
       hideStudentModal();
     }
-    function hideStudentModal() { document.getElementById("studentEditModal")?.classList.remove("show"); }
+    function hideStudentModal() {
+      document.getElementById("studentEditModal")?.classList.remove("show");
+      if (studentWorkspaceState.active && studentWorkspaceState.type === "student") closeStudentWorkspaceSilently();
+    }
     function toggleConsoleClassHint() {
       const type = document.getElementById("editStudentType")?.value || "";
       const note = document.getElementById("studentFormNote");
@@ -8490,6 +8651,7 @@
     function setBatchStudentClassFromSelect(value) {
       const input = document.getElementById("batchStudentClass");
       if (input && value) input.value = value;
+      markStudentWorkspaceDirty();
     }
 
     function handleBatchStudentClassInputKey(event) {
@@ -8512,6 +8674,7 @@
       if (!tags.includes(value)) tags.push(value);
       currentBatchStudentTags = tags.slice(0, 20);
       renderBatchStudentTagEditor();
+      markStudentWorkspaceDirty();
     }
 
     function addBatchStudentTagFromInput() {
@@ -8527,6 +8690,7 @@
       tags.splice(index, 1);
       currentBatchStudentTags = tags;
       renderBatchStudentTagEditor();
+      markStudentWorkspaceDirty();
     }
 
     function handleBatchStudentTagInputKey(event) {
@@ -8535,7 +8699,10 @@
 
     function openBatchStudentEditor() {
       if (!selectedStudentIds.size) { alert("請先勾選學生。"); return; }
-      document.getElementById("batchModalSubtitle").textContent = `即將修改 ${selectedStudentIds.size} 位學生。只會修改有設定的欄位。`;
+      if (studentWorkspaceState.active && !confirmDiscardStudentWorkspace()) return;
+      studentWorkspaceState = { active: true, type: "student-batch", mode: "batch", dirty: false };
+      renderStudentBatchWorkspaceShell();
+      document.getElementById("batchModalSubtitle") && (document.getElementById("batchModalSubtitle").textContent = `即將修改 ${selectedStudentIds.size} 位學生。只會修改有設定的欄位。`);
       document.getElementById("batchStudentType").value = "__nochange";
       document.getElementById("batchStudentClass").value = "";
       document.getElementById("batchStudentActive").value = "__nochange";
@@ -8543,10 +8710,13 @@
       currentBatchStudentTags = [];
       setupStudentFormPickers();
       renderBatchStudentTagEditor();
-      document.getElementById("studentBatchModal").classList.add("show");
+      document.querySelector(".student-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     function closeBatchModal(event) { if (event && event.target && event.target.id !== "studentBatchModal") return; hideBatchModal(); }
-    function hideBatchModal() { document.getElementById("studentBatchModal")?.classList.remove("show"); }
+    function hideBatchModal() {
+      document.getElementById("studentBatchModal")?.classList.remove("show");
+      if (studentWorkspaceState.active && studentWorkspaceState.type === "student-batch") closeStudentWorkspaceSilently();
+    }
     function toggleBatchClassHint() {}
     async function saveBatchStudents() {
       if (!selectedStudentIds.size) { alert("沒有選取學生。"); return; }
@@ -8738,6 +8908,7 @@
           <td>
             <div class="student-action-row">
               <button class="btn-compact" onclick="openAdminCardEditor('${escapeHtml(c.id)}')">編輯</button>
+              <button class="btn-compact" onclick="copyAdminCardUrl('${escapeHtml(c.cardUid)}')">複製連結</button>
               <button class="btn-compact ${c.isActive ? "danger" : "ok"}" onclick="setAdminCardStatus('${escapeHtml(c.id)}', ${c.isActive ? "false" : "true"})">${c.isActive ? "停用" : "啟用"}</button>
             </div>
           </td>
@@ -8776,32 +8947,153 @@
       return getAdminCardsArray().map(normalizeAdminCard).find(c => String(c.id) === String(id)) || null;
     }
 
+    /* =======================================================
+       Phase 3B｜Admin Card Workspace-first Editor v1
+       - Teacher/Admin Card create/edit now opens inside the Admins page.
+       - The old modal is kept as fallback DOM, but no longer used by the main flow.
+       ======================================================= */
+    function markAdminCardWorkspaceDirty() {
+      if (!adminCardWorkspaceState.active) return;
+      adminCardWorkspaceState.dirty = true;
+      document.querySelector(".admin-card-workspace")?.classList.add("is-dirty");
+    }
+
+    function clearAdminCardWorkspaceState() {
+      adminCardWorkspaceState = { active: false, type: "", mode: "", dirty: false };
+    }
+
+    function confirmDiscardAdminCardWorkspace() {
+      if (!adminCardWorkspaceState.active || !adminCardWorkspaceState.dirty) return true;
+      return confirm("目前有尚未儲存的老師管理卡變更，離開後將不會保留。確定離開嗎？");
+    }
+
+    function closeAdminCardWorkspaceSilently() {
+      clearAdminCardWorkspaceState();
+      const host = document.getElementById("adminCardWorkspaceHost");
+      const list = document.getElementById("adminCardListWorkspace");
+      if (host) host.innerHTML = "";
+      if (list) list.style.display = "block";
+    }
+
+    function cancelAdminCardWorkspace() {
+      if (!confirmDiscardAdminCardWorkspace()) return;
+      closeAdminCardWorkspaceSilently();
+    }
+
     function openAdminCardEditor(cardId) {
       if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯老師管理卡。"); return; }
+      if (adminCardWorkspaceState.active && !confirmDiscardAdminCardWorkspace()) return;
       const isNew = !cardId;
       const c = isNew ? null : getAdminCardById(cardId);
       if (!isNew && !c) { alert("找不到老師卡資料，請重新整理後再試。"); return; }
-      document.getElementById("adminCardModalTitle").textContent = isNew ? "新增老師" : "編輯老師管理卡";
-      document.getElementById("adminCardModalSubtitle").textContent = isNew ? "新增後即可產生老師個人 Admin Card 登入連結。" : `${c.teacherName || c.cardUid}｜${currentConsoleSchoolCode()}`;
-      document.getElementById("editAdminCardId").value = c?.id || "";
-      document.getElementById("editAdminCardTeacherName").value = c?.teacherName || "";
-      document.getElementById("editAdminCardUid").value = c?.cardUid || "";
-      document.getElementById("editAdminCardRole").value = c?.role || "admin";
-      document.getElementById("editAdminCardActive").value = String(isNew ? true : c.isActive);
-      document.getElementById("editAdminCardNote").value = c?.note || "";
-      updateAdminCardUrlPreview();
-      document.getElementById("editAdminCardUid").oninput = updateAdminCardUrlPreview;
-      const disableBtn = document.getElementById("adminCardDisableBtn");
-      disableBtn.style.display = isNew ? "none" : "inline-flex";
-      disableBtn.textContent = c?.isActive ? "停用老師卡" : "重新啟用老師卡";
-      disableBtn.className = c?.isActive ? "btn-compact danger" : "btn-compact ok";
-      const modalEl = document.getElementById("adminCardEditModal");
-      modalEl.classList.add("show");
-      document.body.classList.add("console-modal-open");
-      requestAnimationFrame(() => {
-        const scrollBody = modalEl.querySelector(".form-grid");
-        if (scrollBody) scrollBody.scrollTop = 0;
-      });
+      renderAdminCardWorkspaceShell(isNew, c);
+    }
+
+    function renderAdminCardWorkspaceShell(isNew, card) {
+      const host = document.getElementById("adminCardWorkspaceHost");
+      const list = document.getElementById("adminCardListWorkspace");
+      if (!host || !list) return;
+      adminCardWorkspaceState = { active: true, type: "admin-card", mode: isNew ? "create" : "edit", dirty: false };
+      const title = isNew ? "新增老師管理卡" : "編輯老師管理卡";
+      const subtitle = isNew
+        ? "新增後即可產生老師個人 Admin Card 登入連結，讓老師用 NFC 卡進入對應後台。"
+        : `${escapeHtml(card.teacherName || card.cardUid || "老師管理卡")}｜${escapeHtml(currentConsoleSchoolCode())}`;
+      host.innerHTML = `
+        <section class="curriculum-workspace admin-card-workspace" data-workspace="admin-card">
+          <div class="curriculum-workspace-head">
+            <div>
+              <div class="curriculum-workspace-kicker">${isNew ? "新增介面" : "編輯介面"}</div>
+              <h2 class="curriculum-workspace-title">${title}</h2>
+              <p class="curriculum-workspace-subtitle">${subtitle} 這裡採用頁面內工作區，不再使用大型彈窗；彈窗只保留給停用確認、未儲存提醒與錯誤警示。</p>
+            </div>
+            <div class="curriculum-workspace-actions">
+              <button class="btn-compact" onclick="cancelAdminCardWorkspace()">返回列表</button>
+              <button class="btn-compact btn-success" onclick="saveAdminCardWorkspace()">儲存老師卡</button>
+            </div>
+          </div>
+          <div class="curriculum-workspace-body">
+            <div class="curriculum-workspace-note">LINE 官方帳號式操作：新增 / 編輯視為進入一個工作頁，而不是跳出大彈窗。若中途切換分頁，系統會提醒尚未儲存的變更。</div>
+            <div class="curriculum-workspace-section">
+              <h3>老師身分與管理卡</h3>
+              <p>設定老師名稱、NFC 卡片代碼與登入後的權限角色。Normal Admin 老師通常使用 Admin 權限；Super Admin 僅保留給校區高權限管理者。</p>
+              <input type="hidden" id="adminWsCardId" value="${escapeHtml(card?.id || "")}" />
+              <div class="curriculum-workspace-grid">
+                <div class="curriculum-workspace-field"><label>老師名稱</label><input id="adminWsTeacherName" value="${escapeHtml(card?.teacherName || "")}" placeholder="例如：Amy 老師" oninput="markAdminCardWorkspaceDirty()" /></div>
+                <div class="curriculum-workspace-field"><label>管理卡代碼 / NFC UID</label><input id="adminWsUid" value="${escapeHtml(card?.cardUid || "")}" placeholder="例如：1234567890" oninput="updateAdminCardWorkspaceUrlPreview(); markAdminCardWorkspaceDirty();" /></div>
+                <div class="curriculum-workspace-field"><label>權限角色</label><select id="adminWsRole" onchange="markAdminCardWorkspaceDirty()"><option value="admin" ${!card || card.role !== "super" ? "selected" : ""}>Admin 老師</option><option value="super" ${card?.role === "super" ? "selected" : ""}>Super Admin 老師</option></select></div>
+                <div class="curriculum-workspace-field"><label>狀態</label><select id="adminWsActive" onchange="markAdminCardWorkspaceDirty()"><option value="true" ${isNew || card?.isActive ? "selected" : ""}>啟用</option><option value="false" ${!isNew && !card?.isActive ? "selected" : ""}>停用</option></select></div>
+                <div class="curriculum-workspace-field full"><label>備註</label><input id="adminWsNote" value="${escapeHtml(card?.note || "")}" placeholder="可留空，例如：三重五華 A 班老師" oninput="markAdminCardWorkspaceDirty()" /></div>
+              </div>
+            </div>
+            <div class="curriculum-workspace-section">
+              <h3>登入連結</h3>
+              <p>此連結可寫入或搭配老師管理卡使用。若修改 NFC UID，連結會自動更新。</p>
+              <div class="curriculum-workspace-grid">
+                <div class="curriculum-workspace-field full"><label>老師管理卡 NFC 連結</label><input id="adminWsUrlPreview" readonly onclick="this.select()" /></div>
+              </div>
+            </div>
+          </div>
+          <div class="curriculum-workspace-sticky-actions">
+            <span class="curriculum-workspace-dirty">● 尚未儲存</span>
+            <div class="right">
+              ${!isNew ? `<button class="btn-compact ${card?.isActive ? "danger" : "ok"}" onclick="toggleAdminCardStatusFromWorkspace()">${card?.isActive ? "停用老師卡" : "重新啟用老師卡"}</button>` : ""}
+              <button class="btn-compact" onclick="copyAdminCardUrlFromWorkspace()">複製連結</button>
+              <button class="btn-compact" onclick="cancelAdminCardWorkspace()">取消</button>
+              <button id="adminWsSaveBtn" class="btn-compact btn-success" onclick="saveAdminCardWorkspace()">儲存老師卡</button>
+            </div>
+          </div>
+        </section>`;
+      list.style.display = "none";
+      updateAdminCardWorkspaceUrlPreview();
+      requestAnimationFrame(() => document.getElementById("adminWsTeacherName")?.focus());
+    }
+
+    function updateAdminCardWorkspaceUrlPreview() {
+      const input = document.getElementById("adminWsUrlPreview");
+      if (!input) return;
+      input.value = adminCardLoginUrl(document.getElementById("adminWsUid")?.value || "");
+    }
+
+    function getAdminCardWorkspacePayload() {
+      const id = document.getElementById("adminWsCardId")?.value.trim() || "";
+      const teacherName = document.getElementById("adminWsTeacherName")?.value.trim() || "";
+      const cardUid = document.getElementById("adminWsUid")?.value.trim() || "";
+      const role = document.getElementById("adminWsRole")?.value || "admin";
+      const isActive = (document.getElementById("adminWsActive")?.value || "true") === "true";
+      const note = document.getElementById("adminWsNote")?.value.trim() || "";
+      return { id, teacherName, cardUid, role, isActive, note };
+    }
+
+    async function saveAdminCardWorkspace() {
+      const payload = getAdminCardWorkspacePayload();
+      if (!payload.teacherName) return alert("請輸入老師名稱。");
+      if (!payload.cardUid) return alert("請輸入管理卡代碼 / NFC UID。");
+      const btn = document.getElementById("adminWsSaveBtn");
+      if (btn) { btn.disabled = true; btn.textContent = "儲存中..."; }
+      try {
+        const result = await consoleSaveAdminCardAction({ action: "save_admin_card", adminCard: { ...payload, id: payload.id || null } });
+        if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "save_admin_card_failed");
+        closeAdminCardWorkspaceSilently();
+        adminCardsCache = null;
+        await loadAdminCardsData(true);
+      } catch (err) {
+        alert("老師卡儲存失敗：" + (err.message || err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "儲存老師卡"; }
+      }
+    }
+
+    function toggleAdminCardStatusFromWorkspace() {
+      const id = document.getElementById("adminWsCardId")?.value.trim() || "";
+      const c = getAdminCardById(id);
+      if (!c) return;
+      closeAdminCardWorkspaceSilently();
+      setAdminCardStatus(id, !c.isActive);
+    }
+
+    function copyAdminCardUrlFromWorkspace() {
+      const url = document.getElementById("adminWsUrlPreview")?.value || adminCardLoginUrl(document.getElementById("adminWsUid")?.value || "");
+      navigator.clipboard?.writeText(url).then(() => alert("已複製老師管理卡連結。"), () => prompt("複製此連結：", url));
     }
 
     function updateAdminCardUrlPreview() {
@@ -12581,6 +12873,7 @@ function openCurriculumUnitModal(unitId = "") {
     let newslettersConsoleCache = null;
     let selectedNewsletterId = null;
     let newslettersLoading = false;
+    let newsletterWorkspaceState = { active: false, type: "", mode: "", dirty: false };
 
     function getNewsletterApiUrlForConsole() {
       const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
@@ -12705,6 +12998,8 @@ function openCurriculumUnitModal(unitId = "") {
           <div class="insight-card"><div class="insight-title">已封存</div><div id="nlArchivedCount" class="insight-main">—</div><div class="insight-sub">已寄出或手動封存</div></div>
           <div class="insight-card"><div class="insight-title">標籤類型</div><div id="nlTagCount" class="insight-main">—</div><div class="insight-sub">僅供管理員辨識</div></div>
         </div>
+        <div id="newsletterWorkspaceHost"></div>
+        <div id="newsletterListWorkspace">
         <div class="newsletter-toolbar">
           <div>
             <h2 style="margin:0;font-size:20px;letter-spacing:-.03em;">教育專欄</h2>
@@ -12735,6 +13030,7 @@ function openCurriculumUnitModal(unitId = "") {
             </div>
             <div id="newsletterPreviewBody" class="newsletter-preview-body"><div class="newsletter-empty">尚未選擇專欄</div></div>
           </div>
+        </div>
         </div>
       `;
     }
@@ -12847,26 +13143,143 @@ function openCurriculumUnitModal(unitId = "") {
       if (body) body.innerHTML = '<div class="newsletter-empty">尚未選擇專欄</div>';
     }
 
+    /* =======================================================
+       Phase 5A｜Newsletter Workspace-first Editor v1
+       - Manual add/edit opens in-page workspace instead of the large editor modal.
+       - AI generate, archive and reorder remain confirm/action flows.
+       ======================================================= */
+    function defaultNewsletterHtmlTemplate() {
+      return '<h3 style="color:#007bff; margin-bottom:15px;">請輸入專欄標題</h3>\n<div style="background:#f8f9fa; padding:15px; border-left:5px solid #007bff; margin-bottom:20px;">\n<strong>【本週教育碎報】</strong><br>請輸入重點摘要。\n</div>\n<div style="margin-bottom:20px;">\n<h4 style="color:#2c3e50;">這對寶貝有什麼影響？</h4>\n請輸入專欄內容。\n</div>\n<div style="background:rgba(241,196,15,0.05); padding:15px; border-radius:15px;">\n<h4 style="color:#d35400;">給家長的實踐錦囊</h4>\n請輸入家長建議。\n</div>';
+    }
+
+    function markNewsletterWorkspaceDirty() {
+      if (!newsletterWorkspaceState.active) return;
+      newsletterWorkspaceState.dirty = true;
+      document.querySelector(".newsletter-workspace")?.classList.add("is-dirty");
+    }
+
+    function clearNewsletterWorkspaceState() {
+      newsletterWorkspaceState = { active: false, type: "", mode: "", dirty: false };
+    }
+
+    function confirmDiscardNewsletterWorkspace() {
+      if (!newsletterWorkspaceState.active || !newsletterWorkspaceState.dirty) return true;
+      return confirm("目前有尚未儲存的專欄內容，離開後將不會保留。確定離開嗎？");
+    }
+
+    function closeNewsletterWorkspaceSilently() {
+      clearNewsletterWorkspaceState();
+      const host = document.getElementById("newsletterWorkspaceHost");
+      const list = document.getElementById("newsletterListWorkspace");
+      if (host) host.innerHTML = "";
+      if (list) list.style.display = "block";
+    }
+
+    function cancelNewsletterWorkspace() {
+      if (!confirmDiscardNewsletterWorkspace()) return;
+      closeNewsletterWorkspaceSilently();
+    }
+
     function openNewsletterCreateModal() {
-      document.getElementById('newsletterEditMode').value = 'add';
-      document.getElementById('newsletterEditId').value = '';
-      document.getElementById('newsletterEditorTitle').textContent = '新增專欄';
-      document.getElementById('newsletterEditorSubtitle').textContent = '請輸入 content_html；標題會自動取第一個 h3。';
-      document.getElementById('newsletterEditTags').value = '';
-      document.getElementById('newsletterEditHtml').value = '<h3 style="color:#007bff; margin-bottom:15px;">請輸入專欄標題</h3>\n<div style="background:#f8f9fa; padding:15px; border-left:5px solid #007bff; margin-bottom:20px;">\n<strong>【本週教育碎報】</strong><br>請輸入重點摘要。\n</div>\n<div style="margin-bottom:20px;">\n<h4 style="color:#2c3e50;">這對寶貝有什麼影響？</h4>\n請輸入專欄內容。\n</div>\n<div style="background:rgba(241,196,15,0.05); padding:15px; border-radius:15px;">\n<h4 style="color:#d35400;">給家長的實踐錦囊</h4>\n請輸入家長建議。\n</div>';
-      showModal('newsletterEditorModal');
+      if (newsletterWorkspaceState.active && !confirmDiscardNewsletterWorkspace()) return;
+      renderNewsletterWorkspaceShell({ mode: "add", id: "", content: defaultNewsletterHtmlTemplate(), tags: [] });
     }
 
     function openNewsletterEditModal(id) {
+      if (newsletterWorkspaceState.active && !confirmDiscardNewsletterWorkspace()) return;
       const item = (newslettersConsoleCache?.items || []).find(n => newsletterIdOf(n) === String(id));
       if (!item) return alert('找不到專欄資料。');
-      document.getElementById('newsletterEditMode').value = 'update';
-      document.getElementById('newsletterEditId').value = String(id);
-      document.getElementById('newsletterEditorTitle').textContent = '編輯專欄';
-      document.getElementById('newsletterEditorSubtitle').textContent = newsletterTitleFromContent(newsletterContentOf(item), 0);
-      document.getElementById('newsletterEditTags').value = newsletterTagsOf(item).join(', ');
-      document.getElementById('newsletterEditHtml').value = newsletterContentOf(item);
-      showModal('newsletterEditorModal');
+      renderNewsletterWorkspaceShell({ mode: "update", id: String(id), content: newsletterContentOf(item), tags: newsletterTagsOf(item) });
+    }
+
+    function renderNewsletterWorkspaceShell({ mode = "update", id = "", content = "", tags = [] } = {}) {
+      const host = document.getElementById("newsletterWorkspaceHost");
+      const list = document.getElementById("newsletterListWorkspace");
+      if (!host || !list) return;
+      const isNew = mode === "add";
+      const title = isNew ? "新增週報專欄" : "編輯週報專欄";
+      const subtitle = isNew ? "新增後會進入待發排序；正式週報只會取 display_order = 1 的未封存專欄。" : newsletterTitleFromContent(content, 0);
+      newsletterWorkspaceState = { active: true, type: "newsletter", mode, dirty: false };
+      host.innerHTML = `
+        <section class="curriculum-workspace newsletter-workspace" data-workspace="newsletter">
+          <div class="curriculum-workspace-head">
+            <div>
+              <div class="curriculum-workspace-kicker">${isNew ? "新增介面" : "編輯介面"}</div>
+              <h2 class="curriculum-workspace-title">${title}</h2>
+              <p class="curriculum-workspace-subtitle">${escapeHtml(subtitle)} 這裡採用頁面內工作區，不再使用大型彈窗；彈窗只保留給封存確認、未儲存提醒與錯誤警示。</p>
+            </div>
+            <div class="curriculum-workspace-actions">
+              <button class="btn-compact" onclick="cancelNewsletterWorkspace()">返回列表</button>
+              <button class="btn-compact btn-success" onclick="saveNewsletterWorkspace()">儲存專欄</button>
+            </div>
+          </div>
+          <div class="curriculum-workspace-body">
+            <div class="curriculum-workspace-note">LINE 官方帳號式操作：新增 / 編輯專欄視為進入一個工作頁，而不是跳出大彈窗。若中途切換分頁，系統會提醒尚未儲存的變更。</div>
+            <input type="hidden" id="newsletterWsMode" value="${escapeHtml(mode)}" />
+            <input type="hidden" id="newsletterWsId" value="${escapeHtml(id)}" />
+            <div class="curriculum-workspace-section">
+              <h3>管理標籤</h3>
+              <p>標籤僅供管理員辨識，不會寄給家長。可用逗號分隔，例如：語言力量, 情緒連結, 成長引導。</p>
+              <div class="curriculum-workspace-grid">
+                <div class="curriculum-workspace-field full"><label>管理標籤</label><input id="newsletterWsTags" value="${escapeHtml(normalizeNewsletterTagsForConsole(tags).join(', '))}" placeholder="例如：語言力量, 情緒連結, 成長引導" oninput="markNewsletterWorkspaceDirty(); updateNewsletterWorkspacePreview();" /></div>
+              </div>
+            </div>
+            <div class="curriculum-workspace-section">
+              <h3>專欄 HTML</h3>
+              <p>標題會自動取第一個 h3。建議保留簡潔段落與家長行動建議，讓週報閱讀更清楚。</p>
+              <div class="curriculum-workspace-grid">
+                <div class="curriculum-workspace-field full"><label>專欄 HTML</label><textarea id="newsletterWsHtml" class="newsletter-editor-textarea" placeholder="請貼上或編輯專欄 HTML" oninput="markNewsletterWorkspaceDirty(); updateNewsletterWorkspacePreview();">${escapeHtml(content)}</textarea></div>
+              </div>
+            </div>
+            <div class="curriculum-workspace-section">
+              <h3>即時預覽</h3>
+              <p>這裡只做內容預覽，正式寄送仍由週報流程決定。</p>
+              <div id="newsletterWsPreview" class="newsletter-preview-body" style="border:1px solid var(--border);border-radius:18px;max-height:55vh;"></div>
+            </div>
+          </div>
+          <div class="curriculum-workspace-sticky-actions">
+            <span class="curriculum-workspace-dirty">● 尚未儲存</span>
+            <div class="right">
+              <button class="btn-compact" onclick="cancelNewsletterWorkspace()">取消</button>
+              <button id="newsletterWsSaveBtn" class="btn-compact btn-success" onclick="saveNewsletterWorkspace()">儲存專欄</button>
+            </div>
+          </div>
+        </section>`;
+      list.style.display = "none";
+      updateNewsletterWorkspacePreview();
+      requestAnimationFrame(() => document.getElementById("newsletterWsTags")?.focus());
+    }
+
+    function updateNewsletterWorkspacePreview() {
+      const html = document.getElementById("newsletterWsHtml")?.value || "";
+      const preview = document.getElementById("newsletterWsPreview");
+      if (preview) preview.innerHTML = html || '<div class="newsletter-empty">尚未輸入內容。</div>';
+    }
+
+    async function saveNewsletterWorkspace() {
+      const btn = document.getElementById('newsletterWsSaveBtn');
+      const old = btn?.textContent || '儲存專欄';
+      const mode = document.getElementById('newsletterWsMode')?.value || 'update';
+      const id = document.getElementById('newsletterWsId')?.value || '';
+      const content = document.getElementById('newsletterWsHtml')?.value || '';
+      const tags = normalizeNewsletterTagsForConsole(document.getElementById('newsletterWsTags')?.value || '');
+      if (!content.trim()) return alert('請輸入專欄 HTML。');
+      if (btn) { btn.disabled = true; btn.textContent = '儲存中...'; }
+      try {
+        if (mode === 'add') {
+          await newsletterConsoleRequest('add', { content, tags });
+        } else {
+          await newsletterConsoleRequest('update', { id, content, tags });
+        }
+        closeNewsletterWorkspaceSilently();
+        newslettersConsoleCache = null;
+        await loadNewslettersConsole(true);
+        toast('專欄已儲存');
+      } catch (err) {
+        alert('專欄儲存失敗：' + (err.message || err));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = old; }
+      }
     }
 
     function hideNewsletterEditorModal() { hideModal('newsletterEditorModal'); }
