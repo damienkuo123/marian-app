@@ -1,5 +1,6 @@
 // tappie-api.js - Tappie Supabase Dev API Layer
 // Micro Polish v3 - unit_id first learning progress + safe weekly report
+// Security v1C6 - legacy admin Console-only methods disconnected
 const TappieAPI = {
   mode: "supabase-dev",
   supabaseBaseUrl: "https://diptahklguohjtjnwnbf.supabase.co/functions/v1",
@@ -12,10 +13,11 @@ const TappieAPI = {
     submitPractice: "/submit-practice",
     claimPracticeChallenge: "/claim-practice-challenge",
     getDiagnosticReport: "/get-diagnostic-report",
+    adminCardAuth: "/admin-card-auth",
     adminGetData: "/admin-get-data",
     adminGetProgress: "/admin-get-progress",
     adminSaveStudents: "/admin-save-students",
-    adminSaveTasks: "/admin-save-tasks",
+    // Security v1C6 removed legacy admin endpoint: adminSaveTasks
     getLobbyData: "/get-lobby-data",
     createBattleRoom: "/create-battle-room",
     joinBattleRoom: "/join-battle-room",
@@ -35,10 +37,10 @@ const TappieAPI = {
     getStudentActivity: "/get-student-activity",
     updateWeeklyReport: "/update-weekly-report",
     adminGetBranding: "/admin-get-branding",
-    adminUploadBrandingAsset: "/admin-upload-branding-asset",
-    adminDeleteBrandingAsset: "/admin-delete-branding-asset",
-    adminNewsletters: "/admin-newsletters",
-    adminWeeklyReports: "/admin-weekly-reports",
+    // Security v1C6 removed legacy admin endpoint: adminUploadBrandingAsset
+    // Security v1C6 removed legacy admin endpoint: adminDeleteBrandingAsset
+    // Security v1C6 removed legacy admin endpoint: adminNewsletters
+    // Security v1C6 removed legacy admin endpoint: adminWeeklyReports
     adminRecordAttendance: "/admin-record-attendance",
     adminGetQueryData: "/admin-get-query-data",
     savePushSubscription: "/save-push-subscription",
@@ -47,9 +49,10 @@ const TappieAPI = {
     consoleGetSchools: "/console-get-schools",
     consoleGetData: "/console-get-data",
     consoleGetProgress: "/console-get-progress",
+    consoleGetQueryData: "/console-get-query-data",
     consoleGetBranding: "/console-get-branding",
     consoleUploadBrandingAsset: "/console-upload-branding-asset",
-    consoleDeleteBrandingAsset: "/console-delete-branding-asset",
+    consoleDeleteBrandingAsset: "/console-delete-branding",
     consoleGetGamification: "/console-get-gamification",
     consoleSaveTasks: "/console-save-tasks",
     consoleWeeklyReports: "/console-weekly-reports",
@@ -60,7 +63,16 @@ const TappieAPI = {
     consoleGetOverview: "/console-get-overview",
     consoleGetStudents: "/console-get-students",
     consoleSaveStudents: "/console-save-students",
-    consoleSaveSchool: "/console-save-school"
+    consoleSaveSchool: "/console-save-school",
+    consoleSaveFeatures: "/console-save-features",
+    consoleGetAdminCards: "/console-get-admin-cards",
+    consoleSaveAdminCard: "/console-save-admin-card",
+    consoleGetCurriculumPacks: "/console-get-curriculum-packs",
+    consoleSaveCurriculumPack: "/console-save-curriculum-pack",
+    consoleImportCurriculumPack: "/console-import-curriculum-pack",
+    consoleAutoScheduleUnits: "/console-auto-schedule-units",
+    consoleSaveScheduleCycle: "/console-save-schedule-cycle",
+    consoleGetScheduleCycles: "/console-get-schedule-cycles"
   },
   async _get(path) {
     const res = await fetch(this.supabaseBaseUrl + path);
@@ -180,10 +192,12 @@ const TappieAPI = {
 
     return await this._get(`${this.endpoints.getDiagnosticReport}?${qs.toString()}`);
   },
-  async adminGetData(schoolCode = "TEST01", mode = "all") { return await this._get(`${this.endpoints.adminGetData}?schoolCode=${encodeURIComponent(schoolCode)}&mode=${encodeURIComponent(mode)}`); },
-  async adminGetProgress(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetProgress}?schoolCode=${encodeURIComponent(schoolCode)}`); },
+  async adminCardAuth(payload = {}) { return await this._post(this.endpoints.adminCardAuth, payload); },
+  async adminGetData(schoolCode = "TEST01", mode = "all", authPayload = {}) { return await this._post(this.endpoints.adminGetData, { schoolCode, mode, ...authPayload }); },
+  async adminGetProgress(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminGetProgress, { schoolCode, ...authPayload }); },
   async adminSaveStudents(payload) { return await this._post(this.endpoints.adminSaveStudents, payload); },
-  async adminSaveTasks(payload) { return await this._post(this.endpoints.adminSaveTasks, payload); },
+
+  // Security v1C6 removed legacy admin method: adminSaveTasks
   async adminRecordAttendance(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, payload); },
   async adminGetQueryData(payload = {}) { return await this._post(this.endpoints.adminGetQueryData, payload); },
   async adminGetAttendanceToday(payload = {}) { return await this._post(this.endpoints.adminRecordAttendance, { ...payload, action: "get_today" }); },
@@ -221,38 +235,34 @@ const TappieAPI = {
   async purchaseAvatar(payload = {}) { return await this._post(this.endpoints.purchaseAvatar, payload); },
   async getStudentActivity(uid) { return await this._get(`${this.endpoints.getStudentActivity}?uid=${encodeURIComponent(uid)}`); },
   async updateWeeklyReport(payload = {}) { return await this._post(this.endpoints.updateWeeklyReport, payload); },
-  async adminGetBranding(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminGetBranding}?schoolCode=${encodeURIComponent(schoolCode)}`); },
-  async adminUploadBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminUploadBrandingAsset, payload); },
-  async adminDeleteBrandingAsset(payload = {}) { return await this._post(this.endpoints.adminDeleteBrandingAsset, payload); },
-  async adminGetNewsletters(schoolCode = "TEST01") { return await this._get(`${this.endpoints.adminNewsletters}?schoolCode=${encodeURIComponent(schoolCode)}`); },
-  async adminAddNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "add" }); },
-  async adminUpdateNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "update" }); },
-  async adminDeleteNewsletter(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "delete" }); },
-  async adminReorderNewsletters(payload = {}) { return await this._post(this.endpoints.adminNewsletters, { ...payload, action: "reorder" }); },
+  async adminGetBranding(schoolCode = "TEST01", authPayload = {}) { return await this._post(this.endpoints.adminGetBranding, { schoolCode, ...authPayload }); },
 
+  // Security v1C6 removed legacy admin method: adminUploadBrandingAsset
 
-  async adminGetWeeklyReports(schoolCode = "TEST01") {
-    return await this._get(`${this.endpoints.adminWeeklyReports}?schoolCode=${encodeURIComponent(schoolCode)}`);
-  },
-  async adminWeeklyReportAction(payload = {}) {
-    return await this._post(this.endpoints.adminWeeklyReports, payload);
-  },
-  async adminSaveWeeklyReportConfig(schoolCode = "TEST01", config = {}) {
-    return await this.adminWeeklyReportAction({ action: "save_config", schoolCode, config });
-  },
-  async adminPreviewWeeklyReport(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "preview" });
-  },
-  async adminSendWeeklyReportTest(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "send_test" });
-  },
-  async adminSendWeeklyReportNow(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "send_now" });
-  },
-  async adminForceResendWeeklyReport(payload = {}) {
-    return await this.adminWeeklyReportAction({ ...payload, action: "force_resend" });
-  },
+  // Security v1C6 removed legacy admin method: adminDeleteBrandingAsset
 
+  // Security v1C6 removed legacy admin method: adminGetNewsletters
+
+  // Security v1C6 removed legacy admin method: adminAddNewsletter
+
+  // Security v1C6 removed legacy admin method: adminUpdateNewsletter
+
+  // Security v1C6 removed legacy admin method: adminDeleteNewsletter
+
+  // Security v1C6 removed legacy admin method: adminReorderNewsletters
+ // Security v1C6 removed legacy admin method: adminGetWeeklyReports
+
+  // Security v1C6 removed legacy admin method: adminWeeklyReportAction
+
+  // Security v1C6 removed legacy admin method: adminSaveWeeklyReportConfig
+
+  // Security v1C6 removed legacy admin method: adminPreviewWeeklyReport
+
+  // Security v1C6 removed legacy admin method: adminSendWeeklyReportTest
+
+  // Security v1C6 removed legacy admin method: adminSendWeeklyReportNow
+
+  // Security v1C6 removed legacy admin method: adminForceResendWeeklyReport
   async consoleAuth(payload = {}) {
     return await this._post(this.endpoints.consoleAuth, payload);
   },
@@ -264,6 +274,21 @@ const TappieAPI = {
   async consoleSaveSchool(payload = {}) {
     const { token, body } = this._extractConsolePayload(payload);
     return await this._consolePost(this.endpoints.consoleSaveSchool, body, token);
+  },
+
+  async consoleSaveFeatures(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveFeatures, body, token);
+  },
+
+  async consoleGetAdminCards(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleGetAdminCards, body, token);
+  },
+
+  async consoleSaveAdminCard(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveAdminCard, body, token);
   },
 
   async consoleGetHealth({ token, schoolCode = "", scopeMode = "" } = {}) {
@@ -328,6 +353,10 @@ const TappieAPI = {
 
   async consoleGetProgress({ token = "", schoolCode = "", date = "", scopeMode = "" } = {}) {
     return await this._consolePost(this.endpoints.consoleGetProgress, { schoolCode, date, scopeMode }, token);
+  },
+
+  async consoleGetQueryData({ token = "", schoolCode = "", mode = "learning", rangeDays = 7, scopeMode = "" } = {}) {
+    return await this._consolePost(this.endpoints.consoleGetQueryData, { schoolCode, mode, rangeDays, scopeMode }, token);
   },
 
   async consoleGetBranding({ token = "", schoolCode = "", scopeMode = "" } = {}) {
@@ -415,6 +444,37 @@ const TappieAPI = {
   async consoleSaveAvatarSettings(payload = {}) {
     const { token, body } = this._extractConsolePayload(payload);
     return await this._consolePost(this.endpoints.consoleSaveAvatarSettings, body, token);
+  },
+
+
+  async consoleGetCurriculumPacks(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleGetCurriculumPacks, body, token);
+  },
+
+  async consoleSaveCurriculumPack(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveCurriculumPack, body, token);
+  },
+
+  async consoleImportCurriculumPack(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleImportCurriculumPack, body, token);
+  },
+
+  async consoleAutoScheduleUnits(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleAutoScheduleUnits, body, token);
+  },
+
+  async consoleSaveScheduleCycle(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleSaveScheduleCycle, body, token);
+  },
+
+  async consoleGetScheduleCycles(payload = {}) {
+    const { token, body } = this._extractConsolePayload(payload);
+    return await this._consolePost(this.endpoints.consoleGetScheduleCycles, body, token);
   },
 
   toLegacyDashboard(data) {
