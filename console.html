@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <!-- R39_MOBILE_ACTION_FILTERS_APPLIED -->
+  <!-- R44_STUDENT_NFC_DS_FINAL_APPLIED -->
   <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
@@ -7834,7 +7834,16 @@
         overflow-wrap: anywhere;
       }
       .r2-workspace[data-workspace="students-single"] .r2-workspace-side {
+        display: block !important;
+        order: 2 !important;
+        border-top: 0 !important;
+        padding-top: 0 !important;
+      }
+      .r2-workspace[data-workspace="students-single"] .r2-workspace-side .r2-side-card {
         display: none !important;
+      }
+      .r2-workspace[data-workspace="students-single"] .r2-workspace-side .student-nfc-side-card {
+        display: block !important;
       }
       .r2-form-grid,
       .form-grid {
@@ -7953,6 +7962,25 @@
         box-sizing: border-box !important;
         -webkit-appearance: none;
         appearance: none;
+      }
+    }
+
+
+    /* R44_STUDENT_NFC_DS_FINAL_APPLIED
+       - Student NFC preview uses the same side-card + r4-admin-url-preview pattern as teacher Admin Card editor.
+       - Mobile keeps only the student NFC preview card in the side column; student summary/help stay hidden.
+       - Returning from editor workspaces refreshes DS summary/filter chrome.
+    */
+    .student-nfc-side-card .r4-admin-url-preview {
+      margin: 12px 0 12px;
+      cursor: pointer;
+    }
+    .student-nfc-side-card .btn-compact {
+      width: auto;
+    }
+    @media (max-width: 760px) {
+      .student-nfc-side-card .btn-compact {
+        width: 100% !important;
       }
     }
 
@@ -9153,10 +9181,7 @@
       }
 
       document.getElementById("pageContent").innerHTML = renderPage(currentConsolePage);
-      setupMobileInsightCollapse(currentConsolePage);
-      setupDsSummaryToolbar();
-      normalizeUniversalFlatWorkspace();
-      setupR39MobileFilterGroups();
+      refreshConsoleDsChromeAfterRender();
       page = currentConsolePage;
       if (page === "overview") {
         loadOverviewData(false);
@@ -9325,6 +9350,18 @@
           toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         });
       });
+    }
+
+
+    function refreshConsoleDsChromeAfterRender() {
+      try {
+        setupMobileInsightCollapse(currentConsolePage);
+        setupDsSummaryToolbar();
+        normalizeUniversalFlatWorkspace();
+        setupR39MobileFilterGroups();
+      } catch (err) {
+        console.warn("DS chrome refresh skipped", err);
+      }
     }
 
     function renderPage(page) {
@@ -11198,6 +11235,10 @@
       if (!content) return;
       content.innerHTML = renderStudents();
       updateStudentsUI();
+      if (!studentWorkspace) {
+        refreshConsoleDsChromeAfterRender();
+        requestAnimationFrame(refreshConsoleDsChromeAfterRender);
+      }
       if (studentWorkspace) {
         setupStudentFormPickers();
         renderStudentTagEditor();
@@ -11208,7 +11249,9 @@
         if (uidInput) uidInput.oninput = () => { updateStudentUrlPreview(); markStudentWorkspaceDirty(); };
         if (uidSuffixInput) uidSuffixInput.oninput = () => { updateStudentUrlPreview(); markStudentWorkspaceDirty(); };
         toggleConsoleClassHint();
+        requestAnimationFrame(updateStudentUrlPreview);
       }
+      requestAnimationFrame(refreshConsoleDsChromeAfterRender);
     }
 
     function markStudentWorkspaceDirty() {
@@ -11261,6 +11304,7 @@
       const avatarName = s?.equipped_avatar_name || s?.equipped_avatar_id || "新增後自動配發預設角色";
       const studentLine = s ? studentDisplayIdLine(s) : "儲存後會產生學生資料並自動配發預設角色";
       const statusText = isNew ? "新增學生" : (s?.is_active ? "啟用中" : "已停用");
+      const previewUrl = studentNfcUrl(uidValue || (schoolCode ? `${schoolCode}-` : ""));
       return `
         <div class="r2-workspace ds-workspace r25-workspace" data-workspace="students-single">
           <div class="r2-workspace-head ds-editor-head r25-editor-head">
@@ -11290,17 +11334,17 @@
                     <div class="form-field full"><label>Title / 榮譽標籤</label><input id="editStudentTitle" value="${escapeHtml(titleValue)}" placeholder="可留空，Dashboard 榮譽榜通常即時計算" oninput="markStudentWorkspaceDirty()" /></div>
                   </div>
                 </details>
-                <div class="student-nfc-preview-card r2-side-card">
-                  <strong>學生 NFC 連結預覽</strong>
-                  <p class="small-note">此連結由學生 UID / 卡片代碼組成，可寫入 NFC 卡片或提供給學生感應入口。</p>
-                  <div id="editStudentUrlPreview" class="student-nfc-preview-url" onclick="copyStudentUrlFromModal()"></div>
-                  <button class="btn-compact" onclick="copyStudentUrlFromModal()">複製連結</button>
-                </div>
                 <div class="form-field full"><div id="studentFormNote" class="form-note">新增學生會自動配發預設角色，並寫入 student_avatars。席位上限以啟用學生計算。</div></div>
               </div>
             </div>
             <aside class="r2-workspace-side ds-editor-side r25-editor-side">
-              <div class="r2-side-card">
+              <div class="r2-side-card student-nfc-side-card">
+                <strong>學生 NFC 連結預覽</strong>
+                <p class="small-note">此連結由學生 UID / 卡片代碼組成，可寫入 NFC 卡片或提供給學生感應入口。</p>
+                <div id="editStudentUrlPreview" class="r4-admin-url-preview student-nfc-preview-url" onclick="copyStudentUrlFromModal()">${escapeHtml(previewUrl)}</div>
+                <button class="btn-compact" onclick="copyStudentUrlFromModal()">複製連結</button>
+              </div>
+              <div class="r2-side-card student-summary-side-card">
                 <strong>學生摘要</strong>
                 <div class="r3-student-summary-list" style="margin-top:12px;">
                   <div class="r3-student-summary-row"><span>狀態</span><strong>${escapeHtml(statusText)}</strong></div>
