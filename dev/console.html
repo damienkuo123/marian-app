@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
+  <!-- R35_DS_HARD_LOCK_APPLIED -->
   <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
@@ -2928,7 +2929,7 @@
     }
 
   
-    /* Feature Gate F2B｜Super Admin Feature_Config UI */
+    /* Feature Gate F2B｜Super Admin 功能授權 UI */
     .feature-config-panel { margin-bottom:18px; }
     .feature-config-grid {
       display:grid;
@@ -7831,6 +7832,67 @@
     .side-icon { opacity: .76; }
     .side-item.active .side-icon { opacity: 1; }
 
+
+    /* =======================================================
+       R35｜DS v1.1 Hard Lock CSS
+       - toast host for DS notices
+       - reduce leftover panel heaviness in flat management pages
+       - keep summary content spaced when expanded
+       ======================================================= */
+    .console-toast-host {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 12000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .console-toast {
+      min-width: min(360px, calc(100vw - 32px));
+      max-width: min(480px, calc(100vw - 32px));
+      transform: translateY(10px);
+      opacity: 0;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface) 94%, var(--bg));
+      color: var(--text);
+      border-radius: 15px;
+      padding: 12px 14px;
+      box-shadow: 0 18px 42px rgba(16,24,40,.16);
+      font-size: 13.5px;
+      line-height: 1.55;
+      font-weight: 700;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .console-toast.show { opacity: 1; transform: translateY(0); }
+    .console-toast.danger { border-color: rgba(220,38,38,.22); color: var(--red); }
+    .console-toast.warn { border-color: rgba(217,119,6,.22); color: var(--amber); }
+    .console-toast.ok { border-color: rgba(22,163,74,.22); color: var(--green); }
+    .console-summary-expanded,
+    .console-summary-body,
+    [data-ds-summary-body] {
+      gap: 14px !important;
+    }
+    .console-summary-expanded > *,
+    .console-summary-body > *,
+    [data-ds-summary-body] > * {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+    .console-main-card.r34-universal-flat-workspace .console-main-card-head,
+    .console-main-card.r35-universal-flat-workspace .console-main-card-head {
+      display: none !important;
+    }
+    @media (max-width: 760px) {
+      .console-toast-host {
+        left: 14px;
+        right: 14px;
+        bottom: calc(92px + env(safe-area-inset-bottom));
+      }
+      .console-toast { width: 100%; min-width: 0; }
+    }
+
   </style>
 </head>
 <body>
@@ -8632,7 +8694,7 @@
                 <h3>校區功能狀態</h3>
                 <p>此校區目前沒有可由校區主管調整的功能授權項目。這裡只顯示系統已存在的功能權限。</p>
               </div>
-              <span class="gami-impact-pill neutral">Feature_Config</span>
+              <span class="gami-impact-pill neutral">功能授權</span>
             </div>
           </div>
         `;
@@ -8645,7 +8707,7 @@
               <h3>校區功能狀態</h3>
               <p>管理此校區目前可使用的功能。關閉後，相關入口會依權限隱藏或停用。</p>
             </div>
-            <span class="gami-impact-pill neutral">Feature_Config</span>
+            <span class="gami-impact-pill neutral">功能授權</span>
           </div>
           <div class="feature-config-grid">
             ${visibleItems.map(item => `
@@ -8733,7 +8795,7 @@
     }
 
     async function saveFeatureConfig() {
-      if (!isSuperAdmin()) return alert("只有 Super Admin 可以調整校區功能啟用。");
+      if (!isSuperAdmin()) return consoleNotice("只有 Super Admin 可以調整校區功能啟用。");
       const btn = document.getElementById("featureConfigSaveBtn");
       const oldText = btn?.textContent || "儲存功能狀態";
       if (btn) { btn.disabled = true; btn.textContent = "儲存中..."; }
@@ -9092,40 +9154,12 @@
     // these immediately, but future pages should prefer these shells so page
     // rhythm stays consistent.
     // =======================================================
-    function renderConsolePageHero({ kicker = "", title = "", description = "", actions = "", compact = false } = {}) {
-      return `
-        <div class="console-page-hero${compact ? " compact" : ""}">
-          <div>
-            ${kicker ? `<div class="console-page-kicker">${escapeHtml(kicker)}</div>` : ""}
-            ${title ? `<h2>${escapeHtml(title)}</h2>` : ""}
-            ${description ? `<p>${escapeHtml(description)}</p>` : ""}
-          </div>
-          ${actions ? `<div class="console-page-actions">${actions}</div>` : ""}
-        </div>`;
-    }
-    function renderConsoleRulesStrip(title = "", message = "", badge = "") {
-      return `
-        <div class="console-rules-strip">
-          <div>${title ? `<strong>${escapeHtml(title)}</strong>` : ""}${escapeHtml(message)}</div>
-          ${badge ? `<span class="badge ok">${escapeHtml(badge)}</span>` : ""}
-        </div>`;
-    }
-    function renderConsoleSectionCard({ title = "", description = "", actions = "", body = "" } = {}) {
-      return `
-        <div class="console-section-card">
-          ${(title || description || actions) ? `
-            <div class="console-section-head">
-              <div>${title ? `<h3>${escapeHtml(title)}</h3>` : ""}${description ? `<p>${escapeHtml(description)}</p>` : ""}</div>
-              ${actions ? `<div class="console-page-actions">${actions}</div>` : ""}
-            </div>` : ""}
-          ${body || ""}
-        </div>`;
-    }
+    /* R35: deprecated pre-DS helper definitions removed. */
 
 
     // R25｜Design System v1 canonical helpers
     // These helpers are now the official engineering surface for Console pages.
-    const TAPPIE_CONSOLE_DESIGN_SYSTEM_VERSION = "v1.1-r34";
+    const TAPPIE_CONSOLE_DESIGN_SYSTEM_VERSION = "v1.1-r35";
     function renderConsolePageIntro({ group = "", title = "", description = "", actions = "" } = {}) {
       return `
         <section class="console-page-intro-card ds-page-intro r25-page-intro" data-ds-component="page-intro">
@@ -9182,6 +9216,47 @@
       });
     }
 
+
+
+    /* =======================================================
+       R35｜Design System v1.1 Hard Lock Utilities
+       - no direct alert/confirm/prompt calls in console code
+       - visible labels use administrator wording only
+       - legacy blocking wrappers are isolated for compatibility until R36 async-modal conversion
+       ======================================================= */
+    function ensureConsoleToastHost() {
+      let host = document.getElementById('consoleToastHost');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'consoleToastHost';
+        host.className = 'console-toast-host';
+        document.body.appendChild(host);
+      }
+      return host;
+    }
+    function consoleNotice(message, tone = 'info') {
+      const host = ensureConsoleToastHost();
+      const item = document.createElement('div');
+      item.className = `console-toast ${tone}`;
+      item.textContent = String(message || '');
+      host.appendChild(item);
+      setTimeout(() => item.classList.add('show'), 10);
+      setTimeout(() => {
+        item.classList.remove('show');
+        setTimeout(() => item.remove(), 220);
+      }, 3200);
+    }
+    function consoleConfirmSync(message) {
+      // Compatibility bridge: keeps legacy synchronous flows working.
+      // New code should use the async Console modal pattern.
+      return window.confirm(String(message || ''));
+    }
+    function consolePromptSync(message, fallback = '') {
+      // Compatibility bridge for destructive typed confirmations / copy fallback.
+      // New code should use the async text-confirm modal pattern.
+      return window.prompt(String(message || ''), fallback);
+    }
+
     function getConsoleUnsavedMessage() {
       return "目前編輯內容尚未儲存，離開後這次修改不會保留。";
     }
@@ -9201,7 +9276,7 @@
       consolePendingDiscardAction = typeof onDiscard === "function" ? onDiscard : null;
       const modal = document.getElementById("consoleUnsavedModal");
       if (!modal) {
-        if (confirm(getConsoleUnsavedMessage())) {
+        if (consoleConfirmSync(getConsoleUnsavedMessage())) {
           discardCurrentConsoleWorkspace();
           if (consolePendingDiscardAction) consolePendingDiscardAction();
           consolePendingDiscardAction = null;
@@ -9356,7 +9431,7 @@
 
     function normalizeUniversalFlatWorkspace() {
       document.querySelectorAll('.console-page-standard.ds-page-shell, .r25-page-shell.ds-page-shell').forEach(shell => {
-        shell.dataset.dsTemplateLocked = 'v1.1-r34';
+        shell.dataset.dsTemplateLocked = 'v1.1-r35';
       });
       document.querySelectorAll('.console-main-card.ds-main-card').forEach(card => {
         card.classList.add('r34-universal-flat-workspace');
@@ -9780,7 +9855,7 @@
 
     function openSchoolEditor(code = "") {
       if (!isOwner() || !isOwnerAllMode()) {
-        alert("只有 Owner 全部校區模式可以管理校區基本資料。");
+        consoleNotice("只有 Owner 全部校區模式可以管理校區基本資料。");
         return;
       }
       if (schoolWorkspace && schoolWorkspaceDirty) {
@@ -9788,7 +9863,7 @@
         return;
       }
       const raw = code ? getOwnerSchoolByCode(code) : null;
-      if (code && !raw) { alert("找不到校區資料，請重新整理後再試。"); return; }
+      if (code && !raw) { consoleNotice("找不到校區資料，請重新整理後再試。"); return; }
       schoolWorkspace = { code: code || "" };
       schoolWorkspaceDirty = false;
       rerenderSchoolWorkspacePage();
@@ -9822,9 +9897,9 @@
 
     async function submitSchoolEditor() {
       const payload = readSchoolEditorPayload();
-      if (!payload.name) return alert("請輸入校區名稱。");
-      if (payload.mode === "create" && !payload.schoolCode) return alert("請輸入校區代碼。");
-      if (payload.mode === "create" && !/^[A-Z0-9_-]{2,24}$/.test(payload.schoolCode)) return alert("校區代碼只能使用 2-24 個大寫英文、數字、底線或連字號。");
+      if (!payload.name) return consoleNotice("請輸入校區名稱。");
+      if (payload.mode === "create" && !payload.schoolCode) return consoleNotice("請輸入校區代碼。");
+      if (payload.mode === "create" && !/^[A-Z0-9_-]{2,24}$/.test(payload.schoolCode)) return consoleNotice("校區代碼只能使用 2-24 個大寫英文、數字、底線或連字號。");
 
       const btn = document.getElementById("schoolEditorSubmitBtn");
       const oldText = btn?.textContent || "儲存校區";
@@ -9855,16 +9930,16 @@
         updateConsoleScopeUI();
         showPage("schools");
       } catch (err) {
-        alert("校區儲存失敗：" + (err?.message || err));
+        consoleNotice("校區儲存失敗：" + (err?.message || err));
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = oldText; }
       }
     }
 
     async function toggleSchoolActive(code, nextActive) {
-      if (!isOwner() || !isOwnerAllMode()) return alert("只有 Owner 全部校區模式可以啟用或停用校區。");
+      if (!isOwner() || !isOwnerAllMode()) return consoleNotice("只有 Owner 全部校區模式可以啟用或停用校區。");
       const actionText = nextActive ? "啟用" : "停用";
-      if (!confirm(`確定要${actionText}校區 ${code} 嗎？`)) return;
+      if (!consoleConfirmSync(`確定要${actionText}校區 ${code} 嗎？`)) return;
       try {
         const res = await TappieAPI.consoleSaveSchool({
           token: session.token,
@@ -9882,7 +9957,7 @@
         updateConsoleScopeUI();
         showPage("schools");
       } catch (err) {
-        alert(`${actionText}校區失敗：` + (err?.message || err));
+        consoleNotice(`${actionText}校區失敗：` + (err?.message || err));
       }
     }
 
@@ -11331,8 +11406,8 @@
     function copyStudentUrlFromModal() {
       updateStudentUrlPreview();
       const url = document.getElementById("editStudentUrlPreview")?.value || "";
-      if (!url) return alert("請先填寫學生 UID / 卡片代碼。");
-      navigator.clipboard?.writeText(url).then(() => alert("已複製學生 NFC 連結。"), () => prompt("複製此連結：", url));
+      if (!url) return consoleNotice("請先填寫學生 UID / 卡片代碼。");
+      navigator.clipboard?.writeText(url).then(() => consoleNotice("已複製學生 NFC 連結。"), () => consolePromptSync("複製此連結：", url));
     }
 
     function canAddActiveStudent() {
@@ -11370,7 +11445,7 @@
 
     function confirmStudentWorkspaceLeave() {
       if (!studentWorkspaceDirty) return true;
-      return confirm(getConsoleUnsavedMessage());
+      return consoleConfirmSync(getConsoleUnsavedMessage());
     }
 
     function closeStudentWorkspace() {
@@ -11509,7 +11584,7 @@
     }
 
     function openStudentEditor(studentId) {
-      if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯學生。"); return; }
+      if (!isSingleSchoolMode()) { consoleNotice("請先選擇單一校區，再編輯學生。"); return; }
       if (studentWorkspace && studentWorkspaceDirty) {
         requestConsoleWorkspaceLeave(() => openStudentEditor(studentId));
         return;
@@ -11518,12 +11593,12 @@
       if (isNew) {
         const seat = canAddActiveStudent();
         if (!seat.ok) {
-          alert(`⛔ 已達學生方案上限\n\n目前啟用學生：${seat.active} 位\n方案上限：${seat.limit} 位\n\n請先停用不使用的學生，或升級方案後再新增。`);
+          consoleNotice(`⛔ 已達學生方案上限\n\n目前啟用學生：${seat.active} 位\n方案上限：${seat.limit} 位\n\n請先停用不使用的學生，或升級方案後再新增。`);
           return;
         }
       }
       const s = isNew ? null : getStudentById(studentId);
-      if (!isNew && !s) { alert("找不到學生資料，請重新整理後再試。"); return; }
+      if (!isNew && !s) { consoleNotice("找不到學生資料，請重新整理後再試。"); return; }
       currentEditingStudentTags = normalizeStudentTags(s?.tags || []);
       studentWorkspace = { type: "student", studentId: studentId || "" };
       studentWorkspaceDirty = false;
@@ -11565,12 +11640,12 @@
       const isActive = document.getElementById("editStudentActive").value === "true";
       const pointsRaw = document.getElementById("editStudentPoints").value;
       const title = document.getElementById("editStudentTitle").value.trim();
-      if (!uid || !name) { alert("UID 與學生姓名為必填。"); return; }
-      if (type === "有班級" && !classId) { alert("有班級學生必須填寫班級代碼。"); return; }
-      if (parentEmail && !isValidEmail(parentEmail)) { alert("Parent Email 格式不正確，請修正或清空。"); return; }
+      if (!uid || !name) { consoleNotice("UID 與學生姓名為必填。"); return; }
+      if (type === "有班級" && !classId) { consoleNotice("有班級學生必須填寫班級代碼。"); return; }
+      if (parentEmail && !isValidEmail(parentEmail)) { consoleNotice("Parent Email 格式不正確，請修正或清空。"); return; }
       if (!id && isActive) {
         const seat = canAddActiveStudent();
-        if (!seat.ok) { alert(`⛔ 已達學生方案上限\n\n目前啟用學生：${seat.active} 位\n方案上限：${seat.limit} 位`); return; }
+        if (!seat.ok) { consoleNotice(`⛔ 已達學生方案上限\n\n目前啟用學生：${seat.active} 位\n方案上限：${seat.limit} 位`); return; }
       }
       const btn = document.getElementById("studentSaveBtn");
       btn.disabled = true; btn.textContent = "儲存中...";
@@ -11599,7 +11674,7 @@
         studentClassRegistryCache = null;
         await loadStudentsData(true);
       } catch (err) {
-        alert("學生儲存失敗：" + (err.message || err));
+        consoleNotice("學生儲存失敗：" + (err.message || err));
       } finally {
         btn.disabled = false; btn.textContent = "儲存學生";
       }
@@ -11609,12 +11684,12 @@
       const id = document.getElementById("editStudentId").value.trim();
       if (!id) return;
       const s = getStudentById(id);
-      if (!s) { alert("找不到學生資料。"); return; }
+      if (!s) { consoleNotice("找不到學生資料。"); return; }
       if (s.is_active) {
-        const input = prompt(`請輸入「停用」確認停用學生：${s.name || s.uid}`);
+        const input = consolePromptSync(`請輸入「停用」確認停用學生：${s.name || s.uid}`);
         if (input !== "停用") return;
       } else {
-        if (!confirm(`確定要重新啟用學生：${s.name || s.uid}？`)) return;
+        if (!consoleConfirmSync(`確定要重新啟用學生：${s.name || s.uid}？`)) return;
       }
       try {
         const result = s.is_active
@@ -11626,7 +11701,7 @@
         curriculumCache = null;
         studentClassRegistryCache = null;
         await loadStudentsData(true);
-      } catch (err) { alert("狀態修改失敗：" + (err.message || err)); }
+      } catch (err) { consoleNotice("狀態修改失敗：" + (err.message || err)); }
     }
 
     function toggleStudentBatchMode() {
@@ -11707,7 +11782,7 @@
     }
 
     function openBatchStudentEditor() {
-      if (!selectedStudentIds.size) { alert("請先勾選學生。"); return; }
+      if (!selectedStudentIds.size) { consoleNotice("請先勾選學生。"); return; }
       if (studentWorkspace && studentWorkspaceDirty) {
         requestConsoleWorkspaceLeave(() => openBatchStudentEditor());
         return;
@@ -11724,7 +11799,7 @@
     }
     function toggleBatchClassHint() {}
     async function saveBatchStudents() {
-      if (!selectedStudentIds.size) { alert("沒有選取學生。"); return; }
+      if (!selectedStudentIds.size) { consoleNotice("沒有選取學生。"); return; }
       const patch = {};
       const type = document.getElementById("batchStudentType").value;
       const classCode = document.getElementById("batchStudentClass").value.trim();
@@ -11737,9 +11812,9 @@
       if (weekly !== "__nochange") patch.weekly_report_enabled = weekly === "true";
       const batchTags = normalizeStudentTags(currentBatchStudentTags);
       if (batchTags.length) patch.tags = batchTags;
-      if (!Object.keys(patch).length) { alert("你沒有設定任何修改內容。"); return; }
-      if (patch.student_type === "有班級" && !patch.class_code) { alert("批量設為有班級學生時，請填寫班級代碼。"); return; }
-      if (!confirm(`確定要批量修改 ${selectedStudentIds.size} 位學生嗎？`)) return;
+      if (!Object.keys(patch).length) { consoleNotice("你沒有設定任何修改內容。"); return; }
+      if (patch.student_type === "有班級" && !patch.class_code) { consoleNotice("批量設為有班級學生時，請填寫班級代碼。"); return; }
+      if (!consoleConfirmSync(`確定要批量修改 ${selectedStudentIds.size} 位學生嗎？`)) return;
       const btn = document.getElementById("batchSaveBtn");
       btn.disabled = true; btn.textContent = "執行中...";
       try {
@@ -11748,7 +11823,7 @@
         hideBatchModal();
         studentBatchMode = false; selectedStudentIds.clear(); studentsCache = null; curriculumCache = null; studentClassRegistryCache = null;
         await loadStudentsData(true);
-      } catch (err) { alert("批量修改失敗：" + (err.message || err)); }
+      } catch (err) { consoleNotice("批量修改失敗：" + (err.message || err)); }
       finally { btn.disabled = false; btn.textContent = "確認批量修改"; }
     }
 
@@ -11923,7 +11998,7 @@
 
     function confirmAdminCardWorkspaceLeave() {
       if (!adminCardWorkspaceDirty) return true;
-      return confirm(getConsoleUnsavedMessage());
+      return consoleConfirmSync(getConsoleUnsavedMessage());
     }
 
     function closeAdminCardWorkspace(force = false) {
@@ -11937,14 +12012,14 @@
     }
 
     function openAdminCardEditor(cardId) {
-      if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯老師管理卡。"); return; }
+      if (!isSingleSchoolMode()) { consoleNotice("請先選擇單一校區，再編輯老師管理卡。"); return; }
       if (adminCardWorkspace && adminCardWorkspaceDirty) {
         requestConsoleWorkspaceLeave(() => openAdminCardEditor(cardId));
         return;
       }
       const isNew = !cardId;
       const c = isNew ? null : getAdminCardById(cardId);
-      if (!isNew && !c) { alert("找不到老師卡資料，請重新整理後再試。"); return; }
+      if (!isNew && !c) { consoleNotice("找不到老師卡資料，請重新整理後再試。"); return; }
       adminCardWorkspace = { cardId: cardId || "" };
       adminCardWorkspaceDirty = false;
       rerenderAdminCardWorkspacePage();
@@ -12021,7 +12096,7 @@
     function copyAdminCardUrlFromWorkspace() {
       const uid = document.getElementById("adminWsCardUid")?.value || "";
       const url = adminCardLoginUrl(uid);
-      navigator.clipboard?.writeText(url).then(() => alert("已複製老師管理卡連結。"), () => prompt("複製此連結：", url));
+      navigator.clipboard?.writeText(url).then(() => consoleNotice("已複製老師管理卡連結。"), () => consolePromptSync("複製此連結：", url));
     }
 
     async function saveAdminCardWorkspace() {
@@ -12031,8 +12106,8 @@
       const role = document.getElementById("adminWsRole")?.value || "admin";
       const isActive = document.getElementById("adminWsActive")?.value === "true";
       const note = document.getElementById("adminWsNote")?.value.trim() || "";
-      if (!teacherName) return alert("請輸入老師名稱。");
-      if (!cardUid) return alert("請輸入管理卡代碼 / NFC UID。");
+      if (!teacherName) return consoleNotice("請輸入老師名稱。");
+      if (!cardUid) return consoleNotice("請輸入管理卡代碼 / NFC UID。");
       const btn = document.getElementById("adminWsSaveBtn");
       if (btn) { btn.disabled = true; btn.textContent = "儲存中..."; }
       try {
@@ -12044,7 +12119,7 @@
         rerenderAdminCardWorkspacePage();
         await loadAdminCardsData(true);
       } catch (err) {
-        alert("老師卡儲存失敗：" + (err.message || err));
+        consoleNotice("老師卡儲存失敗：" + (err.message || err));
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = "儲存老師卡"; }
       }
@@ -12053,8 +12128,8 @@
     function toggleAdminCardStatusFromWorkspace() {
       const id = document.getElementById("adminWsCardId")?.value.trim() || "";
       const c = getAdminCardById(id);
-      if (!c) return alert("找不到老師卡資料。");
-      if (adminCardWorkspaceDirty && !confirm("目前有尚未儲存的變更，狀態切換會放棄這些變更。確定繼續嗎？")) return;
+      if (!c) return consoleNotice("找不到老師卡資料。");
+      if (adminCardWorkspaceDirty && !consoleConfirmSync("目前有尚未儲存的變更，狀態切換會放棄這些變更。確定繼續嗎？")) return;
       adminCardWorkspace = null;
       adminCardWorkspaceDirty = false;
       rerenderAdminCardWorkspacePage();
@@ -12092,8 +12167,8 @@
       const role = document.getElementById("editAdminCardRole").value;
       const isActive = document.getElementById("editAdminCardActive").value === "true";
       const note = document.getElementById("editAdminCardNote").value.trim();
-      if (!teacherName) return alert("請輸入老師名稱。");
-      if (!cardUid) return alert("請輸入管理卡代碼 / NFC UID。");
+      if (!teacherName) return consoleNotice("請輸入老師名稱。");
+      if (!cardUid) return consoleNotice("請輸入管理卡代碼 / NFC UID。");
       const btn = document.getElementById("adminCardSaveBtn");
       btn.disabled = true; btn.textContent = "儲存中...";
       try {
@@ -12103,7 +12178,7 @@
         adminCardsCache = null;
         await loadAdminCardsData(true);
       } catch (err) {
-        alert("老師卡儲存失敗：" + (err.message || err));
+        consoleNotice("老師卡儲存失敗：" + (err.message || err));
       } finally {
         btn.disabled = false; btn.textContent = "儲存老師卡";
       }
@@ -12111,18 +12186,18 @@
 
     async function setAdminCardStatus(id, active) {
       const c = getAdminCardById(id);
-      if (!c) return alert("找不到老師卡資料。");
+      if (!c) return consoleNotice("找不到老師卡資料。");
       if (!active) {
-        const input = prompt(`請輸入「停用」確認停用老師卡：${c.teacherName || c.cardUid}`);
+        const input = consolePromptSync(`請輸入「停用」確認停用老師卡：${c.teacherName || c.cardUid}`);
         if (input !== "停用") return;
-      } else if (!confirm(`確定要重新啟用老師卡：${c.teacherName || c.cardUid}？`)) return;
+      } else if (!consoleConfirmSync(`確定要重新啟用老師卡：${c.teacherName || c.cardUid}？`)) return;
       try {
         const result = await consoleSaveAdminCardAction({ action: active ? "enable_admin_card" : "disable_admin_card", id });
         if (!result?.success) throw new Error(result?.message || result?.error || result?.detail || "admin_card_status_failed");
         adminCardsCache = null;
         await loadAdminCardsData(true);
       } catch (err) {
-        alert("老師卡狀態修改失敗：" + (err.message || err));
+        consoleNotice("老師卡狀態修改失敗：" + (err.message || err));
       }
     }
 
@@ -12136,11 +12211,11 @@
 
     function copyAdminCardUrl(cardUid) {
       const url = adminCardLoginUrl(cardUid);
-      navigator.clipboard?.writeText(url).then(() => alert("已複製老師管理卡連結。"), () => prompt("複製此連結：", url));
+      navigator.clipboard?.writeText(url).then(() => consoleNotice("已複製老師管理卡連結。"), () => consolePromptSync("複製此連結：", url));
     }
     function copyAdminCardUrlFromModal() {
       const url = document.getElementById("editAdminCardUrlPreview")?.value || adminCardLoginUrl(document.getElementById("editAdminCardUid")?.value || "");
-      navigator.clipboard?.writeText(url).then(() => alert("已複製老師管理卡連結。"), () => prompt("複製此連結：", url));
+      navigator.clipboard?.writeText(url).then(() => consoleNotice("已複製老師管理卡連結。"), () => consolePromptSync("複製此連結：", url));
     }
 
     function renderLearningQueryTabsHtml() {
@@ -13002,41 +13077,41 @@
         const config={enabled:document.getElementById("wkEnabled").checked,sendDay:document.getElementById("wkSendDay").value,sendHour:Number(document.getElementById("wkSendHour").value||21),sendMinute:0,rollingDays:Number(document.getElementById("wkRollingDays").value||7),sendTimezone:"Asia/Taipei"};
         const res=await TappieAPI.consoleSaveWeeklyReportConfig(schoolCode,config,session?.token || "");
         if(!res.success) throw new Error(res.message||res.error||"儲存失敗");
-        alert("✅ 週報設定已儲存"); weeklyCache=null; await loadWeeklyData(true);
-      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+        consoleNotice("✅ 週報設定已儲存"); weeklyCache=null; await loadWeeklyData(true);
+      }catch(err){consoleNotice("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
     }
     async function saveConsoleWeeklyNotification(btn) {
       const old=btn.textContent; btn.disabled=true; btn.textContent="儲存中...";
       try{
         const res=await TappieAPI.consoleWeeklyReportAction({token:session?.token || "",action:"save_notifications",schoolCode:getConsoleSchoolCode(),scopeMode:getActiveScopePayload().scopeMode,config:{settlementNotificationEnabled:document.getElementById("wkNotifyEnabled").checked,missionReportEmail:document.getElementById("wkMissionEmail").value.trim()}});
         if(!res.success) throw new Error(res.message||res.error||"儲存失敗");
-        alert("✅ 單元結算通知設定已儲存"); weeklyCache=null;
+        consoleNotice("✅ 單元結算通知設定已儲存"); weeklyCache=null;
         if (document.getElementById("wkTodayBox")) await loadWeeklyData(true);
         else await loadSettlementNotificationData(true);
-      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+      }catch(err){consoleNotice("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
     }
     async function sendConsoleWeeklyTest(btn) {
       const email=document.getElementById("wkTestEmail").value.trim();
-      if(!email) return alert("請先輸入測試收件信箱");
-      if(!confirm(`確定要寄一封測試週報到 ${email} 嗎？\n測試寄送不會寄給家長，也不會封存專欄。`)) return;
+      if(!email) return consoleNotice("請先輸入測試收件信箱");
+      if(!consoleConfirmSync(`確定要寄一封測試週報到 ${email} 嗎？\n測試寄送不會寄給家長，也不會封存專欄。`)) return;
       const old=btn.textContent; btn.disabled=true; btn.textContent="寄送中...";
       try{
         const res=await TappieAPI.consoleSendWeeklyReportTest({token:session?.token || "",schoolCode:getConsoleSchoolCode(),scopeMode:getActiveScopePayload().scopeMode,testEmail:email});
         if(!res.success) throw new Error(res.message||res.error||"測試寄送失敗");
-        alert("✅ 測試信已送出，請檢查信箱"); weeklyCache=null; await loadWeeklyData(true);
-      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+        consoleNotice("✅ 測試信已送出，請檢查信箱"); weeklyCache=null; await loadWeeklyData(true);
+      }catch(err){consoleNotice("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
     }
     async function sendConsoleWeeklyNow(btn) {
-      if(weeklyCache?.todayLocked) return alert("今日週報已完成正式寄送，今日不開放再次正式寄送。");
+      if(weeklyCache?.todayLocked) return consoleNotice("今日週報已完成正式寄送，今日不開放再次正式寄送。");
       const count=weeklyCache?.stats?.eligibleStudents||0;
-      if(!count) return alert("目前沒有可寄送的家長信箱。");
-      if(!confirm(`確定要正式寄出今日週報嗎？\n將寄給 ${count} 位家長。\n正式寄送成功後，今日不得再次寄送，且第 1 順位專欄會自動封存並遞補。`)) return;
+      if(!count) return consoleNotice("目前沒有可寄送的家長信箱。");
+      if(!consoleConfirmSync(`確定要正式寄出今日週報嗎？\n將寄給 ${count} 位家長。\n正式寄送成功後，今日不得再次寄送，且第 1 順位專欄會自動封存並遞補。`)) return;
       const old=btn.textContent; btn.disabled=true; btn.textContent="正式寄送中...";
       try{
         const res=await TappieAPI.consoleSendWeeklyReportNow({token:session?.token || "",schoolCode:getConsoleSchoolCode(),scopeMode:getActiveScopePayload().scopeMode});
         if(!res.success) throw new Error(res.message||res.error||"正式寄送失敗");
-        alert("✅ 正式寄送流程完成"); weeklyCache=null; await loadWeeklyData(true);
-      }catch(err){alert("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
+        consoleNotice("✅ 正式寄送流程完成"); weeklyCache=null; await loadWeeklyData(true);
+      }catch(err){consoleNotice("⚠️ "+(err.message||err));}finally{btn.disabled=false;btn.textContent=old;}
     }
     function showConsoleWeeklyJobDetails(idx, filter="failed") {
       const job=(weeklyCache?.latestJobs||[])[Number(idx)];
@@ -13451,9 +13526,9 @@
         const units = payload.pack.units || [];
         const wordCount = units.reduce((sum, u) => sum + (u.words || []).length, 0);
         const names = units.map(u => `${u.unitName}（${u.words.length} 字）`).join("\\n");
-        alert(`教材包：${payload.pack.packName}\\n單元：${units.length}\\n單字：${wordCount}\\n\\n${names}`);
+        consoleNotice(`教材包：${payload.pack.packName}\\n單元：${units.length}\\n單字：${wordCount}\\n\\n${names}`);
       } catch (err) {
-        alert(err.message || err);
+        consoleNotice(err.message || err);
       }
     }
 
@@ -13532,7 +13607,7 @@
     }
 
     async function openCurriculumPackEditor(packId = "") {
-      if (!isOwner()) { alert("只有 Owner 可以管理預設教材包。"); return; }
+      if (!isOwner()) { consoleNotice("只有 Owner 可以管理預設教材包。"); return; }
       if (curriculumPackWorkspace && curriculumPackWorkspaceDirty) {
         requestConsoleWorkspaceLeave(() => openCurriculumPackEditor(packId));
         return;
@@ -13553,13 +13628,13 @@
         currentCurriculumPackEditorRaw = pack;
         fillCurriculumPackEditorFields(normalizePackForEditor(pack));
       } catch (err) {
-        alert("讀取教材包失敗：" + (err.message || err));
+        consoleNotice("讀取教材包失敗：" + (err.message || err));
         fillCurriculumPackEditorFields(normalizePackForEditor(curriculumPackStarterJson().pack));
       }
     }
 
     function fillCurriculumPackEditorSample() {
-      if (!confirm("要用 Starter 範例覆蓋目前編輯內容嗎？")) return;
+      if (!consoleConfirmSync("要用 Starter 範例覆蓋目前編輯內容嗎？")) return;
       const currentId = getPackEditorField("packEditorId");
       const sample = normalizePackForEditor(curriculumPackStarterJson().pack);
       sample.id = currentId || "";
@@ -13580,7 +13655,7 @@
         await loadCurriculumPacksConsole(true);
         toast("教材包已儲存");
       } catch (err) {
-        alert("儲存教材包失敗：" + (err.message || err));
+        consoleNotice("儲存教材包失敗：" + (err.message || err));
       }
     }
 
@@ -13589,7 +13664,7 @@
       const message = isActive
         ? "確定要重新啟用這個教材包嗎？重新啟用後，各校區又可以匯入。"
         : "確定要停用這個教材包模板嗎？\n\n這只會讓校區之後不能再匯入這個 pack；已經匯入到各校區的 word_units / unit_words / unit_schedules 都不會被刪除。";
-      if (!confirm(message)) return;
+      if (!consoleConfirmSync(message)) return;
       try {
         const data = await TappieAPI.consoleSaveCurriculumPack({
           token: session?.token || "",
@@ -13603,7 +13678,7 @@
         await loadCurriculumPacksConsole(true);
         toast("教材包狀態已更新");
       } catch (err) {
-        alert("更新教材包失敗：" + (err.message || err));
+        consoleNotice("更新教材包失敗：" + (err.message || err));
       }
     }
 
@@ -13640,7 +13715,7 @@
     }
 
     async function openCurriculumPackImportModal() {
-      if (!isSingleSchoolMode()) return alert("請先選擇單一校區再匯入預設組合。");
+      if (!isSingleSchoolMode()) return consoleNotice("請先選擇單一校區再匯入預設組合。");
       showModal("curriculumPackImportModal");
       prepareCurriculumPackImportMobileScroll();
       if (!curriculumCache) await loadCurriculumData(true);
@@ -13769,7 +13844,7 @@
           if (btn) { btn.disabled = false; btn.textContent = old; }
         }
       } catch (err) {
-        alert("匯入預設組合失敗：" + (err.message || err));
+        consoleNotice("匯入預設組合失敗：" + (err.message || err));
       }
     }
 
@@ -13818,10 +13893,10 @@
     }
 
     function openCurriculumAutoScheduleModal() {
-      if (!isSingleSchoolMode()) return alert("請先選擇單一校區。");
-      if (!curriculumFilter || isEventClassCode(curriculumFilter)) return alert("請先在班級篩選器選擇一般班級。");
+      if (!isSingleSchoolMode()) return consoleNotice("請先選擇單一校區。");
+      if (!curriculumFilter || isEventClassCode(curriculumFilter)) return consoleNotice("請先在班級篩選器選擇一般班級。");
       const units = getAutoScheduleClassUnits();
-      if (!units.length) return alert("這個班級目前沒有可排程的單元。");
+      if (!units.length) return consoleNotice("這個班級目前沒有可排程的單元。");
       showModal("curriculumAutoScheduleModal");
       const cls = normalizeEventClassCode(curriculumFilter);
       const classInput = document.getElementById("autoScheduleClassCode");
@@ -14026,7 +14101,7 @@
           if (btn) { btn.disabled = false; btn.textContent = old; }
         }
       } catch (err) {
-        alert("自動排程失敗：" + (err.message || err));
+        consoleNotice("自動排程失敗：" + (err.message || err));
       }
     }
 
@@ -14226,9 +14301,9 @@
           hideCurriculumCsvModal();
           return;
         }
-        alert("目前模式不支援匯入。");
+        consoleNotice("目前模式不支援匯入。");
       } catch (err) {
-        alert("CSV 匯入失敗：" + (err.message || err));
+        consoleNotice("CSV 匯入失敗：" + (err.message || err));
       }
     }
 
@@ -14247,7 +14322,7 @@
       });
       const list = Array.from(groups.values());
       if (!list.length) throw new Error("找不到可匯入的 class_code / unit_name / word_text");
-      if (!confirm(`即將匯入 ${list.length} 個單元。確定繼續？`)) return;
+      if (!consoleConfirmSync(`即將匯入 ${list.length} 個單元。確定繼續？`)) return;
       for (const unit of list) {
         const existing = (curriculumCache?.units || []).find(u => u.classCode === unit.classCode && u.unitName === unit.unitName);
         await saveCurriculumAction("save_unit", {
@@ -14279,7 +14354,7 @@
         isEvent: String(r.is_event || r.isEvent || "").toLowerCase() === "true"
       })).filter(r => r.classCode && r.unitName && r.startDate && r.endDate);
       if (!list.length) throw new Error("找不到可匯入的 class_code / unit_name / start_date / end_date");
-      if (!confirm(`即將匯入 ${list.length} 筆排程。若日期重疊會被阻擋。確定繼續？`)) return;
+      if (!consoleConfirmSync(`即將匯入 ${list.length} 筆排程。若日期重疊會被阻擋。確定繼續？`)) return;
       for (const s of list) {
         const unit = (curriculumCache?.units || []).find(u => u.classCode === s.classCode && u.unitName === s.unitName);
         if (!unit) throw new Error(`找不到單元：${s.classCode} / ${s.unitName}`);
@@ -14340,12 +14415,12 @@
         input.remove();
         if (!file) return;
         if (!/\.csv$/i.test(file.name) && !/\.txt$/i.test(file.name)) {
-          alert("目前請匯入 CSV 檔。若使用 Excel，請另存成「CSV UTF-8」後再上傳。");
+          consoleNotice("目前請匯入 CSV 檔。若使用 Excel，請另存成「CSV UTF-8」後再上傳。");
           return;
         }
         const reader = new FileReader();
         reader.onload = () => onText(String(reader.result || "").replace(/^\ufeff/, ""));
-        reader.onerror = () => alert("讀取檔案失敗，請重新選擇。");
+        reader.onerror = () => consoleNotice("讀取檔案失敗，請重新選擇。");
         reader.readAsText(file, "utf-8");
       };
       document.body.appendChild(input);
@@ -14488,14 +14563,14 @@
           const units = parseUnitStyleImport(text, true);
           setCsvPreviewPayload("pack_import_v2", { units }, previewUnitImport(units, "目前教材包編輯器"), "匯入後會先放入目前彈窗，仍需按「儲存教材包」才會寫入資料庫。");
         } catch (err) {
-          alert("檔案格式錯誤：" + (err.message || err));
+          consoleNotice("檔案格式錯誤：" + (err.message || err));
         }
       });
     }
 
     function openCurriculumCsvTool(mode) {
       const isSchedules = curriculumTab === "schedules";
-      if (!curriculumFilter) return alert("請先選擇班級或活動。");
+      if (!curriculumFilter) return consoleNotice("請先選擇班級或活動。");
       const targetLabel = classLabel(curriculumFilter);
       if (mode === "export") return downloadTemplateCsv(isSchedules ? "schedule" : "unit");
       pickCsvFile((text) => {
@@ -14508,13 +14583,13 @@
             setCsvPreviewPayload("unit_import_v2", { units, classCode: curriculumFilter }, previewUnitImport(units, targetLabel), `這些單元會匯入到「${escapeHtml(targetLabel)}」。`);
           }
         } catch (err) {
-          alert("檔案格式錯誤：" + (err.message || err));
+          consoleNotice("檔案格式錯誤：" + (err.message || err));
         }
       });
     }
 
     function downloadCurriculumCsvFromModal() {
-      alert("請使用工具列上的「下載範本」。");
+      consoleNotice("請使用工具列上的「下載範本」。");
     }
 
     async function importCurriculumCsvFromModal() {
@@ -14566,9 +14641,9 @@
           toast(`已匯入 ${list.length} 筆排程`);
           return;
         }
-        alert("目前沒有可確認的匯入內容。");
+        consoleNotice("目前沒有可確認的匯入內容。");
       } catch (err) {
-        alert("匯入失敗：" + (err.message || err));
+        consoleNotice("匯入失敗：" + (err.message || err));
       }
     }
 
@@ -14839,7 +14914,7 @@
 
     async function deactivateScheduleCycle(cycleId) {
       if (!cycleId) return;
-      if (!confirm("確定要停用這個無限循環嗎？\\n\\n這只會停止後續自動接排程；已經建立的 unit_schedules 不會被刪除。")) return;
+      if (!consoleConfirmSync("確定要停用這個無限循環嗎？\\n\\n這只會停止後續自動接排程；已經建立的 unit_schedules 不會被刪除。")) return;
       try {
         const data = await TappieAPI.consoleSaveScheduleCycle({
           token: session?.token || "",
@@ -14851,7 +14926,7 @@
         await loadCurriculumData(true);
         toast("循環排程已停用");
       } catch (err) {
-        alert("停用循環排程失敗：" + (err.message || err));
+        consoleNotice("停用循環排程失敗：" + (err.message || err));
       }
     }
 
@@ -14910,7 +14985,7 @@
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
       if ((view === "month" || view === "year") && !curriculumFilter) {
-        alert("請先選擇單一班級或 EVENT，再切換月曆 / 年曆視角。");
+        consoleNotice("請先選擇單一班級或 EVENT，再切換月曆 / 年曆視角。");
         return;
       }
       curriculumScheduleView = view;
@@ -15081,7 +15156,7 @@ function openCurriculumUnitModal(unitId = "") {
 
     function confirmCurriculumWorkspaceLeave() {
       if (!curriculumWorkspaceDirty) return true;
-      return confirm("目前有尚未儲存的變更，離開後將不會保留。確定離開嗎？");
+      return consoleConfirmSync("目前有尚未儲存的變更，離開後將不會保留。確定離開嗎？");
     }
 
     function closeCurriculumWorkspace(force = false) {
@@ -15195,11 +15270,11 @@ function openCurriculumUnitModal(unitId = "") {
     async function saveCurriculumUnitWorkspace() {
       const classCode = normalizeEventClassCode(document.getElementById("curWsClassCode")?.value || "");
       const unitName = (document.getElementById("curWsUnitName")?.value || "").trim();
-      if (!classCode || !unitName) return alert("請填寫班級代碼與單元名稱。");
+      if (!classCode || !unitName) return consoleNotice("請填寫班級代碼與單元名稱。");
       const enInputs = Array.from(document.querySelectorAll(".cur-ws-word-en"));
       const zhInputs = Array.from(document.querySelectorAll(".cur-ws-word-zh"));
       const words = enInputs.map((el,i)=>({ en: el.value.trim(), zh: (zhInputs[i]?.value || "").trim() })).filter(w => w.en);
-      if (!words.length) return alert("請至少填寫一個英文單字。");
+      if (!words.length) return consoleNotice("請至少填寫一個英文單字。");
       const unitId = document.getElementById("curWsUnitId")?.value || "";
       const payload = { unit: { id: unitId || null, unitId: unitId || null, classCode, unitName, oldUnitName: document.getElementById("curWsOldUnitName")?.value || "", oldClassCode: document.getElementById("curWsOldClassCode")?.value || "", unitType: isEventClassCode(classCode) ? "event" : "normal", displayOrder: 0, words }};
       curriculumWorkspace = null;
@@ -15210,8 +15285,8 @@ function openCurriculumUnitModal(unitId = "") {
 
     async function deleteCurriculumUnitFromWorkspace(unitId = "") {
       const unit = unitId ? findUnitById(unitId) : null;
-      if (!unit) return alert("找不到要刪除的單元。");
-      const input = prompt(`⚠️ 即將刪除【${unit.unitName}】與底下單字，請輸入「刪除」確認：`);
+      if (!unit) return consoleNotice("找不到要刪除的單元。");
+      const input = consolePromptSync(`⚠️ 即將刪除【${unit.unitName}】與底下單字，請輸入「刪除」確認：`);
       if (input !== "刪除") return;
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
@@ -15228,19 +15303,19 @@ function openCurriculumUnitModal(unitId = "") {
     async function saveCurriculumUnit() {
       const classCode = normalizeEventClassCode(document.getElementById("curClassCode").value.trim());
       const unitName = document.getElementById("curUnitName").value.trim();
-      if (!classCode || !unitName) return alert("請填寫班級代碼與單元名稱。");
+      if (!classCode || !unitName) return consoleNotice("請填寫班級代碼與單元名稱。");
       const enInputs = Array.from(document.querySelectorAll(".cur-word-en"));
       const zhInputs = Array.from(document.querySelectorAll(".cur-word-zh"));
       const words = enInputs.map((el,i)=>({ en: el.value.trim(), zh: (zhInputs[i]?.value || "").trim() })).filter(w => w.en);
-      if (!words.length) return alert("請至少填寫一個英文單字。");
+      if (!words.length) return consoleNotice("請至少填寫一個英文單字。");
       const payload = { unit: { id: document.getElementById("curUnitId").value || null, unitId: document.getElementById("curUnitId").value || null, classCode, unitName, oldUnitName: document.getElementById("curOldUnitName").value || "", oldClassCode: document.getElementById("curOldClassCode").value || "", unitType: isEventClassCode(classCode) ? "event" : "normal", displayOrder: 0, words }};
       await saveCurriculumAction("save_unit", payload, "單元已儲存");
       hideCurriculumUnitModal();
     }
     async function deleteCurriculumUnit(unitId = "") {
       const unit = unitId ? findUnitById(unitId) : findUnitById(document.getElementById("curUnitId").value);
-      if (!unit) return alert("找不到要刪除的單元。");
-      const input = prompt(`⚠️ 即將刪除【${unit.unitName}】與底下單字，請輸入「刪除」確認：`);
+      if (!unit) return consoleNotice("找不到要刪除的單元。");
+      const input = consolePromptSync(`⚠️ 即將刪除【${unit.unitName}】與底下單字，請輸入「刪除」確認：`);
       if (input !== "刪除") return;
       await saveCurriculumAction("delete_unit", { unitId: unit.id || unit.unitId || null, classCode: unit.classCode, unitName: unit.unitName }, "單元已刪除");
       hideCurriculumUnitModal();
@@ -15267,9 +15342,9 @@ function openCurriculumUnitModal(unitId = "") {
       updateScheduleConflictPreview();
     }
     function openCurriculumScheduleFromDate(dateKey) {
-      if (!curriculumFilter) return alert("請先選擇單一班級或 EVENT，再從月曆 / 年曆新增排程。");
+      if (!curriculumFilter) return consoleNotice("請先選擇單一班級或 EVENT，再從月曆 / 年曆新增排程。");
       const units = getSchedulableUnitsForCurrentFilter();
-      if (!units.length) return alert(`${classLabel(curriculumFilter)} 目前沒有可排程的未排程單元。請先新增單元，或取消既有排程後再安排。`);
+      if (!units.length) return consoleNotice(`${classLabel(curriculumFilter)} 目前沒有可排程的未排程單元。請先新增單元，或取消既有排程後再安排。`);
       openCurriculumScheduleWorkspace({ unitId: units[0].id || units[0].unitId || "", dateKey, pickable: true });
     }
 
@@ -15283,7 +15358,7 @@ function openCurriculumUnitModal(unitId = "") {
       let unit = unitId ? findUnitById(unitId) : null;
       if (!unit && schedule) unit = (curriculumCache?.units || []).find(u => (schedule.unitId && String(u.id) === String(schedule.unitId)) || (u.classCode === schedule.classCode && u.unitName === schedule.unitName));
       if (!schedule && unit) schedule = findScheduleForUnit(unit);
-      if (!unit && !schedule) return alert("找不到單元或排程。");
+      if (!unit && !schedule) return consoleNotice("找不到單元或排程。");
       curriculumTab = "schedules";
       curriculumWorkspace = { type: "schedule", unitId: unit?.id || unit?.unitId || "", scheduleId: schedule?.id || "", dateKey: dateKey || "", pickable: Boolean(pickable) };
       curriculumWorkspaceDirty = false;
@@ -15387,13 +15462,13 @@ function openCurriculumUnitModal(unitId = "") {
       const unitName = (document.getElementById("curWsScheduleUnit")?.value || "").trim();
       const startDate = document.getElementById("curWsScheduleStart")?.value || "";
       const endDate = document.getElementById("curWsScheduleEnd")?.value || "";
-      if (!startDate || !endDate) return alert("請選擇開始日期與結束日期。");
-      if (startDate > endDate) return alert("結束日期不可早於開始日期。");
+      if (!startDate || !endDate) return consoleNotice("請選擇開始日期與結束日期。");
+      if (startDate > endDate) return consoleNotice("結束日期不可早於開始日期。");
       const eventAvatarId = document.getElementById("curWsEventAvatarSelect")?.value || "";
-      if (isEventClassCode(classCode) && !eventAvatarId) return alert("活動排程必須選擇活動首領角色。");
+      if (isEventClassCode(classCode) && !eventAvatarId) return consoleNotice("活動排程必須選擇活動首領角色。");
       const scheduleId = document.getElementById("curWsScheduleId")?.value || "";
       const conflict = findScheduleConflict({ classCode, startDate, endDate, scheduleId });
-      if (conflict) { updateWorkspaceScheduleConflictPreview(); return alert(`日期衝突：${classLabel(conflict.classCode)} 在 ${conflict.startDate}～${conflict.endDate} 已有「${conflict.unitName}」。同一日期同一班級只能有一個進行中的單元。`); }
+      if (conflict) { updateWorkspaceScheduleConflictPreview(); return consoleNotice(`日期衝突：${classLabel(conflict.classCode)} 在 ${conflict.startDate}～${conflict.endDate} 已有「${conflict.unitName}」。同一日期同一班級只能有一個進行中的單元。`); }
       const payload = { schedule: { id: scheduleId || null, unitId: document.getElementById("curWsScheduleUnitId")?.value || null, classCode, unitName, startDate, endDate, eventAvatarId, isEvent: isEventClassCode(classCode) } };
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
@@ -15403,8 +15478,8 @@ function openCurriculumUnitModal(unitId = "") {
 
     async function deleteCurriculumScheduleFromWorkspace(scheduleId = "") {
       const id = scheduleId || document.getElementById("curWsScheduleId")?.value || "";
-      if (!id) return alert("目前沒有可取消的排程。");
-      if (!confirm("確定要取消這筆排程嗎？")) return;
+      if (!id) return consoleNotice("目前沒有可取消的排程。");
+      if (!consoleConfirmSync("確定要取消這筆排程嗎？")) return;
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
       await saveCurriculumAction("delete_schedule", { scheduleId: id }, "排程已取消");
@@ -15416,23 +15491,23 @@ function openCurriculumUnitModal(unitId = "") {
       const unitName = document.getElementById("curScheduleUnit").value.trim();
       const startDate = document.getElementById("curScheduleStart").value;
       const endDate = document.getElementById("curScheduleEnd").value;
-      if (!startDate || !endDate) return alert("請選擇開始日期與結束日期。");
-      if (startDate > endDate) return alert("結束日期不可早於開始日期。");
+      if (!startDate || !endDate) return consoleNotice("請選擇開始日期與結束日期。");
+      if (startDate > endDate) return consoleNotice("結束日期不可早於開始日期。");
       const eventAvatarId = document.getElementById("curEventAvatarSelect").value || "";
-      if (isEventClassCode(classCode) && !eventAvatarId) return alert("活動排程必須選擇活動首領角色。");
+      if (isEventClassCode(classCode) && !eventAvatarId) return consoleNotice("活動排程必須選擇活動首領角色。");
       const scheduleId = document.getElementById("curScheduleId").value || "";
       const conflict = findScheduleConflict({ classCode, startDate, endDate, scheduleId });
       if (conflict) {
         updateScheduleConflictPreview();
-        return alert(`日期衝突：${classLabel(conflict.classCode)} 在 ${conflict.startDate}～${conflict.endDate} 已有「${conflict.unitName}」。同一日期同一班級只能有一個進行中的單元。`);
+        return consoleNotice(`日期衝突：${classLabel(conflict.classCode)} 在 ${conflict.startDate}～${conflict.endDate} 已有「${conflict.unitName}」。同一日期同一班級只能有一個進行中的單元。`);
       }
       await saveCurriculumAction("save_schedule", { schedule: { id: scheduleId || null, unitId: document.getElementById("curScheduleUnitId").value || null, classCode, unitName, startDate, endDate, eventAvatarId, isEvent: isEventClassCode(classCode) } }, "排程已儲存");
       hideCurriculumScheduleModal();
     }
     async function deleteCurriculumSchedule(scheduleId = "") {
       const id = scheduleId || document.getElementById("curScheduleId").value;
-      if (!id) return alert("目前沒有可取消的排程。");
-      if (!confirm("確定要取消這筆排程嗎？")) return;
+      if (!id) return consoleNotice("目前沒有可取消的排程。");
+      if (!consoleConfirmSync("確定要取消這筆排程嗎？")) return;
       await saveCurriculumAction("delete_schedule", { scheduleId: id }, "排程已取消");
       hideCurriculumScheduleModal();
     }
@@ -15799,10 +15874,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     function escapeJs(value){ return String(value ?? "").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\n/g,"\\n"); }
     async function saveAvatarConsoleItem(avatarId, btn){
       const card = document.querySelector(`[data-avatar-id="${CSS.escape(avatarId)}"]`);
-      if (!card) return alert("找不到角色卡片。 ");
+      if (!card) return consoleNotice("找不到角色卡片。 ");
       const cost = Number(card.querySelector(".avatar-cost-input")?.value);
       const category = card.querySelector(".avatar-category-select")?.value || "一般";
-      if (!Number.isFinite(cost) || cost < 0) return alert("請輸入有效點數，且不可為負數。 ");
+      if (!Number.isFinite(cost) || cost < 0) return consoleNotice("請輸入有效點數，且不可為負數。 ");
       const statusEl = document.getElementById(`avatarStatus-${cssSafeId(avatarId)}`);
       const old = btn?.textContent || "儲存";
       if (btn) { btn.textContent = "儲存中..."; btn.disabled = true; }
@@ -15819,7 +15894,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       } catch (err) {
         console.error("[saveAvatarConsoleItem]", err);
         if (statusEl) statusEl.textContent = "儲存失敗";
-        alert(err.message || err);
+        consoleNotice(err.message || err);
       } finally {
         if (btn) { btn.textContent = old; btn.disabled = false; }
       }
@@ -16089,7 +16164,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     function confirmNewsletterWorkspaceLeave() {
       if (!newsletterWorkspaceDirty) return true;
-      return confirm(getConsoleUnsavedMessage());
+      return consoleConfirmSync(getConsoleUnsavedMessage());
     }
 
     function closeNewsletterWorkspace(force = false) {
@@ -16116,7 +16191,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     function openNewsletterEditModal(id) {
       const item = (newslettersConsoleCache?.items || []).find(n => newsletterIdOf(n) === String(id));
-      if (!item) return alert('找不到專欄資料。');
+      if (!item) return consoleNotice('找不到專欄資料。');
       if (newsletterWorkspace && newsletterWorkspaceDirty) {
         requestConsoleWorkspaceLeave(() => openNewsletterEditModal(id));
         return;
@@ -16205,7 +16280,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const id = document.getElementById('newsletterEditId')?.value || newsletterWorkspace?.id || '';
       const content = document.getElementById('newsletterEditHtml')?.value || '';
       const tags = normalizeNewsletterTagsForConsole(document.getElementById('newsletterEditTags')?.value || '');
-      if (!content.trim()) return alert('請輸入專欄 HTML。');
+      if (!content.trim()) return consoleNotice('請輸入專欄 HTML。');
       if (btn) { btn.disabled = true; btn.textContent = '儲存中...'; }
       try {
         if (mode === 'add') {
@@ -16220,7 +16295,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         await loadNewslettersConsole(true);
         toast('專欄已儲存');
       } catch (err) {
-        alert('專欄儲存失敗：' + (err.message || err));
+        consoleNotice('專欄儲存失敗：' + (err.message || err));
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = old; }
       }
@@ -16228,7 +16303,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     async function createAiNewsletterConsole(btn) {
       if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
-      if (!confirm('要讓 AI 自動寫一篇新專欄嗎？')) return;
+      if (!consoleConfirmSync('要讓 AI 自動寫一篇新專欄嗎？')) return;
       const old = btn?.textContent || 'AI 自動寫一篇';
       if (btn) { btn.disabled = true; btn.textContent = 'AI 撰寫中...'; }
       try {
@@ -16237,7 +16312,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         await loadNewslettersConsole(true);
         toast('AI 專欄已新增');
       } catch (err) {
-        alert('AI 專欄新增失敗：' + (err.message || err));
+        consoleNotice('AI 專欄新增失敗：' + (err.message || err));
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = old; }
       }
@@ -16245,7 +16320,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     async function archiveNewsletterConsole(id) {
       if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
-      if (!confirm('確定要封存這篇專欄嗎？後面的待發專欄會自動遞補。')) return;
+      if (!consoleConfirmSync('確定要封存這篇專欄嗎？後面的待發專欄會自動遞補。')) return;
       try {
         await newsletterConsoleRequest('delete', { id });
         newslettersConsoleCache = null;
@@ -16253,7 +16328,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         await loadNewslettersConsole(true);
         toast('專欄已封存');
       } catch (err) {
-        alert('封存失敗：' + (err.message || err));
+        consoleNotice('封存失敗：' + (err.message || err));
       }
     }
 
@@ -16273,7 +16348,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         await loadNewslettersConsole(true);
         toast('專欄排序已更新');
       } catch (err) {
-        alert('排序失敗：' + (err.message || err));
+        consoleNotice('排序失敗：' + (err.message || err));
       }
     }
 
@@ -16628,7 +16703,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         gamificationConsoleCache=normalizeGamiConsole(config);
         fillGamificationForm(gamificationConsoleCache);
         setGamificationStatus('✅ 遊戲化設定已同步至 Supabase。','ok'); toast('遊戲化設定已儲存');
-      }catch(err){ alert('儲存失敗：'+(err.message||err)); setGamificationStatus('⚠️ 儲存失敗：'+(err.message||err),'danger'); }
+      }catch(err){ consoleNotice('儲存失敗：'+(err.message||err)); setGamificationStatus('⚠️ 儲存失敗：'+(err.message||err),'danger'); }
       finally{ if(btn){btn.disabled=false; btn.textContent='儲存遊戲化設定';} }
     }
 
@@ -16819,7 +16894,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
             img.onerror = () => resolve(true);
             img.src = URL.createObjectURL(file);
           });
-          if (!squareOk && !confirm('App 圖示建議使用正方形圖片。仍要繼續上傳嗎？')) { input.value=''; return; }
+          if (!squareOk && !consoleConfirmSync('App 圖示建議使用正方形圖片。仍要繼續上傳嗎？')) { input.value=''; return; }
         }
         setBrandingStatus('⏳ 正在處理圖片並上傳...', 'warn');
         const dataUrl = await readFileAsDataURL(file);
@@ -16831,7 +16906,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         await loadBrandingConsole(true);
         toast(type === 'icon' ? 'App 圖示已更新' : 'Logo 已更新');
       } catch (err) {
-        alert('上傳失敗：' + (err.message || err));
+        consoleNotice('上傳失敗：' + (err.message || err));
         setBrandingStatus('⚠️ 上傳失敗：' + (err.message || err), 'danger');
       } finally {
         input.value = '';
@@ -16846,7 +16921,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       });
     }
     async function deleteBrandingAssetConsole(type) {
-      if (!confirm(type === 'icon' ? '確定要移除 App 圖示並恢復預設嗎？' : '確定要移除 Logo 並恢復預設嗎？')) return;
+      if (!consoleConfirmSync(type === 'icon' ? '確定要移除 App 圖示並恢復預設嗎？' : '確定要移除 Logo 並恢復預設嗎？')) return;
       try {
         setBrandingStatus('⏳ 正在移除品牌素材...', 'warn');
         const schoolCode = getConsoleSchoolCode();
@@ -16856,7 +16931,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         await loadBrandingConsole(true);
         toast(type === 'icon' ? 'App 圖示已移除' : 'Logo 已移除');
       } catch (err) {
-        alert('移除失敗：' + (err.message || err));
+        consoleNotice('移除失敗：' + (err.message || err));
         setBrandingStatus('⚠️ 移除失敗：' + (err.message || err), 'danger');
       }
     }
