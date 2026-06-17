@@ -7481,6 +7481,98 @@
       }
     }
 
+  
+
+    /* =======================================================
+       R32｜Summary Toolbar Integration
+       - Summary is an action button in the page toolbar, not a separate large card.
+       - Opened summary body gets controlled spacing and no card-to-card sticking.
+       ======================================================= */
+    .console-page-intro-actions .ds-summary-action-toggle {
+      border-color: rgba(37, 99, 235, .18);
+      background: rgba(37, 99, 235, .06);
+      color: var(--primary);
+    }
+    .console-page-intro-actions .ds-summary-action-toggle.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 12px 24px rgba(37,99,235,.18);
+    }
+    .console-summary-toggle.r32-summary-promoted {
+      margin: 0 0 18px !important;
+      padding: 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
+    .console-summary-toggle.r32-summary-promoted:not([open]) { display: none !important; }
+    .console-summary-toggle.r32-summary-promoted > summary { display: none !important; }
+    .console-summary-toggle.r32-summary-promoted .console-summary-body,
+    .console-summary-toggle.r32-summary-promoted .ds-summary-body {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    .console-summary-toggle.r32-summary-promoted .console-summary-body > *,
+    .console-summary-toggle.r32-summary-promoted .ds-summary-body > * {
+      margin-top: 0 !important;
+    }
+    .console-summary-toggle.r32-summary-promoted .grid.cards,
+    .console-summary-toggle.r32-summary-promoted .overview-top-grid,
+    .console-summary-toggle.r32-summary-promoted .overview-status-grid,
+    .console-summary-toggle.r32-summary-promoted .insight-grid,
+    .console-summary-toggle.r32-summary-promoted .student-ops-layout,
+    .console-summary-toggle.r32-summary-promoted .curriculum-overview-grid,
+    .console-summary-toggle.r32-summary-promoted .weekly-insight-strip,
+    .console-summary-toggle.r32-summary-promoted .brand-summary-grid,
+    .console-summary-toggle.r32-summary-promoted .avatar-overview-grid,
+    .console-summary-toggle.r32-summary-promoted .r8-learning-metrics,
+    .console-summary-toggle.r32-summary-promoted .r9-system-metrics,
+    .console-summary-toggle.r32-summary-promoted .gami-rule-metrics {
+      gap: 16px !important;
+    }
+    .console-summary-toggle.r32-summary-promoted .overview-stat-card,
+    .console-summary-toggle.r32-summary-promoted .insight-card,
+    .console-summary-toggle.r32-summary-promoted .student-seat-card,
+    .console-summary-toggle.r32-summary-promoted .student-analysis-card,
+    .console-summary-toggle.r32-summary-promoted .curriculum-overview-card,
+    .console-summary-toggle.r32-summary-promoted .weekly-status-card,
+    .console-summary-toggle.r32-summary-promoted .brand-summary-card,
+    .console-summary-toggle.r32-summary-promoted .avatar-overview-card {
+      margin: 0 !important;
+    }
+    @media (max-width: 720px) {
+      .console-page-intro-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .console-page-intro-actions .btn-compact,
+      .console-page-intro-actions .ds-summary-action-toggle {
+        width: 100%;
+        justify-content: center;
+      }
+      .console-summary-toggle.r32-summary-promoted {
+        margin-bottom: 14px !important;
+      }
+      .console-summary-toggle.r32-summary-promoted .grid.cards,
+      .console-summary-toggle.r32-summary-promoted .overview-top-grid,
+      .console-summary-toggle.r32-summary-promoted .overview-status-grid,
+      .console-summary-toggle.r32-summary-promoted .insight-grid,
+      .console-summary-toggle.r32-summary-promoted .student-ops-layout,
+      .console-summary-toggle.r32-summary-promoted .curriculum-overview-grid,
+      .console-summary-toggle.r32-summary-promoted .weekly-insight-strip,
+      .console-summary-toggle.r32-summary-promoted .brand-summary-grid,
+      .console-summary-toggle.r32-summary-promoted .avatar-overview-grid,
+      .console-summary-toggle.r32-summary-promoted .r8-learning-metrics,
+      .console-summary-toggle.r32-summary-promoted .r9-system-metrics,
+      .console-summary-toggle.r32-summary-promoted .gami-rule-metrics {
+        gap: 12px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -8940,6 +9032,7 @@
 
       document.getElementById("pageContent").innerHTML = renderPage(currentConsolePage);
       setupMobileInsightCollapse(currentConsolePage);
+      setupDsSummaryToolbar();
       page = currentConsolePage;
       if (page === "overview") {
         loadOverviewData(false);
@@ -8996,6 +9089,44 @@
       // Do not move existing content into a second mobile-only wrapper;
       // it caused nested cards and inconsistent mobile hierarchy.
       return;
+    }
+
+
+
+    function setupDsSummaryToolbar() {
+      document.querySelectorAll('.console-page-standard > details.console-summary-toggle, .ds-page-shell > details.console-summary-toggle').forEach((details) => {
+        if (!details || details.dataset.r32SummaryReady === '1') return;
+        const pageShell = details.closest('.console-page-standard, .ds-page-shell');
+        if (!pageShell) return;
+        const intro = pageShell.querySelector(':scope > .console-page-intro-card, :scope > .ds-page-intro');
+        if (!intro) return;
+        let actions = intro.querySelector('.console-page-intro-actions, .ds-page-actions');
+        if (!actions) {
+          actions = document.createElement('div');
+          actions.className = 'console-page-intro-actions ds-page-actions';
+          intro.appendChild(actions);
+        }
+        const title = details.querySelector('summary strong')?.textContent?.trim() || '摘要';
+        const note = details.querySelector('summary .console-summary-title span, summary .ds-summary-title span')?.textContent?.trim() || '';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn-compact ds-summary-action-toggle';
+        button.dataset.summaryTarget = details.id || '';
+        button.title = note || title;
+        const sync = () => {
+          button.textContent = details.open ? '收合摘要' : '摘要';
+          button.classList.toggle('active', !!details.open);
+          button.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+        };
+        button.addEventListener('click', () => {
+          details.open = !details.open;
+          sync();
+        });
+        details.classList.add('r32-summary-promoted');
+        details.dataset.r32SummaryReady = '1';
+        actions.insertBefore(button, actions.firstChild);
+        sync();
+      });
     }
 
     function renderPage(page) {
