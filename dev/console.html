@@ -6438,6 +6438,88 @@
       .console-page-intro-actions button { width: 100%; justify-content: center; }
     }
 
+  
+
+    /* =======================================================
+       R21｜Owner / Avatar Page Template Alignment
+       - align 角色收集、校區管理、預設教材包、自動化監控 with R20 interaction model
+       - no API / payload / auth changes
+       ======================================================= */
+    .r21-template-page {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .r21-template-page .console-page-intro-card,
+    .r21-template-page .console-summary-toggle,
+    .r21-template-page .console-main-card {
+      width: 100%;
+    }
+    .r21-template-page .console-summary-body .overview-top-grid,
+    .r21-template-page .console-summary-body .avatar-overview-grid {
+      margin: 0;
+    }
+    .r21-template-page .console-main-card > .table-wrap,
+    .r21-template-page .console-main-card .table-wrap {
+      margin-top: 14px;
+    }
+    .r21-owner-actions,
+    .r21-filter-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .r21-main-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .r21-main-toolbar .muted-text {
+      margin: 0;
+    }
+    .r21-avatar-page .avatar-source-note,
+    .r21-pack-page .r12-pack-note {
+      margin: 0 0 14px;
+    }
+    .r21-empty-owner-page .console-main-card {
+      min-height: 160px;
+    }
+    .r21-template-page .weekly-panel-head p,
+    .r21-template-page .console-main-head p,
+    .r21-template-page .console-summary-title span {
+      line-height: 1.55;
+    }
+    @media (max-width: 720px) {
+      .r21-template-page { gap: 12px; }
+      .r21-template-page .console-page-intro-card,
+      .r21-template-page .console-main-card,
+      .r21-template-page .console-summary-toggle {
+        border-radius: 18px !important;
+      }
+      .r21-owner-actions,
+      .r21-filter-actions,
+      .r21-main-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .r21-owner-actions .btn-compact,
+      .r21-filter-actions .btn-compact,
+      .r21-main-toolbar .btn-compact,
+      .r21-main-toolbar .btn-primary,
+      .r21-avatar-page .avatar-filter-row .btn-compact {
+        width: 100%;
+        justify-content: center;
+      }
+      .r21-template-page .console-summary-body .overview-top-grid,
+      .r21-template-page .console-summary-body .avatar-overview-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -7383,7 +7465,7 @@
       owner: [
         { group: "總覽", items: [
           ["overview", "分析", "⌘"],
-          ["schools", "校區", "▦"],
+          ["schools", "校區管理", "▦"],
           ["health", "資料健康", "◆"]
         ]},
         { group: "學生", items: [
@@ -7407,7 +7489,7 @@
           ["settingsDaily", "今日挑戰", "★"],
           ["settingsBattle", "競技模式", "◇"],
           ["avatars", "角色收集", "◎"],
-          ["automation", "自動化", "↻"]
+          ["automation", "自動化監控", "↻"]
         ]},
         { group: "設定", items: [
           ["branding", "品牌", "◈"],
@@ -7791,7 +7873,11 @@
       consolePendingDiscardAction = typeof onDiscard === "function" ? onDiscard : null;
       const modal = document.getElementById("consoleUnsavedModal");
       if (!modal) {
-        console.warn("consoleUnsavedModal is missing; blocked leaving dirty editor.");
+        if (confirm(getConsoleUnsavedMessage())) {
+          discardCurrentConsoleWorkspace();
+          if (consolePendingDiscardAction) consolePendingDiscardAction();
+          consolePendingDiscardAction = null;
+        }
         return false;
       }
       modal.classList.add("show");
@@ -8018,9 +8104,9 @@
 
       if (!isOwner()) {
         return `
-          <div class="card">
-            <div class="panel-title"><h2>目前校區</h2><span class="badge ok">Super Admin</span></div>
-            <p class="muted-text">Super Admin 固定管理自己的校區：${escapeHtml(getActiveSchoolName())}</p>
+          <div class="console-page-standard console-ui-page r21-template-page r21-empty-owner-page">
+            ${renderConsolePageIntro({ group: "總覽", title: "校區管理", description: `目前固定管理 ${getActiveSchoolName()}。` })}
+            ${renderConsoleMainCard({ title: "目前校區", description: "Super Admin 會直接進入自己的校區，不需要切換校區。", body: `<span class="badge ok">Super Admin</span>` })}
           </div>
         `;
       }
@@ -8029,10 +8115,9 @@
 
       if (!enriched.length) {
         return `
-          <div class="card">
-            <div class="panel-title"><h2>校區列表</h2><span class="badge warn">尚無資料</span></div>
-            <p class="muted-text">目前尚未載入校區清單。請確認 console-get-schools 已部署，且 tappie-api.js 已更新。</p>
-            <button class="btn-compact primary" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入</button>
+          <div class="console-page-standard console-ui-page r21-template-page r21-empty-owner-page">
+            ${renderConsolePageIntro({ group: "總覽", title: "校區管理", description: "新增校區、調整校區資料、切換單校管理。", actions: `<button class="btn-compact primary" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入</button>` })}
+            ${renderConsoleMainCard({ title: "校區列表", description: "目前尚未載入校區清單。", body: `<button class="btn-compact primary" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入校區</button>` })}
           </div>
         `;
       }
@@ -8048,20 +8133,7 @@
       const noSchedule = enriched.filter(s => s.isActive !== false && Number(s.activeSchedules || 0) <= 0).length;
       const noNewsletter = enriched.filter(s => s.isActive !== false && Number(s.weeklyEnabled || 0) > 0 && Number(s.nextNewsletterCount || 0) <= 0).length;
 
-      return `
-        <div class="overview-hero-v3">
-          <div class="overview-hero-main">
-            <div class="overview-kicker">Schools Management</div>
-            <h2>Owner 校區管理中心</h2>
-            <p>這裡用來新增校區、調整校區名稱與系統限額、啟用或停用校區。單校學生、課程、週報、專欄、品牌與遊戲化仍維持在「管理此校區」後的單校模式處理。</p>
-          </div>
-          <div class="overview-hero-side">
-            <button class="btn-compact primary" onclick="openSchoolEditor()">新增校區</button>
-            <button class="btn-compact" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新載入校區</button>
-            <button class="btn-compact" onclick="changeConsoleScope('all')">全部校區模式</button>
-          </div>
-        </div>
-
+      const summary = `
         <div class="overview-top-grid">
           <div class="overview-stat-card emphasis">
             <div class="metric-label">校區總數</div>
@@ -8083,74 +8155,80 @@
             <div class="metric-value">${numFmt(noSchedule + noNewsletter)}</div>
             <div class="metric-note">${noSchedule} 校缺排程｜${noNewsletter} 校缺待發專欄</div>
           </div>
-        </div>
+        </div>`;
 
-        <div class="card" style="margin-top:18px;">
-          <div class="panel-title">
-            <h2>校區管理總表</h2>
-            <span class="badge ${riskySchools ? "warn" : "ok"}">${riskySchools ? "有校區需檢查" : "整體穩定"}</span>
-          </div>
-          <div class="toolbar">
-            <div class="muted-text">Owner 可在此新增校區、調整校區限額與啟用狀態。停用校區會保留資料，但不建議切入單校管理。</div>
-            <button class="btn-compact primary" onclick="openSchoolEditor()">＋ 新增校區</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>狀態 / 校區</th>
-                  <th>限額</th>
-                  <th>學生席位</th>
-                  <th>課程準備</th>
-                  <th>週報觸達</th>
-                  <th>健康 / 初始化</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${enriched.map(s => {
-                  const selected = consoleScope.mode === "single" && consoleScope.selectedSchoolCode === s.code;
-                  const activeCls = s.isActive === false ? "danger" : "ok";
-                  const healthCls = Number(s.highCount || 0) > 0 || Number(s.healthScore || 100) < 70 ? "danger" : Number(s.healthScore || 100) < 90 ? "warn" : "ok";
-                  const seatNote = s.studentLimit > 0 ? `${pctFmt(s.activeStudents / Math.max(s.studentLimit, 1) * 100)} 使用率｜剩餘 ${s.remainingSlots ?? "—"}` : "未設定學生上限";
-                  const weeklyBase = Math.max(Number(s.parentEmailStudents || 0), 1);
-                  const weeklyRate = Number(s.weeklyEnabled || 0) / weeklyBase * 100;
-                  const weeklyCls = s.weeklyEnabled > 0 && s.nextNewsletterCount <= 0 ? "warn" : "ok";
-                  const initHints = [];
-                  if (Number(s.activeSchedules || 0) <= 0 && s.isActive !== false) initHints.push("缺排程");
-                  if (Number(s.schoolAvatars || 0) <= 0 && s.isActive !== false) initHints.push("缺校區角色");
-                  if (Number(s.weeklyEnabled || 0) > 0 && Number(s.nextNewsletterCount || 0) <= 0) initHints.push("缺待發專欄");
-                  return `
-                    <tr>
-                      <td>
-                        <span class="badge ${activeCls}">${s.isActive === false ? "停用" : "啟用"}</span>
-                        <div style="margin-top:8px;"><strong>${escapeHtml(s.code)}</strong></div>
-                        <div class="small-note">${escapeHtml(s.name)}</div>
-                      </td>
-                      <td>
-                        學生 ${s.studentLimit ? numFmt(s.studentLimit) : "不限"}
-                        <div class="small-note">Speech ${numFmt(s.speechLimit || 0)}｜Battle ${numFmt(s.battleLimit || 0)}</div>
-                      </td>
-                      <td>${numFmt(s.activeStudents)} / ${s.studentLimit ? numFmt(s.studentLimit) : "∞"}<div class="small-note">${escapeHtml(seatNote)}</div></td>
-                      <td>${numFmt(s.activeClasses)} 班｜${numFmt(s.activeUnits)} 單元<div class="small-note">${numFmt(s.activeSchedules)} 個啟用排程</div></td>
-                      <td><span class="badge ${weeklyCls}">${pctFmt(weeklyRate)}</span><div class="small-note">${numFmt(s.weeklyEnabled)} 位啟用｜待發專欄 ${numFmt(s.nextNewsletterCount)}</div></td>
-                      <td><span class="badge ${healthCls}">${numFmt(s.healthScore ?? 100)} 分</span><div class="small-note">${initHints.length ? initHints.map(escapeHtml).join("｜") : `High ${numFmt(s.highCount || 0)}｜總問題 ${numFmt(s.totalIssueCount || 0)}`}</div></td>
-                      <td>
-                        <div class="student-action-row">
-                          <button class="btn-compact" onclick="openSchoolEditor('${escapeHtml(s.code)}')">編輯</button>
-                          <button class="btn-compact ${s.isActive === false ? "ok" : "danger"}" onclick="toggleSchoolActive('${escapeHtml(s.code)}', ${s.isActive === false ? "true" : "false"})">${s.isActive === false ? "啟用" : "停用"}</button>
-                          <button class="btn-compact ${selected ? "ok" : "primary"}" ${s.isActive === false ? "disabled" : ""} onclick="changeConsoleScope('${escapeHtml(s.code)}')">${selected ? "目前校區" : "管理此校區"}</button>
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join("")}
-              </tbody>
-            </table>
-          </div>
+      const tableBody = `
+        <div class="r21-main-toolbar">
+          <p class="muted-text">新增校區、調整校區限額、停用校區，或切換到單校管理。</p>
+          <button class="btn-compact primary" onclick="openSchoolEditor()">新增校區</button>
         </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>狀態 / 校區</th>
+                <th>限額</th>
+                <th>學生席位</th>
+                <th>課程準備</th>
+                <th>週報觸達</th>
+                <th>健康 / 初始化</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${enriched.map(s => {
+                const selected = consoleScope.mode === "single" && consoleScope.selectedSchoolCode === s.code;
+                const activeCls = s.isActive === false ? "danger" : "ok";
+                const healthCls = Number(s.highCount || 0) > 0 || Number(s.healthScore || 100) < 70 ? "danger" : Number(s.healthScore || 100) < 90 ? "warn" : "ok";
+                const seatNote = s.studentLimit > 0 ? `${pctFmt(s.activeStudents / Math.max(s.studentLimit, 1) * 100)} 使用率｜剩餘 ${s.remainingSlots ?? "—"}` : "未設定學生上限";
+                const weeklyBase = Math.max(Number(s.parentEmailStudents || 0), 1);
+                const weeklyRate = Number(s.weeklyEnabled || 0) / weeklyBase * 100;
+                const weeklyCls = s.weeklyEnabled > 0 && s.nextNewsletterCount <= 0 ? "warn" : "ok";
+                const initHints = [];
+                if (Number(s.activeSchedules || 0) <= 0 && s.isActive !== false) initHints.push("缺排程");
+                if (Number(s.schoolAvatars || 0) <= 0 && s.isActive !== false) initHints.push("缺校區角色");
+                if (Number(s.weeklyEnabled || 0) > 0 && Number(s.nextNewsletterCount || 0) <= 0) initHints.push("缺待發專欄");
+                return `
+                  <tr>
+                    <td>
+                      <span class="badge ${activeCls}">${s.isActive === false ? "停用" : "啟用"}</span>
+                      <div style="margin-top:8px;"><strong>${escapeHtml(s.code)}</strong></div>
+                      <div class="small-note">${escapeHtml(s.name)}</div>
+                    </td>
+                    <td>
+                      學生 ${s.studentLimit ? numFmt(s.studentLimit) : "不限"}
+                      <div class="small-note">Speech ${numFmt(s.speechLimit || 0)}｜Battle ${numFmt(s.battleLimit || 0)}</div>
+                    </td>
+                    <td>${numFmt(s.activeStudents)} / ${s.studentLimit ? numFmt(s.studentLimit) : "∞"}<div class="small-note">${escapeHtml(seatNote)}</div></td>
+                    <td>${numFmt(s.activeClasses)} 班｜${numFmt(s.activeUnits)} 單元<div class="small-note">${numFmt(s.activeSchedules)} 個啟用排程</div></td>
+                    <td><span class="badge ${weeklyCls}">${pctFmt(weeklyRate)}</span><div class="small-note">${numFmt(s.weeklyEnabled)} 位啟用｜待發專欄 ${numFmt(s.nextNewsletterCount)}</div></td>
+                    <td><span class="badge ${healthCls}">${numFmt(s.healthScore ?? 100)} 分</span><div class="small-note">${initHints.length ? initHints.map(escapeHtml).join("｜") : `High ${numFmt(s.highCount || 0)}｜總問題 ${numFmt(s.totalIssueCount || 0)}`}</div></td>
+                    <td>
+                      <div class="student-action-row">
+                        <button class="btn-compact" onclick="openSchoolEditor('${escapeHtml(s.code)}')">編輯</button>
+                        <button class="btn-compact ${s.isActive === false ? "ok" : "danger"}" onclick="toggleSchoolActive('${escapeHtml(s.code)}', ${s.isActive === false ? "true" : "false"})">${s.isActive === false ? "啟用" : "停用"}</button>
+                        <button class="btn-compact ${selected ? "ok" : "primary"}" ${s.isActive === false ? "disabled" : ""} onclick="changeConsoleScope('${escapeHtml(s.code)}')">${selected ? "目前校區" : "管理此校區"}</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>`;
 
-        ${renderSchoolEditorModal()}
+      return `
+        <div class="console-page-standard console-ui-page r21-template-page r21-owner-page r21-schools-page">
+          ${renderConsolePageIntro({
+            group: "總覽",
+            title: "校區管理",
+            description: "新增校區、調整校區限額與啟用狀態，並切換到單校管理。",
+            actions: `<div class="r21-owner-actions"><button class="btn-compact" onclick="initConsoleScope().then(()=>{updateConsoleScopeUI();showPage('schools');})">重新整理</button><button class="btn-compact" onclick="changeConsoleScope('all')">全部校區</button><button class="btn-compact primary" onclick="openSchoolEditor()">新增校區</button></div>`
+          })}
+          ${renderConsoleSummaryToggle({ id: "schoolsSummaryToggle", title: "校區摘要", note: "點擊展開查看校區數、學生席位與營運提醒", body: summary })}
+          ${renderConsoleMainCard({ title: "校區列表", description: "管理校區資料與進入單校操作。", body: tableBody })}
+          ${renderSchoolEditorModal()}
+        </div>
       `;
     }
 
@@ -9945,8 +10023,7 @@
 
     function confirmStudentWorkspaceLeave() {
       if (!studentWorkspaceDirty) return true;
-      showConsoleUnsavedDialog(() => rerenderStudentsWorkspacePage());
-      return false;
+      return confirm(getConsoleUnsavedMessage());
     }
 
     function closeStudentWorkspace() {
@@ -10499,8 +10576,7 @@
 
     function confirmAdminCardWorkspaceLeave() {
       if (!adminCardWorkspaceDirty) return true;
-      showConsoleUnsavedDialog(() => rerenderAdminCardWorkspacePage());
-      return false;
+      return confirm(getConsoleUnsavedMessage());
     }
 
     function closeAdminCardWorkspace(force = false) {
@@ -11702,27 +11778,32 @@
 
     function renderCurriculumPacksConsole() {
       if (!isOwner()) {
-        return `<div class="console-ui-page">${renderConsolePageHero({kicker:"教材包", title:"預設教材包", description:"目前僅 Owner 可管理全域教材包。"})}<div class="card"><span class="badge warn">Owner only</span><p class="muted-text">請以 Owner 身分登入後管理全校區教材包模板。</p></div></div>`;
+        return `<div class="console-page-standard console-ui-page r21-template-page r21-empty-owner-page">
+          ${renderConsolePageIntro({ group:"學習", title:"預設教材包", description:"此頁僅供 Owner 管理全校區教材包模板。" })}
+          ${renderConsoleMainCard({ title:"Owner 權限限定", description:"請以 Owner 身分登入後管理全校區教材包模板。", body:`<span class="badge warn">Owner only</span>` })}
+        </div>`;
       }
+      const summary = `
+        <div class="overview-top-grid">
+          <div class="overview-stat-card emphasis"><div class="metric-label">教材包總數</div><div id="packSummaryTotal" class="metric-value">—</div><div class="metric-note">目前可管理的全校區模板</div></div>
+          <div class="overview-stat-card"><div class="metric-label">啟用模板</div><div id="packSummaryActive" class="metric-value">—</div><div class="metric-note">可供校區匯入</div></div>
+          <div class="overview-stat-card"><div class="metric-label">單元數</div><div id="packSummaryUnits" class="metric-value">—</div><div class="metric-note">模板內累計單元</div></div>
+          <div class="overview-stat-card"><div class="metric-label">單字數</div><div id="packSummaryWords" class="metric-value">—</div><div class="metric-note">模板內累計單字</div></div>
+        </div>`;
+      const body = `
+        <div class="r12-pack-note"><span>管理模板</span><span>匯入後複製到校區</span><span>停用不影響已匯入資料</span></div>
+        <div id="curriculumPackStatus" class="metric-note" style="margin:14px 0;">正在讀取教材包...</div>
+        <div id="curriculumPackList" class="pack-console-grid"></div>`;
       return `
-        <div class="console-ui-page r12-pack-page">
-          ${renderConsolePageHero({
-            kicker: "教材包",
+        <div class="console-page-standard console-ui-page r21-template-page r21-pack-page">
+          ${renderConsolePageIntro({
+            group: "學習",
             title: "預設教材包",
-            description: "Owner 全校區模板。各校區匯入後會複製成自己的 word_units / unit_words，不會直接共用模板資料。",
+            description: "管理可供各校區匯入的全校區教材模板。",
             actions: `<button class="btn-compact" onclick="loadCurriculumPacksConsole(true)">重新整理</button><button class="btn-compact primary" onclick="openCurriculumPackEditor()">新增教材包</button>`
           })}
-          ${renderConsoleRulesStrip("教材包管理", "管理 Owner 共用教材模板；校區匯入與排程安排請到單一校區的單元排程頁操作。", "Owner")}
-          ${renderConsoleSectionCard({
-            title: "教材包列表",
-            description: "管理可供校區匯入的預設教材包。停用模板只影響後續匯入，不會刪除已匯入校區的單元、單字或排程。",
-            actions: `<button class="btn-compact" onclick="loadCurriculumPacksConsole(true)">重新整理</button><button class="btn-compact primary" onclick="openCurriculumPackEditor()">新增教材包</button>`,
-            body: `
-              <div class="r12-pack-note"><span>模板管理</span><span>匯入後複製到校區</span><span>已匯入校區資料不受影響</span></div>
-              <div id="curriculumPackStatus" class="metric-note" style="margin:14px 0;">正在讀取教材包...</div>
-              <div id="curriculumPackList" class="pack-console-grid"></div>
-            `
-          })}
+          ${renderConsoleSummaryToggle({ id: "packSummaryToggle", title: "教材包摘要", note: "點擊展開查看模板數量與內容規模", body: summary })}
+          ${renderConsoleMainCard({ title: "教材包列表", description: "新增、編輯或停用教材包模板。", actions: `<button class="btn-compact primary" onclick="openCurriculumPackEditor()">新增教材包</button>`, body })}
         </div>
       `;
     }
@@ -11751,7 +11832,15 @@
       const box = document.getElementById("curriculumPackList");
       const status = document.getElementById("curriculumPackStatus");
       const packs = curriculumPackCache || [];
-      if (status) status.textContent = `共 ${packs.length} 個教材包`;
+      const active = packs.filter(p => p.is_active !== false && p.isActive !== false).length;
+      const units = packs.reduce((sum, p) => sum + Number(p.unitCount || p.unit_count || 0), 0);
+      const words = packs.reduce((sum, p) => sum + Number(p.wordCount || p.word_count || 0), 0);
+      const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+      setText("packSummaryTotal", String(packs.length));
+      setText("packSummaryActive", String(active));
+      setText("packSummaryUnits", String(units));
+      setText("packSummaryWords", String(words));
+      if (status) status.textContent = `共 ${packs.length} 個教材包，啟用 ${active} 個`;
       if (!box) return;
       if (!packs.length) {
         box.innerHTML = `<div class="curriculum-empty">尚未建立教材包。可以先新增一個教材包，或用 Starter 範例快速建立。</div>`;
@@ -13132,10 +13221,7 @@
     }
     function setTextSafe(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
     function setCurriculumTab(tab) {
-      if (curriculumWorkspace && curriculumWorkspaceDirty) {
-        requestConsoleWorkspaceLeave(() => setCurriculumTab(tab));
-        return;
-      }
+      if (curriculumWorkspace && curriculumWorkspaceDirty && !confirmCurriculumWorkspaceLeave()) return;
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
       curriculumTab = tab;
@@ -13359,10 +13445,7 @@
         </div>`;
     }
     function setScheduleView(view) {
-      if (curriculumWorkspace && curriculumWorkspaceDirty) {
-        requestConsoleWorkspaceLeave(() => setScheduleView(view));
-        return;
-      }
+      if (curriculumWorkspace && curriculumWorkspaceDirty && !confirmCurriculumWorkspaceLeave()) return;
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
       if ((view === "month" || view === "year") && !curriculumFilter) {
@@ -13732,10 +13815,7 @@ function openCurriculumUnitModal(unitId = "") {
     }
 
     function openCurriculumScheduleWorkspace({ unitId = "", scheduleId = "", dateKey = "", pickable = false } = {}) {
-      if (curriculumWorkspace && curriculumWorkspaceDirty) {
-        requestConsoleWorkspaceLeave(() => openCurriculumScheduleWorkspace({ unitId, scheduleId, dateKey, pickable }));
-        return;
-      }
+      if (curriculumWorkspace && curriculumWorkspaceDirty && !confirmCurriculumWorkspaceLeave()) return;
       let schedule = scheduleId ? findScheduleById(scheduleId) : null;
       let unit = unitId ? findUnitById(unitId) : null;
       if (!unit && schedule) unit = (curriculumCache?.units || []).find(u => (schedule.unitId && String(u.id) === String(schedule.unitId)) || (u.classCode === schedule.classCode && u.unitName === schedule.unitName));
@@ -14032,84 +14112,80 @@ function isAvatarLockedForConsole(a){
 function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsConsoleList(); }
 
     function renderAvatarsConsole() {
-      return `
-        <div class="console-ui-page r11-avatar-page">
-          ${renderConsolePageHero({
-            kicker: "角色",
-            title: "角色定價與素材管理",
-            description: "管理本校一般角色、活動角色、兌換點數、角色類型與素材狀態。預設角色與基礎 AI 對手維持系統鎖定，不在 Console 中改價或改類型。",
-            actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`
-          })}
-          ${renderConsoleRulesStrip("角色管理", "管理角色價格、類型、稀有度與素材狀態。", "角色")}
-
-          <div class="avatar-overview-grid">
-            <div class="avatar-overview-card primary">
-              <div class="avatar-overview-label">角色素材中心</div>
-              <div id="avatarTotalCount" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">角色圖片與 Mask 會影響盲盒、對戰結果與學生端顯示。</div>
-              <div class="avatar-overview-metrics">
-                <div class="avatar-overview-mini"><span>可編輯</span><strong id="avatarEditableCount">—</strong></div>
-                <div class="avatar-overview-mini"><span>系統鎖定</span><strong id="avatarLockedCount">—</strong></div>
-                <div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>
-              </div>
-            </div>
-            <div class="avatar-overview-card">
-              <div class="avatar-overview-label">一般角色</div>
-              <div id="avatarNormalCount" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">學生兌換與盲盒獎池主要來源。</div>
-            </div>
-            <div class="avatar-overview-card">
-              <div class="avatar-overview-label">活動角色</div>
-              <div id="avatarEventCount" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">活動 Boss / 特殊活動使用。</div>
-            </div>
-            <div class="avatar-overview-card">
-              <div class="avatar-overview-label">平均價格</div>
-              <div id="avatarAvgCost" class="avatar-overview-value">—</div>
-              <div class="avatar-overview-note">只計算可編輯角色兌換點數。</div>
+      const summary = `
+        <div class="avatar-overview-grid">
+          <div class="avatar-overview-card primary">
+            <div class="avatar-overview-label">角色總數</div>
+            <div id="avatarTotalCount" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">目前讀取到的角色資料。</div>
+            <div class="avatar-overview-metrics">
+              <div class="avatar-overview-mini"><span>可編輯</span><strong id="avatarEditableCount">—</strong></div>
+              <div class="avatar-overview-mini"><span>系統鎖定</span><strong id="avatarLockedCount">—</strong></div>
+              <div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>
             </div>
           </div>
+          <div class="avatar-overview-card">
+            <div class="avatar-overview-label">一般角色</div>
+            <div id="avatarNormalCount" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">可用於學生兌換與盲盒獎池。</div>
+          </div>
+          <div class="avatar-overview-card">
+            <div class="avatar-overview-label">活動角色</div>
+            <div id="avatarEventCount" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">活動或特殊角色使用。</div>
+          </div>
+          <div class="avatar-overview-card">
+            <div class="avatar-overview-label">平均價格</div>
+            <div id="avatarAvgCost" class="avatar-overview-value">—</div>
+            <div class="avatar-overview-note">只計算可編輯角色兌換點數。</div>
+          </div>
+        </div>`;
 
-          ${renderConsoleSectionCard({
-            title: "角色列表",
-            description: "可在卡片或表格模式調整本校一般 / 活動角色的兌換點數與類型。鎖定角色會顯示原因，但不開放直接編輯。",
-            actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`,
-            body: `
-              <div class="avatar-source-note">
-                <span>本校一般 / 活動角色：可改價格與類型</span>
-                <span>本校預設角色：系統保護</span>
-                <span>AI_EASY / AI_MED / AI_HARD（含校區前綴）：核心 AI 對手鎖定</span>
-              </div>
-              <div class="avatar-toolbar">
-                <div class="avatar-filter-row">
-                  <input id="avatarSearch" class="console-input" placeholder="搜尋角色名稱 / ID" oninput="renderAvatarsConsoleList()" />
-                  <select id="avatarCategoryFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-                    <option value="">全部類型</option>
-                    <option value="一般">一般</option>
-                    <option value="活動">活動</option>
-                    <option value="預設">預設</option>
-                    <option value="locked">鎖定角色</option>
-                    <option value="assetIssue">素材缺漏</option>
-                  </select>
-                  <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-                    <option value="">全部稀有度</option>
-                    <option value="N">N</option><option value="R">R</option><option value="SR">SR</option><option value="SSR">SSR</option><option value="UR">UR</option>
-                  </select>
-                  <select id="avatarScopeFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-                    <option value="">全部來源</option>
-                    <option value="school">本校角色</option>
-                    <option value="global">全域角色</option>
-                  </select>
-                </div>
-                <div class="avatar-filter-row">
-                  <button id="avatarViewCardsBtn" class="btn-compact" onclick="setAvatarConsoleView('cards')">卡片</button>
-                  <button id="avatarViewTableBtn" class="btn-compact" onclick="setAvatarConsoleView('table')">表格</button>
-                </div>
-              </div>
-              <div id="avatarsConsoleStatus" class="metric-note" style="margin-bottom:12px;">正在讀取角色...</div>
-              <div id="avatarsConsoleList" class="empty-state">正在讀取...</div>
-            `
+      const body = `
+        <div class="avatar-source-note">
+          <span>可編輯：本校一般 / 活動角色</span>
+          <span>系統保護：預設角色與基礎 AI 對手</span>
+          <span>素材缺漏會影響學生端顯示</span>
+        </div>
+        <div class="avatar-toolbar">
+          <div class="avatar-filter-row">
+            <input id="avatarSearch" class="console-input" placeholder="搜尋角色名稱 / ID" oninput="renderAvatarsConsoleList()" />
+            <select id="avatarCategoryFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+              <option value="">全部類型</option>
+              <option value="一般">一般</option>
+              <option value="活動">活動</option>
+              <option value="預設">預設</option>
+              <option value="locked">鎖定角色</option>
+              <option value="assetIssue">素材缺漏</option>
+            </select>
+            <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+              <option value="">全部稀有度</option>
+              <option value="N">N</option><option value="R">R</option><option value="SR">SR</option><option value="SSR">SSR</option><option value="UR">UR</option>
+            </select>
+            <select id="avatarScopeFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+              <option value="">全部來源</option>
+              <option value="school">本校角色</option>
+              <option value="global">全域角色</option>
+            </select>
+          </div>
+          <div class="avatar-filter-row r21-filter-actions">
+            <button id="avatarViewCardsBtn" class="btn-compact" onclick="setAvatarConsoleView('cards')">卡片</button>
+            <button id="avatarViewTableBtn" class="btn-compact" onclick="setAvatarConsoleView('table')">表格</button>
+          </div>
+        </div>
+        <div id="avatarsConsoleStatus" class="metric-note" style="margin-bottom:12px;">正在讀取角色...</div>
+        <div id="avatarsConsoleList" class="empty-state">正在讀取...</div>`;
+
+      return `
+        <div class="console-page-standard console-ui-page r21-template-page r21-avatar-page">
+          ${renderConsolePageIntro({
+            group: "系統",
+            title: "角色收集",
+            description: "管理學生可獲得與可兌換的角色素材、類型與兌換點數。",
+            actions: `<button class="btn-compact primary" onclick="loadAvatarsConsole(true)">重新整理</button>`
           })}
+          ${renderConsoleSummaryToggle({ id: "avatarSummaryToggle", title: "角色摘要", note: "點擊展開查看角色數量、鎖定與素材狀態", body: summary })}
+          ${renderConsoleMainCard({ title: "角色列表", description: "調整可編輯角色的兌換點數與類型。", actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`, body })}
         </div>
       `;
     }
@@ -14539,8 +14615,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     function confirmNewsletterWorkspaceLeave() {
       if (!newsletterWorkspaceDirty) return true;
-      showConsoleUnsavedDialog(() => { rerenderNewsletterWorkspacePage(); if (newslettersConsoleCache) updateNewslettersConsoleUI(); else loadNewslettersConsole(false); });
-      return false;
+      return confirm(getConsoleUnsavedMessage());
     }
 
     function closeNewsletterWorkspace(force = false) {
@@ -14678,10 +14753,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     async function createAiNewsletterConsole(btn) {
-      if (newsletterWorkspace && newsletterWorkspaceDirty) {
-        requestConsoleWorkspaceLeave(() => createAiNewsletterConsole(btn));
-        return;
-      }
+      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
       if (!confirm('要讓 AI 自動寫一篇新專欄嗎？')) return;
       const old = btn?.textContent || 'AI 自動寫一篇';
       if (btn) { btn.disabled = true; btn.textContent = 'AI 撰寫中...'; }
@@ -14698,10 +14770,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     async function archiveNewsletterConsole(id) {
-      if (newsletterWorkspace && newsletterWorkspaceDirty) {
-        requestConsoleWorkspaceLeave(() => archiveNewsletterConsole(id));
-        return;
-      }
+      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
       if (!confirm('確定要封存這篇專欄嗎？後面的待發專欄會自動遞補。')) return;
       try {
         await newsletterConsoleRequest('delete', { id });
@@ -14715,10 +14784,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     async function moveNewsletterConsole(id, direction) {
-      if (newsletterWorkspace && newsletterWorkspaceDirty) {
-        requestConsoleWorkspaceLeave(() => moveNewsletterConsole(id, direction));
-        return;
-      }
+      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
       const active = activeNewsletterItems();
       const idx = active.findIndex(item => newsletterIdOf(item) === String(id));
       if (idx < 0) return;
@@ -15330,14 +15396,16 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     function renderAutomationConsole() {
       if (!isOwnerAllMode()) {
-        return `${renderConsolePageIntro({ group: "系統", title: "自動化監控", description: "此頁僅供 Owner 全校區模式查看跨校區自動化狀態。", actions: `<button class="btn-compact primary" onclick="changeConsoleScope('all'); showPage('automation');">切回全部校區</button><button class="btn-compact" onclick="showPage('weekly')">查看單校週報</button>` })}`;
+        return `<div class="console-page-standard console-ui-page r21-template-page r21-empty-owner-page">
+          ${renderConsolePageIntro({ group: "系統", title: "自動化監控", description: "此頁用於 Owner 全校區模式查看跨校區自動化狀態。", actions: `<button class="btn-compact primary" onclick="changeConsoleScope('all'); showPage('automation');">切回全部校區</button><button class="btn-compact" onclick="showPage('weekly')">查看單校週報</button>` })}
+        </div>`;
       }
-      const summary = `<div class="weekly-insight-strip automation-insight-strip"><div class="weekly-insight"><div class="label">週報自動化</div><div id="autoWeeklyStatus" class="value" style="font-size:26px;">—</div><div id="autoWeeklyNote" class="note">最近一次週報 job</div></div><div class="weekly-insight"><div class="label">任務自動結算</div><div id="autoSettlementStatus" class="value" style="font-size:26px;">—</div><div id="autoSettlementNote" class="note">mission_settlements 最近紀錄</div></div><div class="weekly-insight"><div class="label">每日清理</div><div id="autoCleanupStatus" class="value" style="font-size:26px;">未接入</div><div id="autoCleanupNote" class="note">目前 cron-daily-cleanup 尚未寫入 DB log</div></div><div class="weekly-insight"><div class="label">需要注意</div><div id="autoRiskCount" class="value">—</div><div id="autoRiskNote" class="note">異常 / 過久未執行 / 失敗</div></div></div>`;
-      const body = `<div class="weekly-console-grid r9-automation-grid"><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>自動化摘要</h3><p>查看跨校區自動化是否有延遲、失敗或缺少監控紀錄。</p></div></div><div id="autoSummaryBox" class="weekly-status-card">正在讀取自動化狀態...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>週報 Jobs</h3><p>最近全校區週報產生 / 寄送紀錄。</p></div></div><div id="autoWeeklyJobList" class="weekly-mini-list">正在讀取...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>任務結算紀錄</h3><p>最近自動結算產生的 mission_settlements。</p></div></div><div id="autoSettlementList" class="weekly-mini-list">正在讀取...</div></div><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>需要 Owner 介入</h3><p>系統會列出排程失敗、太久未執行或缺少監控紀錄的項目。</p></div></div><div id="autoActionList" class="weekly-mini-list">正在讀取...</div></div></div>`;
-      return `<div class="console-page-standard r9-system-page console-ui-page">
+      const summary = `<div class="weekly-insight-strip automation-insight-strip"><div class="weekly-insight"><div class="label">週報自動化</div><div id="autoWeeklyStatus" class="value" style="font-size:26px;">—</div><div id="autoWeeklyNote" class="note">最近一次週報執行</div></div><div class="weekly-insight"><div class="label">任務自動結算</div><div id="autoSettlementStatus" class="value" style="font-size:26px;">—</div><div id="autoSettlementNote" class="note">最近一次任務結算</div></div><div class="weekly-insight"><div class="label">每日清理</div><div id="autoCleanupStatus" class="value" style="font-size:26px;">—</div><div id="autoCleanupNote" class="note">最近一次清理狀態</div></div><div class="weekly-insight"><div class="label">需要注意</div><div id="autoRiskCount" class="value">—</div><div id="autoRiskNote" class="note">需要檢查的項目</div></div></div>`;
+      const body = `<div class="weekly-console-grid r9-automation-grid"><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>自動化摘要</h3><p>查看跨校區自動化是否正常執行。</p></div></div><div id="autoSummaryBox" class="weekly-status-card">正在讀取自動化狀態...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>週報執行紀錄</h3><p>最近全校區週報產生與寄送結果。</p></div></div><div id="autoWeeklyJobList" class="weekly-mini-list">正在讀取...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>任務結算紀錄</h3><p>最近自動結算的處理結果。</p></div></div><div id="autoSettlementList" class="weekly-mini-list">正在讀取...</div></div><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>需要處理</h3><p>排程失敗、太久未執行或缺少紀錄的項目會顯示在這裡。</p></div></div><div id="autoActionList" class="weekly-mini-list">正在讀取...</div></div></div>`;
+      return `<div class="console-page-standard r9-system-page console-ui-page r21-template-page r21-automation-page">
         ${renderConsolePageIntro({ group: "系統", title: "自動化監控", description: "查看週報、自動結算與每日清理的跨校區狀態。", actions: `<button class="btn-compact primary" onclick="loadAutomationData(true)">重新整理</button>` })}
-        ${renderConsoleSummaryToggle({ id: "automationSummaryToggle", title: "自動化摘要", note: "點擊展開查看最近狀態與需要注意的項目", body: summary })}
-        ${renderConsoleMainCard({ title: "自動化紀錄", description: "查看最近週報、結算與需要 Owner 介入的項目。", body })}
+        ${renderConsoleSummaryToggle({ id: "automationSummaryToggle", title: "自動化摘要", note: "點擊展開查看最近執行狀態", body: summary })}
+        ${renderConsoleMainCard({ title: "自動化紀錄", description: "查看最近執行紀錄與需要處理的項目。", body })}
       </div>`;
     }
 
@@ -15386,11 +15454,11 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
       setText('autoWeeklyStatus', latestWeekly ? automationStatusText(latestWeekly.status) : '尚無');
-      setText('autoWeeklyNote', latestWeekly ? `${formatDateTime(latestWeekly.updated_at || latestWeekly.created_at)}｜成功 ${Number(latestWeekly.sent_count || 0)} / 失敗 ${Number(latestWeekly.failed_count || 0)}` : '尚無週報 job');
+      setText('autoWeeklyNote', latestWeekly ? `${formatDateTime(latestWeekly.updated_at || latestWeekly.created_at)}｜成功 ${Number(latestWeekly.sent_count || 0)} / 失敗 ${Number(latestWeekly.failed_count || 0)}` : '尚無週報紀錄');
       setText('autoSettlementStatus', latestSettlement ? automationStatusText(latestSettlement.status) : '尚無');
       setText('autoSettlementNote', latestSettlement ? `${formatDateTime(latestSettlement.updated_at || latestSettlement.created_at)}｜${escapeHtml(latestSettlement.schoolName || latestSettlement.schoolCode || '')}` : '尚無結算紀錄');
       setText('autoCleanupStatus', cleanup.statusText || '未接入');
-      setText('autoCleanupNote', cleanup.note || 'cron-daily-cleanup 目前只有執行 log，尚未寫入 DB 狀態表');
+      setText('autoCleanupNote', cleanup.note || '尚未收到最近清理狀態');
       setText('autoRiskCount', String(actions.length));
       setText('autoRiskNote', actions.length ? '建議檢查下方清單' : '目前沒有明顯異常');
 
@@ -15399,9 +15467,9 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         summaryBox.innerHTML = `
           <div class="weekly-status-title"><span class="badge ${actions.length ? 'warn' : 'ok'}">${actions.length ? '需要檢查' : '狀態良好'}</span></div>
           <div class="weekly-status-sub">
-            週報最近 job：${latestWeekly ? `${escapeHtml(automationStatusText(latestWeekly.status))}，${formatDateTime(latestWeekly.updated_at || latestWeekly.created_at)}` : '尚無紀錄'}。<br>
+            週報最近紀錄：${latestWeekly ? `${escapeHtml(automationStatusText(latestWeekly.status))}，${formatDateTime(latestWeekly.updated_at || latestWeekly.created_at)}` : '尚無紀錄'}。<br>
             任務結算最近紀錄：${latestSettlement ? `${escapeHtml(latestSettlement.schoolName || latestSettlement.schoolCode || '')}，${formatDateTime(latestSettlement.updated_at || latestSettlement.created_at)}` : '尚無紀錄'}。<br>
-            每日清理：${escapeHtml(cleanup.note || '目前尚未接入 DB log，建議未來新增 automation_runs。')}
+            每日清理：${escapeHtml(cleanup.note || '尚未收到最近清理狀態。')}
           </div>`;
       }
 
@@ -15412,7 +15480,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
           <div class="weekly-row">
             <div><div class="weekly-row-title">${escapeHtml(j.schoolName || j.schoolCode || '未知校區')}｜${escapeHtml(automationStatusText(j.status))}</div><div class="weekly-row-sub">${escapeHtml(j.report_key || '無 report_key')}｜${formatDateTime(j.updated_at || j.created_at)}</div></div>
             <div class="weekly-row-sub" style="text-align:right;">成功 ${Number(j.sent_count || 0)}<br>失敗 ${Number(j.failed_count || 0)}｜略過 ${Number(j.skipped_count || 0)}</div>
-          </div>`).join('') || `<div class="empty-state">尚無週報 job 紀錄。</div>`;
+          </div>`).join('') || `<div class="empty-state">尚無週報紀錄。</div>`;
       }
 
       const sList = document.getElementById('autoSettlementList');
