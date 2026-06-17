@@ -6209,86 +6209,233 @@
 
 
     /* =======================================================
-       R19｜Final Detail Polish
-       - restore Avatar entry
-       - remove double mobile collapses
-       - flatten mobile main cards
-       - make curriculum primary action clear
+       R20｜Interaction Model Refactor
+       - list pages are light operation pages, not dashboards
+       - editor pages are true sub-pages with a clear return path
+       - custom unsaved modal replaces browser confirm for page changes
        ======================================================= */
-    .r11-avatar-page .console-main-card { overflow: visible; }
-    .r11-avatar-page .avatar-overview-grid { margin: 0 !important; }
-    .console-summary-body > .avatar-overview-grid,
-    .console-summary-body > .weekly-insight-strip,
-    .console-summary-body > .gami-rule-metrics,
-    .console-summary-body > .r8-learning-metrics,
-    .console-summary-body > .r9-system-metrics,
-    .console-summary-body > .curriculum-overview-grid,
-    .console-summary-body > .brand-summary-grid { margin: 0 !important; }
+    .side-icon {
+      width: 22px;
+      min-width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-family: var(--font-number);
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      color: var(--muted);
+      background: rgba(148, 163, 184, .10);
+    }
+    .side-item.active .side-icon {
+      color: var(--primary);
+      background: rgba(37, 99, 235, .14);
+    }
+    .console-page-standard {
+      gap: 16px;
+    }
+    .console-page-intro-card {
+      min-height: 0 !important;
+      padding: 18px 22px !important;
+      border-radius: 20px !important;
+      background: var(--surface) !important;
+      box-shadow: 0 8px 20px rgba(16,24,40,.035) !important;
+    }
+    .console-page-intro-card .intro-group {
+      margin-bottom: 4px !important;
+      font-size: 12px !important;
+      font-weight: 850 !important;
+      letter-spacing: .04em !important;
+      color: var(--primary) !important;
+      background: transparent !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+    }
+    .console-page-intro-card h2 {
+      font-size: clamp(24px, 2vw, 32px) !important;
+      line-height: 1.16 !important;
+      letter-spacing: -.055em !important;
+    }
+    .console-page-intro-card p {
+      max-width: 760px;
+      margin-top: 7px !important;
+      font-size: 14px !important;
+      line-height: 1.62 !important;
+      font-weight: 600 !important;
+    }
+    .console-summary-toggle {
+      border-radius: 16px !important;
+      box-shadow: none !important;
+      background: color-mix(in srgb, var(--surface) 94%, var(--bg)) !important;
+    }
+    .console-summary-toggle summary {
+      padding: 13px 16px !important;
+    }
+    .console-summary-body {
+      padding: 0 16px 16px !important;
+    }
+    .console-main-card {
+      border-radius: 20px !important;
+      box-shadow: 0 8px 20px rgba(16,24,40,.035) !important;
+      padding: 20px !important;
+    }
+    .main:has(#pageContent .r20-editor-page) > .topbar {
+      display: none !important;
+    }
+    .r20-editor-page {
+      min-height: calc(100dvh - 70px) !important;
+      padding-top: 0;
+    }
+    .r20-editor-page .r2-workspace {
+      gap: 16px !important;
+      min-height: calc(100dvh - 72px) !important;
+    }
+    .r20-editor-page .r2-workspace-head {
+      display: grid !important;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 16px;
+      padding: 0 0 18px !important;
+      border: 0 !important;
+      border-bottom: 1px solid var(--border) !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .r20-editor-page .r2-workspace-head .btn-compact {
+      height: 42px;
+      padding: 0 14px;
+      background: var(--surface);
+    }
+    .r20-editor-page .r2-workspace-kicker {
+      display: block !important;
+      width: auto !important;
+      margin: 0 0 8px !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      color: var(--primary) !important;
+      font-size: 13px !important;
+      font-weight: 850 !important;
+      letter-spacing: .02em !important;
+    }
+    .r20-editor-page .r2-workspace-kicker::before {
+      content: "← 返回列表 / ";
+      color: var(--muted);
+      font-weight: 750;
+    }
+    .r20-editor-page .r2-workspace-title {
+      font-size: clamp(28px, 2.5vw, 38px) !important;
+      line-height: 1.12 !important;
+      letter-spacing: -.06em !important;
+      margin: 0 !important;
+    }
+    .r20-editor-page .r2-workspace-subtitle {
+      margin-top: 8px !important;
+      font-size: 14px !important;
+      line-height: 1.58 !important;
+      max-width: 680px !important;
+    }
+    .r20-editor-page .r2-workspace-body {
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) !important;
+      gap: 18px !important;
+      align-items: start;
+    }
+    .r20-editor-page .r2-workspace-main > .card,
+    .r20-editor-page .r2-side-card {
+      border-radius: 18px !important;
+      box-shadow: none !important;
+      border: 1px solid var(--border) !important;
+    }
+    .r20-editor-page .r2-side-card {
+      background: color-mix(in srgb, var(--surface) 92%, var(--bg)) !important;
+    }
+    .r20-editor-page .r2-sticky-actions,
+    .r20-editor-page .console-sticky-actions {
+      border-radius: 16px !important;
+      padding: 10px 12px !important;
+      box-shadow: 0 12px 28px rgba(16,24,40,.12) !important;
+    }
+    .console-unsaved-dialog .console-modal {
+      width: min(480px, calc(100vw - 32px));
+      max-height: none;
+      border-radius: 18px;
+    }
+    .console-unsaved-body {
+      padding: 22px 24px 8px;
+    }
+    .console-unsaved-body h2 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.35;
+      letter-spacing: -.035em;
+      color: var(--text);
+    }
+    .console-unsaved-body p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+      font-weight: 600;
+    }
+    .console-unsaved-dialog .modal-actions {
+      border-top: 0;
+      margin-top: 0;
+      padding: 16px 24px 22px;
+    }
     @media (max-width: 760px) {
-      .mobile-insight-collapse { display: none !important; }
-      .console-main-card {
-        border: 0;
-        box-shadow: none;
-        background: transparent;
-        padding: 0;
-        border-radius: 0;
-        overflow: visible;
+      .main:has(#pageContent .r20-editor-page) {
+        padding-top: 18px !important;
       }
-      .console-main-card > .console-main-head {
-        padding: 0 2px;
-        margin-bottom: 12px;
+      .r20-editor-page {
+        min-height: calc(100dvh - 26px) !important;
       }
-      .console-main-card > .console-main-head h3 { font-size: 17px; }
-      .console-main-card > .console-main-head p { display: none; }
-      .console-summary-body .card,
-      .console-summary-body .weekly-insight,
-      .console-summary-body .gami-rule-metric,
-      .console-summary-body .avatar-overview-card,
-      .console-summary-body .curriculum-overview-card,
-      .console-summary-body .brand-summary-card,
-      .console-summary-body .student-seat-card,
-      .console-summary-body .student-analysis-card {
-        box-shadow: none !important;
-        border-radius: 14px !important;
-        padding: 12px !important;
+      .r20-editor-page .r2-workspace-head {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        padding-bottom: 14px !important;
       }
-      .console-summary-body .metric-value,
-      .console-summary-body .value,
-      .console-summary-body .avatar-overview-value,
-      .console-summary-body .curriculum-overview-value {
-        font-size: 24px !important;
+      .r20-editor-page .r2-workspace-head .btn-compact {
+        order: -1;
+        width: fit-content !important;
+        justify-content: flex-start !important;
       }
-      .weekly-console-grid,
-      .r16-weekly-grid,
-      .r7-gami-layout,
-      .r9-automation-grid,
-      .brand-center-layout { gap: 12px !important; }
-      .weekly-panel,
-      .r7-gami-card,
-      .gami-gacha-section,
-      .brand-panel-v2,
-      .analytics-card,
-      .avatar-card,
-      .r2-workspace-main > .card {
+      .r20-editor-page .r2-workspace-kicker::before { content: ""; }
+      .r20-editor-page .r2-workspace-title {
+        font-size: 28px !important;
+      }
+      .r20-editor-page .r2-workspace-body {
+        grid-template-columns: 1fr !important;
+      }
+      .r20-editor-page .r2-workspace-side {
+        border-top: 1px solid var(--border);
+        padding-top: 4px;
+      }
+      .r20-editor-page .r2-side-card {
+        display: none !important;
+      }
+      .r20-editor-page .r2-side-card:first-child {
+        display: block !important;
+      }
+      .r20-editor-page .r2-sticky-actions,
+      .r20-editor-page .console-sticky-actions {
+        position: sticky !important;
+        bottom: max(8px, env(safe-area-inset-bottom)) !important;
+      }
+      .console-page-intro-card {
+        padding: 16px !important;
         border-radius: 18px !important;
-        box-shadow: 0 8px 18px rgba(16,24,40,.035) !important;
       }
-      .curriculum-actions {
+      .console-page-intro-actions {
         display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+        grid-template-columns: 1fr !important;
         width: 100%;
       }
-      #curNewUnitBtn {
-        grid-column: 1 / -1;
-        min-height: 48px;
-        font-size: 15px;
-        font-weight: 900;
-      }
-      .curriculum-actions .btn-compact { width: 100%; justify-content: center; }
-      .avatar-toolbar,
-      .avatar-filter-row { display: grid !important; grid-template-columns: 1fr; width: 100%; }
-      .avatar-filter-row .btn-compact { width: 100%; justify-content: center; }
+      .console-page-intro-actions .btn-compact,
+      .console-page-intro-actions button { width: 100%; justify-content: center; }
     }
 
   </style>
@@ -6376,6 +6523,23 @@
     </main>
   </section>
 
+
+
+  <div id="consoleUnsavedModal" class="modal-backdrop console-unsaved-dialog" onclick="hideConsoleUnsavedDialog(false)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="console-unsaved-body">
+        <h2>離開編輯頁面？</h2>
+        <p>目前編輯內容尚未儲存，離開後這次修改不會保留。</p>
+      </div>
+      <div class="modal-actions">
+        <span></span>
+        <div class="right">
+          <button class="btn-compact" onclick="hideConsoleUnsavedDialog(false)">繼續編輯</button>
+          <button class="btn-compact danger" onclick="confirmConsoleUnsavedDiscard()">捨棄並離開</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 
   <div id="studentEditModal" class="modal-backdrop" onclick="closeStudentModal(event)">
@@ -7036,9 +7200,9 @@
       return { kicker:"學習", title:"學習查詢", description:"查詢班級與學生的練習進度、完成狀態與學習表現。" };
     }
     function getGamificationPageCopy(page = currentConsolePage) {
-      if (page === "settingsBattle") return { kicker:"系統", title:"競技模式", description:"管理對戰勝利後抽卡次數與盲盒獎池機率。", summaryTitle:"競技摘要", summaryNote:"點擊展開查看盲盒與對戰抽卡狀態" };
-      if (page === "settingsFeatures") return { kicker:"設定", title:"功能狀態", description:"管理此校區目前已授權功能的啟用狀態。", summaryTitle:"功能狀態摘要", summaryNote:"點擊展開查看已啟用功能" };
-      return { kicker:"系統", title:"今日挑戰", description:"管理今日挑戰、單元任務結算與排行榜獎勵規則。", summaryTitle:"今日挑戰摘要", summaryNote:"點擊展開查看挑戰、任務與排行榜設定" };
+      if (page === "settingsBattle") return { kicker:"系統", title:"競技模式", description:"管理對戰勝利抽卡次數與盲盒獎池機率。" };
+      if (page === "settingsFeatures") return { kicker:"設定", title:"功能狀態", description:"管理此校區目前已授權功能的啟用狀態。" };
+      return { kicker:"系統", title:"今日挑戰", description:"管理今日挑戰、單元任務結算與排行榜獎勵規則。" };
     }
 
     function renderFeatureDisabledCard(title = "此功能未啟用", message = "此校區目前未啟用此功能，請至「設定」調整校區功能啟用。") {
@@ -7195,7 +7359,6 @@
         renderNav();
         if (!isConsolePageAllowedByFeatures(currentConsolePage)) showPage("overview");
         setFeatureConfigStatus("功能啟用設定已儲存。", "ok");
-        updateFeatureSummaryMetrics();
       } catch (err) {
         setFeatureConfigStatus("⚠️ 儲存失敗：" + (err?.message || err), "danger");
       } finally {
@@ -7224,27 +7387,27 @@
           ["health", "資料健康", "◆"]
         ]},
         { group: "學生", items: [
-          ["students", "學生編輯", "👥"],
+          ["students", "學生編輯", "II"],
           ["learningPoints", "加扣分查詢", "＋"],
           ["learningAttendance", "打卡查詢", "◷"]
         ]},
         { group: "老師", items: [
-          ["admins", "老師編輯", "🪪"]
+          ["admins", "老師編輯", "ID"]
         ]},
         { group: "學習", items: [
-          ["curriculum", "單元排程", "🗓"],
-          ["learning", "學習查詢", "📈"],
-          ["curriculumPacks", "預設教材包", "📦"]
+          ["curriculum", "單元排程", "▤"],
+          ["learning", "學習查詢", "⌁"],
+          ["curriculumPacks", "預設教材包", "▧"]
         ]},
         { group: "家長", items: [
           ["weekly", "週報", "✉"],
-          ["newsletters", "專欄", "📰"]
+          ["newsletters", "專欄", "▣"]
         ]},
         { group: "系統", items: [
-          ["settingsDaily", "今日挑戰", "🏆"],
-          ["settingsBattle", "競技模式", "⚔"],
-          ["avatars", "角色收集", "🎭"],
-          ["automation", "自動化", "⚙"]
+          ["settingsDaily", "今日挑戰", "★"],
+          ["settingsBattle", "競技模式", "◇"],
+          ["avatars", "角色收集", "◎"],
+          ["automation", "自動化", "↻"]
         ]},
         { group: "設定", items: [
           ["branding", "品牌", "◈"],
@@ -7257,25 +7420,25 @@
           ["health", "資料健康", "◆"]
         ]},
         { group: "學生", items: [
-          ["students", "學生編輯", "👥"],
+          ["students", "學生編輯", "II"],
           ["learningPoints", "加扣分查詢", "＋"],
           ["learningAttendance", "打卡查詢", "◷"]
         ]},
         { group: "老師", items: [
-          ["admins", "老師編輯", "🪪"]
+          ["admins", "老師編輯", "ID"]
         ]},
         { group: "學習", items: [
-          ["curriculum", "單元排程", "🗓"],
-          ["learning", "學習查詢", "📈"]
+          ["curriculum", "單元排程", "▤"],
+          ["learning", "學習查詢", "⌁"]
         ]},
         { group: "家長", items: [
           ["weekly", "週報", "✉"],
-          ["newsletters", "專欄", "📰"]
+          ["newsletters", "專欄", "▣"]
         ]},
         { group: "系統", items: [
-          ["settingsDaily", "今日挑戰", "🏆"],
-          ["settingsBattle", "競技模式", "⚔"],
-          ["avatars", "角色收集", "🎭"]
+          ["settingsDaily", "今日挑戰", "★"],
+          ["settingsBattle", "競技模式", "◇"],
+          ["avatars", "角色收集", "◎"]
         ]},
         { group: "設定", items: [
           ["branding", "品牌", "◈"],
@@ -7587,7 +7750,7 @@
         </section>`;
     }
     function renderConsoleEditorFrame(body = "") {
-      return `<div class="console-editor-page">${body || ""}</div>`;
+      return `<div class="console-editor-page r20-editor-page">${body || ""}</div>`;
     }
 
     function renderNav() {
@@ -7598,7 +7761,7 @@
           <div class="side-group-label">${group.group}</div>
           ${group.items.map(([id, label, icon]) => `
             <button class="side-item" data-page="${id}" onclick="showPage('${id}')">
-              <span>${icon}</span><span>${label}</span>
+              <span class="side-icon">${icon}</span><span>${label}</span>
             </button>
           `).join("")}
         </div>
@@ -7612,31 +7775,54 @@
     }
 
     function getConsoleUnsavedMessage() {
-      return "目前編輯內容尚未儲存，離開編輯介面將不會儲存。確定要離開嗎？";
+      return "目前編輯內容尚未儲存，離開後這次修改不會保留。";
+    }
+    let consolePendingDiscardAction = null;
+    function hasConsoleDirtyWorkspace() {
+      return Boolean((curriculumWorkspace && curriculumWorkspaceDirty) || (studentWorkspace && studentWorkspaceDirty) || (adminCardWorkspace && adminCardWorkspaceDirty) || (newsletterWorkspace && newsletterWorkspaceDirty));
+    }
+    function discardCurrentConsoleWorkspace() {
+      if (currentConsolePage === "curriculum") { curriculumWorkspace = null; curriculumWorkspaceDirty = false; }
+      if (currentConsolePage === "students") { studentWorkspace = null; studentWorkspaceDirty = false; }
+      if (currentConsolePage === "admins") { adminCardWorkspace = null; adminCardWorkspaceDirty = false; }
+      if (currentConsolePage === "newsletters") { newsletterWorkspace = null; newsletterWorkspaceDirty = false; }
+    }
+    function showConsoleUnsavedDialog(onDiscard) {
+      consolePendingDiscardAction = typeof onDiscard === "function" ? onDiscard : null;
+      const modal = document.getElementById("consoleUnsavedModal");
+      if (!modal) {
+        console.warn("consoleUnsavedModal is missing; blocked leaving dirty editor.");
+        return false;
+      }
+      modal.classList.add("show");
+      document.body.classList.add("console-modal-open");
+      return false;
+    }
+    function hideConsoleUnsavedDialog(runAction = false) {
+      const modal = document.getElementById("consoleUnsavedModal");
+      if (modal) modal.classList.remove("show");
+      document.body.classList.remove("console-modal-open");
+      if (!runAction) consolePendingDiscardAction = null;
+    }
+    function confirmConsoleUnsavedDiscard() {
+      const action = consolePendingDiscardAction;
+      hideConsoleUnsavedDialog(true);
+      discardCurrentConsoleWorkspace();
+      consolePendingDiscardAction = null;
+      if (typeof action === "function") action();
+    }
+    function requestConsoleWorkspaceLeave(onDiscard) {
+      if (!hasConsoleDirtyWorkspace()) {
+        if (typeof onDiscard === "function") onDiscard();
+        return true;
+      }
+      showConsoleUnsavedDialog(onDiscard);
+      return false;
     }
     function confirmConsoleWorkspaceLeave() {
-      const okLeave = () => confirm(getConsoleUnsavedMessage());
-      if (currentConsolePage === "curriculum" && curriculumWorkspace && curriculumWorkspaceDirty) {
-        if (!okLeave()) return false;
-        curriculumWorkspace = null;
-        curriculumWorkspaceDirty = false;
-      }
-      if (currentConsolePage === "students" && studentWorkspace && studentWorkspaceDirty) {
-        if (!okLeave()) return false;
-        studentWorkspace = null;
-        studentWorkspaceDirty = false;
-      }
-      if (currentConsolePage === "admins" && adminCardWorkspace && adminCardWorkspaceDirty) {
-        if (!okLeave()) return false;
-        adminCardWorkspace = null;
-        adminCardWorkspaceDirty = false;
-      }
-      if (currentConsolePage === "newsletters" && newsletterWorkspace && newsletterWorkspaceDirty) {
-        if (!okLeave()) return false;
-        newsletterWorkspace = null;
-        newsletterWorkspaceDirty = false;
-      }
-      return true;
+      if (!hasConsoleDirtyWorkspace()) return true;
+      showConsoleUnsavedDialog(() => showPage(currentConsolePage || "overview"));
+      return false;
     }
     window.addEventListener("beforeunload", (event) => {
       const dirty = (curriculumWorkspace && curriculumWorkspaceDirty) || (studentWorkspace && studentWorkspaceDirty) || (adminCardWorkspace && adminCardWorkspaceDirty) || (newsletterWorkspace && newsletterWorkspaceDirty);
@@ -7647,7 +7833,10 @@
 
     function showPage(page) {
       const nextPage = page || "overview";
-      if (currentConsolePage && nextPage !== currentConsolePage && !confirmConsoleWorkspaceLeave()) return;
+      if (currentConsolePage && nextPage !== currentConsolePage && hasConsoleDirtyWorkspace()) {
+        requestConsoleWorkspaceLeave(() => showPage(nextPage));
+        return;
+      }
       currentConsolePage = nextPage;
       setLearningTabFromPage(currentConsolePage);
       setActive(currentConsolePage);
@@ -7663,7 +7852,7 @@
         curriculumPacks: ["預設教材包", "Owner 全校區教材包模板"],
         weekly: ["週報", "家長週報設定、測試寄送與正式寄送"],
         newsletters: ["專欄", "教育專欄排序、預覽與封存"],
-        avatars: ["角色收集", "角色定價、稀有度、素材與類型狀態"],
+        avatars: ["角色收集", "管理學生可獲得與可兌換的角色素材"],
         branding: ["品牌", "校區 Logo、手機入口 Icon 與品牌預覽"],
         settings: ["今日挑戰", "今日挑戰、單元任務與排行榜規則"],
         settingsDaily: ["今日挑戰", "今日挑戰、單元任務與排行榜規則"],
@@ -7730,7 +7919,6 @@
           const host = document.getElementById("featureConfigPanelHost");
           if (host) host.innerHTML = renderFeatureConfigPanelHtml();
           setFeatureConfigStatus("功能設定已同步。", "ok");
-          updateFeatureSummaryMetrics();
         });
         loadGamificationConsole(false);
       }
@@ -7741,7 +7929,6 @@
 
 
     function setupMobileInsightCollapse(page) {
-      return;
       if (page === "overview") return;
       const content = document.getElementById("pageContent");
       if (!content) return;
@@ -8213,6 +8400,7 @@
           <div class="overview-hero-side">
             <button class="btn-compact primary" onclick="refreshOverviewAll()">重新整理</button>
             <button class="btn-compact" onclick="showPage('health')">資料健康</button>
+            <button class="btn-compact" onclick="showPage('weekly')">週報設定</button>
           </div>
         </div>
 
@@ -8399,18 +8587,18 @@
           <div class="muted-text">篩選資料健康項目。</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <select id="healthSeverityFilter" class="select" onchange="renderHealthTable()">
-              <option value="all">全部等級</option><option value="critical">嚴重</option><option value="high">高風險</option><option value="medium">中風險</option><option value="low">低風險</option>
+              <option value="all">全部等級</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
             </select>
             <select id="healthCategoryFilter" class="select" onchange="renderHealthTable()"><option value="all">全部類別</option></select>
           </div>
         </div>
         <div id="healthTableWrap" class="table-wrap">
-          <table><thead><tr><th>校區</th><th>等級</th><th>類別</th><th>問題代碼</th><th>對象</th><th>建議</th></tr></thead><tbody><tr><td colspan="6">正在讀取資料健康...</td></tr></tbody></table>
+          <table><thead><tr><th>校區</th><th>等級</th><th>類別</th><th>Issue Code</th><th>對象</th><th>建議</th></tr></thead><tbody><tr><td colspan="6">正在讀取資料健康...</td></tr></tbody></table>
         </div>`;
       return `<div class="console-page-standard r9-system-page console-ui-page">
         ${renderConsolePageIntro({ group: "總覽", title: "資料健康", description: "查看資料健康檢查結果，優先處理高風險項目。", actions: `<button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>` })}
         ${renderConsoleSummaryToggle({ id: "healthSummaryToggle", title: "資料健康摘要", note: "點擊展開查看各等級統計", body: metrics })}
-        ${renderConsoleMainCard({ title: "資料健康清單", description: "依嚴重程度篩選資料項目，逐項確認需要處理的資料。", body: table })}
+        ${renderConsoleMainCard({ title: "資料健康清單", description: "等級、類別、Issue Code 與建議維持在同一張報表中。", body: table })}
       </div>`;
     }
 
@@ -9757,11 +9945,15 @@
 
     function confirmStudentWorkspaceLeave() {
       if (!studentWorkspaceDirty) return true;
-      return confirm(getConsoleUnsavedMessage());
+      showConsoleUnsavedDialog(() => rerenderStudentsWorkspacePage());
+      return false;
     }
 
     function closeStudentWorkspace() {
-      if (studentWorkspace && studentWorkspaceDirty && !confirmStudentWorkspaceLeave()) return;
+      if (studentWorkspace && studentWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => rerenderStudentsWorkspacePage());
+        return;
+      }
       studentWorkspace = null;
       studentWorkspaceDirty = false;
       rerenderStudentsWorkspacePage();
@@ -9894,7 +10086,10 @@
 
     function openStudentEditor(studentId) {
       if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯學生。"); return; }
-      if (studentWorkspace && studentWorkspaceDirty && !confirmStudentWorkspaceLeave()) return;
+      if (studentWorkspace && studentWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openStudentEditor(studentId));
+        return;
+      }
       const isNew = !studentId;
       if (isNew) {
         const seat = canAddActiveStudent();
@@ -10089,7 +10284,10 @@
 
     function openBatchStudentEditor() {
       if (!selectedStudentIds.size) { alert("請先勾選學生。"); return; }
-      if (studentWorkspace && studentWorkspaceDirty && !confirmStudentWorkspaceLeave()) return;
+      if (studentWorkspace && studentWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openBatchStudentEditor());
+        return;
+      }
       currentBatchStudentTags = [];
       studentWorkspace = { type: "batch" };
       studentWorkspaceDirty = false;
@@ -10301,11 +10499,15 @@
 
     function confirmAdminCardWorkspaceLeave() {
       if (!adminCardWorkspaceDirty) return true;
-      return confirm(getConsoleUnsavedMessage());
+      showConsoleUnsavedDialog(() => rerenderAdminCardWorkspacePage());
+      return false;
     }
 
     function closeAdminCardWorkspace(force = false) {
-      if (!force && !confirmAdminCardWorkspaceLeave()) return;
+      if (!force && adminCardWorkspace && adminCardWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => rerenderAdminCardWorkspacePage());
+        return;
+      }
       adminCardWorkspace = null;
       adminCardWorkspaceDirty = false;
       rerenderAdminCardWorkspacePage();
@@ -10313,7 +10515,10 @@
 
     function openAdminCardEditor(cardId) {
       if (!isSingleSchoolMode()) { alert("請先選擇單一校區，再編輯老師管理卡。"); return; }
-      if (adminCardWorkspace && adminCardWorkspaceDirty && !confirmAdminCardWorkspaceLeave()) return;
+      if (adminCardWorkspace && adminCardWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openAdminCardEditor(cardId));
+        return;
+      }
       const isNew = !cardId;
       const c = isNew ? null : getAdminCardById(cardId);
       if (!isNew && !c) { alert("找不到老師卡資料，請重新整理後再試。"); return; }
@@ -12927,7 +13132,10 @@
     }
     function setTextSafe(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
     function setCurriculumTab(tab) {
-      if (curriculumWorkspace && curriculumWorkspaceDirty && !confirmCurriculumWorkspaceLeave()) return;
+      if (curriculumWorkspace && curriculumWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => setCurriculumTab(tab));
+        return;
+      }
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
       curriculumTab = tab;
@@ -13151,7 +13359,10 @@
         </div>`;
     }
     function setScheduleView(view) {
-      if (curriculumWorkspace && curriculumWorkspaceDirty && !confirmCurriculumWorkspaceLeave()) return;
+      if (curriculumWorkspace && curriculumWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => setScheduleView(view));
+        return;
+      }
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
       if ((view === "month" || view === "year") && !curriculumFilter) {
@@ -13330,14 +13541,20 @@ function openCurriculumUnitModal(unitId = "") {
     }
 
     function closeCurriculumWorkspace(force = false) {
-      if (!force && !confirmCurriculumWorkspaceLeave()) return;
+      if (!force && curriculumWorkspace && curriculumWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => renderCurriculumList());
+        return;
+      }
       curriculumWorkspace = null;
       curriculumWorkspaceDirty = false;
       renderCurriculumList();
     }
 
     function openCurriculumUnitWorkspace(unitId = "") {
-      if (curriculumWorkspace && curriculumWorkspaceDirty && !confirmCurriculumWorkspaceLeave()) return;
+      if (curriculumWorkspace && curriculumWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openCurriculumUnitWorkspace(unitId));
+        return;
+      }
       curriculumTab = "units";
       curriculumWorkspace = { type: "unit", unitId: unitId || "" };
       curriculumWorkspaceDirty = false;
@@ -13515,7 +13732,10 @@ function openCurriculumUnitModal(unitId = "") {
     }
 
     function openCurriculumScheduleWorkspace({ unitId = "", scheduleId = "", dateKey = "", pickable = false } = {}) {
-      if (curriculumWorkspace && curriculumWorkspaceDirty && !confirmCurriculumWorkspaceLeave()) return;
+      if (curriculumWorkspace && curriculumWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openCurriculumScheduleWorkspace({ unitId, scheduleId, dateKey, pickable }));
+        return;
+      }
       let schedule = scheduleId ? findScheduleById(scheduleId) : null;
       let unit = unitId ? findUnitById(unitId) : null;
       if (!unit && schedule) unit = (curriculumCache?.units || []).find(u => (schedule.unitId && String(u.id) === String(schedule.unitId)) || (u.classCode === schedule.classCode && u.unitName === schedule.unitName));
@@ -13812,70 +14032,88 @@ function isAvatarLockedForConsole(a){
 function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsConsoleList(); }
 
     function renderAvatarsConsole() {
-      const summary = `
-        <div class="avatar-overview-grid">
-          <div class="avatar-overview-card primary">
-            <div class="avatar-overview-label">角色總數</div>
-            <div id="avatarTotalCount" class="avatar-overview-value">—</div>
-            <div class="avatar-overview-note">目前可在本校使用的角色。</div>
-            <div class="avatar-overview-metrics">
-              <div class="avatar-overview-mini"><span>可編輯</span><strong id="avatarEditableCount">—</strong></div>
-              <div class="avatar-overview-mini"><span>系統鎖定</span><strong id="avatarLockedCount">—</strong></div>
-              <div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>
+      return `
+        <div class="console-ui-page r11-avatar-page">
+          ${renderConsolePageHero({
+            kicker: "角色",
+            title: "角色定價與素材管理",
+            description: "管理本校一般角色、活動角色、兌換點數、角色類型與素材狀態。預設角色與基礎 AI 對手維持系統鎖定，不在 Console 中改價或改類型。",
+            actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`
+          })}
+          ${renderConsoleRulesStrip("角色管理", "管理角色價格、類型、稀有度與素材狀態。", "角色")}
+
+          <div class="avatar-overview-grid">
+            <div class="avatar-overview-card primary">
+              <div class="avatar-overview-label">角色素材中心</div>
+              <div id="avatarTotalCount" class="avatar-overview-value">—</div>
+              <div class="avatar-overview-note">角色圖片與 Mask 會影響盲盒、對戰結果與學生端顯示。</div>
+              <div class="avatar-overview-metrics">
+                <div class="avatar-overview-mini"><span>可編輯</span><strong id="avatarEditableCount">—</strong></div>
+                <div class="avatar-overview-mini"><span>系統鎖定</span><strong id="avatarLockedCount">—</strong></div>
+                <div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>
+              </div>
+            </div>
+            <div class="avatar-overview-card">
+              <div class="avatar-overview-label">一般角色</div>
+              <div id="avatarNormalCount" class="avatar-overview-value">—</div>
+              <div class="avatar-overview-note">學生兌換與盲盒獎池主要來源。</div>
+            </div>
+            <div class="avatar-overview-card">
+              <div class="avatar-overview-label">活動角色</div>
+              <div id="avatarEventCount" class="avatar-overview-value">—</div>
+              <div class="avatar-overview-note">活動 Boss / 特殊活動使用。</div>
+            </div>
+            <div class="avatar-overview-card">
+              <div class="avatar-overview-label">平均價格</div>
+              <div id="avatarAvgCost" class="avatar-overview-value">—</div>
+              <div class="avatar-overview-note">只計算可編輯角色兌換點數。</div>
             </div>
           </div>
-          <div class="avatar-overview-card">
-            <div class="avatar-overview-label">一般角色</div>
-            <div id="avatarNormalCount" class="avatar-overview-value">—</div>
-            <div class="avatar-overview-note">學生兌換與盲盒獎池主要來源。</div>
-          </div>
-          <div class="avatar-overview-card">
-            <div class="avatar-overview-label">活動角色</div>
-            <div id="avatarEventCount" class="avatar-overview-value">—</div>
-            <div class="avatar-overview-note">活動或特殊對戰使用。</div>
-          </div>
-          <div class="avatar-overview-card">
-            <div class="avatar-overview-label">平均價格</div>
-            <div id="avatarAvgCost" class="avatar-overview-value">—</div>
-            <div class="avatar-overview-note">只計算可編輯角色兌換點數。</div>
-          </div>
-        </div>`;
-      const body = `
-        <div class="avatar-toolbar">
-          <div class="avatar-filter-row">
-            <input id="avatarSearch" class="console-input" placeholder="搜尋角色名稱 / ID" oninput="renderAvatarsConsoleList()" />
-            <select id="avatarCategoryFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-              <option value="">全部類型</option>
-              <option value="一般">一般</option>
-              <option value="活動">活動</option>
-              <option value="預設">預設</option>
-              <option value="locked">鎖定角色</option>
-              <option value="assetIssue">素材缺漏</option>
-            </select>
-            <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-              <option value="">全部稀有度</option>
-              <option value="N">N</option><option value="R">R</option><option value="SR">SR</option><option value="SSR">SSR</option><option value="UR">UR</option>
-            </select>
-            <select id="avatarScopeFilter" class="console-select" onchange="renderAvatarsConsoleList()">
-              <option value="">全部來源</option>
-              <option value="school">本校角色</option>
-              <option value="global">全域角色</option>
-            </select>
-          </div>
-          <div class="avatar-filter-row">
-            <button id="avatarViewCardsBtn" class="btn-compact" onclick="setAvatarConsoleView('cards')">卡片</button>
-            <button id="avatarViewTableBtn" class="btn-compact" onclick="setAvatarConsoleView('table')">表格</button>
-          </div>
-        </div>
-        <div id="avatarsConsoleStatus" class="metric-note" style="margin-bottom:12px;">正在讀取角色...</div>
-        <div id="avatarsConsoleList" class="empty-state">正在讀取...</div>`;
-      return `<div class="console-page-standard r11-avatar-page console-ui-page">
-        ${renderConsolePageIntro({ group: "系統", title: "角色收集", description: "管理本校角色的兌換點數、類型與素材狀態。", actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>` })}
-        ${renderConsoleSummaryToggle({ id: "avatarSummaryToggle", title: "角色摘要", note: "點擊展開查看角色數量與素材狀態", body: summary })}
-        ${renderConsoleMainCard({ title: "角色列表", description: "可調整本校一般 / 活動角色；系統鎖定角色只顯示狀態。", actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`, body })}
-      </div>`;
-    }
 
+          ${renderConsoleSectionCard({
+            title: "角色列表",
+            description: "可在卡片或表格模式調整本校一般 / 活動角色的兌換點數與類型。鎖定角色會顯示原因，但不開放直接編輯。",
+            actions: `<button class="btn-compact" onclick="loadAvatarsConsole(true)">重新整理</button>`,
+            body: `
+              <div class="avatar-source-note">
+                <span>本校一般 / 活動角色：可改價格與類型</span>
+                <span>本校預設角色：系統保護</span>
+                <span>AI_EASY / AI_MED / AI_HARD（含校區前綴）：核心 AI 對手鎖定</span>
+              </div>
+              <div class="avatar-toolbar">
+                <div class="avatar-filter-row">
+                  <input id="avatarSearch" class="console-input" placeholder="搜尋角色名稱 / ID" oninput="renderAvatarsConsoleList()" />
+                  <select id="avatarCategoryFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+                    <option value="">全部類型</option>
+                    <option value="一般">一般</option>
+                    <option value="活動">活動</option>
+                    <option value="預設">預設</option>
+                    <option value="locked">鎖定角色</option>
+                    <option value="assetIssue">素材缺漏</option>
+                  </select>
+                  <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+                    <option value="">全部稀有度</option>
+                    <option value="N">N</option><option value="R">R</option><option value="SR">SR</option><option value="SSR">SSR</option><option value="UR">UR</option>
+                  </select>
+                  <select id="avatarScopeFilter" class="console-select" onchange="renderAvatarsConsoleList()">
+                    <option value="">全部來源</option>
+                    <option value="school">本校角色</option>
+                    <option value="global">全域角色</option>
+                  </select>
+                </div>
+                <div class="avatar-filter-row">
+                  <button id="avatarViewCardsBtn" class="btn-compact" onclick="setAvatarConsoleView('cards')">卡片</button>
+                  <button id="avatarViewTableBtn" class="btn-compact" onclick="setAvatarConsoleView('table')">表格</button>
+                </div>
+              </div>
+              <div id="avatarsConsoleStatus" class="metric-note" style="margin-bottom:12px;">正在讀取角色...</div>
+              <div id="avatarsConsoleList" class="empty-state">正在讀取...</div>
+            `
+          })}
+        </div>
+      `;
+    }
+    
     async function loadAvatarsConsole(force=false){
       const statusEl = document.getElementById("avatarsConsoleStatus");
       const listEl = document.getElementById("avatarsConsoleList");
@@ -14301,11 +14539,15 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
     function confirmNewsletterWorkspaceLeave() {
       if (!newsletterWorkspaceDirty) return true;
-      return confirm(getConsoleUnsavedMessage());
+      showConsoleUnsavedDialog(() => { rerenderNewsletterWorkspacePage(); if (newslettersConsoleCache) updateNewslettersConsoleUI(); else loadNewslettersConsole(false); });
+      return false;
     }
 
     function closeNewsletterWorkspace(force = false) {
-      if (!force && !confirmNewsletterWorkspaceLeave()) return;
+      if (!force && newsletterWorkspace && newsletterWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => { rerenderNewsletterWorkspacePage(); if (newslettersConsoleCache) updateNewslettersConsoleUI(); else loadNewslettersConsole(false); });
+        return;
+      }
       newsletterWorkspace = null;
       newsletterWorkspaceDirty = false;
       rerenderNewsletterWorkspacePage();
@@ -14314,7 +14556,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     function openNewsletterCreateModal() {
-      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
+      if (newsletterWorkspace && newsletterWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openNewsletterCreateModal());
+        return;
+      }
       newsletterWorkspace = { mode: "add", id: "", content: defaultNewsletterHtmlTemplate(), tags: "" };
       newsletterWorkspaceDirty = false;
       rerenderNewsletterWorkspacePage();
@@ -14323,7 +14568,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     function openNewsletterEditModal(id) {
       const item = (newslettersConsoleCache?.items || []).find(n => newsletterIdOf(n) === String(id));
       if (!item) return alert('找不到專欄資料。');
-      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
+      if (newsletterWorkspace && newsletterWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openNewsletterEditModal(id));
+        return;
+      }
       newsletterWorkspace = { mode: "update", id: String(id), content: newsletterContentOf(item), tags: newsletterTagsOf(item).join(', ') };
       newsletterWorkspaceDirty = false;
       rerenderNewsletterWorkspacePage();
@@ -14430,7 +14678,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     async function createAiNewsletterConsole(btn) {
-      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
+      if (newsletterWorkspace && newsletterWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => createAiNewsletterConsole(btn));
+        return;
+      }
       if (!confirm('要讓 AI 自動寫一篇新專欄嗎？')) return;
       const old = btn?.textContent || 'AI 自動寫一篇';
       if (btn) { btn.disabled = true; btn.textContent = 'AI 撰寫中...'; }
@@ -14447,7 +14698,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     async function archiveNewsletterConsole(id) {
-      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
+      if (newsletterWorkspace && newsletterWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => archiveNewsletterConsole(id));
+        return;
+      }
       if (!confirm('確定要封存這篇專欄嗎？後面的待發專欄會自動遞補。')) return;
       try {
         await newsletterConsoleRequest('delete', { id });
@@ -14461,7 +14715,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
 
     async function moveNewsletterConsole(id, direction) {
-      if (newsletterWorkspace && newsletterWorkspaceDirty && !confirmNewsletterWorkspaceLeave()) return;
+      if (newsletterWorkspace && newsletterWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => moveNewsletterConsole(id, direction));
+        return;
+      }
       const active = activeNewsletterItems();
       const idx = active.findIndex(item => newsletterIdOf(item) === String(id));
       if (idx < 0) return;
@@ -14559,33 +14816,19 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         if(data && data.success !== false) gamificationAvatarCache = Array.isArray(data.avatars) ? data.avatars : [];
       }catch(err){ console.warn('[loadGamificationSchoolAvatars]', err); gamificationAvatarCache = []; }
     }
-    function updateFeatureSummaryMetrics() {
-      const inputs = Array.from(document.querySelectorAll('input[data-feature-config-key]'));
-      const totalEl = document.getElementById('gamiFeatureTotalMetric');
-      const enabledEl = document.getElementById('gamiFeatureEnabledMetric');
-      if (!totalEl && !enabledEl) return;
-      const enabled = inputs.filter(input => input.checked).length;
-      if (totalEl) totalEl.textContent = inputs.length || '—';
-      if (enabledEl) enabledEl.textContent = inputs.length ? enabled : '—';
-    }
-
-    function renderGamificationSummaryHtml(viewPage = currentConsolePage) {
-      if (viewPage === "settingsFeatures") {
-        return `<div id="featureSummaryOnly" class="gami-rule-metrics"><div class="gami-rule-metric"><span>授權功能</span><strong id="gamiFeatureTotalMetric">—</strong><small>目前可管理的功能</small></div><div class="gami-rule-metric"><span>已啟用</span><strong id="gamiFeatureEnabledMetric">—</strong><small>校區目前開啟中</small></div></div>`;
-      }
-      if (viewPage === "settingsBattle") {
-        return `<div class="gami-rule-metrics"><div class="gami-rule-metric"><span>盲盒總機率</span><strong id="gamiProbMetric">—</strong><small>總和需等於 100%</small></div><div class="gami-rule-metric"><span>對戰抽卡</span><strong id="gamiBattlePickMetric">—</strong><small>玩家 / AI 勝利抽卡次數</small></div></div>`;
-      }
-      return `<div class="gami-rule-metrics"><div class="gami-rule-metric"><span>今日挑戰最高階</span><strong id="gamiDailyMetric">—</strong><small>最高分對應點數</small></div><div class="gami-rule-metric"><span>任務結算門檻</span><strong id="gamiMissionMetric">—</strong><small>未達標 / 良好 / 完美</small></div><div class="gami-rule-metric"><span>排行榜前三</span><strong id="gamiLeaderboardMetric">—</strong><small>前三名加分</small></div></div>`;
-    }
-
     function renderGamificationConsole(viewPage = currentConsolePage){
       const copy = getGamificationPageCopy(viewPage);
       const pageClass = viewPage === "settingsBattle" ? "gami-page-battle" : (viewPage === "settingsFeatures" ? "gami-page-features" : "gami-page-daily");
       return `
         <div class="console-page-standard r7-gami-page ${pageClass}">
           ${renderConsolePageIntro({ group: copy.kicker, title: copy.title, description: copy.description, actions: `<button class="btn-compact" onclick="loadGamificationConsole(true)">重新整理</button><button id="gamiSaveBtnTop" class="btn-compact primary" onclick="saveGamificationConsole(document.getElementById('gamiSaveBtn') || this)">儲存設定</button>` })}
-          ${renderConsoleSummaryToggle({ id: "gamiSummaryToggle", title: copy.summaryTitle, note: copy.summaryNote, body: renderGamificationSummaryHtml(viewPage) })}
+          ${renderConsoleSummaryToggle({ id: "gamiSummaryToggle", title: "設定摘要", note: "點擊展開查看目前設定摘要", body: `
+          <div class="gami-rule-metrics">
+            <div class="gami-rule-metric"><span>今日挑戰最高階</span><strong id="gamiDailyMetric">—</strong><small>最高分對應點數</small></div>
+            <div class="gami-rule-metric"><span>任務結算門檻</span><strong id="gamiMissionMetric">—</strong><small>未達標 / 良好 / 完美</small></div>
+            <div class="gami-rule-metric"><span>排行榜前三</span><strong id="gamiLeaderboardMetric">—</strong><small>前三名加分</small></div>
+            <div class="gami-rule-metric"><span>盲盒總機率</span><strong id="gamiProbMetric">—</strong><small>總和需等於 100%</small></div>
+          </div>` })}
           ${renderConsoleMainCard({ title: copy.title, description: "調整完成後請儲存設定。", body: `
           <div class="r7-gami-layout">
             <div class="r7-gami-main">
@@ -14831,9 +15074,6 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const daily=document.getElementById('gamiDailyMetric'); if(daily) daily.textContent=`${g.dailyChallenge.tiers[0].min}+`;
       const mission=document.getElementById('gamiMissionMetric'); if(mission) mission.textContent=`${g.mission.failThreshold}/${g.mission.goodThreshold}/${g.mission.perfectThreshold}`;
       const lb=document.getElementById('gamiLeaderboardMetric'); if(lb) lb.textContent=g.leaderboard.join('/');
-      const battlePickMetric=document.getElementById('gamiBattlePickMetric');
-      if (battlePickMetric) battlePickMetric.textContent = `${g.gachaPicks['玩家對戰']} / ${g.gachaPicks['初階Ai']} / ${g.gachaPicks['中階Ai']} / ${g.gachaPicks['高階Ai']}`;
-      updateFeatureSummaryMetrics();
     }
     document.addEventListener('input', (e)=>{ if(e.target && String(e.target.id||'').startsWith('gami')) updateGamificationPreview(); });
     async function saveGamificationConsole(btn){
