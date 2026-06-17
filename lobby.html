@@ -1225,14 +1225,9 @@
           });
         }
 
-        try {
-          const settings = await TappieAPI.adminGetData(schoolCode, 'settings');
-          if (settings && settings.success) {
-            mergeAvatarList(settings.avatars);
-          }
-        } catch (assetErr) {
-          console.warn('Supabase 角色資產載入失敗，使用預設角色:', assetErr);
-        }
+        // PVP_AUTH_HOTFIX_20260617:
+        // lobby.html 是學生端頁面，不應呼叫 admin-get-data/settings。
+        // 角色素材改由學生端 getAvatarShop 載入；失敗時使用預設角色。
 
         let avatarShop = null;
         try {
@@ -2328,17 +2323,39 @@
         const levelInput = document.getElementById('pvp-level');
         if (!selector || !levelInput) return;
 
-        selector.innerHTML = `<div style="color:#a4b0be;font-size:14px;font-weight:bold;padding:20px;">🔄 正在載入 Supabase 戰場級數...</div>`;
+        selector.innerHTML = `<div style="color:#a4b0be;font-size:14px;font-weight:bold;padding:20px;">🔄 正在載入可用戰場...</div>`;
 
         try {
-          if (!window.TappieAPI) throw new Error('TappieAPI 尚未載入');
-          const data = await TappieAPI.adminGetData(SUPA_SCHOOL_CODE, 'tasks');
-          if (!data?.success) throw new Error(data?.message || data?.error || 'admin-get-data failed');
+          if (!window.TappieAPI || typeof TappieAPI.getLobbyData !== 'function') {
+            throw new Error('TappieAPI.getLobbyData 尚未載入');
+          }
 
-          const validClasses = getBattleClassListFromTasks(data);
+          // PVP_AUTH_HOTFIX_20260617:
+          // 學生端 1v1 戰場級數不可再使用 admin-get-data/tasks，否則會出現「請提供管理員授權」。
+          // 改用學生端 get-lobby-data 回傳的 availableBattleClasses；舊後端尚未更新時，退回學生自己的 classCode。
+          const data = await TappieAPI.getLobbyData(STUDENT_ID);
+          if (!data?.success) throw new Error(data?.message || data?.error || 'get-lobby-data failed');
+
+          const rawClasses = Array.isArray(data.availableBattleClasses)
+            ? data.availableBattleClasses
+            : (Array.isArray(data.availableClasses) ? data.availableClasses : []);
+
+          const fallbackClass = data.student?.classCode || data.currentUnit?.classCode || '';
+          const classSet = new Set();
+          rawClasses.forEach(code => {
+            const c = String(code || '').trim();
+            if (!c) return;
+            if (c.toUpperCase().includes('EVENT')) return;
+            classSet.add(c);
+          });
+          if (fallbackClass && !String(fallbackClass).toUpperCase().includes('EVENT')) {
+            classSet.add(String(fallbackClass).trim());
+          }
+
+          const validClasses = Array.from(classSet).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
 
           if (validClasses.length === 0) {
-            selector.innerHTML = `<div style="color:#e74c3c;font-size:14px;font-weight:bold;padding:20px;">⚠️ Supabase 目前沒有可用級數</div>`;
+            selector.innerHTML = `<div style="color:#e74c3c;font-size:14px;font-weight:bold;padding:20px;">⚠️ 目前無開放戰場</div>`;
             levelInput.value = '';
             return;
           }
