@@ -7315,6 +7315,110 @@
       #anaModeDonut .donut { width: min(72vw, 260px) !important; height: min(72vw, 260px) !important; }
     }
 
+
+
+    /* =======================================================
+       R28 Regression Hotfix｜Analysis Donut + Import Flow Safety
+       - Keep DS shell intact, but prevent analytic donut number overflow.
+       - Fix R27 JS regression that stopped analytics range/import functions.
+       ======================================================= */
+    .analytics-card:has(#anaModeDonut) {
+      overflow: hidden !important;
+    }
+    #anaModeDonut,
+    #anaModeDonut.donut-wrap,
+    #anaModeDonut .donut-wrap,
+    #anaModeDonut .pro-mode-wrap {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
+    }
+    #anaModeDonut .pro-donut,
+    #anaModeDonut .donut {
+      width: min(100%, 240px) !important;
+      max-width: 240px !important;
+      height: min(60vw, 240px) !important;
+      max-height: 240px !important;
+      min-width: 0 !important;
+      justify-self: center !important;
+      flex: 0 0 auto !important;
+    }
+    #anaModeDonut .donut-inner {
+      width: min(54%, 128px) !important;
+      height: min(54%, 128px) !important;
+      max-width: 128px !important;
+      max-height: 128px !important;
+      min-width: 96px !important;
+      min-height: 96px !important;
+      overflow: hidden !important;
+    }
+    #anaModeDonut .donut-inner strong {
+      display: block !important;
+      max-width: 100% !important;
+      font-size: clamp(24px, 3vw, 34px) !important;
+      line-height: 1 !important;
+      letter-spacing: -0.06em !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: clip !important;
+      text-align: center !important;
+    }
+    #anaModeDonut .donut-inner span {
+      display: block !important;
+      font-size: 12px !important;
+      line-height: 1.25 !important;
+      text-align: center !important;
+      white-space: nowrap !important;
+    }
+    #anaModeDonut .pro-legend-list,
+    #anaModeDonut .legend-list,
+    #anaModeDonut .mode-legend-grid,
+    #anaModeDonut .donut-legend {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
+    }
+    #anaModeDonut .mode-legend-row {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow: hidden !important;
+    }
+    #anaModeDonut .mode-legend-row strong {
+      font-size: clamp(18px, 2.2vw, 26px) !important;
+      white-space: nowrap !important;
+    }
+    @media (max-width: 720px) {
+      #anaModeDonut .pro-donut,
+      #anaModeDonut .donut {
+        width: min(68vw, 220px) !important;
+        height: min(68vw, 220px) !important;
+      }
+      #anaModeDonut .donut-inner strong {
+        font-size: clamp(22px, 8vw, 32px) !important;
+      }
+    }
+    @media (max-width: 420px) {
+      #anaModeDonut .pro-donut,
+      #anaModeDonut .donut {
+        width: min(70vw, 200px) !important;
+        height: min(70vw, 200px) !important;
+      }
+      #anaModeDonut .donut-inner { min-width: 84px !important; min-height: 84px !important; }
+      #anaModeDonut .donut-inner strong { font-size: clamp(20px, 7vw, 28px) !important; }
+    }
+    #curriculumPackImportModal .console-modal,
+    #curriculumCsvModal .console-modal {
+      max-height: min(92dvh, 760px) !important;
+    }
+    #curriculumPackImportModal .form-grid,
+    #curriculumCsvModal .form-grid {
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+
   </style>
 </head>
 <body>
@@ -7441,7 +7545,405 @@
   </div>
 
 
-  <!-- R27: legacy large editor modals removed. Main create/edit flows use page workspaces. -->
+  <div id="studentEditModal" class="modal-backdrop" onclick="closeStudentModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="studentModalTitle">編輯學生</h2>
+          <p id="studentModalSubtitle">修改學生基本資料、週報與啟用狀態。</p>
+        </div>
+        <button class="btn-compact" onclick="hideStudentModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <input type="hidden" id="editStudentId" />
+        <div class="form-field"><label>學生姓名</label><input id="editStudentName" placeholder="例如：王小明" /></div>
+        <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" placeholder="例如：TEST01-S001" /></div>
+        <div class="form-field full"><label>學生類別</label><select id="editStudentType" class="select" onchange="toggleConsoleClassHint();"><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
+        <div class="form-field full" id="editStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="editStudentClass" placeholder="有班級學生需填班級，例如 A1" onkeydown="handleStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentClassFromInput()">新增</button><select id="editStudentExistingClass" onchange="setStudentClassFromSelect(this.value);"><option value="">選擇既有班級</option></select></div></div>
+        <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput()">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
+        <div class="form-field"><label>Parent Email</label><input id="editStudentEmail" placeholder="parent@example.com" /></div>
+        <div class="form-field"><label>週報狀態</label><select id="editStudentWeekly"><option value="true">啟用週報</option><option value="false">不啟用週報</option></select></div>
+        <div class="form-field"><label>帳號狀態</label><select id="editStudentActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
+        <div class="form-field"><label>目前點數</label><input id="editStudentPoints" type="number" inputmode="numeric" placeholder="0" /></div>
+        <div class="form-field full"><label>Title / 榮譽標籤</label><input id="editStudentTitle" placeholder="可留空，Dashboard 榮譽榜通常即時計算" /></div>
+        <div class="form-field full"><label>學生 NFC 連結</label><input id="editStudentUrlPreview" readonly onclick="this.select()" /></div>
+        <div class="form-field full"><div id="studentFormNote" class="form-note">新增學生會自動配發預設角色，並寫入 student_avatars。席位上限以啟用學生計算。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button id="studentDisableBtn" class="btn-compact danger" onclick="disableCurrentStudent()">停用學生</button>
+        <div class="right">
+          <button class="btn-compact" onclick="copyStudentUrlFromModal()">複製連結</button>
+          <button class="btn-compact" onclick="hideStudentModal()">取消</button>
+          <button id="studentSaveBtn" class="btn-compact primary" onclick="saveConsoleStudent()">儲存學生</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="adminCardEditModal" class="modal-backdrop" onclick="closeAdminCardModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="adminCardModalTitle">編輯老師管理卡</h2>
+          <p id="adminCardModalSubtitle">設定老師名稱、卡片代碼與權限角色。</p>
+        </div>
+        <button class="btn-compact" onclick="hideAdminCardModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <input type="hidden" id="editAdminCardId" />
+        <div class="form-field"><label>老師名稱</label><input id="editAdminCardTeacherName" placeholder="例如：Amy 老師" /></div>
+        <div class="form-field"><label>管理卡代碼 / NFC UID</label><input id="editAdminCardUid" placeholder="例如：1234567890" /></div>
+        <div class="form-field"><label>權限角色</label><select id="editAdminCardRole"><option value="admin">Admin 老師</option><option value="super">Super Admin 老師</option></select></div>
+        <div class="form-field"><label>狀態</label><select id="editAdminCardActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
+        <div class="form-field full"><label>備註</label><input id="editAdminCardNote" placeholder="可留空，例如：三重五華 A 班老師" /></div>
+        <div class="form-field full"><label>老師管理卡 NFC 連結</label><input id="editAdminCardUrlPreview" readonly onclick="this.select()" /></div>
+        <div class="form-field full"><div class="form-note">請不要將連結貼給其他人，以避免帳號外流。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button id="adminCardDisableBtn" class="btn-compact danger" onclick="toggleCurrentAdminCardStatus()">停用老師卡</button>
+        <div class="right">
+          <button class="btn-compact" onclick="copyAdminCardUrlFromModal()">複製連結</button>
+          <button class="btn-compact" onclick="hideAdminCardModal()">取消</button>
+          <button id="adminCardSaveBtn" class="btn-compact primary" onclick="saveConsoleAdminCard()">儲存老師卡</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="studentBatchModal" class="modal-backdrop" onclick="closeBatchModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2>批量修改學生</h2>
+          <p id="batchWorkspaceSubtitle">只會修改有選擇的欄位；留空或選擇不修改會保留原資料。</p>
+        </div>
+        <button class="btn-compact" onclick="hideBatchModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field full"><label>學生類別</label><select id="batchStudentType" class="select" onchange="toggleBatchClassHint()"><option value="__nochange">不修改</option><option value="無班級">無班級</option><option value="有班級">有班級</option></select></div>
+        <div class="form-field full" id="batchStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="batchStudentClass" placeholder="不修改請留空；有班級學生需填班級，例如 A1" onkeydown="handleBatchStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addBatchStudentClassFromInput()">新增</button><select id="batchStudentExistingClass" onchange="setBatchStudentClassFromSelect(this.value);"><option value="">選擇既有班級</option></select></div></div>
+        <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="batchStudentTagInput" placeholder="不修改請留空；輸入後將覆蓋所選學生標籤" onkeydown="handleBatchStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addBatchStudentTagFromInput()">新增</button><select id="batchStudentExistingTag" onchange="addBatchStudentTagFromSelect(this.value); this.value='';"><option value="">選擇既有標籤</option></select></div><div id="batchStudentTagChips" class="student-tag-chip-row"></div><div class="form-note">批量標籤有加入項目時，會以這組標籤覆蓋所選學生；沒有加入標籤則不修改標籤。</div></div>
+        <div class="form-field"><label>帳號狀態</label><select id="batchStudentActive"><option value="__nochange">不修改</option><option value="true">啟用</option><option value="false">停用</option></select></div>
+        <div class="form-field"><label>週報狀態</label><select id="batchStudentWeekly"><option value="__nochange">不修改</option><option value="true">啟用週報</option><option value="false">關閉週報</option></select></div>
+        <div class="form-field full"><div class="form-note">批量修改不提供 UID / 姓名批量覆蓋，避免誤傷正式資料。若要修改 UID 或姓名，請用單一學生編輯。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideBatchModal()">取消</button>
+        <div class="right"><button id="batchSaveBtn" class="btn-compact primary" onclick="saveBatchStudents()">確認批量修改</button></div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="curriculumUnitModal" class="modal-backdrop" onclick="closeCurriculumUnitModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="curriculumUnitModalTitle">編輯單元</h2>
+          <p>管理班級、單元名稱與單字內容。儲存後會寫入 word_units / unit_words。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumUnitModal()">關閉</button>
+      </div>
+      <input type="hidden" id="curUnitId" />
+      <input type="hidden" id="curOldUnitName" />
+      <input type="hidden" id="curOldClassCode" />
+      <div class="form-grid">
+        <div class="form-field"><label>班級代碼</label><input id="curClassCode" list="curriculumClassOptions" placeholder="例如 A1，活動請填 EVENT" oninput="syncCurriculumEventHint()" /><datalist id="curriculumClassOptions"></datalist></div>
+        <div class="form-field"><label>選擇既有班級</label><select id="curExistingClassSelect" onchange="applyCurriculumExistingClass()"><option value="">選擇既有班級</option></select></div>
+        <div class="form-field full"><label>單元名稱</label><input id="curUnitName" placeholder="例如 Animals" /></div>
+      </div>
+      <div class="unit-modal-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <div><strong>單字列表</strong><div class="metric-note">英文必填，中文可空白。</div></div>
+          <button class="btn-compact" onclick="addCurriculumWordRow('', '')">新增單字</button>
+        </div>
+        <div class="word-list-shell">
+          <div id="curWordsList" class="word-editor-list"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact btn-danger" id="curDeleteUnitBtn" onclick="deleteCurriculumUnit()">刪除單元</button>
+        <button class="btn-compact" onclick="hideCurriculumUnitModal()">取消</button>
+        <button class="btn-compact btn-success" onclick="saveCurriculumUnit()">儲存單元</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="curriculumScheduleModal" class="modal-backdrop" onclick="closeCurriculumScheduleModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="curriculumScheduleModalTitle">排定日期</h2>
+          <p>設定目前單元的開始與結束日期。活動 EVENT 需指定活動角色。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumScheduleModal()">關閉</button>
+      </div>
+      <input type="hidden" id="curScheduleId" />
+      <input type="hidden" id="curScheduleUnitId" />
+      <div class="form-grid">
+        <div id="curScheduleUnitPickerWrap" class="form-field full" style="display:none;">
+          <label>選擇要排程的單元</label>
+          <select id="curScheduleUnitPicker" onchange="onScheduleUnitPickerChange()"></select>
+        </div>
+        <div class="form-field"><label>班級代碼</label><input id="curScheduleClass" disabled /></div>
+        <div class="form-field"><label>單元名稱</label><input id="curScheduleUnit" disabled /></div>
+        <div class="form-field"><label>開始日期</label><input id="curScheduleStart" type="date" onchange="updateScheduleConflictPreview()" /></div>
+        <div class="form-field"><label>結束日期</label><input id="curScheduleEnd" type="date" onchange="updateScheduleConflictPreview()" /></div>
+      </div>
+      <div id="curEventAvatarZone" class="event-avatar-zone">
+        <div class="form-field"><label>活動首領角色</label><select id="curEventAvatarSelect"></select></div>
+      </div>
+      <div id="curScheduleConflictBox" class="schedule-conflict-box"></div>
+      <div class="modal-actions">
+        <button class="btn-compact btn-danger" id="curCancelScheduleBtn" onclick="deleteCurriculumSchedule()">取消排程</button>
+        <button class="btn-compact" onclick="hideCurriculumScheduleModal()">關閉</button>
+        <button class="btn-compact btn-success" onclick="saveCurriculumSchedule()">確認排定</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="curriculumPackEditorModal" class="modal-backdrop" onclick="closeCurriculumPackEditorModal(event)">
+    <div class="console-modal pack-editor-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="curriculumPackEditorTitle">編輯預設教材包</h2>
+          <p>Owner 全校區模板。儲存後可供各校區匯入；匯入時會複製到該校 word_units / unit_words。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">關閉</button>
+      </div>
+      <div class="form-grid pack-editor-grid">
+        <input id="packEditorId" type="hidden" />
+        <div class="pack-editor-section full">
+          <div class="pack-editor-section-head">
+            <div>
+              <h3>基本資料</h3>
+              <p>這些資料會顯示在 Owner 教材包列表與單校區匯入彈窗。</p>
+            </div>
+          </div>
+          <div class="form-grid compact">
+            <div class="form-field">
+              <label>教材包名稱</label>
+              <input id="packEditorName" placeholder="例如 Tappie 國小基礎 400" />
+            </div>
+            <div class="form-field">
+              <label>教材包 Key</label>
+              <input id="packEditorKey" placeholder="例如 tappie-basic-400" />
+            </div>
+            <div class="form-field">
+              <label>等級</label>
+              <input id="packEditorLevel" placeholder="Starter / Basic / GEPT Kids" />
+            </div>
+            <div class="form-field">
+              <label>適用年級</label>
+              <input id="packEditorTargetGrade" placeholder="低年級 / 中年級 / 高年級" />
+            </div>
+            <div class="form-field">
+              <label>版本</label>
+              <input id="packEditorVersion" placeholder="v1" />
+            </div>
+            <div class="form-field">
+              <label>排序</label>
+              <input id="packEditorDisplayOrder" type="number" value="0" />
+            </div>
+            <div class="form-field full">
+              <label>描述</label>
+              <textarea id="packEditorDescription" class="pack-editor-small-textarea" placeholder="簡短說明教材包用途"></textarea>
+            </div>
+            <div class="form-field full">
+              <label>來源 / 設計備註</label>
+              <textarea id="packEditorSourceNote" class="pack-editor-small-textarea" placeholder="例如：參考 108 課綱方向、常見小學教材與內部教學經驗整理"></textarea>
+            </div>
+            <div class="form-field full">
+              <label style="display:flex;gap:9px;align-items:center;">
+                <input id="packEditorIsActive" type="checkbox" checked />
+                啟用此教材包
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="pack-editor-section full">
+          <div class="pack-editor-section-head">
+            <div>
+              <h3>單元與單字</h3>
+              <p>每個單元可貼上多行單字。每行格式：英文, 中文, phonics hint。也支援 Tab 分隔。</p>
+            </div>
+            <div class="pack-editor-actions">
+              <button class="btn-compact" type="button" onclick="addCurriculumPackUnit()">新增單元</button>
+              <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('export')">下載範本</button>
+              <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('import')">匯入檔案</button>
+              <button class="btn-compact" type="button" onclick="fillCurriculumPackEditorSample()">填入範例</button>
+            </div>
+          </div>
+          <div id="packEditorStats" class="pack-editor-stats">—</div>
+          <div id="packEditorUnitList" class="pack-editor-unit-list"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">取消</button>
+        <div class="right">
+          <button class="btn-compact" onclick="previewCurriculumPackEditor()">更新預覽</button>
+          <button class="btn-compact primary" onclick="saveCurriculumPackFromEditor()">儲存教材包</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="curriculumPackImportModal" class="modal-backdrop" onclick="closeCurriculumPackImportModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2>匯入預設組合</h2>
+          <p>將 Owner 全域教材包複製到目前校區的指定班級。匯入後可自由編輯，不影響原模板。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumPackImportModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>班級代碼</label>
+          <input id="packImportClassCode" placeholder="例如 A1 / E1 / GEPT" />
+        </div>
+        <div class="form-field">
+          <label>選擇既有班級</label>
+          <select id="packImportExistingClass" onchange="applyPackImportExistingClass(this.value)"><option value="">選擇既有班級</option></select>
+        </div>
+        <div class="form-field full">
+          <label>選擇預設組合</label>
+          <select id="packImportPackSelect" onchange="updateCurriculumPackImportPreview()"><option value="">正在讀取...</option></select>
+        </div>
+        <div class="form-field full">
+          <div id="packImportPreview" class="pack-import-preview">請先選擇教材包。</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideCurriculumPackImportModal()">取消</button>
+        <div class="right">
+          <button id="packImportSubmitBtn" class="btn-compact primary" onclick="importCurriculumPackToSchool()">加入組合</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="curriculumAutoScheduleModal" class="modal-backdrop" onclick="closeCurriculumAutoScheduleModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2>單次自動排程</h2>
+          <p>選擇班級、單元與日期區間，系統會平均分配時間並建立 unit_schedules。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumAutoScheduleModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>班級</label>
+          <input id="autoScheduleClassCode" readonly />
+        </div>
+        <div class="form-field">
+          <label>模式</label>
+          <select id="autoScheduleMode" onchange="updateAutoScheduleModeUI(); updateAutoSchedulePreview();">
+            <option value="single_even">單次循環｜平均分配</option>
+            <option value="infinite_cycle">無限循環｜固定天數</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>開始日期</label>
+          <input id="autoScheduleStart" type="date" onchange="updateAutoSchedulePreview()" />
+        </div>
+        <div id="autoScheduleEndField" class="form-field">
+          <label>結束日期</label>
+          <input id="autoScheduleEnd" type="date" onchange="updateAutoSchedulePreview()" />
+        </div>
+        <div id="autoScheduleInfiniteFields" class="form-field full hidden">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:12px;">
+            <div class="form-field">
+              <label>每單元天數</label>
+              <input id="autoScheduleDaysPerUnit" type="number" min="1" max="90" value="7" onchange="updateAutoSchedulePreview()" />
+            </div>
+          </div>
+          <div class="small-note">無限循環會先建立第一輪；之後約每日凌晨 12:45 自動檢查，當下一個單元結束後，會把同一單元接到排程最後方。</div>
+        </div>
+        <div class="form-field full">
+          <label>單元範圍</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <button class="btn-compact" type="button" onclick="setAutoScheduleUnitChecks(true)">全選</button>
+            <button class="btn-compact" type="button" onclick="setAutoScheduleUnitChecks(false)">清除</button>
+            <button class="btn-compact" type="button" onclick="setAutoScheduleUnscheduledOnly()">只選尚未排程</button>
+          </div>
+          <div id="autoScheduleUnitList" class="auto-schedule-unit-list"></div>
+        </div>
+        <div class="form-field full">
+          <div class="small-note">若指定區間已有同班級排程，系統會拒絕建立，避免重疊；請先調整日期或手動停用舊排程。</div>
+        </div>
+        <div class="form-field full">
+          <div id="autoSchedulePreview" class="pack-import-preview">請選擇日期與單元。</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideCurriculumAutoScheduleModal()">取消</button>
+        <div class="right">
+          <button id="autoScheduleSubmitBtn" class="btn-compact primary" onclick="saveAutoScheduleUnits()">建立排程</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="curriculumCsvModal" class="modal-backdrop" onclick="closeCurriculumCsvModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="curriculumCsvTitle">匯入預覽</h2>
+          <p id="curriculumCsvSubtitle">請確認即將匯入的內容。</p>
+        </div>
+        <button class="btn-compact" onclick="hideCurriculumCsvModal()">關閉</button>
+      </div>
+      <div class="form-grid">
+        <input id="curriculumCsvMode" type="hidden" />
+        <textarea id="curriculumCsvPayload" class="hidden"></textarea>
+        <div class="form-field full">
+          <div id="curriculumCsvNote" class="csv-tool-note">請先選擇匯入檔案。</div>
+        </div>
+        <div class="form-field full">
+          <div id="curriculumCsvPreview" class="csv-preview-box"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideCurriculumCsvModal()">取消</button>
+        <div class="right csv-tool-actions">
+          <button id="curriculumCsvImportBtn" class="btn-compact primary" onclick="confirmCurriculumCsvImport()">確認匯入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="newsletterEditorModal" class="modal-backdrop" onclick="closeNewsletterEditorModal(event)">
+    <div class="console-modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h2 id="newsletterEditorTitle">編輯專欄</h2>
+          <p id="newsletterEditorSubtitle">修改週報專欄 HTML。正式週報只會取 display_order = 1 的未封存專欄。</p>
+        </div>
+        <button class="btn-compact" onclick="hideNewsletterEditorModal()">關閉</button>
+      </div>
+      <input type="hidden" id="newsletterEditMode" value="update" />
+      <input type="hidden" id="newsletterEditId" />
+      <div class="form-grid">
+        <div class="form-field full"><label>管理標籤（逗號分隔，不會寄給家長）</label><input id="newsletterEditTags" class="console-input" placeholder="例如：語言力量, 情緒連結, 成長引導" /></div>
+        <div class="form-field full"><label>專欄 HTML</label><textarea id="newsletterEditHtml" class="newsletter-editor-textarea" placeholder="請貼上或編輯專欄 HTML，標題會自動取第一個 h3"></textarea></div>
+        <div class="form-field full"><div class="form-note">專欄標題取自 content_html 的第一個 &lt;h3&gt;。tags 只給管理員辨識，不會出現在家長週報。正式全校週報成功後，系統會自動封存第 1 順位並遞補排序。</div></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-compact" onclick="hideNewsletterEditorModal()">取消</button>
+        <div class="right"><button id="newsletterSaveBtn" class="btn-compact primary" onclick="saveNewsletterFromModal()">儲存專欄</button></div>
+      </div>
+    </div>
+  </div>
+
 
   <script>
     let loginMode = "super_admin";
@@ -8711,7 +9213,199 @@
       `;
     }
 
-    // R27: legacy school editor modal renderer removed; school create/edit uses workspace.
+    function renderSchoolEditorModal() {
+      return `
+        <div id="schoolEditorModal" class="modal-backdrop">
+          <div class="console-modal" onclick="event.stopPropagation()">
+            <div class="modal-head">
+              <div>
+                <h2 id="schoolEditorTitle">新增校區</h2>
+                <p id="schoolEditorSubtitle">建立或調整校區基本資料。校區代碼建立後不建議修改，避免影響既有學生 UID、卡片與路由。</p>
+              </div>
+              <button class="icon-btn" onclick="closeSchoolEditor()">×</button>
+            </div>
+            <div class="form-grid">
+              <input id="schoolEditorMode" type="hidden" value="create" />
+              <input id="schoolEditorOriginalCode" type="hidden" value="" />
+              <div class="form-field">
+                <label>校區代碼 school_code</label>
+                <input id="schoolEditorCode" placeholder="例如 SW01 / TP01" autocomplete="off" />
+              </div>
+              <div class="form-field">
+                <label>校區名稱</label>
+                <input id="schoolEditorName" placeholder="例如 三重五華校區" autocomplete="off" />
+              </div>
+              <div class="form-field">
+                <label>學生上限 student_limit</label>
+                <input id="schoolEditorStudentLimit" type="number" min="0" step="1" placeholder="0 代表不限或未設定" />
+              </div>
+              <div class="form-field">
+                <label>口說次數上限</label>
+                <input id="schoolEditorSpeechLimit" type="number" min="0" step="1" placeholder="80" />
+              </div>
+              <div class="form-field">
+                <label>對戰次數上限</label>
+                <input id="schoolEditorBattleLimit" type="number" min="0" step="1" placeholder="2" />
+              </div>
+              <div class="form-field">
+                <label>狀態</label>
+                <select id="schoolEditorIsActive">
+                  <option value="true">啟用</option>
+                  <option value="false">停用</option>
+                </select>
+              </div>
+              <div class="form-field full">
+                <label>舊資料表 ID（選填）</label>
+                <input id="schoolEditorLegacySheetId" placeholder="GAS / Google Sheet 遷移時可暫存，沒有就留空" autocomplete="off" />
+              </div>
+              <div class="form-field">
+                <label>Super Admin 密碼（Owner Only）</label>
+                <input id="schoolEditorSuperAdminPassword" type="password" placeholder="設定 Super Admin 登入密碼" autocomplete="new-password" />
+              </div>
+              <div class="form-field">
+                <label>Normal Admin 密碼（Owner Only）</label>
+                <input id="schoolEditorAdminPassword" type="password" placeholder="設定一般 Admin 登入密碼" autocomplete="new-password" />
+              </div>
+              ${renderFeatureAccessEditorHtml()}
+              <div class="form-field full">
+                <div class="form-note">提醒：Admin_Password / Super_Admin_Password 只允許 Owner 在全校區模式調整。Super Admin 不能修改，避免影響 NFC 實體卡與後台權限流程。</div>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="btn-compact" onclick="closeSchoolEditor()">取消</button>
+              <div class="right">
+                <button id="schoolEditorSubmitBtn" class="btn-compact primary" onclick="submitSchoolEditor()">儲存校區</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getOwnerSchoolByCode(code) {
+      const target = String(code || "").trim().toUpperCase();
+      return (consoleScope.schools || []).find(s => String(s.schoolCode || s.school_code || s.raw?.school_code || "").trim().toUpperCase() === target) || null;
+    }
+
+
+    function rerenderSchoolWorkspacePage() {
+      if (currentConsolePage !== "schools") return;
+      const content = document.getElementById("pageContent");
+      if (!content) return;
+      content.innerHTML = renderSchoolsConsole();
+      if (!schoolWorkspace && consoleScope.schools?.length) return;
+      const raw = schoolWorkspace?.code ? getOwnerSchoolByCode(schoolWorkspace.code) : null;
+      const s = raw ? normalizeOwnerSchoolRow(raw) : null;
+      setSchoolEditorFeatureAccess(s ? getOwnerSchoolFeatureAccess(raw || {}) : DEFAULT_FEATURES);
+      if (s) hydrateSchoolEditorFeatureAccess(s.code, raw);
+      setTimeout(() => (s ? document.getElementById("schoolEditorName") : document.getElementById("schoolEditorCode"))?.focus(), 0);
+    }
+
+    function markSchoolWorkspaceDirty() {
+      if (!schoolWorkspace) return;
+      schoolWorkspaceDirty = true;
+      const note = document.getElementById("schoolEditorDirtyNote");
+      if (note) note.textContent = "有尚未儲存的變更";
+    }
+
+    function renderSchoolWorkspace() {
+      const raw = schoolWorkspace?.code ? getOwnerSchoolByCode(schoolWorkspace.code) : null;
+      const s = raw ? normalizeOwnerSchoolRow(raw) : null;
+      const isEdit = Boolean(s);
+      const schoolCode = isEdit ? s.code : "";
+      const schoolName = isEdit ? s.name : "";
+      const studentLimit = isEdit ? Number(s.studentLimit || 0) : 0;
+      const speechLimit = isEdit ? Number(s.speechLimit || 80) : 80;
+      const battleLimit = isEdit ? Number(s.battleLimit || 2) : 2;
+      const legacySheetId = isEdit ? String(raw?.legacySheetId || raw?.legacy_sheet_id || raw?.raw?.legacy_sheet_id || "") : "";
+      const superAdminPassword = isEdit ? String(raw?.settings?.superAdminPassword || raw?.superAdminPassword || raw?.raw?.super_admin_password || "") : "";
+      const adminPassword = isEdit ? String(raw?.settings?.adminPassword || raw?.adminPassword || raw?.raw?.admin_password || "") : "";
+      const activeValue = isEdit && s.isActive === false ? "false" : "true";
+      return `
+        <div class="r2-workspace ds-workspace r25-workspace r22-editor-layout" data-workspace="school">
+          <div class="r2-workspace-head ds-editor-head r25-editor-head">
+            <div>
+              <div class="r2-workspace-kicker">校區管理</div>
+              <h2 class="r2-workspace-title">${isEdit ? "編輯校區" : "新增校區"}</h2>
+              <p class="r2-workspace-subtitle">${isEdit ? `${escapeHtml(schoolCode)}｜${escapeHtml(schoolName || "未命名校區")}` : "建立新校區基本資料，建立後可切換到單校模式設定品牌、課程與學生。"}</p>
+            </div>
+            <button class="btn-compact" onclick="closeSchoolEditor()">返回列表</button>
+          </div>
+          <div class="r2-workspace-body ds-editor-body r25-editor-body">
+            <div class="r2-workspace-main ds-editor-main r25-editor-main">
+              <div class="card">
+                <div class="form-grid">
+                  <input id="schoolEditorMode" type="hidden" value="${isEdit ? "update" : "create"}" />
+                  <input id="schoolEditorOriginalCode" type="hidden" value="${escapeHtml(schoolCode)}" />
+                  <div class="form-field"><label>校區代碼</label><input id="schoolEditorCode" value="${escapeHtml(schoolCode)}" ${isEdit ? "disabled" : ""} placeholder="例如 SW01 / TP01" autocomplete="off" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>校區名稱</label><input id="schoolEditorName" value="${escapeHtml(schoolName)}" placeholder="例如 三重五華校區" autocomplete="off" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>學生上限</label><input id="schoolEditorStudentLimit" type="number" min="0" step="1" value="${studentLimit}" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>口說次數上限</label><input id="schoolEditorSpeechLimit" type="number" min="0" step="1" value="${speechLimit}" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>對戰次數上限</label><input id="schoolEditorBattleLimit" type="number" min="0" step="1" value="${battleLimit}" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>狀態</label><select id="schoolEditorIsActive" onchange="markSchoolWorkspaceDirty()"><option value="true" ${activeValue === "true" ? "selected" : ""}>啟用</option><option value="false" ${activeValue === "false" ? "selected" : ""}>停用</option></select></div>
+                  <div class="form-field full"><label>舊資料表 ID（選填）</label><input id="schoolEditorLegacySheetId" value="${escapeHtml(legacySheetId)}" placeholder="Google Sheet 遷移時可暫存，沒有就留空" autocomplete="off" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>Super Admin 密碼</label><input id="schoolEditorSuperAdminPassword" type="password" value="${escapeHtml(superAdminPassword)}" placeholder="設定 Super Admin 登入密碼" autocomplete="new-password" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>Normal Admin 密碼</label><input id="schoolEditorAdminPassword" type="password" value="${escapeHtml(adminPassword)}" placeholder="設定一般 Admin 登入密碼" autocomplete="new-password" oninput="markSchoolWorkspaceDirty()" /></div>
+                  ${renderFeatureAccessEditorHtml()}
+                </div>
+              </div>
+            </div>
+            <aside class="r2-workspace-side ds-editor-side r25-editor-side">
+              <div class="r2-side-card">
+                <strong>設定提醒</strong>
+                <p class="small-note">校區代碼建立後不建議修改，避免影響既有學生 UID、NFC 卡片與登入路由。</p>
+              </div>
+              <div class="r2-side-card">
+                <strong>權限提醒</strong>
+                <p class="small-note">Admin 與 Super Admin 密碼只限 Owner 在全校區模式調整。</p>
+              </div>
+            </aside>
+          </div>
+          <div class="r2-sticky-actions">
+            <div id="schoolEditorDirtyNote" class="r2-dirty-note">${schoolWorkspaceDirty ? "有尚未儲存的變更" : ""}</div>
+            <div class="right">
+              <button class="btn-compact" onclick="closeSchoolEditor()">取消</button>
+              <button id="schoolEditorSubmitBtn" class="btn-compact primary" onclick="submitSchoolEditor()">儲存校區</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function syncSchoolEditorMobileViewport() {
+      const vh = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 0) * 0.01;
+      document.documentElement.style.setProperty("--tappie-vh", `${vh}px`);
+    }
+
+    function prepareSchoolEditorMobileScroll() {
+      syncSchoolEditorMobileViewport();
+      const modal = document.getElementById("schoolEditorModal");
+      const scroller = modal?.querySelector(".form-grid");
+      if (!modal || !scroller || modal.dataset.scrollPrepared === "true") return;
+      modal.dataset.scrollPrepared = "true";
+
+      let startY = 0;
+      scroller.addEventListener("touchstart", (e) => {
+        startY = e.touches && e.touches.length ? e.touches[0].clientY : 0;
+      }, { passive: true });
+
+      scroller.addEventListener("touchmove", (e) => {
+        // Keep touch scrolling inside the school editor form on iOS Safari.
+        e.stopPropagation();
+
+        const currentY = e.touches && e.touches.length ? e.touches[0].clientY : startY;
+        const deltaY = currentY - startY;
+        const atTop = scroller.scrollTop <= 0;
+        const atBottom = Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight;
+
+        // Prevent rubber-banding from transferring the gesture to the page/backdrop.
+        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      window.addEventListener("resize", syncSchoolEditorMobileViewport, { passive: true });
+      window.addEventListener("orientationchange", () => setTimeout(syncSchoolEditorMobileViewport, 120), { passive: true });
+    }
 
     function openSchoolEditor(code = "") {
       if (!isOwner() || !isOwnerAllMode()) {
@@ -12521,7 +13215,7 @@
       const message = isActive
         ? "確定要重新啟用這個教材包嗎？重新啟用後，各校區又可以匯入。"
         : "確定要停用這個教材包模板嗎？\n\n這只會讓校區之後不能再匯入這個 pack；已經匯入到各校區的 word_units / unit_words / unit_schedules 都不會被刪除。";
-      if (!(await consoleConfirm(message, { tone: active ? "primary" : "danger", okText: active ? "啟用" : "停用" }))) return;
+      if (!(await consoleConfirm(message, { tone: isActive ? "primary" : "danger", okText: isActive ? "啟用" : "停用" }))) return;
       try {
         const data = await TappieAPI.consoleSaveCurriculumPack({
           token: session?.token || "",
