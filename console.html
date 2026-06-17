@@ -7577,6 +7577,7 @@
 
   
 
+    /* R40_QUERY_MOBILE_FILTER_FIX_APPLIED */
     /* =======================================================
        R39｜Mobile Action Priority / Filter Collapse / Bottom Space
        - keep desktop layout unchanged
@@ -8768,7 +8769,7 @@
 
 
     // These helpers are now the official engineering surface for Console pages.
-    const TAPPIE_CONSOLE_DESIGN_SYSTEM_VERSION = "v1.1-r39-mobile-action-filters";
+    const TAPPIE_CONSOLE_DESIGN_SYSTEM_VERSION = "v1.1-r40-query-mobile-filter-fix";
     function renderConsolePageIntro({ group = "", title = "", description = "", actions = "" } = {}) {
       return `
         <section class="console-page-intro-card ds-page-intro r25-page-intro" data-ds-component="page-intro">
@@ -9080,11 +9081,30 @@
 
 
 
+    function resetR40MobileFilterShell(row) {
+      if (!row) return;
+      row.classList.remove('r39-filter-shell', 'filters-open');
+      delete row.dataset.r39FilterReady;
+      const primary = row.querySelector(':scope > .r39-filter-primary');
+      const options = row.querySelector(':scope > .r39-filter-options');
+      if (!primary && !options) return;
+      const restored = [];
+      if (primary) {
+        Array.from(primary.children || []).forEach((child) => {
+          if (!child.classList || !child.classList.contains('r39-filter-toggle')) restored.push(child);
+        });
+      }
+      if (options) Array.from(options.children || []).forEach((child) => restored.push(child));
+      row.textContent = '';
+      restored.forEach((child) => row.appendChild(child));
+    }
+
     function setupR39MobileFilterGroups() {
       const candidates = Array.from(document.querySelectorAll([
         '.r33-flat-workspace .toolbar > div',
         '.r33-flat-workspace .curriculum-filter-row',
         '.r33-flat-workspace .learning-filter-row',
+        '#learningFilterRow',
         '.r33-flat-workspace .avatar-filter-row',
         '.r33-flat-workspace .student-filter-row',
         '.r33-flat-workspace .students-filter-row',
@@ -11992,7 +12012,11 @@
         document.getElementById(`learningTabBtn-${key}`)?.classList.toggle("active", key === learningQueryTab);
       });
       const filterRow = document.getElementById("learningFilterRow");
-      if (filterRow) filterRow.innerHTML = renderLearningFilterControls(learningQueryTab);
+      if (filterRow) {
+        resetR40MobileFilterShell(filterRow);
+        filterRow.innerHTML = renderLearningFilterControls(learningQueryTab);
+        setupR39MobileFilterGroups();
+      }
       if (learningQueryTab === "points") return renderLearningPoints(true);
       if (learningQueryTab === "attendance") return renderLearningAttendance(true);
       return renderLearningOverview(true);
