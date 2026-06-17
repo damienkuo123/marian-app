@@ -6520,6 +6520,110 @@
       }
     }
 
+  
+
+    /* =======================================================
+       R22｜Interaction Completion + Mobile Modal Repair
+       - Owner school and curriculum pack editors become page workspaces.
+       - Curriculum pack import modal scrolls safely on mobile.
+       - Weekly send card simplified.
+       ======================================================= */
+    .r22-editor-layout .r2-workspace-head {
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      padding: 0 0 22px !important;
+      border-radius: 0 !important;
+    }
+    .r22-editor-layout .r2-workspace-title { letter-spacing: -.04em; }
+    .r22-editor-layout .r2-workspace-subtitle { max-width: 760px; }
+    .r22-editor-layout .card,
+    .r22-editor-layout .r2-side-card {
+      border-radius: 24px;
+    }
+    .r22-school-feature-note,
+    .r22-pack-help-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 8px 0 0;
+    }
+    .r22-weekly-send-card {
+      display: grid;
+      gap: 18px;
+    }
+    .r22-weekly-send-status {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--panel) 70%, var(--surface));
+    }
+    .r22-weekly-send-status .weekly-status-sub {
+      margin-top: 6px;
+      line-height: 1.55;
+    }
+    .r22-weekly-send-form {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      gap: 14px;
+      align-items: end;
+    }
+    .r22-weekly-send-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .r22-weekly-send-card .weekly-result-box { margin-top: 0; }
+    @media (max-width: 720px) {
+      .r22-weekly-send-status,
+      .r22-weekly-send-form,
+      .r22-weekly-send-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+      .r22-weekly-send-actions .weekly-btn,
+      .r22-weekly-send-card .weekly-btn { width: 100%; justify-content: center; }
+      #curriculumPackImportModal.modal-backdrop.show {
+        align-items: flex-end !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        overscroll-behavior: contain;
+      }
+      #curriculumPackImportModal .console-modal {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: min(92dvh, calc(var(--tappie-vh, 1vh) * 92)) !important;
+        max-height: min(92dvh, calc(var(--tappie-vh, 1vh) * 92)) !important;
+        border-radius: 24px 24px 0 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+      #curriculumPackImportModal .modal-head,
+      #curriculumPackImportModal .modal-actions {
+        flex: 0 0 auto !important;
+      }
+      #curriculumPackImportModal .form-grid {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        padding-bottom: 22px !important;
+      }
+      #curriculumPackImportModal .pack-import-preview {
+        max-height: none !important;
+        overflow: visible !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -6784,92 +6888,7 @@
   </div>
 
 
-  <div id="curriculumPackEditorModal" class="modal-backdrop" onclick="closeCurriculumPackEditorModal(event)">
-    <div class="console-modal pack-editor-modal" onclick="event.stopPropagation()">
-      <div class="modal-head">
-        <div>
-          <h2 id="curriculumPackEditorTitle">編輯預設教材包</h2>
-          <p>Owner 全校區模板。儲存後可供各校區匯入；匯入時會複製到該校 word_units / unit_words。</p>
-        </div>
-        <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">關閉</button>
-      </div>
-      <div class="form-grid pack-editor-grid">
-        <input id="packEditorId" type="hidden" />
-        <div class="pack-editor-section full">
-          <div class="pack-editor-section-head">
-            <div>
-              <h3>基本資料</h3>
-              <p>這些資料會顯示在 Owner 教材包列表與單校區匯入彈窗。</p>
-            </div>
-          </div>
-          <div class="form-grid compact">
-            <div class="form-field">
-              <label>教材包名稱</label>
-              <input id="packEditorName" placeholder="例如 Tappie 國小基礎 400" />
-            </div>
-            <div class="form-field">
-              <label>教材包 Key</label>
-              <input id="packEditorKey" placeholder="例如 tappie-basic-400" />
-            </div>
-            <div class="form-field">
-              <label>等級</label>
-              <input id="packEditorLevel" placeholder="Starter / Basic / GEPT Kids" />
-            </div>
-            <div class="form-field">
-              <label>適用年級</label>
-              <input id="packEditorTargetGrade" placeholder="低年級 / 中年級 / 高年級" />
-            </div>
-            <div class="form-field">
-              <label>版本</label>
-              <input id="packEditorVersion" placeholder="v1" />
-            </div>
-            <div class="form-field">
-              <label>排序</label>
-              <input id="packEditorDisplayOrder" type="number" value="0" />
-            </div>
-            <div class="form-field full">
-              <label>描述</label>
-              <textarea id="packEditorDescription" class="pack-editor-small-textarea" placeholder="簡短說明教材包用途"></textarea>
-            </div>
-            <div class="form-field full">
-              <label>來源 / 設計備註</label>
-              <textarea id="packEditorSourceNote" class="pack-editor-small-textarea" placeholder="例如：參考 108 課綱方向、常見小學教材與內部教學經驗整理"></textarea>
-            </div>
-            <div class="form-field full">
-              <label style="display:flex;gap:9px;align-items:center;">
-                <input id="packEditorIsActive" type="checkbox" checked />
-                啟用此教材包
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="pack-editor-section full">
-          <div class="pack-editor-section-head">
-            <div>
-              <h3>單元與單字</h3>
-              <p>每個單元可貼上多行單字。每行格式：英文, 中文, phonics hint。也支援 Tab 分隔。</p>
-            </div>
-            <div class="pack-editor-actions">
-              <button class="btn-compact" type="button" onclick="addCurriculumPackUnit()">新增單元</button>
-              <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('export')">下載範本</button>
-              <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('import')">匯入檔案</button>
-              <button class="btn-compact" type="button" onclick="fillCurriculumPackEditorSample()">填入範例</button>
-            </div>
-          </div>
-          <div id="packEditorStats" class="pack-editor-stats">—</div>
-          <div id="packEditorUnitList" class="pack-editor-unit-list"></div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">取消</button>
-        <div class="right">
-          <button class="btn-compact" onclick="previewCurriculumPackEditor()">更新預覽</button>
-          <button class="btn-compact primary" onclick="saveCurriculumPackFromEditor()">儲存教材包</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div id="curriculumPackEditorModal" class="hidden" aria-hidden="true"></div>
 
   <div id="curriculumPackImportModal" class="modal-backdrop" onclick="closeCurriculumPackImportModal(event)">
     <div class="console-modal" onclick="event.stopPropagation()">
@@ -7057,6 +7076,10 @@
     let studentClassRegistryLoading = false;
     let curriculumPackCache = null;
     let curriculumPackLoading = false;
+    let curriculumPackWorkspace = null;
+    let curriculumPackWorkspaceDirty = false;
+    let schoolWorkspace = null;
+    let schoolWorkspaceDirty = false;
     let curriculumTab = "units";
     let curriculumScheduleView = "list";
     let curriculumCalendarCursor = new Date();
@@ -7156,7 +7179,7 @@
           <div class="feature-access-grid">
             ${FEATURE_ACCESS_ITEMS.map(item => `
               <label class="feature-access-card" for="schoolFeature_${item.key}">
-                <input id="schoolFeature_${item.key}" type="checkbox" data-feature-key="${item.key}" />
+                <input id="schoolFeature_${item.key}" type="checkbox" data-feature-key="${item.key}" onchange="markSchoolWorkspaceDirty()" />
                 <span>
                   <strong>${escapeHtml(item.title)}</strong>
                   <small>${escapeHtml(item.note)}</small>
@@ -7181,6 +7204,7 @@
         const input = document.getElementById(`schoolFeature_${item.key}`);
         if (input) input.checked = Boolean(enabled);
       });
+      markSchoolWorkspaceDirty();
     }
 
     function readSchoolEditorFeatureAccess() {
@@ -7861,13 +7885,15 @@
     }
     let consolePendingDiscardAction = null;
     function hasConsoleDirtyWorkspace() {
-      return Boolean((curriculumWorkspace && curriculumWorkspaceDirty) || (studentWorkspace && studentWorkspaceDirty) || (adminCardWorkspace && adminCardWorkspaceDirty) || (newsletterWorkspace && newsletterWorkspaceDirty));
+      return Boolean((curriculumWorkspace && curriculumWorkspaceDirty) || (studentWorkspace && studentWorkspaceDirty) || (adminCardWorkspace && adminCardWorkspaceDirty) || (newsletterWorkspace && newsletterWorkspaceDirty) || (schoolWorkspace && schoolWorkspaceDirty) || (curriculumPackWorkspace && curriculumPackWorkspaceDirty));
     }
     function discardCurrentConsoleWorkspace() {
       if (currentConsolePage === "curriculum") { curriculumWorkspace = null; curriculumWorkspaceDirty = false; }
       if (currentConsolePage === "students") { studentWorkspace = null; studentWorkspaceDirty = false; }
       if (currentConsolePage === "admins") { adminCardWorkspace = null; adminCardWorkspaceDirty = false; }
       if (currentConsolePage === "newsletters") { newsletterWorkspace = null; newsletterWorkspaceDirty = false; }
+      if (currentConsolePage === "schools") { schoolWorkspace = null; schoolWorkspaceDirty = false; }
+      if (currentConsolePage === "curriculumPacks") { curriculumPackWorkspace = null; curriculumPackWorkspaceDirty = false; }
     }
     function showConsoleUnsavedDialog(onDiscard) {
       consolePendingDiscardAction = typeof onDiscard === "function" ? onDiscard : null;
@@ -7911,7 +7937,7 @@
       return false;
     }
     window.addEventListener("beforeunload", (event) => {
-      const dirty = (curriculumWorkspace && curriculumWorkspaceDirty) || (studentWorkspace && studentWorkspaceDirty) || (adminCardWorkspace && adminCardWorkspaceDirty) || (newsletterWorkspace && newsletterWorkspaceDirty);
+      const dirty = (curriculumWorkspace && curriculumWorkspaceDirty) || (studentWorkspace && studentWorkspaceDirty) || (adminCardWorkspace && adminCardWorkspaceDirty) || (newsletterWorkspace && newsletterWorkspaceDirty) || (schoolWorkspace && schoolWorkspaceDirty) || (curriculumPackWorkspace && curriculumPackWorkspaceDirty);
       if (!dirty) return;
       event.preventDefault();
       event.returnValue = getConsoleUnsavedMessage();
@@ -8101,6 +8127,7 @@
 
     function renderSchoolsConsole() {
       const schools = consoleScope.schools || [];
+      if (isOwner() && isOwnerAllMode() && schoolWorkspace) return renderConsoleEditorFrame(renderSchoolWorkspace());
 
       if (!isOwner()) {
         return `
@@ -8227,7 +8254,6 @@
           })}
           ${renderConsoleSummaryToggle({ id: "schoolsSummaryToggle", title: "校區摘要", note: "點擊展開查看校區數、學生席位與營運提醒", body: summary })}
           ${renderConsoleMainCard({ title: "校區列表", description: "管理校區資料與進入單校操作。", body: tableBody })}
-          ${renderSchoolEditorModal()}
         </div>
       `;
     }
@@ -8306,6 +8332,90 @@
       return (consoleScope.schools || []).find(s => String(s.schoolCode || s.school_code || s.raw?.school_code || "").trim().toUpperCase() === target) || null;
     }
 
+
+    function rerenderSchoolWorkspacePage() {
+      if (currentConsolePage !== "schools") return;
+      const content = document.getElementById("pageContent");
+      if (!content) return;
+      content.innerHTML = renderSchoolsConsole();
+      if (!schoolWorkspace && consoleScope.schools?.length) return;
+      const raw = schoolWorkspace?.code ? getOwnerSchoolByCode(schoolWorkspace.code) : null;
+      const s = raw ? normalizeOwnerSchoolRow(raw) : null;
+      setSchoolEditorFeatureAccess(s ? getOwnerSchoolFeatureAccess(raw || {}) : DEFAULT_FEATURES);
+      if (s) hydrateSchoolEditorFeatureAccess(s.code, raw);
+      setTimeout(() => (s ? document.getElementById("schoolEditorName") : document.getElementById("schoolEditorCode"))?.focus(), 0);
+    }
+
+    function markSchoolWorkspaceDirty() {
+      if (!schoolWorkspace) return;
+      schoolWorkspaceDirty = true;
+      const note = document.getElementById("schoolEditorDirtyNote");
+      if (note) note.textContent = "有尚未儲存的變更";
+    }
+
+    function renderSchoolWorkspace() {
+      const raw = schoolWorkspace?.code ? getOwnerSchoolByCode(schoolWorkspace.code) : null;
+      const s = raw ? normalizeOwnerSchoolRow(raw) : null;
+      const isEdit = Boolean(s);
+      const schoolCode = isEdit ? s.code : "";
+      const schoolName = isEdit ? s.name : "";
+      const studentLimit = isEdit ? Number(s.studentLimit || 0) : 0;
+      const speechLimit = isEdit ? Number(s.speechLimit || 80) : 80;
+      const battleLimit = isEdit ? Number(s.battleLimit || 2) : 2;
+      const legacySheetId = isEdit ? String(raw?.legacySheetId || raw?.legacy_sheet_id || raw?.raw?.legacy_sheet_id || "") : "";
+      const superAdminPassword = isEdit ? String(raw?.settings?.superAdminPassword || raw?.superAdminPassword || raw?.raw?.super_admin_password || "") : "";
+      const adminPassword = isEdit ? String(raw?.settings?.adminPassword || raw?.adminPassword || raw?.raw?.admin_password || "") : "";
+      const activeValue = isEdit && s.isActive === false ? "false" : "true";
+      return `
+        <div class="r2-workspace r22-editor-layout" data-workspace="school">
+          <div class="r2-workspace-head">
+            <div>
+              <div class="r2-workspace-kicker">校區管理</div>
+              <h2 class="r2-workspace-title">${isEdit ? "編輯校區" : "新增校區"}</h2>
+              <p class="r2-workspace-subtitle">${isEdit ? `${escapeHtml(schoolCode)}｜${escapeHtml(schoolName || "未命名校區")}` : "建立新校區基本資料，建立後可切換到單校模式設定品牌、課程與學生。"}</p>
+            </div>
+            <button class="btn-compact" onclick="closeSchoolEditor()">返回列表</button>
+          </div>
+          <div class="r2-workspace-body">
+            <div class="r2-workspace-main">
+              <div class="card">
+                <div class="form-grid">
+                  <input id="schoolEditorMode" type="hidden" value="${isEdit ? "update" : "create"}" />
+                  <input id="schoolEditorOriginalCode" type="hidden" value="${escapeHtml(schoolCode)}" />
+                  <div class="form-field"><label>校區代碼</label><input id="schoolEditorCode" value="${escapeHtml(schoolCode)}" ${isEdit ? "disabled" : ""} placeholder="例如 SW01 / TP01" autocomplete="off" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>校區名稱</label><input id="schoolEditorName" value="${escapeHtml(schoolName)}" placeholder="例如 三重五華校區" autocomplete="off" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>學生上限</label><input id="schoolEditorStudentLimit" type="number" min="0" step="1" value="${studentLimit}" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>Speech limit</label><input id="schoolEditorSpeechLimit" type="number" min="0" step="1" value="${speechLimit}" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>Battle limit</label><input id="schoolEditorBattleLimit" type="number" min="0" step="1" value="${battleLimit}" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>狀態</label><select id="schoolEditorIsActive" onchange="markSchoolWorkspaceDirty()"><option value="true" ${activeValue === "true" ? "selected" : ""}>啟用</option><option value="false" ${activeValue === "false" ? "selected" : ""}>停用</option></select></div>
+                  <div class="form-field full"><label>Legacy Sheet ID（選填）</label><input id="schoolEditorLegacySheetId" value="${escapeHtml(legacySheetId)}" placeholder="Google Sheet 遷移時可暫存，沒有就留空" autocomplete="off" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>Super Admin 密碼</label><input id="schoolEditorSuperAdminPassword" type="password" value="${escapeHtml(superAdminPassword)}" placeholder="設定 Super Admin 登入密碼" autocomplete="new-password" oninput="markSchoolWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>Normal Admin 密碼</label><input id="schoolEditorAdminPassword" type="password" value="${escapeHtml(adminPassword)}" placeholder="設定一般 Admin 登入密碼" autocomplete="new-password" oninput="markSchoolWorkspaceDirty()" /></div>
+                  ${renderFeatureAccessEditorHtml()}
+                </div>
+              </div>
+            </div>
+            <aside class="r2-workspace-side">
+              <div class="r2-side-card">
+                <strong>設定提醒</strong>
+                <p class="small-note">校區代碼建立後不建議修改，避免影響既有學生 UID、NFC 卡片與登入路由。</p>
+              </div>
+              <div class="r2-side-card">
+                <strong>權限提醒</strong>
+                <p class="small-note">Admin 與 Super Admin 密碼只限 Owner 在全校區模式調整。</p>
+              </div>
+            </aside>
+          </div>
+          <div class="r2-sticky-actions">
+            <div id="schoolEditorDirtyNote" class="r2-dirty-note">${schoolWorkspaceDirty ? "有尚未儲存的變更" : ""}</div>
+            <div class="right">
+              <button class="btn-compact" onclick="closeSchoolEditor()">取消</button>
+              <button id="schoolEditorSubmitBtn" class="btn-compact primary" onclick="submitSchoolEditor()">儲存校區</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
     function syncSchoolEditorMobileViewport() {
       const vh = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 0) * 0.01;
       document.documentElement.style.setProperty("--tappie-vh", `${vh}px`);
@@ -8347,39 +8457,25 @@
         alert("只有 Owner 全部校區模式可以管理校區基本資料。");
         return;
       }
-      const modal = document.getElementById("schoolEditorModal");
-      if (!modal) return;
+      if (schoolWorkspace && schoolWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openSchoolEditor(code));
+        return;
+      }
       const raw = code ? getOwnerSchoolByCode(code) : null;
-      const s = raw ? normalizeOwnerSchoolRow(raw) : null;
-      const isEdit = Boolean(s);
-      document.getElementById("schoolEditorMode").value = isEdit ? "update" : "create";
-      document.getElementById("schoolEditorOriginalCode").value = isEdit ? s.code : "";
-      document.getElementById("schoolEditorTitle").textContent = isEdit ? `編輯校區：${s.code}` : "新增校區";
-      document.getElementById("schoolEditorSubtitle").textContent = isEdit ? "調整校區名稱、限額與啟用狀態。校區代碼建立後不建議修改。" : "建立新校區基本資料。建立後再切入單校模式設定密碼、品牌、課程與學生。";
-      const codeInput = document.getElementById("schoolEditorCode");
-      codeInput.value = isEdit ? s.code : "";
-      codeInput.disabled = isEdit;
-      document.getElementById("schoolEditorName").value = isEdit ? s.name : "";
-      document.getElementById("schoolEditorStudentLimit").value = isEdit ? Number(s.studentLimit || 0) : 0;
-      document.getElementById("schoolEditorSpeechLimit").value = isEdit ? Number(s.speechLimit || 80) : 80;
-      document.getElementById("schoolEditorBattleLimit").value = isEdit ? Number(s.battleLimit || 2) : 2;
-      document.getElementById("schoolEditorLegacySheetId").value = isEdit ? String(raw?.legacySheetId || raw?.legacy_sheet_id || raw?.raw?.legacy_sheet_id || "") : "";
-      document.getElementById("schoolEditorSuperAdminPassword").value = isEdit ? String(raw?.settings?.superAdminPassword || raw?.superAdminPassword || raw?.raw?.super_admin_password || "") : "";
-      document.getElementById("schoolEditorAdminPassword").value = isEdit ? String(raw?.settings?.adminPassword || raw?.adminPassword || raw?.raw?.admin_password || "") : "";
-      document.getElementById("schoolEditorIsActive").value = isEdit && s.isActive === false ? "false" : "true";
-      setSchoolEditorFeatureAccess(isEdit ? getOwnerSchoolFeatureAccess(raw || {}) : DEFAULT_FEATURES);
-      if (isEdit) hydrateSchoolEditorFeatureAccess(s.code, raw);
-      modal.classList.add("show");
-      document.body.classList.add("console-modal-open");
-      prepareSchoolEditorMobileScroll();
-      const schoolFormScroller = modal.querySelector(".form-grid");
-      if (schoolFormScroller) schoolFormScroller.scrollTop = 0;
-      setTimeout(() => (isEdit ? document.getElementById("schoolEditorName") : codeInput)?.focus(), 0);
+      if (code && !raw) { alert("找不到校區資料，請重新整理後再試。"); return; }
+      schoolWorkspace = { code: code || "" };
+      schoolWorkspaceDirty = false;
+      rerenderSchoolWorkspacePage();
     }
 
-    function closeSchoolEditor() {
-      document.getElementById("schoolEditorModal")?.classList.remove("show");
-      document.body.classList.remove("console-modal-open");
+    function closeSchoolEditor(force = false) {
+      if (!force && schoolWorkspace && schoolWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => rerenderSchoolWorkspacePage());
+        return;
+      }
+      schoolWorkspace = null;
+      schoolWorkspaceDirty = false;
+      rerenderSchoolWorkspacePage();
     }
 
     function readSchoolEditorPayload() {
@@ -8427,7 +8523,8 @@
           }
         });
         if (!res || !res.success) throw new Error(res?.message || res?.detail || res?.error || "save_school_failed");
-        closeSchoolEditor();
+        schoolWorkspace = null;
+        schoolWorkspaceDirty = false;
         await initConsoleScope();
         updateConsoleScopeUI();
         showPage("schools");
@@ -11368,7 +11465,7 @@
     function renderWeekly() {
       if (isOwnerAllMode()) return renderOwnerAllWeeklyOperations();
       const summary = `<div class="weekly-insight-strip"><div class="weekly-insight"><div class="label">週報對象</div><div id="wkEnabledStudents" class="value">—</div><div id="wkEnabledNote" class="note">已啟用週報學生</div><div class="weekly-progress"><div id="wkRecipientBar"></div></div></div><div class="weekly-insight"><div class="label">可寄送</div><div id="wkEligibleStudents" class="value">—</div><div class="note">有效 Parent Email</div></div><div class="weekly-insight"><div class="label">待發專欄</div><div id="wkNewsletter" class="value">—</div><div id="wkNewsletterNote" class="note">第 1 順位專欄</div></div></div>`;
-      const body = `<div class="weekly-console-grid r16-weekly-grid"><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>自動寄送排程</h3><p>設定家長週報是否自動寄送、寄送星期與整點時間。</p></div><span id="wkConfigBadge" class="badge warn">讀取中</span></div><div class="weekly-toggle"><div><strong>啟用家長週報</strong><span>關閉時，系統不會自動正式寄送週報給家長。</span></div><input type="checkbox" id="wkEnabled" /></div><div class="weekly-form-grid two" style="margin-top:14px;"><div class="weekly-field"><label>寄送星期</label><select id="wkSendDay"><option value="MON">週一</option><option value="TUE">週二</option><option value="WED">週三</option><option value="THU">週四</option><option value="FRI">週五</option><option value="SAT">週六</option><option value="SUN">週日</option></select></div><div class="weekly-field"><label>寄送時間（整點）</label><select id="wkSendHour"></select></div><div class="weekly-field"><label>統計區間</label><select id="wkRollingDays"><option value="7">往前 7 天</option></select></div><div class="weekly-field"><label>時區</label><input value="Asia/Taipei" disabled /></div></div><div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyConfig(this)">儲存週報設定</button></div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>測試與正式寄送</h3><p>先寄測試信確認內容；正式寄送成功後，今日內不可再次正式寄送。</p></div></div><div class="weekly-status-inline"><div class="weekly-status-title"><span id="wkTodayStatus" class="badge warn">—</span></div><div id="wkTodayNote" class="weekly-status-sub">今日 report_key</div><div id="wkTodayBox" class="weekly-status-card">正在讀取...</div></div><div class="weekly-field" style="margin-top:14px;"><label>測試收件信箱</label><input id="wkTestEmail" placeholder="輸入你的測試信箱" /></div><div class="weekly-send-actions"><button class="weekly-btn purple" onclick="sendConsoleWeeklyTest(this)">測試寄給自己</button><button id="wkSendNowBtn" class="weekly-btn orange" onclick="sendConsoleWeeklyNow(this)">正式寄送</button></div><div id="wkActionResult" class="weekly-result-box hidden"></div></div><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>收件人健康檢查</h3><p>確認會收到週報的學生，以及缺少信箱或格式異常的學生。</p></div><span id="wkRecipientBadge" class="badge warn">—</span></div><div id="wkRecipientSummary" class="weekly-status-sub"></div><div id="wkRecipientList" class="weekly-mini-list" style="margin-top:10px;"></div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>本週週報專欄</h3><p>正式寄送只取第 1 順位且未封存的校區專欄。</p></div></div><div id="wkNewsletterBox" class="weekly-status-card">正在讀取...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>最近寄送紀錄</h3><p>可查看最近成功、失敗與略過紀錄。</p></div><button class="weekly-btn" onclick="loadWeeklyData(true)">重新整理</button></div><div id="wkJobList" class="weekly-mini-list">正在讀取...</div></div></div>`;
+      const body = `<div class="weekly-console-grid r16-weekly-grid"><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>自動寄送排程</h3><p>設定家長週報是否自動寄送、寄送星期與整點時間。</p></div><span id="wkConfigBadge" class="badge warn">讀取中</span></div><div class="weekly-toggle"><div><strong>啟用家長週報</strong><span>關閉時，系統不會自動正式寄送週報給家長。</span></div><input type="checkbox" id="wkEnabled" /></div><div class="weekly-form-grid two" style="margin-top:14px;"><div class="weekly-field"><label>寄送星期</label><select id="wkSendDay"><option value="MON">週一</option><option value="TUE">週二</option><option value="WED">週三</option><option value="THU">週四</option><option value="FRI">週五</option><option value="SAT">週六</option><option value="SUN">週日</option></select></div><div class="weekly-field"><label>寄送時間（整點）</label><select id="wkSendHour"></select></div><div class="weekly-field"><label>統計區間</label><select id="wkRollingDays"><option value="7">往前 7 天</option></select></div><div class="weekly-field"><label>時區</label><input value="Asia/Taipei" disabled /></div></div><div class="weekly-button-row"><button class="weekly-btn primary" onclick="saveConsoleWeeklyConfig(this)">儲存週報設定</button></div></div><div class="weekly-panel r22-weekly-send-card"><div class="weekly-panel-head"><div><h3>測試與正式寄送</h3><p>先寄測試信確認內容，再執行正式寄送。</p></div><span id="wkTodayStatus" class="badge warn">—</span></div><div class="r22-weekly-send-status"><div><div id="wkTodayNote" class="weekly-status-sub">今日 report_key</div><div id="wkTodayBox" class="weekly-status-sub">正在讀取...</div></div></div><div class="r22-weekly-send-form"><div class="weekly-field"><label>測試收件信箱</label><input id="wkTestEmail" placeholder="輸入你的測試信箱" /></div><div class="r22-weekly-send-actions"><button class="weekly-btn purple" onclick="sendConsoleWeeklyTest(this)">測試寄給自己</button><button id="wkSendNowBtn" class="weekly-btn orange" onclick="sendConsoleWeeklyNow(this)">正式寄送</button></div></div><div id="wkActionResult" class="weekly-result-box hidden"></div></div><div class="weekly-panel wide"><div class="weekly-panel-head"><div><h3>收件人健康檢查</h3><p>確認會收到週報的學生，以及缺少信箱或格式異常的學生。</p></div><span id="wkRecipientBadge" class="badge warn">—</span></div><div id="wkRecipientSummary" class="weekly-status-sub"></div><div id="wkRecipientList" class="weekly-mini-list" style="margin-top:10px;"></div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>本週週報專欄</h3><p>正式寄送只取第 1 順位且未封存的校區專欄。</p></div></div><div id="wkNewsletterBox" class="weekly-status-card">正在讀取...</div></div><div class="weekly-panel"><div class="weekly-panel-head"><div><h3>最近寄送紀錄</h3><p>可查看最近成功、失敗與略過紀錄。</p></div><button class="weekly-btn" onclick="loadWeeklyData(true)">重新整理</button></div><div id="wkJobList" class="weekly-mini-list">正在讀取...</div></div></div>`;
       return `<div class="console-page-standard">
         ${renderConsolePageIntro({ group: "家長", title: "週報", description: "設定家長週報寄送規則、測試信與正式寄送狀態。", actions: `<button class="btn-compact" onclick="loadWeeklyData(true)">重新整理</button>` })}
         ${renderConsoleSummaryToggle({ id: "weeklySummaryToggle", title: "週報摘要", note: "點擊展開查看收件人、可寄送與待發專欄", body: summary })}
@@ -11617,11 +11714,9 @@
 
       const today = data.todayJob || {};
       document.getElementById("wkTodayBox").innerHTML = data.todayLocked ? `
-        <div class="weekly-status-title"><span class="badge ok">今日已正式寄送</span></div>
-        <div class="weekly-status-sub">為避免家長重複收到信件，今日不開放再次正式寄送。<br>寄送時間：${formatDateTime(today.updated_at || today.created_at)}<br>成功 ${today.sent_count || 0}｜失敗 ${today.failed_count || 0}｜略過 ${today.skipped_count || 0}</div>
+        今日不開放再次正式寄送。寄送時間：${formatDateTime(today.updated_at || today.created_at)}<br>成功 ${today.sent_count || 0}｜失敗 ${today.failed_count || 0}｜略過 ${today.skipped_count || 0}
       ` : `
-        <div class="weekly-status-title"><span class="badge warn">今日尚未正式寄送</span></div>
-        <div class="weekly-status-sub">可以先測試寄給自己，確認內容後再正式寄送。<br>Report Key：${escapeHtml(data.todayReportKey || "—")}</div>`;
+        可以先測試寄給自己，確認內容後再正式寄送。<br>Report Key：${escapeHtml(data.todayReportKey || "—")}`;
       const sendBtn = document.getElementById("wkSendNowBtn");
       if (sendBtn) { sendBtn.disabled = !!data.todayLocked; sendBtn.textContent = data.todayLocked ? "今日已寄送" : "正式寄送"; }
 
@@ -11777,6 +11872,7 @@
     }
 
     function renderCurriculumPacksConsole() {
+      if (isOwner() && curriculumPackWorkspace) return renderConsoleEditorFrame(renderCurriculumPackWorkspace());
       if (!isOwner()) {
         return `<div class="console-page-standard console-ui-page r21-template-page r21-empty-owner-page">
           ${renderConsolePageIntro({ group:"學習", title:"預設教材包", description:"此頁僅供 Owner 管理全校區教材包模板。" })}
@@ -11997,7 +12093,7 @@
           <div class="pack-editor-unit-head">
             <div class="form-field unit-title-field">
               <label>單元名稱</label>
-              <input id="packUnitName_${index}" value="${escapeHtml(unit.unitName || "")}" oninput="updateCurriculumPackEditorStats()" />
+              <input id="packUnitName_${index}" value="${escapeHtml(unit.unitName || "")}" oninput="markCurriculumPackWorkspaceDirty()" />
             </div>
             <div class="form-field">
               <label>Unit Key</label>
@@ -12010,7 +12106,7 @@
             </div>
           </div>
           <label style="font-weight:900;color:var(--muted);font-size:13px;">單字列表</label>
-          <textarea id="packUnitWords_${index}" class="pack-editor-word-textarea" oninput="updateCurriculumPackEditorStats()" placeholder="apple, 蘋果&#10;banana, 香蕉">${escapeHtml(unitWordsToText(unit.words || []))}</textarea>
+          <textarea id="packUnitWords_${index}" class="pack-editor-word-textarea" oninput="markCurriculumPackWorkspaceDirty()" placeholder="apple, 蘋果&#10;banana, 香蕉">${escapeHtml(unitWordsToText(unit.words || []))}</textarea>
           <div class="pack-editor-word-help">每行一個單字。建議格式：英文, 中文, phonics hint。第三欄可空白。</div>
         </div>
       `).join("");
@@ -12039,6 +12135,7 @@
         words: []
       });
       renderCurriculumPackUnitEditor();
+      markCurriculumPackWorkspaceDirty();
     }
 
     function removeCurriculumPackUnit(index) {
@@ -12046,6 +12143,7 @@
       currentCurriculumPackEditorUnits.splice(index, 1);
       currentCurriculumPackEditorUnits = currentCurriculumPackEditorUnits.map((u, i) => ({ ...u, displayOrder: i + 1 }));
       renderCurriculumPackUnitEditor();
+      markCurriculumPackWorkspaceDirty();
     }
 
     function moveCurriculumPackUnit(index, delta) {
@@ -12056,6 +12154,7 @@
       [arr[index], arr[target]] = [arr[target], arr[index]];
       currentCurriculumPackEditorUnits = arr.map((u, i) => ({ ...u, displayOrder: i + 1 }));
       renderCurriculumPackUnitEditor();
+      markCurriculumPackWorkspaceDirty();
     }
 
     function collectCurriculumPackEditorPayload() {
@@ -12108,11 +12207,90 @@
       }
     }
 
+
+    function rerenderCurriculumPackWorkspacePage() {
+      if (currentConsolePage !== "curriculumPacks") return;
+      const content = document.getElementById("pageContent");
+      if (!content) return;
+      content.innerHTML = renderCurriculumPacksConsole();
+    }
+
+    function markCurriculumPackWorkspaceDirty() {
+      if (!curriculumPackWorkspace) return;
+      curriculumPackWorkspaceDirty = true;
+      const note = document.getElementById("packEditorDirtyNote");
+      if (note) note.textContent = "有尚未儲存的變更";
+      updateCurriculumPackEditorStats();
+    }
+
+    function renderCurriculumPackWorkspace() {
+      const isNew = !curriculumPackWorkspace?.packId;
+      return `
+        <div class="r2-workspace r22-editor-layout" data-workspace="curriculum-pack">
+          <div class="r2-workspace-head">
+            <div>
+              <div class="r2-workspace-kicker">預設教材包</div>
+              <h2 class="r2-workspace-title">${isNew ? "新增預設教材包" : "編輯預設教材包"}</h2>
+              <p class="r2-workspace-subtitle">Owner 全校區教材模板。儲存後可供校區匯入，匯入時會複製成該校自己的單元與單字。</p>
+            </div>
+            <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">返回列表</button>
+          </div>
+          <div class="r2-workspace-body">
+            <div class="r2-workspace-main">
+              <div class="card">
+                <div class="form-grid">
+                  <input id="packEditorId" type="hidden" />
+                  <div class="form-field"><label>教材包名稱</label><input id="packEditorName" placeholder="例如 Tappie 國小基礎 400" oninput="markCurriculumPackWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>教材包 Key</label><input id="packEditorKey" placeholder="例如 tappie-basic-400" oninput="markCurriculumPackWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>等級</label><input id="packEditorLevel" placeholder="Starter / Basic / GEPT Kids" oninput="markCurriculumPackWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>適用年級</label><input id="packEditorTargetGrade" placeholder="低年級 / 中年級 / 高年級" oninput="markCurriculumPackWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>版本</label><input id="packEditorVersion" placeholder="v1" oninput="markCurriculumPackWorkspaceDirty()" /></div>
+                  <div class="form-field"><label>排序</label><input id="packEditorDisplayOrder" type="number" value="0" oninput="markCurriculumPackWorkspaceDirty()" /></div>
+                  <div class="form-field full"><label>描述</label><textarea id="packEditorDescription" class="pack-editor-small-textarea" placeholder="簡短說明教材包用途" oninput="markCurriculumPackWorkspaceDirty()"></textarea></div>
+                  <div class="form-field full"><label>來源 / 設計備註</label><textarea id="packEditorSourceNote" class="pack-editor-small-textarea" placeholder="例如：參考 108 課綱方向、常見小學教材與內部教學經驗整理" oninput="markCurriculumPackWorkspaceDirty()"></textarea></div>
+                  <div class="form-field full"><label style="display:flex;gap:9px;align-items:center;"><input id="packEditorIsActive" type="checkbox" checked onchange="markCurriculumPackWorkspaceDirty()" />啟用此教材包</label></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="pack-editor-section-head">
+                  <div><h3>單元與單字</h3><p>每個單元可貼上多行單字。每行格式：英文, 中文, phonics hint。</p></div>
+                  <div class="pack-editor-actions">
+                    <button class="btn-compact primary" type="button" onclick="addCurriculumPackUnit(); markCurriculumPackWorkspaceDirty();">新增單元</button>
+                    <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('export')">下載範本</button>
+                    <button class="btn-compact" type="button" onclick="openPackEditorCsvTool('import')">匯入檔案</button>
+                    <button class="btn-compact" type="button" onclick="fillCurriculumPackEditorSample()">填入範例</button>
+                  </div>
+                </div>
+                <div id="packEditorStats" class="pack-editor-stats">—</div>
+                <div id="packEditorUnitList" class="pack-editor-unit-list"></div>
+              </div>
+            </div>
+            <aside class="r2-workspace-side">
+              <div class="r2-side-card"><strong>匯入規則</strong><p class="small-note">教材包是全校區模板。校區匯入後會成為該校自己的單元、單字與排程，可獨立修改。</p></div>
+              <div class="r2-side-card"><strong>編輯提醒</strong><p class="small-note">停用模板不會刪除已匯入到校區的內容，只會讓之後不能再選擇匯入。</p></div>
+            </aside>
+          </div>
+          <div class="r2-sticky-actions">
+            <div id="packEditorDirtyNote" class="r2-dirty-note">${curriculumPackWorkspaceDirty ? "有尚未儲存的變更" : ""}</div>
+            <div class="right">
+              <button class="btn-compact" onclick="hideCurriculumPackEditorModal()">取消</button>
+              <button class="btn-compact" onclick="previewCurriculumPackEditor()">更新預覽</button>
+              <button class="btn-compact primary" onclick="saveCurriculumPackFromEditor()">儲存教材包</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
     async function openCurriculumPackEditor(packId = "") {
-      showModal("curriculumPackEditorModal");
-      const title = document.getElementById("curriculumPackEditorTitle");
-      if (title) title.textContent = packId ? "編輯預設教材包" : "新增預設教材包";
+      if (!isOwner()) { alert("只有 Owner 可以管理預設教材包。"); return; }
+      if (curriculumPackWorkspace && curriculumPackWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => openCurriculumPackEditor(packId));
+        return;
+      }
+      curriculumPackWorkspace = { packId: packId || "" };
+      curriculumPackWorkspaceDirty = false;
       currentCurriculumPackEditorRaw = null;
+      rerenderCurriculumPackWorkspacePage();
       if (!packId) {
         fillCurriculumPackEditorFields(normalizePackForEditor(curriculumPackStarterJson().pack));
         return;
@@ -12136,6 +12314,7 @@
       const sample = normalizePackForEditor(curriculumPackStarterJson().pack);
       sample.id = currentId || "";
       fillCurriculumPackEditorFields(sample);
+      markCurriculumPackWorkspaceDirty();
     }
 
     async function saveCurriculumPackFromEditor() {
@@ -12144,8 +12323,10 @@
         const payload = collectCurriculumPackEditorPayload();
         const data = await TappieAPI.consoleSaveCurriculumPack({ token: session?.token || "", ...payload });
         if (!data || data.success === false) throw new Error(data?.message || data?.detail || data?.error || "儲存失敗");
-        hideCurriculumPackEditorModal();
+        curriculumPackWorkspace = null;
+        curriculumPackWorkspaceDirty = false;
         curriculumPackCache = null;
+        rerenderCurriculumPackWorkspacePage();
         await loadCurriculumPacksConsole(true);
         toast("教材包已儲存");
       } catch (err) {
@@ -12185,9 +12366,33 @@
       return curriculumPackCache;
     }
 
+
+    function prepareCurriculumPackImportMobileScroll() {
+      syncSchoolEditorMobileViewport();
+      const modal = document.getElementById("curriculumPackImportModal");
+      const scroller = modal?.querySelector(".form-grid");
+      if (!modal || !scroller || modal.dataset.scrollPrepared === "true") return;
+      modal.dataset.scrollPrepared = "true";
+      let startY = 0;
+      scroller.addEventListener("touchstart", (e) => {
+        startY = e.touches && e.touches.length ? e.touches[0].clientY : 0;
+      }, { passive: true });
+      scroller.addEventListener("touchmove", (e) => {
+        e.stopPropagation();
+        const currentY = e.touches && e.touches.length ? e.touches[0].clientY : startY;
+        const deltaY = currentY - startY;
+        const atTop = scroller.scrollTop <= 0;
+        const atBottom = Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight;
+        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) e.preventDefault();
+      }, { passive: false });
+      window.addEventListener("resize", syncSchoolEditorMobileViewport, { passive: true });
+      window.addEventListener("orientationchange", () => setTimeout(syncSchoolEditorMobileViewport, 120), { passive: true });
+    }
+
     async function openCurriculumPackImportModal() {
       if (!isSingleSchoolMode()) return alert("請先選擇單一校區再匯入預設組合。");
       showModal("curriculumPackImportModal");
+      prepareCurriculumPackImportMobileScroll();
       if (!curriculumCache) await loadCurriculumData(true);
       const classInput = document.getElementById("packImportClassCode");
       const classSelect = document.getElementById("packImportExistingClass");
@@ -13999,8 +14204,17 @@ function openCurriculumUnitModal(unitId = "") {
     function closeCurriculumUnitModal(event) { if (event.target.id === "curriculumUnitModal") hideCurriculumUnitModal(); }
     function hideCurriculumScheduleModal() { hideModal("curriculumScheduleModal"); }
     function closeCurriculumScheduleModal(event) { if (event.target.id === "curriculumScheduleModal") hideCurriculumScheduleModal(); }
-    function hideCurriculumPackEditorModal() { hideModal("curriculumPackEditorModal"); }
-    function closeCurriculumPackEditorModal(event) { if (event.target.id === "curriculumPackEditorModal") hideCurriculumPackEditorModal(); }
+    function hideCurriculumPackEditorModal(force = false) {
+      if (!force && curriculumPackWorkspace && curriculumPackWorkspaceDirty) {
+        requestConsoleWorkspaceLeave(() => rerenderCurriculumPackWorkspacePage());
+        return;
+      }
+      curriculumPackWorkspace = null;
+      curriculumPackWorkspaceDirty = false;
+      rerenderCurriculumPackWorkspacePage();
+      if (!curriculumPackCache && currentConsolePage === "curriculumPacks") loadCurriculumPacksConsole(false);
+    }
+    function closeCurriculumPackEditorModal(event) { if (!event || event.target.id === "curriculumPackEditorModal") hideCurriculumPackEditorModal(); }
     function hideCurriculumPackImportModal() { hideModal("curriculumPackImportModal"); }
     function closeCurriculumPackImportModal(event) { if (event.target.id === "curriculumPackImportModal") hideCurriculumPackImportModal(); }
     function hideCurriculumAutoScheduleModal() { hideModal("curriculumAutoScheduleModal"); }
