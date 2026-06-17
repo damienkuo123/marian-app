@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
-  <!-- R42_STUDENT_EDITOR_DS_FIX_APPLIED -->
+  <!-- R43_STUDENT_NFC_MOBILE_RETURN_FIX_APPLIED -->
+  <!-- R39_MOBILE_ACTION_FILTERS_APPLIED -->
   <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
@@ -7775,98 +7776,31 @@
 
   
 
-    /* =======================================================
-       R42｜Student Editor DS Fix / Mobile Return Stability
-       - Student NFC preview uses same side-card pattern as teacher login link
-       - UID school prefix is fixed visually; editable suffix only
-       - Advanced student fields are collapsed by default
-       - Mobile return from editor reapplies summary/filter DS helpers
-       ======================================================= */
-    .student-uid-prefix-field {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-      gap: 0;
+    /* R43_STUDENT_NFC_MOBILE_RETURN_FIX_APPLIED */
+    /* Student editor NFC preview uses the same preview-card rhythm as teacher Admin Card. */
+    .student-nfc-preview-card .r4-admin-url-preview {
+      cursor: pointer;
+      user-select: text;
+    }
+    .student-nfc-preview-card .btn-compact {
       width: 100%;
-      min-height: 46px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: var(--surface);
-      overflow: hidden;
+      justify-content: center;
+      margin-top: 0;
     }
-    .student-uid-prefix-field span {
-      height: 100%;
-      display: inline-flex;
-      align-items: center;
-      padding: 0 12px 0 14px;
-      color: var(--muted);
-      background: var(--surface-2);
-      border-right: 1px solid var(--border);
-      font-weight: 900;
-      white-space: nowrap;
+    .student-nfc-preview-card .small-note {
+      margin: 0 0 12px;
+      display: block;
     }
-    .student-uid-prefix-field input {
-      border: 0 !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      min-width: 0;
-      height: 100%;
-      padding: 12px 14px !important;
-      background: transparent !important;
-    }
-    .student-advanced-settings {
-      grid-column: 1 / -1;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: var(--surface);
-      overflow: hidden;
-    }
-    .student-advanced-settings > summary {
-      cursor: pointer;
-      list-style: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      color: var(--text);
-      font-weight: 950;
-    }
-    .student-advanced-settings > summary::-webkit-details-marker { display: none; }
-    .student-advanced-settings > summary::after {
-      content: '⌄';
-      color: var(--muted);
-      font-weight: 950;
-    }
-    .student-advanced-settings[open] > summary::after { content: '⌃'; }
-    .student-advanced-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-      padding: 0 16px 16px;
-    }
-    .student-link-preview-card .student-link-preview-url,
-    .student-nfc-preview-url {
-      margin-top: 12px;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: var(--surface-2);
-      color: var(--muted);
-      font-weight: 850;
-      line-height: 1.55;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      cursor: pointer;
-    }
-    .student-link-preview-card .btn-compact { margin-top: 10px; width: 100%; }
-    .student-summary-side-card { display: block; }
-    @media (max-width: 720px) {
-      .student-advanced-grid { grid-template-columns: 1fr; }
-      .student-link-preview-card { display: block !important; }
-      .student-summary-side-card { display: none !important; }
-      .student-uid-prefix-field { min-height: 54px; border-radius: 18px; }
-      .student-uid-prefix-field span { padding-inline: 14px; }
+    @media (max-width: 760px) {
+      .console-editor-page[data-page="students"] .student-nfc-preview-card {
+        display: block !important;
+      }
+      .console-editor-page[data-page="students"] .r2-side-card.student-summary-side-card {
+        display: none !important;
+      }
+      .console-editor-page[data-page="students"] .r2-side-card.r3-student-help {
+        display: none !important;
+      }
     }
 
   </style>
@@ -9066,8 +9000,7 @@
       }
 
       document.getElementById("pageContent").innerHTML = renderPage(currentConsolePage);
-      setupMobileInsightCollapse(currentConsolePage);
-      refreshConsoleMobileDsEnhancements();
+      refreshConsoleDsMobileEnhancers();
       page = currentConsolePage;
       if (page === "overview") {
         loadOverviewData(false);
@@ -9238,8 +9171,20 @@
       });
     }
 
-    function refreshConsoleMobileDsEnhancements() {
-      refreshConsoleMobileDsEnhancements();
+
+    function refreshConsoleDsMobileEnhancers() {
+      try { setupMobileInsightCollapse(currentConsolePage); } catch (_) {}
+      try { setupDsSummaryToolbar(); } catch (_) {}
+      try { normalizeUniversalFlatWorkspace(); } catch (_) {}
+      try { setupR39MobileFilterGroups(); } catch (_) {}
+      const again = () => {
+        try { setupDsSummaryToolbar(); } catch (_) {}
+        try { normalizeUniversalFlatWorkspace(); } catch (_) {}
+        try { setupR39MobileFilterGroups(); } catch (_) {}
+      };
+      try { requestAnimationFrame(again); } catch (_) { setTimeout(again, 0); }
+      setTimeout(again, 60);
+      setTimeout(again, 180);
     }
 
     function renderPage(page) {
@@ -10643,7 +10588,6 @@
       setupStudentTagFilter();
       setupStudentFormPickers();
       renderStudentsTable();
-      refreshConsoleMobileDsEnhancements();
     }
 
     function renderStudentClassBars(activeRows) {
@@ -11059,35 +11003,23 @@
       return (studentsCache?.students || []).find(s => String(s.id) === String(id)) || null;
     }
 
-    function syncStudentUidFromSuffix() {
-      const hidden = document.getElementById("editStudentUid");
-      const suffixInput = document.getElementById("editStudentUidSuffix");
-      if (!hidden || !suffixInput) return hidden?.value || "";
-      const schoolCode = currentConsoleSchoolCode();
-      const suffix = String(suffixInput.value || "").trim();
-      hidden.value = suffix ? (schoolCode ? `${schoolCode}-${suffix}` : suffix) : "";
-      return hidden.value;
-    }
-
     function studentNfcUrl(uidValue) {
       const origin = location.origin || "https://www.tappieapp.com";
       return `${origin}/tap.html?uid=${encodeURIComponent(uidValue || "")}`;
     }
 
     function updateStudentUrlPreview() {
-      const target = document.getElementById("editStudentUrlPreview");
-      if (!target) return;
-      const uid = syncStudentUidFromSuffix() || document.getElementById("editStudentUid")?.value || "";
-      const url = studentNfcUrl(uid);
-      if ("value" in target) target.value = url;
-      else target.textContent = url;
-      target.setAttribute("title", url);
+      const preview = document.getElementById("editStudentUrlPreview");
+      if (!preview) return;
+      const url = studentNfcUrl(document.getElementById("editStudentUid")?.value || "");
+      if ("value" in preview) preview.value = url;
+      else preview.textContent = url;
     }
 
     function copyStudentUrlFromModal() {
       updateStudentUrlPreview();
-      const el = document.getElementById("editStudentUrlPreview");
-      const url = ("value" in (el || {})) ? (el?.value || "") : (el?.textContent || "");
+      const preview = document.getElementById("editStudentUrlPreview");
+      const url = (preview && "value" in preview ? preview.value : preview?.textContent || "").trim();
       if (!url) return consoleNotice("請先填寫學生 UID / 卡片代碼。");
       navigator.clipboard?.writeText(url).then(() => consoleNotice("已複製學生 NFC 連結。"), () => consolePromptSync("複製此連結：", url));
     }
@@ -11107,18 +11039,16 @@
       if (!content) return;
       content.innerHTML = renderStudents();
       updateStudentsUI();
-      refreshConsoleMobileDsEnhancements();
       if (studentWorkspace) {
         setupStudentFormPickers();
         renderStudentTagEditor();
         renderBatchStudentTagEditor();
         updateStudentUrlPreview();
         const uidInput = document.getElementById("editStudentUid");
-        const uidSuffixInput = document.getElementById("editStudentUidSuffix");
         if (uidInput) uidInput.oninput = () => { updateStudentUrlPreview(); markStudentWorkspaceDirty(); };
-        if (uidSuffixInput) uidSuffixInput.oninput = () => { updateStudentUrlPreview(); markStudentWorkspaceDirty(); };
         toggleConsoleClassHint();
       }
+      refreshConsoleDsMobileEnhancers();
     }
 
     function markStudentWorkspaceDirty() {
@@ -11160,7 +11090,6 @@
       const s = isNew ? null : getStudentById(studentWorkspace.studentId);
       const schoolCode = currentConsoleSchoolCode();
       const uidValue = isNew ? (schoolCode ? `${schoolCode}-` : "") : (s?.uid || "");
-      const uidSuffixValue = schoolCode && String(uidValue || "").startsWith(`${schoolCode}-`) ? String(uidValue || "").slice(String(schoolCode).length + 1) : String(uidValue || "");
       const typeValue = normalizeStudentType(s?.student_type || "無班級");
       const classValue = s?.class_code || "";
       const emailValue = s?.parent_email || "";
@@ -11186,28 +11115,23 @@
               <input type="hidden" id="editStudentId" value="${escapeHtml(s?.id || "")}" />
               <div class="form-grid">
                 <div class="form-field"><label>學生姓名</label><input id="editStudentName" value="${escapeHtml(s?.name || "")}" placeholder="例如：王小明" oninput="markStudentWorkspaceDirty()" /></div>
-                <div class="form-field"><label>UID / 卡片代碼</label><input type="hidden" id="editStudentUid" value="${escapeHtml(uidValue)}" /><div class="student-uid-prefix-field"><span>${escapeHtml(schoolCode ? `${schoolCode}-` : "")}</span><input id="editStudentUidSuffix" value="${escapeHtml(uidSuffixValue)}" placeholder="1234567" oninput="updateStudentUrlPreview(); markStudentWorkspaceDirty();" /></div></div>
+                <div class="form-field"><label>UID / 卡片代碼</label><input id="editStudentUid" value="${escapeHtml(uidValue)}" placeholder="例如：TEST01-S001" oninput="updateStudentUrlPreview(); markStudentWorkspaceDirty();" /></div>
                 <div class="form-field full"><label>學生類別</label><select id="editStudentType" class="select" onchange="toggleConsoleClassHint(); markStudentWorkspaceDirty();"><option value="無班級" ${typeValue === "無班級" ? "selected" : ""}>無班級</option><option value="有班級" ${typeValue === "有班級" ? "selected" : ""}>有班級</option></select></div>
                 <div class="form-field full" id="editStudentClassField"><label>班級代碼</label><div class="student-form-line"><input id="editStudentClass" value="${escapeHtml(classValue)}" placeholder="有班級學生需填班級，例如 A1" oninput="markStudentWorkspaceDirty()" onkeydown="handleStudentClassInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentClassFromInput(); markStudentWorkspaceDirty();">新增</button><select id="editStudentExistingClass" onchange="setStudentClassFromSelect(this.value); markStudentWorkspaceDirty();"><option value="">選擇既有班級</option></select></div></div>
                 <div class="form-field full"><label>標籤</label><div class="student-form-line"><input id="editStudentTagInput" placeholder="輸入標籤，例如：二年級安親課輔班" onkeydown="handleStudentTagInputKey(event)" /><button type="button" class="btn-compact" onclick="addStudentTagFromInput(); markStudentWorkspaceDirty();">新增</button><select id="editStudentExistingTag" onchange="addStudentTagFromSelect(this.value); this.value=''; markStudentWorkspaceDirty();"><option value="">選擇既有標籤</option></select></div><div id="editStudentTagChips" class="student-tag-chip-row"></div></div>
-                <details class="student-advanced-settings">
-                  <summary>進階設定</summary>
-                  <div class="student-advanced-grid">
-                    <div class="form-field"><label>Parent Email</label><input id="editStudentEmail" value="${escapeHtml(emailValue)}" placeholder="parent@example.com" oninput="markStudentWorkspaceDirty()" /></div>
-                    <div class="form-field"><label>週報狀態</label><select id="editStudentWeekly" onchange="markStudentWorkspaceDirty()"><option value="true" ${weeklyValue === "true" ? "selected" : ""}>啟用週報</option><option value="false" ${weeklyValue === "false" ? "selected" : ""}>不啟用週報</option></select></div>
-                    <div class="form-field"><label>帳號狀態</label><select id="editStudentActive" onchange="markStudentWorkspaceDirty()"><option value="true" ${activeValue === "true" ? "selected" : ""}>啟用</option><option value="false" ${activeValue === "false" ? "selected" : ""}>停用</option></select></div>
-                    <div class="form-field"><label>目前點數</label><input id="editStudentPoints" value="${escapeHtml(pointsValue)}" type="number" inputmode="numeric" placeholder="0" oninput="markStudentWorkspaceDirty()" /></div>
-                    <div class="form-field full"><label>Title / 榮譽標籤</label><input id="editStudentTitle" value="${escapeHtml(titleValue)}" placeholder="可留空，Dashboard 榮譽榜通常即時計算" oninput="markStudentWorkspaceDirty()" /></div>
-                  </div>
-                </details>
+                <div class="form-field"><label>Parent Email</label><input id="editStudentEmail" value="${escapeHtml(emailValue)}" placeholder="parent@example.com" oninput="markStudentWorkspaceDirty()" /></div>
+                <div class="form-field"><label>週報狀態</label><select id="editStudentWeekly" onchange="markStudentWorkspaceDirty()"><option value="true" ${weeklyValue === "true" ? "selected" : ""}>啟用週報</option><option value="false" ${weeklyValue === "false" ? "selected" : ""}>不啟用週報</option></select></div>
+                <div class="form-field"><label>帳號狀態</label><select id="editStudentActive" onchange="markStudentWorkspaceDirty()"><option value="true" ${activeValue === "true" ? "selected" : ""}>啟用</option><option value="false" ${activeValue === "false" ? "selected" : ""}>停用</option></select></div>
+                <div class="form-field"><label>目前點數</label><input id="editStudentPoints" value="${escapeHtml(pointsValue)}" type="number" inputmode="numeric" placeholder="0" oninput="markStudentWorkspaceDirty()" /></div>
+                <div class="form-field full"><label>Title / 榮譽標籤</label><input id="editStudentTitle" value="${escapeHtml(titleValue)}" placeholder="可留空，Dashboard 榮譽榜通常即時計算" oninput="markStudentWorkspaceDirty()" /></div>
                 <div class="form-field full"><div id="studentFormNote" class="form-note">新增學生會自動配發預設角色，並寫入 student_avatars。席位上限以啟用學生計算。</div></div>
               </div>
             </div>
             <aside class="r2-workspace-side ds-editor-side r25-editor-side">
-              <div class="r2-side-card student-link-preview-card">
+              <div class="r2-side-card student-nfc-preview-card">
                 <strong>學生 NFC 連結預覽</strong>
-                <p class="small-note">此連結由校區代碼與學生卡片代碼組成，可寫入 NFC 卡片或提供給學生感應入口。</p>
-                <div id="editStudentUrlPreview" class="student-link-preview-url" onclick="copyStudentUrlFromModal()"></div>
+                <p class="small-note">此連結由學生 UID / 卡片代碼組成，請只提供給對應學生或家長使用。</p>
+                <div id="editStudentUrlPreview" class="r4-admin-url-preview" onclick="copyStudentUrlFromModal()">${escapeHtml(studentNfcUrl(uidValue))}</div>
                 <button class="btn-compact" onclick="copyStudentUrlFromModal()">複製連結</button>
               </div>
               <div class="r2-side-card student-summary-side-card">
@@ -11324,7 +11248,7 @@
 
     async function saveConsoleStudent() {
       const id = document.getElementById("editStudentId").value.trim();
-      let uid = (syncStudentUidFromSuffix() || document.getElementById("editStudentUid").value || "").trim();
+      let uid = document.getElementById("editStudentUid").value.trim();
       const schoolCode = currentConsoleSchoolCode();
       if (schoolCode && uid && !uid.includes("-")) uid = `${schoolCode}-${uid}`;
       const name = document.getElementById("editStudentName").value.trim();
@@ -14493,7 +14417,7 @@
       if (!host || currentConsolePage !== "curriculum") return;
       host.innerHTML = renderCurriculum();
       if (!curriculumWorkspace && curriculumCache) renderCurriculumData();
-      setTimeout(setupR39MobileFilterGroups, 0);
+      refreshConsoleDsMobileEnhancers();
     }
     function renderCurriculumList() {
       const box = document.getElementById("curriculumContent");
