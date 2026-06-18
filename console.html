@@ -6,6 +6,7 @@
   <title>Tappie Console</title>
   <!-- R44_STUDENT_NFC_DS_FINAL_APPLIED -->
   <!-- DATA_HEALTH_V3B_CURRICULUM_WORD_QUALITY_APPLIED -->
+  <!-- FEATURE_GATE_MATRIX_V1_CONSOLE_ONLY_APPLIED -->
   <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
@@ -8334,13 +8335,13 @@
     };
 
     const FEATURE_ACCESS_ITEMS = [
-      { key: "attendance_enabled", title: "上放學功能", note: "Admin 打卡、Station 到校打卡、上放學通知。" },
-      { key: "manual_points_enabled", title: "手動加扣點", note: "老師端加扣點與 Super Admin 選擇學生加扣分。" },
-      { key: "practice_enabled", title: "今日挑戰 / 一般練習", note: "Dashboard 進入 Arena 的口說練習入口。" },
-      { key: "battle_enabled", title: "對戰模式", note: "Dashboard 進入 Lobby，Battle 的 AI / 1v1 / 活動對戰。" },
+      { key: "attendance_enabled", title: "上放學功能", note: "Admin 上放學 / 打卡、打卡查詢與 Station 打卡入口。" },
+      { key: "manual_points_enabled", title: "手動加扣點", note: "老師端手動加扣點功能。Console 的加扣分查詢仍可作為歷史紀錄查詢使用。" },
+      { key: "practice_enabled", title: "今日挑戰 / 一般練習", note: "學生 Dashboard 練習入口，並控制 Console 的學習查詢、今日挑戰與單元排程。" },
+      { key: "battle_enabled", title: "對戰模式", note: "學生 Lobby 入口，並控制 Console 的競技模式設定。" },
       { key: "weekly_report_enabled", title: "週報功能", note: "家長週報、週報設定與寄送流程。" },
       { key: "newsletter_enabled", title: "專欄功能", note: "Console 專欄管理與週報專欄內容。" },
-      { key: "station_enabled", title: "Station 現場站", note: "現場平板入口。若上放學關閉，Station 仍可只保留學生入口。" }
+      { key: "station_enabled", title: "Station 現場站", note: "現場平板入口。Console 目前沒有獨立 Station 設定頁。" }
     ];
 
     function normalizeFeatureMap(value) {
@@ -8448,19 +8449,34 @@
       const features = getCurrentEffectiveFeatures();
       const tabs = [];
       if (features.practice_enabled !== false) tabs.push("learning");
-      if (features.manual_points_enabled !== false) tabs.push("points");
+      // manual_points_enabled controls teacher-side manual point editing.
+      // Console keeps 加扣分查詢 visible as a read-only/history query surface.
+      tabs.push("points");
       if (features.attendance_enabled !== false) tabs.push("attendance");
       return tabs;
     }
 
+    const CONSOLE_FEATURE_PAGE_MATRIX = {
+      practice_enabled: new Set(["learning", "settings", "settingsDaily", "curriculum"]),
+      attendance_enabled: new Set(["learningAttendance"]),
+      battle_enabled: new Set(["settingsBattle"]),
+      weekly_report_enabled: new Set(["weekly"]),
+      newsletter_enabled: new Set(["newsletters"])
+      // manual_points_enabled: teacher-side manual point editing only.
+      // station_enabled: student/station frontend gate only; no Console settings page yet.
+    };
+
+    function getConsolePageRequiredFeature(page) {
+      for (const [featureKey, pages] of Object.entries(CONSOLE_FEATURE_PAGE_MATRIX)) {
+        if (pages.has(page)) return featureKey;
+      }
+      return "";
+    }
+
     function isConsolePageAllowedByFeatures(page) {
       if (!isSingleSchoolMode()) return true;
-      if (page === "weekly") return isFeatureEnabled("weekly_report_enabled");
-      if (page === "newsletters") return isFeatureEnabled("newsletter_enabled");
-      if (isLearningConsolePage(page)) {
-        const tab = LEARNING_PAGE_TAB_MAP[page] || "learning";
-        return getEnabledLearningTabs().includes(tab);
-      }
+      const requiredFeature = getConsolePageRequiredFeature(page);
+      if (requiredFeature) return isFeatureEnabled(requiredFeature);
       return true;
     }
 
@@ -8509,7 +8525,7 @@
       return { kicker:"系統", title:"今日挑戰", description:"管理今日挑戰、單元任務結算與排行榜獎勵規則。" };
     }
 
-    function renderFeatureDisabledCard(title = "此功能未啟用", message = "此校區目前未啟用此功能，請至「設定」調整校區功能啟用。") {
+    function renderFeatureDisabledCard(title = "此功能未啟用", message = "此校區目前未啟用此功能，請至「功能狀態」確認授權或啟用狀態。") {
       return `
         <div class="card">
           <div class="panel-title">
@@ -8517,7 +8533,7 @@
             <span class="badge warn">未啟用</span>
           </div>
           <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn-compact primary" onclick="showPage('settings')">前往設定</button>
+            <button class="btn-compact primary" onclick="showPage('settingsFeatures')">前往功能狀態</button>
             <button class="btn-compact" onclick="showPage('overview')">回總覽</button>
           </div>
         </div>
