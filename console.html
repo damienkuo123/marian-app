@@ -7,6 +7,7 @@
   <!-- R44_STUDENT_NFC_DS_FINAL_APPLIED -->
   <!-- DATA_HEALTH_V3B_CURRICULUM_WORD_QUALITY_APPLIED -->
   <!-- FEATURE_GATE_MATRIX_V1_CONSOLE_ONLY_APPLIED -->
+  <!-- FEATURE_GATE_MATRIX_V2_UI_POLISH_APPLIED -->
   <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
@@ -806,6 +807,100 @@
       .r33-health-workspace .r9-system-toolbar { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 14px; margin-bottom: 12px; }
       .r33-health-workspace .r9-system-toolbar > div:last-child { display: grid !important; grid-template-columns: 1fr 1fr; width: 100%; }
       .r33-health-workspace .r9-system-toolbar select { min-width: 0; width: 100%; }
+    }
+
+
+
+
+    /* =======================================================
+       Feature Gate Matrix v2 / Mobile Topbar / Owner Schools Polish
+       - Console-only gating rules
+       - Prevent owner scope selector and session chip from squeezing each other on mobile
+       - Normalize Owner school-management action bars
+       ======================================================= */
+    .r21-owner-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .r21-school-list-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+    }
+    .r21-school-list-toolbar .muted-text {
+      margin: 0 !important;
+    }
+    @media (max-width: 720px) {
+      .r21-owner-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        gap: 10px;
+      }
+      .r21-owner-actions .btn-compact {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+      }
+      .r21-owner-actions .btn-compact.primary {
+        grid-column: 1 / -1;
+      }
+      .r21-school-list-toolbar {
+        align-items: stretch;
+      }
+    }
+    @media (max-width: 560px) {
+      .topbar {
+        gap: 12px !important;
+      }
+      .top-actions {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) 42px 42px;
+        width: 100%;
+        gap: 8px;
+        align-items: center;
+      }
+      #scopeSwitcherWrap {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        padding: 6px 8px !important;
+      }
+      #scopeSchoolSelect {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #sessionChip.scope-status-chip {
+        display: none !important;
+      }
+      #sessionChip:not(.scope-status-chip) {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .top-actions .icon-btn {
+        width: 42px;
+        height: 42px;
+      }
+    }
+    @media (max-width: 390px) {
+      .top-actions {
+        grid-template-columns: minmax(0, 1fr) 40px 40px;
+        gap: 6px;
+      }
+      .top-actions .icon-btn {
+        width: 40px;
+        height: 40px;
+      }
     }
 
 
@@ -8336,9 +8431,9 @@
 
     const FEATURE_ACCESS_ITEMS = [
       { key: "attendance_enabled", title: "上放學功能", note: "Admin 上放學 / 打卡、打卡查詢與 Station 打卡入口。" },
-      { key: "manual_points_enabled", title: "手動加扣點", note: "老師端手動加扣點功能。Console 的加扣分查詢仍可作為歷史紀錄查詢使用。" },
+      { key: "manual_points_enabled", title: "手動加扣點", note: "老師端手動加扣點功能。若手動加扣點、練習與對戰皆停用，Console 加扣分查詢也會隱藏。" },
       { key: "practice_enabled", title: "今日挑戰 / 一般練習", note: "學生 Dashboard 練習入口，並控制 Console 的學習查詢、今日挑戰與單元排程。" },
-      { key: "battle_enabled", title: "對戰模式", note: "學生 Lobby 入口，並控制 Console 的競技模式設定。" },
+      { key: "battle_enabled", title: "對戰模式", note: "學生 Lobby 入口，並控制 Console 的競技模式與角色收集頁。" },
       { key: "weekly_report_enabled", title: "週報功能", note: "家長週報、週報設定與寄送流程。" },
       { key: "newsletter_enabled", title: "專欄功能", note: "Console 專欄管理與週報專欄內容。" },
       { key: "station_enabled", title: "Station 現場站", note: "現場平板入口。Console 目前沒有獨立 Station 設定頁。" }
@@ -8445,13 +8540,22 @@
       return features[key] !== false;
     }
 
+    function isLearningPointsConsoleAllowed(features = getCurrentEffectiveFeatures()) {
+      // 加扣分查詢是「點數異動紀錄查詢」頁。
+      // 只要手動加扣點、今日挑戰/一般練習、對戰模式其中一個啟用，就可能產生點數紀錄，因此保留查詢頁。
+      // 三者都停用時，代表沒有新的點數異動來源，Console 也隱藏此頁。
+      return (
+        features.manual_points_enabled !== false ||
+        features.practice_enabled !== false ||
+        features.battle_enabled !== false
+      );
+    }
+
     function getEnabledLearningTabs() {
       const features = getCurrentEffectiveFeatures();
       const tabs = [];
       if (features.practice_enabled !== false) tabs.push("learning");
-      // manual_points_enabled controls teacher-side manual point editing.
-      // Console keeps 加扣分查詢 visible as a read-only/history query surface.
-      tabs.push("points");
+      if (isLearningPointsConsoleAllowed(features)) tabs.push("points");
       if (features.attendance_enabled !== false) tabs.push("attendance");
       return tabs;
     }
@@ -8459,10 +8563,10 @@
     const CONSOLE_FEATURE_PAGE_MATRIX = {
       practice_enabled: new Set(["learning", "settings", "settingsDaily", "curriculum"]),
       attendance_enabled: new Set(["learningAttendance"]),
-      battle_enabled: new Set(["settingsBattle"]),
+      battle_enabled: new Set(["settingsBattle", "avatars"]),
       weekly_report_enabled: new Set(["weekly"]),
       newsletter_enabled: new Set(["newsletters"])
-      // manual_points_enabled: teacher-side manual point editing only.
+      // manual_points_enabled is handled by isLearningPointsConsoleAllowed().
       // station_enabled: student/station frontend gate only; no Console settings page yet.
     };
 
@@ -8475,6 +8579,7 @@
 
     function isConsolePageAllowedByFeatures(page) {
       if (!isSingleSchoolMode()) return true;
+      if (page === "learningPoints") return isLearningPointsConsoleAllowed();
       const requiredFeature = getConsolePageRequiredFeature(page);
       if (requiredFeature) return isFeatureEnabled(requiredFeature);
       return true;
@@ -8931,9 +9036,14 @@
       const wrap = document.getElementById("scopeSwitcherWrap");
       const select = document.getElementById("scopeSchoolSelect");
 
-      if (chip) chip.textContent = isOwner()
-        ? (isOwnerAllMode() ? "全部校區" : getActiveSchoolName())
-        : (getActiveSchoolName() || "Super Admin");
+      if (chip) {
+        const chipText = isOwner()
+          ? (isOwnerAllMode() ? "全部校區" : getActiveSchoolName())
+          : (getActiveSchoolName() || "Super Admin");
+        chip.textContent = chipText;
+        chip.title = chipText;
+        chip.classList.toggle("scope-status-chip", isOwner());
+      }
       if (sideRole) sideRole.textContent = isOwner() ? "Owner 總控台" : "Super Admin 後台";
       if (sideScope) sideScope.textContent = getActiveSchoolName();
 
@@ -9515,9 +9625,8 @@
         </div>`;
 
       const tableBody = `
-        <div class="r21-main-toolbar">
-          <p class="muted-text">新增校區、調整校區限額、停用校區，或切換到單校管理。</p>
-          <button class="btn-compact primary" onclick="openSchoolEditor()">新增校區</button>
+        <div class="r21-main-toolbar r21-school-list-toolbar">
+          <p class="muted-text">新增校區、調整校區限額、停用校區，或切換到單校管理。主要操作請使用上方工具列。</p>
         </div>
         <div class="table-wrap">
           <table>
