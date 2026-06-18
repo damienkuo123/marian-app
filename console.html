@@ -307,6 +307,20 @@
     .school-score-row { display:flex; align-items:center; padding:14px 0; border-bottom:1px solid var(--border); }
     .school-score-row:last-child { border-bottom:0; }
     .issue-message { max-width: 520px; white-space: normal; line-height: 1.55; }
+    .health-issues-wrap { overflow: visible; }
+    .health-desktop-table { width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: 18px; }
+    .health-desktop-table table { min-width: 760px; }
+    .health-code-inline { display: block; margin-top: 4px; color: var(--muted); font-family: var(--font-number); font-size: 11px; font-weight: 700; word-break: break-all; }
+    .health-action-text { display: block; margin-top: 6px; color: var(--muted); font-size: 12.5px; font-weight: 650; line-height: 1.55; }
+    .health-mobile-list { display: none; flex-direction: column; gap: 12px; }
+    .health-issue-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 16px; box-shadow: 0 10px 24px rgba(16,24,40,.04); }
+    .health-issue-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .health-issue-title { color: var(--text); font-size: 16px; font-weight: 900; letter-spacing: -.02em; line-height: 1.35; }
+    .health-issue-meta { margin-top: 5px; color: var(--muted); font-size: 12px; font-weight: 700; line-height: 1.45; }
+    .health-issue-section { display: grid; grid-template-columns: 74px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+    .health-issue-section:first-of-type { border-top: 0; }
+    .health-issue-label { color: var(--muted); font-size: 12px; font-weight: 850; }
+    .health-issue-value { color: var(--text); font-size: 13.5px; font-weight: 700; line-height: 1.55; min-width: 0; word-break: break-word; }
     .empty-state { padding: 30px; text-align:center; color: var(--muted); font-weight:850; }
 
 
@@ -780,6 +794,16 @@
       .cards { grid-template-columns: 1fr; }
       .main { padding: 18px 16px 105px; }
       .topbar { align-items:flex-start; height:auto; flex-direction:column; }
+    }
+
+    @media (max-width: 720px) {
+      .health-issues-wrap { border: 0 !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; }
+      .health-desktop-table { display: none !important; }
+      .health-mobile-list { display: flex !important; }
+      .r33-health-workspace { padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+      .r33-health-workspace .r9-system-toolbar { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 14px; margin-bottom: 12px; }
+      .r33-health-workspace .r9-system-toolbar > div:last-child { display: grid !important; grid-template-columns: 1fr 1fr; width: 100%; }
+      .r33-health-workspace .r9-system-toolbar select { min-width: 0; width: 100%; }
     }
 
 
@@ -9869,7 +9893,7 @@
         </div>`;
       const table = `
         <div class="r9-system-toolbar">
-          <div class="muted-text">篩選資料健康項目。</div>
+          <div class="muted-text">篩選資料健康項目。近期打卡重複屬於營運提醒，只追蹤近 7 天。</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <select id="healthSeverityFilter" class="select" onchange="renderHealthTable()">
               <option value="all">全部等級</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
@@ -9877,11 +9901,12 @@
             <select id="healthCategoryFilter" class="select" onchange="renderHealthTable()"><option value="all">全部類別</option></select>
           </div>
         </div>
-        <div id="healthTableWrap" class="table-wrap">
-          <table><thead><tr><th>校區</th><th>等級</th><th>類別</th><th>問題代碼</th><th>對象</th><th>建議</th></tr></thead><tbody><tr><td colspan="6">正在讀取資料健康...</td></tr></tbody></table>
+        <div id="healthTableWrap" class="table-wrap health-issues-wrap">
+          <div class="health-desktop-table"><table><thead><tr><th>校區</th><th>等級</th><th>問題</th><th>對象</th><th>處理方式</th></tr></thead><tbody><tr><td colspan="5">正在讀取資料健康...</td></tr></tbody></table></div>
+          <div class="health-mobile-list"><div class="empty-state">正在讀取資料健康...</div></div>
         </div>`;
       return `<div class="console-page-standard ds-page-shell r25-page-shell r9-system-page console-ui-page r33-management-page">
-        ${renderConsolePageIntro({ group: "總覽", title: "資料健康", description: "查看資料健康檢查結果，優先處理高風險項目。", actions: `<button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>` })}
+        ${renderConsolePageIntro({ group: "總覽", title: "資料健康", description: "查看資料健康檢查結果，區分必須修復的資料錯誤與近期營運提醒。", actions: `<button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>` })}
         ${renderConsoleSummaryToggle({ id: "healthSummaryToggle", title: "資料健康摘要", note: "點擊展開查看各等級統計", body: metrics })}
         ${renderConsoleMainCard({ body: table, className: "r33-flat-workspace r33-list-workspace r33-health-workspace" })}
       </div>`;
@@ -9931,6 +9956,84 @@
       if (s === "critical" || s === "high") return "danger";
       if (s === "medium") return "warn";
       return "ok";
+    }
+
+
+    const HEALTH_ISSUE_TEXT = {
+      student_tags_not_array: { title: "學生標籤格式需整理", category: "學生資料", action: "到學生編輯頁重新儲存學生資料，讓 tags 統一轉成陣列格式。" },
+      student_tags_empty_value: { title: "學生標籤含空值", category: "學生資料", action: "到學生編輯頁重新儲存學生資料，系統會清理空白標籤。" },
+      student_tags_duplicate: { title: "學生標籤重複", category: "學生資料", action: "到學生編輯頁重新儲存學生資料，系統會去除重複標籤。" },
+      no_class_student_has_class_code: { title: "無班級學生仍有班級代碼", category: "學生班級", action: "到學生編輯頁確認學生類別；若是無班級，請清空班級代碼。" },
+      class_student_missing_class_code: { title: "有班級學生缺少班級代碼", category: "學生班級", action: "到學生編輯頁補上班級代碼，否則會影響排程、挑戰與排行榜。" },
+      student_push_devices_over_3: { title: "推播訂閱裝置過多", category: "推播訂閱", action: "通常是家長或學生換裝置後留下舊訂閱。建議清理舊 push subscription。" },
+      attendance_missing_student_id: { title: "打卡紀錄缺少學生 ID", category: "打卡紀錄", action: "需要資料修補：依 uid 找回學生並補 student_id；若無法判斷，再保留為人工檢查。" },
+      attendance_student_not_found: { title: "打卡紀錄找不到學生", category: "打卡紀錄", action: "需要確認學生是否被停用、刪除或搬移錯誤；修正 student_id 或保留為歷史孤兒紀錄。" },
+      attendance_duplicate_same_day_type: { title: "同日同類型打卡重複", category: "近期打卡提醒", action: "這是近 7 天營運提醒，不建議直接刪除打卡紀錄；若非補登，請確認是否重複感應。超過 7 天會自動不再顯示。" }
+    };
+
+    function healthSeverityLabel(severity) {
+      const s = String(severity || "low").toLowerCase();
+      if (s === "critical") return "嚴重";
+      if (s === "high") return "高風險";
+      if (s === "medium") return "中風險";
+      return "提醒";
+    }
+
+    function healthIssueMeta(issue) {
+      const code = String(issue?.issue_code || "");
+      return HEALTH_ISSUE_TEXT[code] || {};
+    }
+
+    function healthIssueTitle(issue) {
+      const meta = healthIssueMeta(issue);
+      return issue?.issue_title || meta.title || issue?.issue_code || "資料健康問題";
+    }
+
+    function healthCategoryLabel(issueOrCategory) {
+      if (typeof issueOrCategory === "object" && issueOrCategory) {
+        const meta = healthIssueMeta(issueOrCategory);
+        return issueOrCategory.category_label || meta.category || issueOrCategory.category || "資料健康";
+      }
+      const raw = String(issueOrCategory || "");
+      const found = Object.values(HEALTH_ISSUE_TEXT).find(v => v.category === raw);
+      return found?.category || raw || "資料健康";
+    }
+
+    function healthIssueAction(issue) {
+      const meta = healthIssueMeta(issue);
+      return issue?.action_hint || issue?.suggestion || meta.action || "請依照資料狀況確認是否需要人工修正。";
+    }
+
+    function healthIssueTarget(issue) {
+      const primary = issue?.student_name || issue?.uid || issue?.class_code || issue?.unit_name || issue?.detail_value || "—";
+      const parts = [];
+      if (issue?.student_name) parts.push(issue.student_name);
+      if (issue?.uid && issue.uid !== issue.student_name) parts.push(issue.uid);
+      if (!parts.length && primary) parts.push(primary);
+      return parts.join(" / ") || "—";
+    }
+
+    function healthIssueDetail(issue) {
+      const parts = [];
+      if (issue?.detail_value) parts.push(issue.detail_value);
+      if (issue?.class_code) parts.push(`班級 ${issue.class_code}`);
+      return parts.join("｜");
+    }
+
+    function renderHealthIssueCard(issue) {
+      const detail = healthIssueDetail(issue);
+      return `<article class="health-issue-card">
+        <div class="health-issue-card-head">
+          <div>
+            <div class="health-issue-title">${escapeHtml(healthIssueTitle(issue))}</div>
+            <div class="health-issue-meta">${escapeHtml(issue.school_code || '')} ${escapeHtml(issue.school_name || '')}｜${escapeHtml(healthCategoryLabel(issue))}</div>
+          </div>
+          <span class="badge ${severityClass(issue.severity)}">${escapeHtml(healthSeverityLabel(issue.severity))}</span>
+        </div>
+        <div class="health-issue-section"><div class="health-issue-label">對象</div><div class="health-issue-value">${escapeHtml(healthIssueTarget(issue))}</div></div>
+        ${detail ? `<div class="health-issue-section"><div class="health-issue-label">細節</div><div class="health-issue-value">${escapeHtml(detail)}</div></div>` : ''}
+        <div class="health-issue-section"><div class="health-issue-label">處理</div><div class="health-issue-value">${escapeHtml(healthIssueAction(issue))}<span class="health-code-inline">${escapeHtml(issue.issue_code || '')}</span></div></div>
+      </article>`;
     }
 
     async function loadOverviewData(force = false) {
@@ -10573,34 +10676,40 @@
 
     function setupHealthCategoryFilter() {
       const select = document.getElementById("healthCategoryFilter");
-      if (!select || select.dataset.ready === "1" || !healthCache) return;
+      if (!select || !healthCache) return;
+      const current = select.value || "all";
       const cats = [...new Set((healthCache.issues || []).map(i => i.category).filter(Boolean))].sort();
-      select.innerHTML = `<option value="all">全部類別</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
-      select.dataset.ready = "1";
+      select.innerHTML = `<option value="all">全部類別</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(healthCategoryLabel(c))}</option>`).join("");
+      if (cats.includes(current)) select.value = current;
     }
 
     function renderHealthTable() {
-      if (!healthCache || !document.getElementById("healthTableWrap")) return;
+      const wrap = document.getElementById("healthTableWrap");
+      if (!healthCache || !wrap) return;
       const severity = document.getElementById("healthSeverityFilter")?.value || "all";
       const category = document.getElementById("healthCategoryFilter")?.value || "all";
       let issues = healthCache.issues || [];
       if (severity !== "all") issues = issues.filter(i => String(i.severity || "").toLowerCase() === severity);
       if (category !== "all") issues = issues.filter(i => String(i.category || "") === category);
-      const body = issues.length ? issues.map(i => `
+      const emptyDesktop = `<tr><td colspan="5"><div class="empty-state">沒有符合條件的資料健康問題。✅</div></td></tr>`;
+      const desktopBody = issues.length ? issues.map(i => `
         <tr>
           <td><strong>${escapeHtml(i.school_code)}</strong><br><span class="small-note">${escapeHtml(i.school_name)}</span></td>
-          <td><span class="badge ${severityClass(i.severity)}">${escapeHtml(i.severity)}</span></td>
-          <td>${escapeHtml(i.category)}</td>
-          <td><code>${escapeHtml(i.issue_code)}</code></td>
-          <td>${escapeHtml(i.student_name || i.uid || i.class_code || i.unit_name || i.detail_value || "-")}</td>
-          <td class="issue-message">${escapeHtml(i.suggestion || "-")}</td>
+          <td><span class="badge ${severityClass(i.severity)}">${escapeHtml(healthSeverityLabel(i.severity))}</span></td>
+          <td><strong>${escapeHtml(healthIssueTitle(i))}</strong><span class="health-action-text">${escapeHtml(healthCategoryLabel(i))}</span><span class="health-code-inline">${escapeHtml(i.issue_code)}</span></td>
+          <td>${escapeHtml(healthIssueTarget(i))}${healthIssueDetail(i) ? `<span class="health-action-text">${escapeHtml(healthIssueDetail(i))}</span>` : ''}</td>
+          <td class="issue-message">${escapeHtml(healthIssueAction(i))}</td>
         </tr>
-      `).join("") : `<tr><td colspan="6"><div class="empty-state">沒有符合條件的資料健康問題。✅</div></td></tr>`;
-      document.getElementById("healthTableWrap").innerHTML = `
-        <table>
-          <thead><tr><th>校區</th><th>等級</th><th>類別</th><th>問題代碼</th><th>對象</th><th>建議</th></tr></thead>
-          <tbody>${body}</tbody>
-        </table>`;
+      `).join("") : emptyDesktop;
+      const mobileBody = issues.length ? issues.map(renderHealthIssueCard).join("") : `<div class="empty-state">沒有符合條件的資料健康問題。✅</div>`;
+      wrap.innerHTML = `
+        <div class="health-desktop-table">
+          <table>
+            <thead><tr><th>校區</th><th>等級</th><th>問題</th><th>對象</th><th>處理方式</th></tr></thead>
+            <tbody>${desktopBody}</tbody>
+          </table>
+        </div>
+        <div class="health-mobile-list">${mobileBody}</div>`;
     }
 
     async function loadStudentsData(force = false) {
