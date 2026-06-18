@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tappie Console</title>
+  <title>Tappie 管理後台</title>
   <!-- R44_STUDENT_NFC_DS_FINAL_APPLIED -->
   <!-- DATA_HEALTH_V3B_CURRICULUM_WORD_QUALITY_APPLIED -->
   <!-- FEATURE_GATE_MATRIX_V1_CONSOLE_ONLY_APPLIED -->
   <!-- FEATURE_GATE_MATRIX_V2_UI_POLISH_APPLIED -->
+  <!-- CONSOLE_LOGIN_POLISH_V1_APPLIED -->
   <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
@@ -8110,15 +8111,15 @@
 <body>
   <section id="loginView" class="login-shell">
     <div class="login-hero">
-      <div class="brand"><span class="brand-dot"></span> Tappie Console</div>
+      <div class="brand"><span class="brand-dot"></span> Tappie 管理後台</div>
       <div>
-        <h1 class="hero-title">專業後台，<br><span>集中管理</span>每一個校區。</h1>
-        <p class="hero-copy">Owner 與 Super Admin 專用的 SaaS 後台框架。第一版已接上 Overview 與 Data Health 真實資料，Owner 可看全部校區，Super Admin 僅看自己校區。</p>
+        <h1 class="hero-title">補習班專用的<br><span>學習管理中心</span></h1>
+        <p class="hero-copy">集中管理學生、課程排程、學習紀錄、週報與校區設定，讓老師更快掌握學生練習狀況。</p>
         <div class="hero-pills">
-          <span class="pill">Owner 總控台</span>
-          <span class="pill">Super Admin 後台</span>
-          <span class="pill">Data Health</span>
-          <span class="pill">Weekly Reports</span>
+          <span class="pill">學生與班級管理</span>
+          <span class="pill">課程排程</span>
+          <span class="pill">學習紀錄</span>
+          <span class="pill">週報設定</span>
         </div>
       </div>
       <a class="text-link" href="index.html">← 回到官網首頁</a>
@@ -8126,33 +8127,26 @@
 
     <div class="login-panel-wrap">
       <div class="login-card">
-        <h1>登入後台</h1>
-        <p>console.html 只開放 Owner 與 Super Admin。一般管理員不進入此專業後台。</p>
+        <h1>登入管理後台</h1>
+        <p>請輸入管理代碼與密碼。系統會依照帳號權限開啟可使用的管理範圍。</p>
 
-        <div class="mode-tabs">
-          <button id="tabSuper" class="mode-tab active" onclick="setLoginMode('super_admin')">Super Admin</button>
-          <button id="tabOwner" class="mode-tab" onclick="setLoginMode('owner')">Owner</button>
+        <div id="loginCodeField" class="field">
+          <label>管理代碼</label>
+          <input id="loginCodeInput" placeholder="例如校區代碼或管理代碼" autocomplete="username" onkeydown="if(event.key==='Enter') loginConsole()" />
         </div>
-
-        <div id="schoolCodeField" class="field">
-          <label>School Code</label>
-          <input id="schoolCodeInput" placeholder="例如 TEST01 / SW01" autocomplete="username" />
-        </div>
-        <div id="ownerCodeField" class="field hidden">
-          <label>Owner Code</label>
-          <input id="ownerCodeInput" placeholder="Owner_Code" autocomplete="username" />
-        </div>
+        <input id="schoolCodeInput" type="hidden" autocomplete="off" />
+        <input id="ownerCodeInput" type="hidden" autocomplete="off" />
         <div class="field">
-          <label>Password</label>
-          <input id="passwordInput" type="password" placeholder="請輸入密碼" autocomplete="current-password" />
+          <label>登入密碼</label>
+          <input id="passwordInput" type="password" placeholder="請輸入登入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter') loginConsole()" />
         </div>
 
-        <button id="loginBtn" class="btn-primary" onclick="loginConsole()">登入 Console</button>
+        <button id="loginBtn" class="btn-primary" onclick="loginConsole()">登入管理後台</button>
         <div id="loginError" class="login-error hidden"></div>
 
         <div class="login-actions">
           <button class="icon-btn" onclick="toggleTheme()" title="切換深色/淺色">◐</button>
-          <a class="text-link" href="admin.html">手機現場工具 →</a>
+          <a class="text-link" href="admin.html">老師現場工具 →</a>
         </div>
       </div>
     </div>
@@ -8875,12 +8869,19 @@
     };
 
     function setLoginMode(mode) {
+      // Login Polish v1: the public login UI is unified.
+      // Keep this function tolerant for older inline calls / saved browser state.
       loginMode = mode;
-      document.getElementById("tabSuper").classList.toggle("active", mode === "super_admin");
-      document.getElementById("tabOwner").classList.toggle("active", mode === "owner");
-      document.getElementById("schoolCodeField").classList.toggle("hidden", mode === "owner");
-      document.getElementById("ownerCodeField").classList.toggle("hidden", mode !== "owner");
-      document.getElementById("loginError").classList.add("hidden");
+      const tabSuper = document.getElementById("tabSuper");
+      const tabOwner = document.getElementById("tabOwner");
+      const schoolCodeField = document.getElementById("schoolCodeField");
+      const ownerCodeField = document.getElementById("ownerCodeField");
+      const errBox = document.getElementById("loginError");
+      if (tabSuper) tabSuper.classList.toggle("active", mode === "super_admin");
+      if (tabOwner) tabOwner.classList.toggle("active", mode === "owner");
+      if (schoolCodeField) schoolCodeField.classList.toggle("hidden", mode === "owner");
+      if (ownerCodeField) ownerCodeField.classList.toggle("hidden", mode !== "owner");
+      if (errBox) errBox.classList.add("hidden");
     }
 
     function toggleTheme() {
@@ -8895,35 +8896,67 @@
       document.documentElement.dataset.theme = stored || "light";
     }
 
+    async function tryConsoleLoginPayload(payload) {
+      try {
+        const result = await TappieAPI.consoleAuth(payload);
+        if (result && result.success) return result;
+      } catch (_) {}
+      return null;
+    }
+
     async function loginConsole() {
       const btn = document.getElementById("loginBtn");
       const errBox = document.getElementById("loginError");
+      const loginCodeInput = document.getElementById("loginCodeInput");
+      const passwordInput = document.getElementById("passwordInput");
+      const loginCode = (loginCodeInput?.value || "").trim();
+      const password = passwordInput?.value || "";
+
       errBox.classList.add("hidden");
       btn.disabled = true;
       btn.textContent = "登入中...";
 
-      const payload = {
-        mode: loginMode,
-        schoolCode: document.getElementById("schoolCodeInput").value.trim().toUpperCase(),
-        ownerCode: document.getElementById("ownerCodeInput").value.trim(),
-        password: document.getElementById("passwordInput").value
-      };
-
       try {
-        const result = await TappieAPI.consoleAuth(payload);
-        if (!result || !result.success) {
-          throw new Error(result?.message || result?.error || "login_failed");
+        if (!loginCode || !password) {
+          throw new Error("missing_credentials");
+        }
+
+        // Login Polish v1：對外只顯示單一「管理代碼」。
+        // 內部仍沿用現有 console-auth，不改 Edge Function：先嘗試單校區管理，再嘗試全校區管理。
+        const attempts = [
+          {
+            mode: "super_admin",
+            schoolCode: loginCode.toUpperCase(),
+            ownerCode: "",
+            password
+          },
+          {
+            mode: "owner",
+            schoolCode: "",
+            ownerCode: loginCode,
+            password
+          }
+        ];
+
+        let result = null;
+        for (const payload of attempts) {
+          result = await tryConsoleLoginPayload(payload);
+          if (result) break;
+        }
+
+        if (!result) {
+          throw new Error("login_failed");
         }
 
         session = result;
         localStorage.setItem("tappie_console_session", JSON.stringify(result));
         enterApp();
-      } catch (err) {
-        errBox.textContent = "登入失敗：" + (err.message || err);
+      } catch (_) {
+        errBox.textContent = "登入失敗，請確認管理代碼或密碼是否正確。";
         errBox.classList.remove("hidden");
       } finally {
         btn.disabled = false;
-        btn.textContent = "登入 Console";
+        btn.textContent = "登入管理後台";
       }
     }
 
@@ -9039,12 +9072,12 @@
       if (chip) {
         const chipText = isOwner()
           ? (isOwnerAllMode() ? "全部校區" : getActiveSchoolName())
-          : (getActiveSchoolName() || "Super Admin");
+          : (getActiveSchoolName() || "校區管理");
         chip.textContent = chipText;
         chip.title = chipText;
         chip.classList.toggle("scope-status-chip", isOwner());
       }
-      if (sideRole) sideRole.textContent = isOwner() ? "Owner 總控台" : "Super Admin 後台";
+      if (sideRole) sideRole.textContent = isOwner() ? "全校區管理" : "校區管理";
       if (sideScope) sideScope.textContent = getActiveSchoolName();
 
       if (!wrap || !select) return;
