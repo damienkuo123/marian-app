@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tappie Console</title>
   <!-- R44_STUDENT_NFC_DS_FINAL_APPLIED -->
+  <!-- DATA_HEALTH_V3A_CORE_OPS_HEALTH_APPLIED -->
   <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
@@ -9906,7 +9907,7 @@
           <div class="health-mobile-list"><div class="empty-state">正在讀取資料健康...</div></div>
         </div>`;
       return `<div class="console-page-standard ds-page-shell r25-page-shell r9-system-page console-ui-page r33-management-page">
-        ${renderConsolePageIntro({ group: "總覽", title: "資料健康", description: "查看資料健康檢查結果，區分必須修復的資料錯誤與近期營運提醒。", actions: `<button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>` })}
+        ${renderConsolePageIntro({ group: "總覽", title: "資料健康", description: "查看資料健康檢查結果，包含學生、老師卡、排程、設定、週報與角色素材。", actions: `<button class="btn-compact primary" onclick="loadHealthData(true)">重新檢查</button>` })}
         ${renderConsoleSummaryToggle({ id: "healthSummaryToggle", title: "資料健康摘要", note: "點擊展開查看各等級統計", body: metrics })}
         ${renderConsoleMainCard({ body: table, className: "r33-flat-workspace r33-list-workspace r33-health-workspace" })}
       </div>`;
@@ -9968,7 +9969,27 @@
       student_push_devices_over_3: { title: "推播訂閱裝置過多", category: "推播訂閱", action: "通常是家長或學生換裝置後留下舊訂閱。建議清理舊 push subscription。" },
       attendance_missing_student_id: { title: "打卡紀錄缺少學生 ID", category: "打卡紀錄", action: "需要資料修補：依 uid 找回學生並補 student_id；若無法判斷，再保留為人工檢查。" },
       attendance_student_not_found: { title: "打卡紀錄找不到學生", category: "打卡紀錄", action: "需要確認學生是否被停用、刪除或搬移錯誤；修正 student_id 或保留為歷史孤兒紀錄。" },
-      attendance_duplicate_same_day_type: { title: "同日同類型打卡重複", category: "近期打卡提醒", action: "這是近 7 天營運提醒，不建議直接刪除打卡紀錄；若非補登，請確認是否重複感應。超過 7 天會自動不再顯示。" }
+      attendance_duplicate_same_day_type: { title: "同日同類型打卡重複", category: "近期打卡提醒", action: "這是近 7 天營運提醒，不建議直接刪除打卡紀錄；若非補登，請確認是否重複感應。超過 7 天會自動不再顯示。" },
+      admin_card_missing_uid: { title: "老師卡缺少 NFC UID", category: "老師管理卡", action: "到老師編輯頁補上管理卡代碼 / NFC UID，否則老師無法用卡片入口登入。" },
+      admin_card_duplicate_uid: { title: "老師卡 UID 重複", category: "老師管理卡", action: "到老師管理卡確認重複卡號，只保留正確老師卡，避免同一張卡對應多位老師。" },
+      admin_card_no_active_super_admin: { title: "校區缺少啟用中的 Super Admin", category: "老師管理卡", action: "至少保留一位啟用中的 Super Admin 老師，避免校區無人可進行完整後台操作。" },
+      schedule_missing_unit_id: { title: "排程找不到對應單元", category: "單元排程", action: "到單元排程確認排程的單元是否存在；重新選擇有效單元或停用這筆排程。" },
+      schedule_invalid_date_range: { title: "排程日期區間錯誤", category: "單元排程", action: "到排程基本資料修正開始日期與結束日期，開始日期不可晚於結束日期。" },
+      schedule_duplicate_same_class_date: { title: "同班級同日期區間重複排程", category: "單元排程", action: "確認是否真的要同時安排多個單元；若非刻意，停用或調整其中一筆排程。" },
+      schedule_active_unit_has_no_words: { title: "排程中的單元沒有單字", category: "單元排程", action: "到單元資料庫替該單元加入至少一個有效單字，否則學生進入排程可能沒有可練習內容。" },
+      schedule_event_unit_missing_avatar: { title: "活動排程缺少活動角色", category: "單元排程", action: "活動 / EVENT 排程建議設定活動角色或 Boss，避免活動頁面缺素材。" },
+      unit_no_words: { title: "單元沒有有效單字", category: "單元資料庫", action: "到單元資料庫新增有效單字，或停用不再使用的空單元。" },
+      word_missing_text: { title: "單字文字空白", category: "單元資料庫", action: "到單元資料庫補上英文單字，空白單字會影響題庫與練習。" },
+      word_duplicate_in_unit: { title: "同一單元內單字重複", category: "單元資料庫", action: "到單元資料庫合併或刪除重複單字，避免學生反覆抽到同一題。" },
+      school_invalid_gamification_config: { title: "遊戲化設定格式錯誤", category: "校區設定", action: "到遊戲化設定頁重新儲存設定；若仍錯誤，檢查 school_settings 的 Gamification_Config JSON。" },
+      school_invalid_weekly_report_config: { title: "週報設定格式錯誤", category: "校區設定", action: "到週報設定頁重新儲存設定；若仍錯誤，檢查 school_settings 的 Weekly_Report_Config JSON。" },
+      school_feature_enabled_but_config_missing: { title: "功能授權與功能設定不一致", category: "校區設定", action: "校區已有 Feature_Access 但缺 Feature_Config，建議到功能狀態頁重新儲存一次設定。" },
+      school_missing_admin_password: { title: "校區缺少後台密碼設定", category: "校區設定", action: "到校區設定補上 Admin_Password / Super_Admin_Password，避免管理入口無法正常驗證。" },
+      weekly_enabled_but_no_parent_email: { title: "週報啟用但缺家長 Email", category: "週報收件", action: "到學生編輯頁補上家長 Email，或關閉該學生週報。" },
+      weekly_parent_email_invalid: { title: "家長 Email 格式疑似錯誤", category: "週報收件", action: "到學生編輯頁修正家長 Email，避免週報寄送失敗。" },
+      avatar_missing_image: { title: "角色缺少圖片素材", category: "角色素材", action: "到角色管理頁補上 full image，避免學生端或對戰畫面缺圖。" },
+      avatar_default_missing: { title: "校區沒有專屬角色素材", category: "角色素材", action: "建議至少保留一個校區專屬預設角色，避免新學生角色或裝備資料 fallback 不一致。" },
+      student_equipped_avatar_missing: { title: "學生裝備的角色不存在", category: "角色素材", action: "到學生編輯頁或資料庫修正 equipped_avatar_id，改成存在且可用的角色。" }
     };
 
     function healthSeverityLabel(severity) {
