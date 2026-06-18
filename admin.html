@@ -7,6 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Tappie中控台 (Admin)</title>
+    <!-- ADMIN_QUERY_TABS_ALWAYS_VISIBLE_20260618_APPLIED -->
     <!-- Class Pack Fix v6: admin query tag index uses current student tags only. -->
     <meta name="apple-mobile-web-app-capable" content="yes">
   
@@ -1118,7 +1119,7 @@
         .admin-v2-query-search span { color: var(--admin-muted); font-size: 28px; }
         .admin-v2-query-search input { flex:1; min-width:0; border:0; outline:0; background:transparent; font-size:17px; font-weight:800; color:var(--admin-text); }
         .admin-v2-query-search input::placeholder { color: rgba(127,140,141,.82); }
-        .admin-v2-query-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:6px; border-radius:999px; background:rgba(255,255,255,.46); border:1px solid rgba(255,255,255,.86); box-shadow:0 5px 15px rgba(0,0,0,.035); }
+        .admin-v2-query-tabs { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; padding:6px; border-radius:999px; background:rgba(255,255,255,.46); border:1px solid rgba(255,255,255,.86); box-shadow:0 5px 15px rgba(0,0,0,.035); }
         .admin-v2-query-tabs button { min-height:46px; border:0; border-radius:999px; background:transparent; color:var(--admin-muted); font-weight:900; }
         .admin-v2-query-tabs button.active { background:rgba(255,255,255,.82); color:var(--admin-text); box-shadow:0 5px 14px rgba(0,0,0,.04); }
         .admin-v2-query-tabs button:disabled { opacity:.5; }
@@ -2188,16 +2189,14 @@
         }
 
         function updateAdminFeatureGateUI() {
+            // Bottom work modes still respect feature locks.
+            // Query tabs are read-only/history surfaces, so keep 學習 / 打卡 / 加扣點 visible even if features are disabled.
             document.querySelectorAll('[data-admin-mode]').forEach(btn => {
                 const mode = btn.dataset.adminMode;
                 btn.classList.toggle('admin-v2-feature-locked', !isAdminModeEnabled(mode));
             });
             document.querySelectorAll('[data-query-tab]').forEach(btn => {
-                const tab = btn.dataset.queryTab;
-                const hidden =
-                    (tab === 'points' && !isAdminFeatureEnabled('manual_points_enabled')) ||
-                    (tab === 'attendance' && !isAdminFeatureEnabled('attendance_enabled'));
-                btn.classList.toggle('hidden', hidden);
+                btn.classList.remove('hidden');
             });
             const attendanceBar = document.getElementById('admin-v2-attendance-modebar');
             if (attendanceBar) attendanceBar.classList.toggle('hidden', !isAdminFeatureEnabled('attendance_enabled'));
@@ -2205,15 +2204,12 @@
         }
 
         function getEnabledAdminQueryTabs() {
-            const tabs = ['learning'];
-            if (isAdminFeatureEnabled('manual_points_enabled')) tabs.push('points');
-            if (isAdminFeatureEnabled('attendance_enabled')) tabs.push('attendance');
-            return tabs;
+            return ['learning', 'points', 'attendance'];
         }
 
         function normalizeAdminQueryTabByFeatures(tab) {
             const enabled = getEnabledAdminQueryTabs();
-            return enabled.includes(tab) ? tab : enabled[0];
+            return enabled.includes(tab) ? tab : 'learning';
         }
 
         function getAdminAuthBaseUrl() {
@@ -3951,11 +3947,7 @@
 
         function setAdminQueryTab(tab) {
             const requestedTab = ['learning', 'points', 'attendance'].includes(tab) ? tab : 'learning';
-            const nextTab = normalizeAdminQueryTabByFeatures(requestedTab);
-            if (requestedTab !== nextTab && requestedTab !== 'learning') {
-                alert(requestedTab === 'points' ? getAdminFeatureDisabledMessage('points') : getAdminFeatureDisabledMessage('attendance'));
-            }
-            ADMIN_V2_QUERY_TAB = nextTab;
+            ADMIN_V2_QUERY_TAB = normalizeAdminQueryTabByFeatures(requestedTab);
             updateAdminFeatureGateUI();
             document.querySelectorAll('[data-query-tab]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.queryTab === ADMIN_V2_QUERY_TAB);

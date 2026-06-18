@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
   <title>Tappie學美語</title>
+  <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -542,11 +543,11 @@
         <img src="/assets/logo.webp" id="student-avatar" class="student-avatar-img">
         <h1 id="student-name" class="student-name">-</h1>
         <div id="student-attendance-status" class="student-attendance-status hidden"></div>
-        <div class="points-container">
+        <div id="dashboard-points-summary" class="points-container">
           <div id="current-points" class="points">0</div>
           <div class="points-label">Total Points</div>
         </div>
-        <span class="history-btn" onclick="toggleLogs(true)">📋 查看點數明細</span>
+        <span id="dashboard-points-history-btn" class="history-btn" onclick="toggleLogs(true)">📋 查看點數明細</span>
       </div>
 
       <div class="glass-panel home-notification-zone">
@@ -1047,6 +1048,20 @@
       else delete nav.dataset.lockMessage;
     }
 
+    function shouldShowDashboardPointsSummary() {
+      // Points are meaningful only when at least one point-affecting student feature is active.
+      // When manual points, practice, and battle are all disabled, hide both Total Points and detail history.
+      return isDashboardFeatureEnabled('manual_points_enabled') ||
+             isDashboardFeatureEnabled('practice_enabled') ||
+             isDashboardFeatureEnabled('battle_enabled');
+    }
+
+    function applyDashboardPointsVisibility() {
+      const showPoints = shouldShowDashboardPointsSummary();
+      document.getElementById('dashboard-points-summary')?.classList.toggle('hidden', !showPoints);
+      document.getElementById('dashboard-points-history-btn')?.classList.toggle('hidden', !showPoints);
+    }
+
     function applyDashboardFeatureLocks(data) {
       const isClassStudent = isClassBasedStudent(data);
       const classLockMessage = "🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。";
@@ -1067,6 +1082,7 @@
           setBottomNavLock(item.tab, false);
         }
       });
+      applyDashboardPointsVisibility();
     }
 
     function applyDashboardNotificationFeatureVisibility() {

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Tappie 現場站</title>
+  <!-- STATION_BRANDING_AUTH_HOTFIX_20260618_APPLIED -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Tappie現場站" />
@@ -1610,10 +1611,46 @@
       }
     }
 
+    function getStationAdminAuthPayload(extra = {}) {
+      const current = stationSession || readStationSession() || {};
+      const loginSecret = String(document.getElementById('login-secret')?.value || '').trim();
+      const secret = extra.secret || current.adminKey || loginSecret || '';
+      const schoolCode = String(extra.schoolCode || current.schoolCode || document.getElementById('login-school')?.value || '').trim().toUpperCase();
+      const payload = { schoolCode, role: 'super', authMode: 'super_admin' };
+      if (secret) {
+        payload.secret = secret;
+        payload.adminKey = secret;
+        payload.superAdminPassword = secret;
+      }
+      return payload;
+    }
+
+    async function postStationAdminFunction(endpoint, payload = {}) {
+      const res = await fetch(`${getApiBaseUrl()}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) throw new Error(data?.message || data?.error || `${endpoint} failed`);
+      return data;
+    }
+
     async function refreshStationFeatureSettings() {
-      if (!stationSession?.schoolCode || !window.TappieAPI || typeof TappieAPI.adminGetData !== 'function') return;
+      if (!stationSession?.schoolCode) return;
       try {
-        const data = await TappieAPI.adminGetData(stationSession.schoolCode, 'settings');
+        const authPayload = getStationAdminAuthPayload({ schoolCode: stationSession.schoolCode });
+        let data = null;
+        if (window.TappieAPI && typeof TappieAPI.adminGetData === 'function') {
+          try {
+            data = await TappieAPI.adminGetData(stationSession.schoolCode, 'settings', authPayload);
+          } catch (_) {
+            data = null;
+          }
+        }
+        if (!data || data.success === false) {
+          data = await postStationAdminFunction('admin-get-data', { ...authPayload, sheetName: 'settings', table: 'settings', type: 'settings' });
+        }
         if (data && data.success !== false && (data.effectiveFeatures || data.features)) {
           stationSession.effectiveFeatures = normalizeStationFeatures(data.effectiveFeatures || data.features);
           stationSession.features = stationSession.effectiveFeatures;
@@ -1702,7 +1739,7 @@
         const authFeatures = normalizeStationFeatures(data.effectiveFeatures || data.features || {});
         if (authFeatures.station_enabled === false) throw new Error('此校區尚未啟用 Station 現場站，請至 Console 開啟功能。');
 
-        const branding = await loadBranding(schoolCode).catch(() => ({}));
+        const branding = await loadBranding(schoolCode, { secret, auth: data }).catch(() => ({}));
         const brand = extractSchoolBranding({ ...branding, auth: data, school: data.school || branding.school }, schoolCode);
         writeStationSession({
           schoolCode,
@@ -1721,13 +1758,23 @@
       }
     }
 
-    async function loadBranding(schoolCode) {
+    async function loadBranding(schoolCode, extraAuth = {}) {
+      const authPayload = getStationAdminAuthPayload({ ...extraAuth, schoolCode });
       if (window.TappieAPI && typeof TappieAPI.adminGetBranding === 'function') {
-        const data = await TappieAPI.adminGetBranding(schoolCode);
-        if (data && data.success !== false) return data;
+        try {
+          const data = await TappieAPI.adminGetBranding(schoolCode, authPayload);
+          if (data && data.success !== false) return data;
+        } catch (err) {
+          console.warn('[Station Branding] TappieAPI adminGetBranding failed, fallback to direct POST', err);
+        }
       }
-      const res = await fetch(`${getApiBaseUrl()}/admin-get-branding?schoolCode=${encodeURIComponent(schoolCode)}`);
-      return await res.json().catch(() => ({}));
+      try {
+        return await postStationAdminFunction('admin-get-branding', authPayload);
+      } catch (postErr) {
+        console.warn('[Station Branding] authenticated POST failed, fallback to legacy GET', postErr);
+        const res = await fetch(`${getApiBaseUrl()}/admin-get-branding?schoolCode=${encodeURIComponent(schoolCode)}`);
+        return await res.json().catch(() => ({}));
+      }
     }
 
     function extractSchoolBranding(raw, fallbackCode = '') {
@@ -1797,7 +1844,7 @@
         const missingLogo = !stationSession.logoUrl || String(stationSession.logoUrl).includes('/assets/app-icon.png');
         if (!force && !looksLikeCodeOnly && !missingLogo) return;
         const branding = await loadBranding(stationSession.schoolCode);
-        const brand = extractSchoolBranding(branding, stationSession.schoolCode);
+        const brand = extractSchoolBranding({ ...branding, auth: stationSession, school: branding.school }, stationSession.schoolCode);
         const next = {
           ...stationSession,
           schoolName: brand.schoolName || stationSession.schoolName,
