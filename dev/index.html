@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tappie 數位口說名牌｜把名牌變成開口說英文的入口</title>
+    <title>Tappie - 嗶卡感應，秒說外語！</title>
     
-    <meta name="description" content="Tappie 數位口說名牌，為兒童美語與補習班打造的感應式口說練習入口。學生一感應就能開始練習，老師看得到紀錄，家長收得到成果。">
+    <meta name="description" content="專為實體教育機構打造的英語學習 SaaS 平台。免下載 APP，實體魔法卡一嗶即唸！結合微軟醫療級發音診斷、AI 雙語教練與自動化家長週報，無痛升級貴校的數位點數系統。">
     
     <meta name="keywords" content="外語口說, 補習班數位轉型, 感應學習, 兒童英語, OMO教學, AI英語教練, 點數系統">
     
@@ -14,8 +14,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         
-    <meta property="og:title" content="Tappie 數位口說名牌｜把名牌變成開口說英文的入口">
-    <meta property="og:description" content="把學生每天戴的名牌，變成開口說英文的入口。">
+    <meta property="og:title" content="Tappie - 嗶卡感應，秒說外語！">
+    <meta property="og:description" content="補教業最強的 OMO 語音開口神器。免下載、一嗶即唸，無痛升級貴校的點數系統。">
     <meta property="og:image" content="https://www.tappieapp.com/assets/official/tappieapp-share.PNG"> 
     <meta property="og:url" content="https://www.tappieapp.com/">
     <meta property="og:type" content="website">
@@ -139,6 +139,220 @@
             letter-spacing: 3px; font-weight: 900; outline: none; margin-bottom: 20px; box-sizing: border-box; transition: 0.3s;
         }
         .uid-input:focus { border-color: var(--primary-blue); box-shadow: 0 0 20px rgba(0,123,255,0.3); }
+
+
+        /* ========================================= */
+        /* 🎬 Tappie Card Story Stage v1：Hero 動畫主舞台 */
+        /* ========================================= */
+        .hero-stage {
+            width: 100%; max-width: 560px; min-height: 560px;
+            position: relative; display: flex; align-items: center; justify-content: center;
+            border-radius: 44px;
+            background:
+                radial-gradient(circle at 18% 18%, rgba(0, 123, 255, 0.26), transparent 30%),
+                radial-gradient(circle at 82% 20%, rgba(241, 196, 15, 0.20), transparent 32%),
+                radial-gradient(circle at 50% 86%, rgba(46, 204, 113, 0.16), transparent 36%),
+                rgba(20, 25, 35, 0.56);
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow: 0 40px 95px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            overflow: hidden; isolation: isolate;
+            --stage-progress: 0;
+            --stage-mouse-x: 0px;
+            --stage-mouse-y: 0px;
+        }
+
+        .hero-stage::before {
+            content: ""; position: absolute; inset: 1px; border-radius: 43px; pointer-events: none;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.16), transparent 28%, rgba(255,255,255,0.06) 52%, transparent 74%),
+                radial-gradient(circle at calc(50% + var(--stage-mouse-x)) calc(50% + var(--stage-mouse-y)), rgba(255,255,255,0.20), transparent 22%);
+            opacity: 0.88; z-index: 2;
+        }
+
+        .stage-grid {
+            position: absolute; inset: 0; opacity: 0.28; z-index: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: radial-gradient(circle at center, black 0%, transparent 72%);
+            animation: gridDrift 12s linear infinite;
+        }
+
+        .stage-orbit {
+            position: absolute; width: 440px; height: 440px; border-radius: 50%; z-index: 1;
+            border: 1px solid rgba(255,255,255,0.10);
+            box-shadow: inset 0 0 40px rgba(0,123,255,0.08);
+            transform: rotate(calc(var(--stage-progress) * 18deg));
+            animation: orbitPulse 7s ease-in-out infinite alternate;
+        }
+        .stage-orbit::before, .stage-orbit::after {
+            content: ""; position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,0.09);
+        }
+        .stage-orbit::before { inset: 52px; }
+        .stage-orbit::after { inset: 106px; }
+
+        .stage-status {
+            position: absolute; top: 24px; left: 24px; z-index: 5;
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 10px 16px; border-radius: 999px;
+            background: rgba(0,0,0,0.34); border: 1px solid rgba(255,255,255,0.10);
+            color: rgba(255,255,255,0.92); font-size: 12px; font-weight: 900; letter-spacing: 1px;
+            box-shadow: 0 14px 30px rgba(0,0,0,0.26);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        }
+
+        .stage-chip {
+            position: absolute; z-index: 5; display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 13px; border-radius: 18px;
+            background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.13);
+            color: rgba(255,255,255,0.92); font-size: 12px; font-weight: 900;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.28);
+            backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+        }
+        .stage-chip strong { color: var(--marian-gold); }
+        .stage-chip.chip-ai { right: 26px; top: 84px; animation: chipFloat 4.8s ease-in-out infinite; }
+        .stage-chip.chip-parent { left: 26px; bottom: 92px; animation: chipFloat 5.4s ease-in-out infinite reverse; }
+        .stage-chip.chip-console { right: 32px; bottom: 36px; animation: chipFloat 5.1s ease-in-out infinite; }
+
+        .device-cluster {
+            position: relative; width: 410px; height: 410px; z-index: 3;
+            transform-style: preserve-3d;
+            transform: translate3d(var(--stage-mouse-x), var(--stage-mouse-y), 0) rotateX(calc(var(--stage-progress) * -1.8deg)) rotateY(calc(var(--stage-progress) * 2.2deg));
+            transition: transform 0.22s ease-out;
+        }
+
+        .story-phone {
+            position: absolute; left: 102px; top: 38px; width: 206px; height: 360px;
+            border-radius: 34px; padding: 12px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(126, 152, 190, 0.56));
+            box-shadow: 0 34px 80px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.8);
+            transform: translateZ(0) rotate(-2deg);
+        }
+        .story-phone::before {
+            content: ""; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+            width: 70px; height: 7px; border-radius: 999px; background: rgba(11,15,26,0.68); z-index: 3;
+        }
+
+        .phone-screen {
+            position: relative; width: 100%; height: 100%; border-radius: 26px; overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 18%, rgba(0,123,255,0.32), transparent 30%),
+                linear-gradient(180deg, #111827 0%, #08111f 100%);
+            border: 1px solid rgba(255,255,255,0.10);
+        }
+        .phone-screen::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.12) 43%, transparent 68%);
+            animation: phoneShine 5.8s ease-in-out infinite;
+        }
+        .phone-topline { position: absolute; top: 26px; left: 20px; right: 20px; display: flex; justify-content: space-between; color: rgba(255,255,255,0.56); font-size: 10px; font-weight: 900; }
+        .mission-card {
+            position: absolute; left: 18px; right: 18px; top: 62px; padding: 18px 16px;
+            border-radius: 24px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+        .mission-label { color: var(--marian-gold); font-size: 11px; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; }
+        .mission-word { color: #fff; font-size: 31px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+        .mission-sub { margin-top: 10px; color: #94a3b8; font-size: 11px; font-weight: 800; }
+        .mic-disc {
+            position: absolute; width: 96px; height: 96px; border-radius: 50%; left: 50%; top: 198px; transform: translateX(-50%);
+            background: radial-gradient(circle at 35% 30%, #ff9aa6, #ff4757 58%, #9f1239 100%);
+            display: flex; align-items: center; justify-content: center; font-size: 38px;
+            box-shadow: 0 0 32px rgba(255,71,87,0.45), 0 18px 30px rgba(0,0,0,0.36);
+            animation: micPulse 1.8s ease-in-out infinite alternate;
+        }
+        .wave-row { position: absolute; left: 34px; right: 34px; bottom: 34px; height: 44px; display: flex; justify-content: center; align-items: center; gap: 7px; }
+        .wave-row i { display: block; width: 7px; border-radius: 999px; background: var(--marian-green); box-shadow: 0 0 12px rgba(46,204,113,0.50); animation: waveTalk 0.7s ease-in-out infinite alternate; }
+        .wave-row i:nth-child(1) { height: 20px; animation-delay: 0.05s; }
+        .wave-row i:nth-child(2) { height: 34px; animation-delay: 0.15s; }
+        .wave-row i:nth-child(3) { height: 14px; animation-delay: 0.25s; }
+        .wave-row i:nth-child(4) { height: 40px; animation-delay: 0.35s; }
+        .wave-row i:nth-child(5) { height: 24px; animation-delay: 0.45s; }
+
+        .story-card {
+            position: absolute; left: 18px; top: 126px; width: 174px; aspect-ratio: 0.63;
+            transform-style: preserve-3d;
+            transform: translateZ(78px) rotateZ(-16deg) rotateY(calc(-22deg + var(--stage-progress) * 22deg));
+            animation: cardHover 5.5s ease-in-out infinite alternate;
+        }
+        .story-card-face {
+            position: absolute; inset: 0; border-radius: 22px; overflow: hidden;
+            background:
+                linear-gradient(160deg, rgba(255,255,255,0.18), transparent 34%),
+                linear-gradient(145deg, #f1c40f, #fd79a8 48%, #007bff 100%);
+            border: 2px solid rgba(255,255,255,0.42);
+            box-shadow: 0 30px 55px rgba(0,0,0,0.42), 0 0 30px rgba(241,196,15,0.22);
+            backface-visibility: hidden;
+        }
+        .story-card-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .story-card-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 18px 16px; box-sizing: border-box; color: #111827; }
+        .fallback-brand { font-size: 19px; font-weight: 1000; letter-spacing: 1px; }
+        .fallback-title { font-size: 30px; font-weight: 1000; line-height: 1; }
+        .fallback-nfc { align-self: flex-end; width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.72); display: grid; place-items: center; font-weight: 1000; }
+        .story-card-face::after {
+            content: ""; position: absolute; inset: -30%;
+            background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.62) 45%, transparent 62%);
+            transform: translateX(-120%) rotate(8deg);
+            animation: cardSweep 4.5s ease-in-out infinite;
+        }
+
+        .nfc-signal { position: absolute; left: 164px; top: 158px; z-index: 4; width: 126px; height: 126px; pointer-events: none; }
+        .nfc-signal span {
+            position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(241,196,15,0.62);
+            animation: signalWave 2.15s ease-out infinite;
+        }
+        .nfc-signal span:nth-child(2) { animation-delay: .45s; }
+        .nfc-signal span:nth-child(3) { animation-delay: .9s; }
+
+        .score-panel {
+            position: absolute; right: 8px; top: 212px; z-index: 5; width: 154px;
+            padding: 16px 14px; border-radius: 22px;
+            background: rgba(255,255,255,0.13); border: 1px solid rgba(255,255,255,0.16);
+            box-shadow: 0 24px 45px rgba(0,0,0,0.32); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+            transform: translateZ(90px) rotate(5deg);
+            animation: scoreFloat 4.9s ease-in-out infinite alternate;
+        }
+        .score-panel .score-num { font-size: 34px; color: var(--marian-green); font-weight: 1000; line-height: 1; }
+        .score-panel .score-label { color: #fff; font-size: 12px; font-weight: 900; margin-top: 5px; }
+        .score-panel .score-bars { display: grid; gap: 5px; margin-top: 12px; }
+        .score-panel .score-bars i { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.12); overflow: hidden; }
+        .score-panel .score-bars i::after { content: ""; display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary-blue), var(--marian-green)); animation: scoreFill 3.6s ease-in-out infinite alternate; }
+        .score-panel .score-bars i:nth-child(2)::after { width: 78%; animation-delay: .15s; }
+        .score-panel .score-bars i:nth-child(3)::after { width: 92%; animation-delay: .3s; }
+
+        @keyframes gridDrift { to { background-position: 42px 42px; } }
+        @keyframes orbitPulse { from { opacity: .46; transform: scale(.96) rotate(0deg); } to { opacity: .86; transform: scale(1.04) rotate(9deg); } }
+        @keyframes chipFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        @keyframes phoneShine { 0%, 62% { transform: translateX(-110%); } 100% { transform: translateX(110%); } }
+        @keyframes micPulse { to { transform: translateX(-50%) scale(1.08); } }
+        @keyframes waveTalk { to { transform: scaleY(.42); opacity: .62; } }
+        @keyframes cardHover { from { margin-top: 0; } to { margin-top: -16px; } }
+        @keyframes cardSweep { 0%, 55% { transform: translateX(-120%) rotate(8deg); } 100% { transform: translateX(120%) rotate(8deg); } }
+        @keyframes signalWave { 0% { transform: scale(.12); opacity: .82; } 100% { transform: scale(1.45); opacity: 0; } }
+        @keyframes scoreFloat { to { transform: translateZ(90px) translateY(-13px) rotate(3deg); } }
+        @keyframes scoreFill { from { width: 42%; } to { width: 96%; } }
+
+        @media (min-width: 992px) {
+            .hero-stage { flex: 0.95; }
+        }
+        @media (max-width: 640px) {
+            .hero-content { gap: 34px; }
+            .hero-stage { min-height: 470px; border-radius: 34px; }
+            .hero-stage::before { border-radius: 33px; }
+            .stage-orbit { width: 340px; height: 340px; }
+            .device-cluster { width: 330px; height: 360px; transform: scale(.9) translate3d(var(--stage-mouse-x), var(--stage-mouse-y), 0); }
+            .story-phone { left: 70px; top: 24px; }
+            .story-card { left: 0px; top: 112px; width: 152px; }
+            .score-panel { right: 0; top: 212px; transform: scale(.9) rotate(5deg); }
+            .stage-chip { display: none; }
+            .stage-status { top: 18px; left: 18px; right: 18px; justify-content: center; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hero-stage *, .hero-stage *::before, .hero-stage *::after { animation: none !important; transition: none !important; }
+        }
 
         /* ========================================= */
         /* 🎛️ 分眾切換膠囊 (Audience Toggle) */
@@ -1101,424 +1315,6 @@
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes breathe { to { transform: scale(1.1); box-shadow: 0 0 50px rgba(255,71,87,0.8); } }
         @keyframes jump { 0% { height: 20%; } 100% { height: 100%; } }
-    
-        /* ========================================= */
-        /* 🧈 Tappie Index Supaste-inspired Light System v2 */
-        /* 以 Supaste 的明亮產品頁節奏作為參考：乾淨底色、大字級、浮動產品卡、柔陰影。 */
-        /* 不複製對方網站原始碼，只保留可延伸的視覺原則。 */
-        /* ========================================= */
-        :root {
-            --tappie-page: #fbf7ee;
-            --tappie-page-2: #fffdfa;
-            --tappie-page-3: #f3f8ff;
-            --tappie-ink: #171717;
-            --tappie-ink-soft: #3f4652;
-            --tappie-muted: #707782;
-            --tappie-hairline: rgba(23, 23, 23, 0.08);
-            --tappie-card: rgba(255, 255, 255, 0.78);
-            --tappie-card-solid: #ffffff;
-            --tappie-shadow: 0 34px 90px rgba(24, 33, 52, 0.12);
-            --tappie-shadow-soft: 0 18px 46px rgba(24, 33, 52, 0.08);
-            --tappie-radius-xl: 42px;
-            --tappie-radius-lg: 30px;
-            --tappie-radius-md: 22px;
-        }
-
-        html { background: var(--tappie-page); }
-
-        body {
-            font-family: ui-rounded, 'SF Pro Rounded', 'SF Pro Display', 'PingFang TC', 'Microsoft JhengHei', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
-            background:
-                radial-gradient(circle at 50% -12%, rgba(255, 255, 255, 0.98) 0 12rem, rgba(255, 255, 255, 0) 34rem),
-                radial-gradient(circle at 6% 12%, rgba(0, 123, 255, 0.11), transparent 30rem),
-                radial-gradient(circle at 96% 4%, rgba(241, 196, 15, 0.16), transparent 28rem),
-                linear-gradient(180deg, var(--tappie-page) 0%, var(--tappie-page-2) 40%, var(--tappie-page-3) 100%) !important;
-            color: var(--tappie-ink) !important;
-            letter-spacing: -0.01em;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            z-index: -3;
-            pointer-events: none;
-            background-image:
-                linear-gradient(rgba(23, 23, 23, 0.025) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(23, 23, 23, 0.025) 1px, transparent 1px);
-            background-size: 36px 36px;
-            mask-image: linear-gradient(180deg, rgba(0,0,0,0.5), transparent 75%);
-            -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.5), transparent 75%);
-        }
-
-        .ambient-orb {
-            filter: blur(90px) !important;
-            opacity: 0.24 !important;
-            mix-blend-mode: multiply;
-        }
-        .orb-1 { background: #7fd7ff !important; top: 8% !important; left: -8% !important; width: 460px !important; height: 460px !important; }
-        .orb-2 { background: #ffe0a0 !important; bottom: 10% !important; right: -8% !important; width: 420px !important; height: 420px !important; }
-
-        nav {
-            top: 18px !important;
-            left: 50% !important;
-            width: calc(100% - 34px) !important;
-            max-width: 1120px !important;
-            height: 64px !important;
-            transform: translateX(-50%);
-            border-radius: 999px !important;
-            padding: 0 14px 0 22px !important;
-            background: rgba(255, 255, 255, 0.76) !important;
-            border: 1px solid rgba(23, 23, 23, 0.08) !important;
-            box-shadow: 0 20px 48px rgba(24, 33, 52, 0.10) !important;
-            backdrop-filter: blur(24px) saturate(150%) !important;
-            -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
-        }
-        .nav-logo {
-            color: var(--tappie-ink) !important;
-            font-size: 19px !important;
-            letter-spacing: -0.03em !important;
-        }
-        .nav-logo img {
-            width: 36px !important;
-            height: 36px !important;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 123, 255, 0.14);
-        }
-        .nav-actions { gap: 8px !important; }
-        .nav-btn {
-            background: #171717 !important;
-            border: 1px solid rgba(23, 23, 23, 0.08) !important;
-            color: #fff !important;
-            border-radius: 999px !important;
-            padding: 10px 18px !important;
-            font-size: 13px !important;
-            letter-spacing: -0.01em !important;
-            box-shadow: 0 10px 28px rgba(23, 23, 23, 0.16) !important;
-        }
-        .nav-btn.secondary {
-            background: rgba(255, 255, 255, 0.72) !important;
-            color: #171717 !important;
-            border-color: rgba(23, 23, 23, 0.10) !important;
-            box-shadow: none !important;
-        }
-
-        .section {
-            color: var(--tappie-ink) !important;
-            padding-left: 22px !important;
-            padding-right: 22px !important;
-        }
-        body > .section:first-of-type {
-            max-width: 1180px !important;
-            padding-top: 140px !important;
-            min-height: 96vh !important;
-        }
-        .hero-content {
-            gap: clamp(28px, 4vw, 64px) !important;
-            align-items: center !important;
-        }
-        .hero-text {
-            position: relative;
-        }
-        .hero-text::before {
-            content: 'Tappie 數位口說名牌';
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 18px;
-            padding: 8px 14px;
-            border-radius: 999px;
-            color: #171717;
-            background: rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(23, 23, 23, 0.08);
-            box-shadow: 0 12px 34px rgba(24, 33, 52, 0.08);
-            font-size: 13px;
-            font-weight: 900;
-            letter-spacing: 0.02em;
-        }
-        .hero-text h1 {
-            color: var(--tappie-ink) !important;
-            background: none !important;
-            -webkit-text-fill-color: currentColor !important;
-            text-shadow: none !important;
-            font-size: clamp(3.15rem, 8.2vw, 7.6rem) !important;
-            line-height: 0.94 !important;
-            letter-spacing: -0.075em !important;
-            max-width: 860px;
-            margin-left: auto !important;
-            margin-right: auto !important;
-        }
-        .hero-text h1 span {
-            color: var(--primary-blue) !important;
-            -webkit-text-fill-color: currentColor !important;
-            background: none !important;
-            display: inline-block;
-            transform: rotate(-2deg);
-        }
-        .hero-text p {
-            color: var(--tappie-muted) !important;
-            font-size: clamp(1.02rem, 1.45vw, 1.22rem) !important;
-            max-width: 680px !important;
-            line-height: 1.72 !important;
-            font-weight: 650;
-        }
-
-        .login-card {
-            color: var(--tappie-ink) !important;
-            background:
-                linear-gradient(180deg, rgba(255,255,255,0.88), rgba(255,255,255,0.62)) !important;
-            border: 1px solid rgba(23, 23, 23, 0.08) !important;
-            border-radius: 42px !important;
-            box-shadow: var(--tappie-shadow) !important;
-            backdrop-filter: blur(24px) saturate(150%) !important;
-            -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
-            transform: rotate(1.2deg);
-            position: relative;
-            overflow: hidden;
-        }
-        .login-card::before {
-            content: '';
-            position: absolute;
-            inset: 12px;
-            border-radius: 32px;
-            border: 1px solid rgba(255,255,255,0.78);
-            pointer-events: none;
-        }
-        .login-card::after {
-            content: '';
-            position: absolute;
-            width: 180px;
-            height: 180px;
-            right: -70px;
-            top: -70px;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(0,123,255,0.16), transparent 70%);
-            pointer-events: none;
-        }
-        .login-card h3,
-        #manual-input-zone h3 {
-            color: var(--tappie-ink) !important;
-            letter-spacing: -0.02em !important;
-        }
-        .status-badge {
-            background: #171717 !important;
-            color: #fff !important;
-            border: 1px solid rgba(255,255,255,0.08) !important;
-            box-shadow: 0 12px 30px rgba(23,23,23,0.14) !important;
-        }
-        .btn-login {
-            background: rgba(255,255,255,0.78) !important;
-            border: 1px solid rgba(23,23,23,0.10) !important;
-            color: var(--tappie-ink) !important;
-            border-radius: 20px !important;
-            box-shadow: 0 12px 32px rgba(24, 33, 52, 0.08) !important;
-        }
-        .btn-login.primary,
-        .btn-login.line {
-            color: #fff !important;
-            border: none !important;
-        }
-        .uid-input {
-            background: #fff !important;
-            color: var(--tappie-ink) !important;
-            border: 1px solid rgba(23,23,23,0.10) !important;
-            box-shadow: 0 10px 30px rgba(24,33,52,0.06) !important;
-        }
-
-        .toggle-wrapper {
-            background: rgba(255,255,255,0.7) !important;
-            border: 1px solid rgba(23,23,23,0.08) !important;
-            box-shadow: 0 18px 50px rgba(24,33,52,0.09) !important;
-            border-radius: 999px !important;
-            padding: 6px !important;
-        }
-        .toggle-btn {
-            color: var(--tappie-muted) !important;
-            border-radius: 999px !important;
-        }
-        .toggle-btn.active {
-            background: #171717 !important;
-            color: #fff !important;
-            box-shadow: 0 10px 28px rgba(23,23,23,0.16) !important;
-        }
-
-        .feature-row {
-            background: rgba(255, 255, 255, 0.58) !important;
-            border: 1px solid rgba(23, 23, 23, 0.075) !important;
-            border-radius: var(--tappie-radius-xl) !important;
-            padding: clamp(22px, 3vw, 42px) !important;
-            gap: clamp(24px, 5vw, 72px) !important;
-            box-shadow: var(--tappie-shadow-soft) !important;
-            backdrop-filter: blur(20px) saturate(145%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(145%) !important;
-            margin-bottom: 34px !important;
-        }
-        .feature-text .tag {
-            display: inline-flex !important;
-            width: fit-content;
-            color: #171717 !important;
-            background: rgba(255,255,255,0.78);
-            border: 1px solid rgba(23,23,23,0.08);
-            border-radius: 999px;
-            padding: 8px 13px;
-            font-size: 12px !important;
-            letter-spacing: 0.08em !important;
-            box-shadow: 0 12px 28px rgba(24,33,52,0.06);
-        }
-        .feature-text h2,
-        .light-break-section h2,
-        #pricing-section h2,
-        .section > h2,
-        .scroll-step .step-title {
-            color: var(--tappie-ink) !important;
-            -webkit-text-fill-color: currentColor !important;
-            background: none !important;
-            letter-spacing: -0.055em !important;
-            text-shadow: none !important;
-        }
-        .feature-text p,
-        .step-desc,
-        .pricing-desc,
-        .tech-desc,
-        .faq-a {
-            color: var(--tappie-muted) !important;
-        }
-        .mock-ui-box,
-        .feature-visual > div:not(.showcase-interactive) {
-            background: rgba(255,255,255,0.82) !important;
-            border: 1px solid rgba(23,23,23,0.08) !important;
-            border-radius: 36px !important;
-            box-shadow: 0 28px 72px rgba(24,33,52,0.12) !important;
-            color: var(--tappie-ink) !important;
-        }
-        .mock-ui-box[style*="background: #000"],
-        .mock-ui-box[style*="background:#000"] {
-            background: linear-gradient(180deg, #171717, #06070a) !important;
-            color: #fff !important;
-        }
-        .showcase-interactive {
-            border-radius: 36px !important;
-            background:
-                radial-gradient(circle at 50% 0%, rgba(255,255,255,0.95), rgba(255,255,255,0.46) 42%, rgba(255,255,255,0.2) 100%) !important;
-            border: 1px solid rgba(23,23,23,0.08) !important;
-            box-shadow: 0 28px 72px rgba(24,33,52,0.12) !important;
-        }
-
-        .light-break-section {
-            background: rgba(255, 255, 255, 0.70) !important;
-            border: 1px solid rgba(23,23,23,0.075) !important;
-            box-shadow: var(--tappie-shadow) !important;
-            color: var(--tappie-ink) !important;
-            border-radius: 48px !important;
-        }
-        .timeline-card,
-        .tech-card,
-        .pricing-card,
-        .faq-item {
-            background: rgba(255,255,255,0.72) !important;
-            border: 1px solid rgba(23,23,23,0.08) !important;
-            box-shadow: 0 16px 42px rgba(24,33,52,0.08) !important;
-            color: var(--tappie-ink) !important;
-        }
-        .tech-card {
-            filter: none !important;
-            opacity: 1 !important;
-        }
-        .tech-name,
-        .pricing-title,
-        .faq-q {
-            color: var(--tappie-ink) !important;
-        }
-        .pricing-card.highlight {
-            background: #171717 !important;
-            color: #fff !important;
-            border-color: rgba(23,23,23,0.9) !important;
-            box-shadow: 0 34px 80px rgba(23,23,23,0.20) !important;
-        }
-        .pricing-card.highlight .pricing-title,
-        .pricing-card.highlight .pricing-desc {
-            color: rgba(255,255,255,0.86) !important;
-        }
-        .btn-pricing.outline {
-            color: #171717 !important;
-            border-color: rgba(23,23,23,0.16) !important;
-            background: rgba(255,255,255,0.56) !important;
-        }
-        .pricing-card.highlight .btn-pricing.outline {
-            color: #fff !important;
-            border-color: rgba(255,255,255,0.26) !important;
-        }
-        .trust-badge {
-            background: rgba(255,255,255,0.78) !important;
-            color: #0f9f62 !important;
-            border-color: rgba(23,23,23,0.08) !important;
-            box-shadow: none !important;
-        }
-
-        footer {
-            color: var(--tappie-muted) !important;
-            border-top: 1px solid rgba(23,23,23,0.08) !important;
-        }
-
-        @media (min-width: 992px) {
-            .hero-content {
-                display: grid !important;
-                grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.72fr) !important;
-                text-align: left !important;
-            }
-            .hero-text h1,
-            .hero-text p {
-                margin-left: 0 !important;
-                margin-right: 0 !important;
-            }
-            .hero-text::before {
-                justify-content: flex-start;
-            }
-            .login-card {
-                justify-self: end;
-                min-width: 330px;
-            }
-            .feature-row:nth-child(even) {
-                transform: translateX(18px);
-            }
-            .feature-row:nth-child(odd) {
-                transform: translateX(-18px);
-            }
-        }
-
-        @media (max-width: 720px) {
-            nav {
-                top: 10px !important;
-                width: calc(100% - 20px) !important;
-                height: 58px !important;
-                padding: 0 10px 0 14px !important;
-            }
-            .nav-logo { font-size: 16px !important; }
-            .nav-logo img { width: 32px !important; height: 32px !important; }
-            .nav-btn { padding: 9px 12px !important; font-size: 12px !important; }
-            body > .section:first-of-type { padding-top: 104px !important; min-height: auto !important; }
-            .hero-text h1 {
-                font-size: clamp(3.1rem, 17vw, 5.4rem) !important;
-                letter-spacing: -0.08em !important;
-                text-align: left !important;
-            }
-            .hero-text p,
-            .hero-text::before { text-align: left !important; margin-left: 0 !important; }
-            .hero-content { align-items: stretch !important; text-align: left !important; }
-            .login-card { transform: rotate(0deg); border-radius: 34px !important; }
-            .feature-row {
-                border-radius: 34px !important;
-                padding: 22px !important;
-                margin-left: 0 !important;
-                margin-right: 0 !important;
-            }
-            .feature-text { text-align: left !important; }
-            .feature-text h2 { font-size: clamp(2.05rem, 10vw, 3.1rem) !important; }
-            .feature-text p { font-size: 1rem !important; line-height: 1.72 !important; }
-            .light-break-section { margin: 70px 10px !important; border-radius: 36px !important; }
-            .toggle-wrapper { width: calc(100% - 24px) !important; }
-        }
-
     </style>
 </head>
 <body>
@@ -1540,39 +1336,55 @@
     <section class="section">
         <div class="hero-content">
             <div class="hero-text reveal-up">
-                <h1>把名牌，<br>變成 <span>開口</span> 的入口</h1>
-                <p>學生一感應就能開始美語口說練習，老師看得到練習紀錄，家長收得到學習成果。Tappie 把實體名牌、AI 發音回饋、點數獎勵與補習班管理後台串成一套完整流程。</p>
+                <h1>嗶卡感應，<br>用 <span>Tappie</span> 秒說外語！</h1>
+                <p>補教業最強的 OMO 語音開口神器。免下載、一嗶即唸，融合微軟醫療級診斷與自動化家長週報。靠卡加扣點，無痛升級貴校的點數系統。</p>
             </div>
 
-            <div class="login-card reveal-up" style="transition-delay: 0.2s;" id="mainCard">
-                <div id="login-home">
-                    <div class="status-badge">
-                        <div class="status-dot"></div>
-                        <span id="msg" style="font-size: 14px; font-weight: 900;">請感應學生專屬 NFC 卡片</span>
-                    </div>
-                    
-                    <h3 style="margin: 0; letter-spacing: 2px; font-size: 22px;">STUDENT LOGIN</h3>
-                    <p style="color: #94a3b8; font-size: 13px; margin: 5px 0 30px 0; font-weight: bold;">數位學習平台</p>
+            <div class="hero-stage reveal-up" style="transition-delay: 0.2s;" id="tappie-card-stage" aria-label="Tappie 數位口說名牌使用流程動畫">
+                <div class="stage-grid"></div>
+                <div class="stage-orbit" aria-hidden="true"></div>
 
-                    <button class="btn-login" onclick="toggleManualInput()">
-                        <span style="font-size: 20px;">⌨️</span> <span style="flex:1; text-align: left;">手動登入</span> <span>➔</span>
-                    </button>
-                    <button class="btn-login line" onclick="alert('LIFF 靜默登入開發中，敬請期待！')">
-                        <span style="font-size: 20px;">💬</span> <span style="flex:1; text-align: left;">使用 Line 快速進入</span> <span>➔</span>
-                    </button>
+                <div class="stage-status">
+                    <div class="status-dot"></div>
+                    <span id="msg">名牌感應，正在開啟口說任務</span>
                 </div>
 
-                <div id="manual-input-zone">
-                    <div style="text-align: left; margin-bottom: 20px; color: #94a3b8; font-size: 14px; cursor: pointer; font-weight: bold;" onclick="toggleManualInput()">❮ 返回感應模式</div>
-                    <h3 style="margin-bottom: 25px; letter-spacing: 2px;">手動登入</h3>
-                    
-                    <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: var(--marian-gold); padding-left: 10px;">校區代碼</div>
-                    <input type="text" id="class-input-field" class="uid-input" placeholder="輸入代碼" autocomplete="off" style="margin-bottom: 15px; letter-spacing: 5px;">
-                    
-                    <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: var(--marian-gold); padding-left: 10px;">學生代號</div>
-                    <input type="text" id="uid-input-field" class="uid-input" placeholder="輸入學號" autocomplete="off" style="margin-bottom: 25px;">
-                    
-                    <button class="btn-login primary" id="manual-submit-btn" style="width: 100%; font-size: 18px;" onclick="handleManualLogin()">進入系統</button>
+                <div class="stage-chip chip-ai">🎙️ <span><strong>AI</strong> 發音回饋</span></div>
+                <div class="stage-chip chip-parent">📩 <span>家長週報同步</span></div>
+                <div class="stage-chip chip-console">📊 <span>老師後台追蹤</span></div>
+
+                <div class="device-cluster">
+                    <div class="story-phone">
+                        <div class="phone-screen">
+                            <div class="phone-topline"><span>Tappie</span><span>● REC</span></div>
+                            <div class="mission-card">
+                                <div class="mission-label">TODAY MISSION</div>
+                                <div class="mission-word">Speak!</div>
+                                <div class="mission-sub">感應後直接開始英文口說練習</div>
+                            </div>
+                            <div class="mic-disc">🎙️</div>
+                            <div class="wave-row" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                        </div>
+                    </div>
+
+                    <div class="story-card" aria-label="Tappie NFC 數位口說名牌">
+                        <div class="story-card-face">
+                            <img src="/assets/official/tappiecard-1.PNG" alt="Tappie 數位口說名牌" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="story-card-fallback" style="display:none;">
+                                <div class="fallback-brand">Tappie</div>
+                                <div class="fallback-title">Digital<br>Speaking<br>Badge</div>
+                                <div class="fallback-nfc">NFC</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nfc-signal" aria-hidden="true"><span></span><span></span><span></span></div>
+
+                    <div class="score-panel" aria-label="AI 發音回饋分數">
+                        <div class="score-num">92</div>
+                        <div class="score-label">Pronunciation Score</div>
+                        <div class="score-bars"><i></i><i></i><i></i></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2857,6 +2669,40 @@
             });
         }
         
+
+        // =======================================================
+        // 🎬 Tappie Card Story Stage v1：Hero 卡片舞台互動
+        // =======================================================
+        (function initTappieCardStoryStage() {
+            const stage = document.getElementById('tappie-card-stage');
+            if (!stage) return;
+
+            function updateStageByScroll() {
+                const rect = stage.getBoundingClientRect();
+                const viewport = window.innerHeight || document.documentElement.clientHeight;
+                const raw = 1 - ((rect.top + rect.height * 0.5) / (viewport + rect.height * 0.5));
+                const progress = Math.max(0, Math.min(1, raw));
+                stage.style.setProperty('--stage-progress', progress.toFixed(3));
+            }
+
+            stage.addEventListener('pointermove', (event) => {
+                const rect = stage.getBoundingClientRect();
+                const x = ((event.clientX - rect.left) / rect.width - 0.5) * 18;
+                const y = ((event.clientY - rect.top) / rect.height - 0.5) * 18;
+                stage.style.setProperty('--stage-mouse-x', `${x.toFixed(1)}px`);
+                stage.style.setProperty('--stage-mouse-y', `${y.toFixed(1)}px`);
+            });
+
+            stage.addEventListener('pointerleave', () => {
+                stage.style.setProperty('--stage-mouse-x', '0px');
+                stage.style.setProperty('--stage-mouse-y', '0px');
+            });
+
+            updateStageByScroll();
+            window.addEventListener('scroll', updateStageByScroll, { passive: true });
+            window.addEventListener('resize', updateStageByScroll);
+        })();
+
         // =======================================================
         // 📸 OMO 圖庫引擎：手機滑動點亮 & Lightbox 橫向滑動
         // =======================================================
