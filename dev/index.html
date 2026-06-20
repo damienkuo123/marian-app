@@ -1491,9 +1491,10 @@
             padding: clamp(78px, 9vw, 128px) 22px clamp(110px, 12vw, 170px);
             color: #101828;
             background:
-                radial-gradient(circle at 12% 8%, rgba(0,123,255,0.10), transparent 32%),
-                radial-gradient(circle at 88% 34%, rgba(241,196,15,0.12), transparent 28%),
-                linear-gradient(180deg, #f7f9fc 0%, #ffffff 42%, #eef5ff 76%, var(--bg-dark) 100%);
+                radial-gradient(circle at 10% 6%, rgba(0,123,255,0.13), transparent 32%),
+                radial-gradient(circle at 88% 30%, rgba(241,196,15,0.16), transparent 30%),
+                radial-gradient(circle at 50% 86%, rgba(46,204,113,0.08), transparent 34%),
+                linear-gradient(180deg, #f7f9fc 0%, #ffffff 38%, #eef6ff 72%, #f8fbff 100%);
             overflow: clip;
         }
 
@@ -1859,6 +1860,18 @@
         .loop-node[data-step="4"] { left: 9%; top: 75%; }
         .loop-node[data-step="5"] { left: 9%; top: 25%; }
 
+
+        .problem-loop-section .reveal-up.is-visible,
+        .problem-loop-section .reveal-left.is-visible,
+        .problem-loop-section .reveal-right.is-visible {
+            opacity: 1;
+            transform: translate(0, 0);
+        }
+
+        .problem-loop-section.global-section {
+            color-scheme: light;
+        }
+
         @media (max-width: 920px) {
             .pain-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2033,7 +2046,7 @@
         </div>
     </section>
 
-    <section class="problem-loop-section" id="tappie-problem-loop" aria-label="Tappie 痛點與核心閉環">
+    <section class="problem-loop-section global-section" id="tappie-problem-loop" aria-label="Tappie 痛點與核心閉環">
         <div class="problem-loop-shell">
             <div class="problem-loop-header reveal-up">
                 <div class="problem-loop-kicker">Problem to Loop</div>
@@ -3781,6 +3794,31 @@
         setActive(0);
         window.addEventListener('scroll', onScroll, { passive: true });
         window.addEventListener('resize', onScroll);
+    })();
+    </script>
+
+
+    <script>
+    (() => {
+        const section = document.getElementById('tappie-problem-loop');
+        if (!section) return;
+        const revealItems = section.querySelectorAll('.reveal-up, .reveal-left, .reveal-right');
+
+        if (!('IntersectionObserver' in window)) {
+            revealItems.forEach(el => el.classList.add('is-visible'));
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.08, rootMargin: '0px 0px -8% 0px' });
+
+        revealItems.forEach(el => observer.observe(el));
     })();
     </script>
 
