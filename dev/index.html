@@ -1103,6 +1103,67 @@
         @keyframes jump { 0% { height: 20%; } 100% { height: 100%; } }
 
 
+
+        /* ========================================= */
+        /* 🗃️ 學生登入彈窗 */
+        /* ========================================= */
+        .login-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 2500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(3, 7, 18, 0.62);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+        .login-modal.show { display: flex; animation: modalFadeIn 0.22s ease-out; }
+        .login-modal__panel {
+            position: relative;
+            width: min(450px, calc(100vw - 32px));
+            animation: modalPanelIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .login-modal .login-card {
+            width: 100%;
+            max-width: none;
+            padding: 42px 32px 34px;
+            margin: 0;
+        }
+        .login-modal__close {
+            position: absolute;
+            top: -14px;
+            right: -10px;
+            z-index: 2;
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(15, 23, 42, 0.92);
+            color: white;
+            font-size: 22px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.35);
+        }
+        .login-modal__hint {
+            margin: 18px 0 0;
+            color: rgba(148, 163, 184, 0.86);
+            font-size: 12px;
+            line-height: 1.6;
+            font-weight: 700;
+        }
+        body.login-modal-open { overflow: hidden; }
+        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalPanelIn { from { opacity: 0; transform: translateY(22px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @media (max-width: 520px) {
+            .login-modal { align-items: flex-end; padding: 0 12px 18px; }
+            .login-modal__panel { width: 100%; }
+            .login-modal .login-card { border-radius: 32px; padding: 38px 24px 28px; }
+            .login-modal__close { top: -12px; right: 8px; }
+        }
+
         /* ========================================= */
         /* 🎬 Tappie Frame Sequence Hero */
         /* ========================================= */
@@ -1140,8 +1201,13 @@
             z-index: 2;
             pointer-events: none;
             background:
-                linear-gradient(90deg, rgba(247, 249, 252, 0.96) 0%, rgba(247, 249, 252, 0.72) 30%, rgba(247, 249, 252, 0.06) 62%, rgba(247, 249, 252, 0.18) 100%),
-                linear-gradient(0deg, rgba(247, 249, 252, 0.9) 0%, rgba(247, 249, 252, 0) 28%, rgba(247, 249, 252, 0) 80%, rgba(247, 249, 252, 0.78) 100%);
+                linear-gradient(0deg,
+                    rgba(247, 249, 252, 0.96) 0%,
+                    rgba(247, 249, 252, 0.82) 10%,
+                    rgba(247, 249, 252, 0.28) 23%,
+                    rgba(247, 249, 252, 0) 46%);
+            opacity: var(--hero-end-fade, 0);
+            transition: opacity 0.12s linear;
         }
 
         .tappie-scroll-hero__copy {
@@ -1230,6 +1296,74 @@
             transform: translateY(-2px);
         }
 
+        .tappie-scroll-hero__steps {
+            position: relative;
+            min-height: 250px;
+        }
+
+        .tappie-scroll-hero__step {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: min(560px, calc(100vw - 44px));
+            opacity: 0;
+            transform: translateY(18px) scale(0.985);
+            transition: opacity 0.26s ease, transform 0.26s ease;
+            pointer-events: none;
+            padding: 22px 24px 24px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.68);
+            border: 1px solid rgba(16, 24, 40, 0.10);
+            box-shadow: 0 24px 70px rgba(16, 24, 40, 0.12);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .tappie-scroll-hero__step.is-active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .tappie-scroll-hero__step-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(16, 24, 40, 0.54);
+            font-weight: 950;
+        }
+
+        .tappie-scroll-hero__step-kicker::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--primary-blue);
+            box-shadow: 0 0 18px rgba(0, 123, 255, 0.42);
+        }
+
+        .tappie-scroll-hero__step h1 {
+            margin: 0 0 12px;
+            color: #101828;
+            font-size: clamp(2.2rem, 5vw, 4.6rem);
+            line-height: 1;
+            letter-spacing: -0.06em;
+            font-weight: 950;
+        }
+
+        .tappie-scroll-hero__step p {
+            margin: 0;
+            max-width: 40ch;
+            color: rgba(16, 24, 40, 0.68);
+            font-size: clamp(0.98rem, 1.5vw, 1.12rem);
+            line-height: 1.66;
+            font-weight: 700;
+        }
+
         .tappie-scroll-hero__loading {
             position: absolute;
             right: 18px;
@@ -1257,26 +1391,41 @@
                 height: 460vh;
             }
 
-            .tappie-scroll-hero__shade {
-                background:
-                    linear-gradient(0deg, rgba(247, 249, 252, 0.96) 0%, rgba(247, 249, 252, 0.82) 28%, rgba(247, 249, 252, 0.06) 72%, rgba(247, 249, 252, 0.78) 100%);
-            }
-
             .tappie-scroll-hero__copy {
-                left: 18px;
-                right: 18px;
-                bottom: 74px;
+                left: 14px;
+                right: 14px;
+                bottom: 78px;
                 width: auto;
             }
 
-            .tappie-scroll-hero__copy h1 {
-                font-size: clamp(2.35rem, 11vw, 4rem);
-                letter-spacing: -0.055em;
+            .tappie-scroll-hero__steps {
+                min-height: 184px;
             }
 
-            .tappie-scroll-hero__copy p {
-                font-size: 15px;
-                max-width: 31ch;
+            .tappie-scroll-hero__step {
+                width: 100%;
+                padding: 15px 16px 16px;
+                border-radius: 24px;
+                background: rgba(255, 255, 255, 0.76);
+                box-shadow: 0 18px 46px rgba(16, 24, 40, 0.12);
+            }
+
+            .tappie-scroll-hero__step-kicker {
+                font-size: 10px;
+                margin-bottom: 8px;
+            }
+
+            .tappie-scroll-hero__step h1 {
+                font-size: clamp(1.48rem, 7vw, 2.35rem);
+                line-height: 1.04;
+                letter-spacing: -0.05em;
+                margin-bottom: 8px;
+            }
+
+            .tappie-scroll-hero__step p {
+                font-size: 13.5px;
+                line-height: 1.5;
+                max-width: 27ch;
             }
 
             .tappie-scroll-hero__actions {
@@ -1287,6 +1436,15 @@
                 padding: 12px 16px;
                 font-size: 14px;
             }
+        }
+
+
+        @media (max-width: 390px) {
+            nav { padding: 0 12px; }
+            .nav-logo { font-size: 16px; letter-spacing: 1.2px; }
+            .nav-logo img { width: 32px; }
+            .nav-actions { gap: 6px; }
+            .nav-btn { padding: 7px 9px; font-size: 11px; }
         }
 
     </style>
@@ -1302,22 +1460,70 @@
             Tappie
         </div>
         <div class="nav-actions">
+            <button class="nav-btn secondary" onclick="openStudentLoginModal()">學生登入</button>
             <button class="nav-btn secondary" onclick="window.location.href='console.html'">登入後台</button>
             <button class="nav-btn" onclick="document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })">加入Tappie</button>
         </div>
     </nav>
 
+    <div class="login-modal" id="student-login-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="學生登入">
+        <div class="login-modal__panel" role="document">
+            <button class="login-modal__close" type="button" onclick="closeStudentLoginModal()" aria-label="關閉登入彈窗">×</button>
+            <div class="login-card" id="mainCard">
+                <div id="login-home">
+                    <div class="status-badge">
+                        <div class="status-dot"></div>
+                        <span id="msg" style="font-size: 14px; font-weight: 900;">請感應學生專屬 NFC 卡片</span>
+                    </div>
+                    <h3 style="margin: 0; letter-spacing: 2px; font-size: 22px;">STUDENT LOGIN</h3>
+                    <p style="color: #94a3b8; font-size: 13px; margin: 5px 0 30px 0; font-weight: bold;">數位學習平台</p>
+                    <button class="btn-login" onclick="toggleManualInput()">
+                        <span style="font-size: 20px;">⌨️</span> <span style="flex:1; text-align: left;">手動登入</span> <span>➔</span>
+                    </button>
+                    <button class="btn-login line" onclick="alert('LIFF 靜默登入開發中，敬請期待！')">
+                        <span style="font-size: 20px;">💬</span> <span style="flex:1; text-align: left;">使用 Line 快速進入</span> <span>➔</span>
+                    </button>
+                    <p class="login-modal__hint">也可以直接感應學生專屬 NFC 卡片，系統會自動導向學習頁面。</p>
+                </div>
+                <div id="manual-input-zone">
+                    <div style="text-align: left; margin-bottom: 20px; color: #94a3b8; font-size: 14px; cursor: pointer; font-weight: bold;" onclick="toggleManualInput()">❮ 返回感應模式</div>
+                    <h3 style="margin-bottom: 25px; letter-spacing: 2px;">手動登入</h3>
+                    <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: var(--marian-gold); padding-left: 10px;">校區代碼</div>
+                    <input type="text" id="class-input-field" class="uid-input" placeholder="輸入代碼" autocomplete="off" style="margin-bottom: 15px; letter-spacing: 5px;">
+                    <div style="text-align: left; margin-bottom: 5px; font-size: 12px; font-weight: bold; color: var(--marian-gold); padding-left: 10px;">學生代號</div>
+                    <input type="text" id="uid-input-field" class="uid-input" placeholder="輸入學號" autocomplete="off" style="margin-bottom: 25px;">
+                    <button class="btn-login primary" id="manual-submit-btn" style="width: 100%; font-size: 18px;" onclick="handleManualLogin()">進入系統</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <section class="tappie-scroll-hero" id="tappie-scroll-hero" aria-label="Tappie 數位口說名牌展示">
         <div class="tappie-scroll-hero__sticky">
             <canvas id="tappieHeroCanvas" class="tappie-scroll-hero__canvas"></canvas>
             <div class="tappie-scroll-hero__shade"></div>
-            <div class="tappie-scroll-hero__copy reveal-up">
-                <div class="tappie-scroll-hero__eyebrow">Tappie Digital Speaking Badge</div>
-                <h1>把每天戴的名牌，<br>變成開口說英文的入口。</h1>
-                <p>一嗶進入口說練習，學生不用記帳密、不用下載 App；補習班可以把練習、點數、成果與家長週報串成完整流程。</p>
-                <div class="tappie-scroll-hero__actions">
-                    <button class="tappie-scroll-hero__btn primary" onclick="document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })">加入 Tappie</button>
-                    <button class="tappie-scroll-hero__btn secondary" onclick="window.location.href='console.html'">登入後台</button>
+            <div class="tappie-scroll-hero__copy" aria-live="polite">
+                <div class="tappie-scroll-hero__steps">
+                    <article class="tappie-scroll-hero__step is-active" data-start="0" data-end="0.24">
+                        <div class="tappie-scroll-hero__step-kicker">Tappie Speaking Badge</div>
+                        <h1>把每天戴的名牌，<br>變成開口說英文的入口。</h1>
+                        <p>從學生最熟悉的實體名牌開始，把口說練習放進每天都會發生的學習流程。</p>
+                    </article>
+                    <article class="tappie-scroll-hero__step" data-start="0.24" data-end="0.48">
+                        <div class="tappie-scroll-hero__step-kicker">Tap to Start</div>
+                        <h1>一嗶進入，<br>不用帳號密碼。</h1>
+                        <p>NFC 感應後直接進入個人頁面，不用下載 App，也不用學生記住複雜帳號。</p>
+                    </article>
+                    <article class="tappie-scroll-hero__step" data-start="0.48" data-end="0.74">
+                        <div class="tappie-scroll-hero__step-kicker">Student Journey</div>
+                        <h1>練習、點數、成果，<br>都被系統記錄。</h1>
+                        <p>學生完成口說練習後，系統會累積點數與學習紀錄，讓練習變成看得見的進步。</p>
+                    </article>
+                    <article class="tappie-scroll-hero__step" data-start="0.74" data-end="1">
+                        <div class="tappie-scroll-hero__step-kicker">For Schools & Parents</div>
+                        <h1>補習班與家長，<br>都能看見成果。</h1>
+                        <p>從感應、練習、點數到週報，把原本分散的口說練習整理成完整的學習追蹤流程。</p>
+                    </article>
                 </div>
             </div>
             <div class="tappie-scroll-hero__loading" id="tappieHeroLoading">Loading hero…</div>
@@ -2186,6 +2392,38 @@
         // 🗃️ 登入邏輯 (完整保留您的核心代碼)
         // =======================================================
         const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
+
+        function openStudentLoginModal() {
+            const modal = document.getElementById('student-login-modal');
+            if (!modal) return;
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('login-modal-open');
+            window.setTimeout(() => {
+                const manual = document.getElementById('manual-input-zone');
+                const classInput = document.getElementById('class-input-field');
+                if (manual && manual.style.display === 'block' && classInput) {
+                    classInput.focus({ preventScroll: true });
+                }
+            }, 120);
+        }
+
+        function closeStudentLoginModal() {
+            const modal = document.getElementById('student-login-modal');
+            if (!modal) return;
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('login-modal-open');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeStudentLoginModal();
+        });
+
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('student-login-modal');
+            if (modal && e.target === modal) closeStudentLoginModal();
+        });
         
         function toggleManualInput() {
             const home = document.getElementById('login-home');
@@ -2836,11 +3074,32 @@
             return maxScroll > 0 ? y / maxScroll : 0;
         }
 
+        const heroSteps = Array.from(scene.querySelectorAll('.tappie-scroll-hero__step'));
+
+        function updateHeroText(progress) {
+            let activeFound = false;
+            heroSteps.forEach((step) => {
+                const start = Number(step.dataset.start || 0);
+                const end = Number(step.dataset.end || 1);
+                const active = progress >= start && progress < end;
+                step.classList.toggle('is-active', active);
+                if (active) activeFound = true;
+            });
+
+            if (!activeFound && heroSteps.length) {
+                heroSteps[heroSteps.length - 1].classList.add('is-active');
+            }
+
+            const endFade = Math.max(0, Math.min(1, (progress - 0.86) / 0.14));
+            scene.style.setProperty('--hero-end-fade', endFade.toFixed(3));
+        }
+
         function update() {
             rafId = null;
             const progress = getProgress();
             const nextIndex = Math.round(progress * (frameCount - 1));
             if (nextIndex !== currentIndex) drawFrame(nextIndex);
+            updateHeroText(progress);
         }
 
         function requestUpdate() {
