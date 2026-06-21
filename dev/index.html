@@ -7402,6 +7402,205 @@
             }
         }
 
+    
+
+        /* ===================================================== */
+        /* ✅ 2026-06-22 Final layout stability patch             */
+        /* Scope: Section 2 typography / Section 3 centering /    */
+        /* Role sections gap + alignment                          */
+        /* ===================================================== */
+
+        :root {
+            --tappie-apple-font: -apple-system, BlinkMacSystemFont, "SF Pro TC", "SF Pro Display", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+            --tappie-display-leading-final: 1.035;
+            --tappie-display-tracking-final: -0.052em;
+        }
+
+        body {
+            font-family: var(--tappie-apple-font) !important;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* 1) Section 2: Apple-like display rhythm — 不再擠成一團 */
+        .tappie-problem-photo h2,
+        .tappie-day-loop__copy h2,
+        .tappie-role-hero h2,
+        .tappie-feature-copy h4 {
+            font-family: var(--tappie-apple-font) !important;
+            line-height: var(--tappie-display-leading-final) !important;
+            letter-spacing: var(--tappie-display-tracking-final) !important;
+            font-weight: 860 !important;
+            text-wrap: balance;
+            word-break: keep-all;
+        }
+
+        .tappie-problem-photo h2 {
+            max-width: 910px !important;
+            font-size: clamp(3rem, 7.15vw, 6.85rem) !important;
+            line-height: 1.025 !important;
+            letter-spacing: -0.055em !important;
+        }
+
+        .tappie-problem-photo p {
+            max-width: 680px !important;
+            margin-top: clamp(24px, 3vw, 38px) !important;
+            line-height: 1.68 !important;
+            letter-spacing: -0.012em !important;
+        }
+
+        .tappie-problem-photo__tags {
+            margin-top: clamp(34px, 4.2vw, 56px) !important;
+        }
+
+        /* 2) Section 3: sticky 置中修正，讓手機下方有呼吸空間 */
+        .tappie-day-loop {
+            overflow: clip !important;
+        }
+
+        .tappie-day-loop__sticky {
+            top: 75px !important;
+            height: calc(100dvh - 75px) !important;
+            min-height: 0 !important;
+            box-sizing: border-box !important;
+            align-items: center !important;
+            padding-top: clamp(28px, 4vh, 54px) !important;
+            padding-bottom: clamp(66px, 8vh, 108px) !important;
+        }
+
+        .tappie-day-loop__stage {
+            min-height: min(560px, calc(100dvh - 205px)) !important;
+            align-self: center !important;
+            transform: translate3d(0, -12px, 0) !important;
+        }
+
+        .tappie-day-phone {
+            width: min(318px, 42vw) !important;
+            transform: translate3d(0, -10px, 0) !important;
+            will-change: transform;
+        }
+
+        .tappie-day-screen,
+        .tappie-day-screen img {
+            backface-visibility: hidden;
+            transform: translateZ(0);
+        }
+
+        /* 3) 四大角色區：標題區與卡片區拉開一點，並保持左邊界一致 */
+        .tappie-role-hero,
+        .tappie-role-features {
+            width: min(1180px, calc(100vw - 96px)) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+
+        .tappie-role-features {
+            /* 原本 -18vh 太靠近標題，這裡讓卡片再往下，視覺更像獨立區段 */
+            margin-top: clamp(18px, 4vh, 54px) !important;
+        }
+
+        .tappie-feature-track {
+            padding-top: clamp(10px, 1.4vw, 18px) !important;
+        }
+
+        /* Role desktop reveal 不要因卡片下移而消失太晚 */
+        @media (min-width: 861px) {
+            .tappie-role-story {
+                min-height: clamp(1040px, 134vh, 1360px) !important;
+            }
+
+            .tappie-role-hero {
+                min-height: calc(68dvh - 75px) !important;
+                padding-top: clamp(64px, 7vw, 104px) !important;
+                padding-bottom: clamp(42px, 5vw, 76px) !important;
+            }
+
+            .tappie-role-features {
+                opacity: var(--role-cards) !important;
+                transform: translate3d(0, calc((1 - var(--role-cards)) * 34px), 0) !important;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .tappie-problem-photo h2 {
+                font-size: clamp(2.55rem, 11.4vw, 4.65rem) !important;
+                line-height: 1.055 !important;
+                letter-spacing: -0.047em !important;
+                max-width: 9.6em !important;
+            }
+
+            .tappie-problem-photo p {
+                font-size: .98rem !important;
+                line-height: 1.62 !important;
+                max-width: 31ch !important;
+            }
+
+            /* Section 3 mobile：保留手機底部空間，避免貼到畫面下緣 */
+            .tappie-day-loop__sticky {
+                top: 75px !important;
+                height: calc(100dvh - 75px) !important;
+                min-height: 680px !important;
+                align-content: start !important;
+                gap: 16px !important;
+                padding-top: 30px !important;
+                padding-bottom: 94px !important;
+            }
+
+            .tappie-day-loop__caption {
+                min-height: 138px !important;
+                margin-top: 22px !important;
+            }
+
+            .tappie-day-loop__stage {
+                min-height: 368px !important;
+                margin-top: 30px !important;
+                transform: translate3d(0, -8px, 0) !important;
+            }
+
+            .tappie-day-phone {
+                width: min(212px, 54vw) !important;
+                transform: translate3d(0, -8px, 0) !important;
+            }
+
+            /* 四大角色區 mobile：標題與卡片拉開距離 */
+            .tappie-role-story {
+                padding-top: 58px !important;
+                padding-bottom: 64px !important;
+            }
+
+            .tappie-role-hero,
+            .tappie-role-features {
+                width: calc(100vw - 32px) !important;
+            }
+
+            .tappie-role-hero {
+                padding-bottom: 0 !important;
+            }
+
+            .tappie-role-features {
+                margin-top: 42px !important;
+            }
+
+            .tappie-feature-track {
+                padding-top: 8px !important;
+            }
+        }
+
+        @media (max-width: 390px) {
+            .tappie-day-loop__sticky {
+                min-height: 650px !important;
+                padding-bottom: 88px !important;
+            }
+
+            .tappie-day-phone {
+                width: min(202px, 53vw) !important;
+            }
+
+            .tappie-role-features {
+                margin-top: 38px !important;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -9202,6 +9401,10 @@
         if (!scene || !canvas) return;
 
         const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+        }
         const loading = document.getElementById('tappieHeroLoading');
         const frameCount = 241;
         const images = new Array(frameCount);
@@ -9530,9 +9733,9 @@
                 const y = Math.min(Math.max(-rect.top, 0), total);
                 const p = y / total;
 
-                const blur = smooth((p - 0.06) / 0.42);
-                const cards = smooth((p - 0.20) / 0.38);
-                const hero = 1 - smooth((p - 0.12) / 0.42) * .88;
+                const blur = smooth((p - 0.05) / 0.44);
+                const cards = smooth((p - 0.17) / 0.42);
+                const hero = 1 - smooth((p - 0.10) / 0.46) * .88;
 
                 section.style.setProperty('--role-progress', p.toFixed(3));
                 section.style.setProperty('--role-blur', blur.toFixed(3));
