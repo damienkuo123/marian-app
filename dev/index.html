@@ -7536,6 +7536,187 @@
             image-rendering: auto;
         }
 
+    
+
+        /* ========================================= */
+        /* ✅ Section 3 direction correction v2       */
+        /* 手機框應往上，不是往下；保留底部 breathing room */
+        /* ========================================= */
+        @media (min-width: 861px) {
+            .tappie-day-loop__sticky {
+                padding-bottom: clamp(82px, 9vw, 128px) !important;
+            }
+
+            .tappie-day-loop__stage {
+                min-height: min(680px, calc(100svh - 92px)) !important;
+                padding-bottom: 18px !important;
+            }
+
+            .tappie-day-phone {
+                height: min(620px, calc(100svh - 128px)) !important;
+                max-height: calc(100svh - 128px) !important;
+                width: auto !important;
+                aspect-ratio: 0.49 !important;
+                transform: translateY(-22px) translateZ(0) !important;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .tappie-day-loop__stage {
+                padding-bottom: 26px !important;
+            }
+
+            .tappie-day-phone {
+                transform: translateY(-8px) translateZ(0) !important;
+            }
+        }
+
+        @media (max-width: 390px) {
+            .tappie-day-phone {
+                transform: translateY(-8px) translateZ(0) !important;
+            }
+        }
+
+    
+
+        /* ========================================= */
+        /* ✅ Mobile role lightweight reveal v6       */
+        /* 手機版：背景圖保留 + 輕量模糊淡入 + 卡片浮出 */
+        /* 桌機版不動，避免影響 clean role desktop reveal */
+        /* ========================================= */
+        .tappie-role-story {
+            --mobile-role-blur: 0;
+            --mobile-role-card: 1;
+        }
+
+        @media (max-width: 860px) {
+            .tappie-role-story {
+                --mobile-role-blur: 0;
+                --mobile-role-card: 0;
+                min-height: auto !important;
+                height: auto !important;
+                padding: 66px 0 72px !important;
+                overflow: hidden !important;
+                isolation: isolate !important;
+            }
+
+            .tappie-role-bg {
+                position: absolute !important;
+                inset: 0 !important;
+                height: 100% !important;
+                min-height: 100% !important;
+                overflow: hidden !important;
+                background: inherit !important;
+                pointer-events: none !important;
+            }
+
+            /* 清晰主圖：手機版重新打開可見度，不再被遮罩壓到看不到 */
+            .tappie-role-bg-img:not(.tappie-role-bg-blur) {
+                display: block !important;
+                opacity: calc(.52 - (var(--mobile-role-blur) * .12)) !important;
+                filter: saturate(.98) contrast(.98) !important;
+                transform: translate3d(0,0,0) scale(1.03) !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                will-change: opacity;
+                backface-visibility: hidden;
+            }
+
+            /* 模糊主圖：只做 opacity 淡入，不做大型動態 blur / mask，避免 iOS 穿幫 */
+            .tappie-role-bg-blur {
+                display: block !important;
+                opacity: calc(.08 + (var(--mobile-role-blur) * .50)) !important;
+                filter: blur(12px) saturate(.95) contrast(.96) !important;
+                transform: translate3d(0,0,0) scale(1.08) !important;
+                mask-image: none !important;
+                -webkit-mask-image: none !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                will-change: opacity;
+                backface-visibility: hidden;
+            }
+
+            /* 遮罩變薄，讓背景圖重新看得到 */
+            .theme-student .tappie-role-bg-shade,
+            .theme-teacher .tappie-role-bg-shade {
+                background:
+                    linear-gradient(180deg, rgba(0,0,0,.58) 0%, rgba(0,0,0,.48) 38%, rgba(0,0,0,.72) 100%),
+                    radial-gradient(circle at 50% 26%, rgba(255,255,255,.08), rgba(0,0,0,0) 42%) !important;
+            }
+
+            .theme-parent .tappie-role-bg-shade {
+                background:
+                    linear-gradient(180deg, rgba(244,239,232,.70) 0%, rgba(244,239,232,.58) 42%, rgba(244,239,232,.86) 100%),
+                    radial-gradient(circle at 50% 28%, rgba(255,255,255,.16), rgba(244,239,232,0) 48%) !important;
+            }
+
+            .theme-manager .tappie-role-bg-shade {
+                background:
+                    linear-gradient(180deg, rgba(237,241,244,.72) 0%, rgba(237,241,244,.60) 42%, rgba(237,241,244,.88) 100%),
+                    radial-gradient(circle at 50% 28%, rgba(255,255,255,.16), rgba(237,241,244,0) 48%) !important;
+            }
+
+            .tappie-role-hero {
+                position: relative !important;
+                top: auto !important;
+                width: calc(100vw - 32px) !important;
+                min-height: auto !important;
+                margin: 0 auto !important;
+                padding: 0 0 34px !important;
+                opacity: 1 !important;
+                transform: none !important;
+                pointer-events: auto !important;
+                transition: none !important;
+            }
+
+            .tappie-role-features {
+                position: relative !important;
+                z-index: 5 !important;
+                width: calc(100vw - 32px) !important;
+                margin: 34px auto 0 !important;
+                padding: 0 0 0 !important;
+                opacity: calc(.18 + (var(--mobile-role-card) * .82)) !important;
+                transform: translate3d(0, calc((1 - var(--mobile-role-card)) * 28px), 0) !important;
+                transition: opacity .08s linear, transform .08s linear !important;
+                will-change: opacity, transform;
+            }
+
+            .tappie-feature-track {
+                gap: 22px !important;
+                padding: 6px 16px 12px 0 !important;
+                margin: 0 -16px 0 0 !important;
+                overflow-x: auto !important;
+                scroll-snap-type: x mandatory !important;
+                overscroll-behavior-x: contain !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .tappie-feature-card.apple-visual-card,
+            .tappie-feature-card {
+                flex: 0 0 min(76vw, 342px) !important;
+                width: min(76vw, 342px) !important;
+                max-width: 342px !important;
+                scroll-snap-align: start !important;
+            }
+        }
+
+        @media (max-width: 390px) {
+            .tappie-role-story {
+                padding-top: 60px !important;
+                padding-bottom: 68px !important;
+            }
+
+            .tappie-role-features {
+                margin-top: 30px !important;
+            }
+
+            .tappie-feature-card.apple-visual-card,
+            .tappie-feature-card {
+                flex-basis: min(74vw, 318px) !important;
+                width: min(74vw, 318px) !important;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -9690,6 +9871,65 @@
         document.addEventListener('DOMContentLoaded', setupTappieCleanRoleReveal);
     } else {
         setupTappieCleanRoleReveal();
+    }
+})();
+</script>
+
+
+<script>
+(() => {
+    const clamp01 = v => Math.min(1, Math.max(0, v));
+    const smooth = v => {
+        v = clamp01(v);
+        return v * v * (3 - 2 * v);
+    };
+
+    function setupMobileRoleLightRevealV6() {
+        const sections = Array.from(document.querySelectorAll('[data-tappie-role-story]'));
+        if (!sections.length) return;
+
+        let raf = 0;
+
+        const update = () => {
+            raf = 0;
+            const isMobile = window.matchMedia('(max-width: 860px)').matches;
+            const vh = Math.max(1, window.innerHeight || 1);
+
+            sections.forEach(section => {
+                if (!isMobile) {
+                    section.style.removeProperty('--mobile-role-blur');
+                    section.style.removeProperty('--mobile-role-card');
+                    return;
+                }
+
+                const rect = section.getBoundingClientRect();
+
+                // 手機輕量版：section 進入畫面時，背景先慢慢模糊，卡片再輕微浮出。
+                // 不改 section 高度、不 sticky，所以不會再卡住或反覆穿幫。
+                const enter = (vh * 0.92 - rect.top) / (vh * 0.74);
+                const blur = smooth((enter - 0.05) / 0.82);
+                const card = smooth((enter - 0.24) / 0.70);
+
+                section.style.setProperty('--mobile-role-blur', blur.toFixed(3));
+                section.style.setProperty('--mobile-role-card', card.toFixed(3));
+            });
+        };
+
+        const requestUpdate = () => {
+            if (raf) return;
+            raf = requestAnimationFrame(update);
+        };
+
+        update();
+        window.addEventListener('scroll', requestUpdate, { passive: true });
+        window.addEventListener('resize', requestUpdate);
+        window.addEventListener('orientationchange', () => setTimeout(requestUpdate, 220));
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupMobileRoleLightRevealV6);
+    } else {
+        setupMobileRoleLightRevealV6();
     }
 })();
 </script>
