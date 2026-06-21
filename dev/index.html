@@ -7717,6 +7717,42 @@
             }
         }
 
+    
+
+        /* ========================================= */
+        /* ✅ Mobile role reveal timing v7            */
+        /* 只修手機四大區：標題區清晰，卡片接近時才模糊 / 浮出 */
+        /* ========================================= */
+        @media (max-width: 860px) {
+            .tappie-role-story {
+                --mobile-role-blur: 0;
+                --mobile-role-card: 0;
+            }
+
+            /* 標題區：清晰背景為主，卡片出現時才逐漸退到模糊 */
+            .tappie-role-bg-img:not(.tappie-role-bg-blur) {
+                opacity: calc(.58 - (var(--mobile-role-blur) * .18)) !important;
+                filter: saturate(1.02) contrast(1.01) !important;
+                transform: translate3d(0,0,0) scale(1.025) !important;
+            }
+
+            .tappie-role-bg-blur {
+                display: block !important;
+                opacity: calc(var(--mobile-role-blur) * .62) !important;
+                filter: blur(13px) saturate(.94) contrast(.96) !important;
+                transform: translate3d(0,0,0) scale(1.08) !important;
+                mask-image: none !important;
+                -webkit-mask-image: none !important;
+            }
+
+            .tappie-role-features {
+                opacity: var(--mobile-role-card) !important;
+                transform: translate3d(0, calc((1 - var(--mobile-role-card)) * 56px), 0) !important;
+                transition: opacity .06s linear, transform .06s linear !important;
+                will-change: opacity, transform;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -9930,6 +9966,68 @@
         document.addEventListener('DOMContentLoaded', setupMobileRoleLightRevealV6);
     } else {
         setupMobileRoleLightRevealV6();
+    }
+})();
+</script>
+
+
+<script>
+(() => {
+    const clamp01 = v => Math.min(1, Math.max(0, v));
+    const smooth = v => {
+        v = clamp01(v);
+        return v * v * (3 - 2 * v);
+    };
+
+    function setupMobileRoleRevealTimingV7() {
+        const sections = Array.from(document.querySelectorAll('[data-tappie-role-story]'));
+        if (!sections.length) return;
+
+        let raf = 0;
+
+        const update = () => {
+            raf = 0;
+            const isMobile = window.matchMedia('(max-width: 860px)').matches;
+            const vh = Math.max(1, window.innerHeight || 1);
+
+            sections.forEach(section => {
+                if (!isMobile) {
+                    section.style.removeProperty('--mobile-role-blur');
+                    section.style.removeProperty('--mobile-role-card');
+                    return;
+                }
+
+                const features = section.querySelector('.tappie-role-features');
+                if (!features) return;
+
+                const rect = features.getBoundingClientRect();
+
+                // 關鍵修正：
+                // 以前用 section 進入畫面觸發，所以標題區就開始模糊。
+                // 現在改用「卡片區接近畫面」才觸發。
+                const blurProgress = smooth((vh * 0.86 - rect.top) / (vh * 0.58));
+                const cardProgress = smooth((vh * 0.76 - rect.top) / (vh * 0.56));
+
+                section.style.setProperty('--mobile-role-blur', blurProgress.toFixed(3));
+                section.style.setProperty('--mobile-role-card', cardProgress.toFixed(3));
+            });
+        };
+
+        const requestUpdate = () => {
+            if (raf) return;
+            raf = requestAnimationFrame(update);
+        };
+
+        update();
+        window.addEventListener('scroll', requestUpdate, { passive: true });
+        window.addEventListener('resize', requestUpdate);
+        window.addEventListener('orientationchange', () => setTimeout(requestUpdate, 220));
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupMobileRoleRevealTimingV7);
+    } else {
+        setupMobileRoleRevealTimingV7();
     }
 })();
 </script>
