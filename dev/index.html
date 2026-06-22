@@ -9358,6 +9358,382 @@
             }
         }
 
+    
+
+        /* ========================================= */
+        /* ✅ v13 Battle gacha flow transplant        */
+        /* From battle gacha flow: card → record → unlock → flip → prize */
+        /* ========================================= */
+        .collection-gacha-card .tappie-feature-visual {
+            min-height: 430px !important;
+        }
+
+        .collection-gacha-ui {
+            height: 430px !important;
+            min-height: 430px !important;
+            background:
+                radial-gradient(circle at 50% 16%, rgba(0,210,211,.18), transparent 36%),
+                radial-gradient(circle at 50% 88%, rgba(241,196,15,.14), transparent 44%),
+                linear-gradient(180deg, #07101f 0%, #0b1220 100%) !important;
+            border-radius: 32px !important;
+            overflow: hidden !important;
+            position: relative !important;
+        }
+
+        .collection-gacha-ui::before {
+            content: '';
+            position: absolute;
+            left: -40%; right: -40%; bottom: -38%; height: 70%;
+            background:
+                linear-gradient(to top, rgba(0, 210, 211, 0.13), transparent 75%),
+                repeating-linear-gradient(90deg, transparent 0 34px, rgba(0,210,211,.08) 35px 36px),
+                repeating-linear-gradient(0deg, transparent 0 34px, rgba(0,210,211,.05) 35px 36px);
+            transform: rotateX(68deg);
+            transform-origin: top center;
+            pointer-events: none;
+            opacity: .9;
+        }
+
+        .collection-gacha-demo {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            align-items: center;
+            justify-items: center;
+            padding: 22px 22px 18px;
+            box-sizing: border-box;
+            color: #fff;
+            perspective: 1200px;
+            isolation: isolate;
+        }
+
+        .gacha-demo-header {
+            width: min(88%, 420px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 3;
+            margin-bottom: 4px;
+        }
+
+        .gacha-demo-header span {
+            color: #00d2d3;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            opacity: .88;
+        }
+
+        .gacha-demo-header strong {
+            color: rgba(255,255,255,.78);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .08em;
+        }
+
+        .gacha-demo-card-wrap {
+            width: min(250px, 58vw);
+            aspect-ratio: 5 / 7;
+            position: relative;
+            z-index: 4;
+            animation: gachaWrapPop 9s infinite cubic-bezier(.17,.9,.28,1);
+        }
+
+        @keyframes gachaWrapPop {
+            0%, 3% { transform: translateY(14px) scale(.86); opacity: 0; filter: blur(7px); }
+            8%, 100% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+        }
+
+        .gacha-demo-card,
+        .gacha-demo-inner,
+        .gacha-demo-front,
+        .gacha-demo-back {
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            transform-style: preserve-3d;
+        }
+
+        .gacha-demo-card {
+            filter: drop-shadow(0 28px 54px rgba(0,0,0,.56));
+        }
+
+        .gacha-demo-inner {
+            transform: rotateY(0deg);
+            animation: gachaCardFlipV13 9s infinite cubic-bezier(.17,.84,.44,1);
+        }
+
+        @keyframes gachaCardFlipV13 {
+            0%, 48% { transform: rotateY(0deg); }
+            59%, 100% { transform: rotateY(180deg); }
+        }
+
+        .gacha-demo-front,
+        .gacha-demo-back {
+            backface-visibility: hidden;
+            overflow: hidden;
+        }
+
+        .gacha-demo-front {
+            background: linear-gradient(145deg, #1e272b 0%, #0b0f19 100%);
+            border: 2px solid rgba(0,210,211,.34);
+            box-shadow: inset 0 0 30px rgba(0,210,211,.12), 0 0 34px rgba(0,210,211,.10);
+        }
+
+        .gacha-demo-back {
+            transform: rotateY(180deg);
+            background: radial-gradient(circle at 50% 20%, rgba(241,196,15,.22), transparent 44%), #090d16;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(241,196,15,.58);
+            box-shadow: inset 0 0 54px rgba(241,196,15,.18), 0 0 70px rgba(241,196,15,.28);
+        }
+
+        .gacha-demo-cover {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 38%, rgba(0,210,211,.22), transparent 33%),
+                conic-gradient(from 0deg, transparent, rgba(0,210,211,.32), transparent, rgba(155,89,182,.32), transparent),
+                linear-gradient(145deg, #1e272b 0%, #0b0f19 100%);
+            animation: gachaCoverSpin 4.2s linear infinite;
+            opacity: .86;
+        }
+
+        @keyframes gachaCoverSpin { to { transform: rotate(360deg); } }
+
+        .gacha-demo-orbit {
+            position: absolute;
+            left: 50%; top: 50%;
+            width: 130%; height: 130%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, transparent 42%, rgba(0,210,211,.16) 43%, transparent 46%);
+            opacity: .66;
+            animation: gachaOrbitPulse 2.8s infinite ease-in-out;
+        }
+
+        @keyframes gachaOrbitPulse {
+            0%,100% { transform: translate(-50%, -50%) scale(.88); opacity:.42; }
+            50% { transform: translate(-50%, -50%) scale(1.06); opacity:.86; }
+        }
+
+        .gacha-demo-unlock-ui {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: translateZ(30px);
+            animation: gachaUnlockUiFade 9s infinite;
+        }
+
+        @keyframes gachaUnlockUiFade {
+            0%, 52% { opacity: 1; }
+            56%, 100% { opacity: 0; }
+        }
+
+        .gacha-demo-hint {
+            color: #a4b0be;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .gacha-demo-word {
+            color: #00d2d3;
+            font-size: clamp(30px, 4vw, 42px);
+            font-weight: 950;
+            line-height: 1;
+            letter-spacing: -0.045em;
+            text-shadow: 0 0 20px rgba(0,210,211,.82);
+            margin-bottom: 20px;
+            animation: gachaWordGlow 9s infinite;
+        }
+
+        @keyframes gachaWordGlow {
+            0%, 18%, 100% { filter: brightness(1); transform: translateY(0); }
+            24%, 40% { filter: brightness(1.45); transform: translateY(-2px); }
+        }
+
+        .gacha-demo-record-btn {
+            width: 74px;
+            height: 74px;
+            border-radius: 50%;
+            background: rgba(0,0,0,.58);
+            border: 3px solid #0fb9b1;
+            color: #fff;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 24px rgba(15,185,177,.48);
+            margin-bottom: 10px;
+            animation: gachaRecordPulse 9s infinite;
+        }
+
+        @keyframes gachaRecordPulse {
+            0%, 18%, 33%, 100% { transform: scale(1); background: rgba(0,0,0,.58); border-color:#0fb9b1; box-shadow: 0 0 24px rgba(15,185,177,.48); }
+            22%, 29% { transform: scale(.9); background:#eb3b5a; border-color:#ff7675; box-shadow:0 0 28px #eb3b5a, 0 0 60px rgba(235,59,90,.62); }
+        }
+
+        .gacha-demo-status {
+            position: relative;
+            min-height: 18px;
+            color: #f1c40f;
+            font-size: 12px;
+            font-weight: 850;
+        }
+
+        .gacha-demo-status span {
+            position: absolute;
+            left: 50%; top: 0;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            opacity: 0;
+        }
+        .gacha-demo-status .idle { animation: statusIdleV13 9s infinite; }
+        .gacha-demo-status .rec { animation: statusRecV13 9s infinite; }
+        .gacha-demo-status .open { animation: statusOpenV13 9s infinite; }
+        @keyframes statusIdleV13 { 0%, 18% { opacity:1; } 22%,100% { opacity:0; } }
+        @keyframes statusRecV13 { 0%, 20% { opacity:0; } 23%, 34% { opacity:1; } 38%,100% { opacity:0; } }
+        @keyframes statusOpenV13 { 0%, 36% { opacity:0; } 40%, 54% { opacity:1; } 58%,100% { opacity:0; } }
+
+        .gacha-demo-crack {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            z-index: 6;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+        .gacha-demo-crack.c1 { background: linear-gradient(45deg, transparent 48%, #fff 49%, transparent 51%); animation: gachaCrack1 9s infinite; }
+        .gacha-demo-crack.c2 { background: linear-gradient(-45deg, transparent 48%, #f1c40f 49%, transparent 51%); animation: gachaCrack2 9s infinite; }
+        .gacha-demo-crack.c3 { background: linear-gradient(15deg, transparent 48%, #fff 49%, transparent 51%), linear-gradient(-75deg, transparent 48%, #fff 49%, transparent 51%); animation: gachaCrack3 9s infinite; }
+        @keyframes gachaCrack1 { 0%,35%,55%,100% { opacity:0; } 39%,48% { opacity:1; } }
+        @keyframes gachaCrack2 { 0%,38%,55%,100% { opacity:0; } 42%,50% { opacity:.9; } }
+        @keyframes gachaCrack3 { 0%,41%,55%,100% { opacity:0; } 45%,53% { opacity:.86; } }
+
+        .gacha-demo-front::after {
+            content:'';
+            position:absolute;
+            inset:0;
+            opacity:0;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.88), rgba(241,196,15,.45) 28%, transparent 62%);
+            animation: gachaBurstV13 9s infinite;
+            z-index: 7;
+            pointer-events: none;
+        }
+
+        @keyframes gachaBurstV13 {
+            0%, 44%, 56%, 100% { opacity:0; transform:scale(.5); }
+            49%, 53% { opacity:1; transform:scale(1.35); }
+        }
+
+        .gacha-prize-showcase {
+            width: min(170px, 68%);
+            max-width: none !important;
+            aspect-ratio: .718;
+            z-index: 4;
+            animation: gachaPrizeAppearV13 9s infinite;
+        }
+
+        .gacha-prize-showcase .card {
+            --pointer-x: 50%;
+            --pointer-y: 45%;
+            --pointer-from-center: .55;
+            width: 100%;
+            height: 100%;
+        }
+
+        .gacha-prize-showcase .card__rotator {
+            animation: gachaPrizeFloatV13 3.8s infinite ease-in-out;
+            box-shadow: 0 26px 50px rgba(0,0,0,.55), 0 0 34px rgba(241,196,15,.22) !important;
+        }
+
+        @keyframes gachaPrizeAppearV13 {
+            0%, 56% { opacity: 0; transform: scale(.74); filter: blur(8px) brightness(2); }
+            64%, 100% { opacity: 1; transform: scale(1); filter: blur(0) brightness(1); }
+        }
+
+        @keyframes gachaPrizeFloatV13 {
+            0%,100% { transform: rotateY(-8deg) rotateX(4deg) translateY(0); }
+            50% { transform: rotateY(9deg) rotateX(-4deg) translateY(-8px); }
+        }
+
+        .gacha-demo-prize-label {
+            position: absolute;
+            left: 50%; bottom: 18px;
+            transform: translateX(-50%);
+            color: #f1c40f;
+            background: rgba(0,0,0,.58);
+            border: 1px solid rgba(241,196,15,.32);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .12em;
+            white-space: nowrap;
+            animation: gachaPrizeLabelV13 9s infinite;
+        }
+
+        @keyframes gachaPrizeLabelV13 { 0%, 60% { opacity:0; transform: translateX(-50%) translateY(8px); } 68%,100% { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+        .gacha-demo-timeline {
+            position: relative;
+            z-index: 5;
+            width: min(92%, 420px);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .gacha-demo-timeline span {
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: rgba(255,255,255,.08);
+            color: rgba(255,255,255,.62);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .05em;
+            animation: timelineStepV13 9s infinite;
+        }
+        .gacha-demo-timeline .t1 { animation-delay: 0s; }
+        .gacha-demo-timeline .t2 { animation-delay: -6.6s; }
+        .gacha-demo-timeline .t3 { animation-delay: -5.1s; }
+        .gacha-demo-timeline .t4 { animation-delay: -3.2s; }
+
+        @keyframes timelineStepV13 {
+            0%, 18% { background: rgba(0,210,211,.22); color:#fff; box-shadow:0 0 14px rgba(0,210,211,.18); }
+            24%,100% { background: rgba(255,255,255,.08); color:rgba(255,255,255,.62); box-shadow:none; }
+        }
+
+        @media (max-width: 860px) {
+            .collection-gacha-card .tappie-feature-visual { min-height: 390px !important; }
+            .collection-gacha-ui { height: 390px !important; min-height: 390px !important; }
+            .collection-gacha-demo { padding: 18px 16px 14px; }
+            .gacha-demo-header { width: 94%; }
+            .gacha-demo-card-wrap { width: min(216px, 60vw); }
+            .gacha-demo-word { font-size: clamp(28px, 7vw, 38px); }
+            .gacha-demo-record-btn { width: 66px; height: 66px; font-size: 29px; }
+            .gacha-prize-showcase { width: min(148px, 68%); }
+            .gacha-demo-prize-label { bottom: 14px; font-size: 10px; }
+            .gacha-demo-timeline { width: 96%; gap: 5px; }
+            .gacha-demo-timeline span { font-size: 9px; height: 22px; }
+        }
+
     </style>
 </head>
 <body>
@@ -9729,15 +10105,37 @@
 </div>
 </div>
 </article>
-<article class="tappie-feature-card">
+<article class="tappie-feature-card collection-gacha-card">
 <div class="tappie-feature-copy">
 <span>收集成長</span>
 <h4>練習，變成收集。</h4>
 <p>點數、角色與抽卡機制，把每次開口都變成有回報的日常累積。</p>
 </div>
 <div class="tappie-feature-visual">
-<div class="tappie-feature-ui collection-ui" style="--ui-scale:1;">
-<div class="showcase-interactive" id="holo-showcase">
+<div class="tappie-feature-ui collection-ui collection-gacha-ui" style="--ui-scale:1;">
+<div class="collection-gacha-demo" aria-hidden="true">
+<div class="gacha-demo-header">
+<span>Battle Reward</span>
+<strong>抽卡解封流程</strong>
+</div>
+<div class="gacha-demo-card-wrap">
+<div class="gacha-demo-card">
+<div class="gacha-demo-inner">
+<div class="gacha-demo-front">
+<div class="gacha-demo-cover"></div>
+<div class="gacha-demo-orbit"></div>
+<div class="gacha-demo-unlock-ui">
+<div class="gacha-demo-hint">解鎖密語</div>
+<div class="gacha-demo-word">brother</div>
+<div class="gacha-demo-record-btn">🎙️</div>
+<div class="gacha-demo-status"><span class="idle">點擊開始解鎖</span><span class="rec">錄音中...</span><span class="open">封印解除</span></div>
+</div>
+<div class="gacha-demo-crack c1"></div>
+<div class="gacha-demo-crack c2"></div>
+<div class="gacha-demo-crack c3"></div>
+</div>
+<div class="gacha-demo-back">
+<div class="showcase-interactive gacha-prize-showcase">
 <div class="card masked" data-rarity="SSR" style="--mask: url('/assets/Montage%20%E8%92%99%E5%A4%AA%E5%A5%87_mask.webp');">
 <div class="card__rotator">
 <div class="card__front">
@@ -9747,7 +10145,15 @@
 </div>
 </div>
 </div>
-<div class="holo-instruction">👆 觸摸並把玩 3D 盲盒</div>
+</div>
+<div class="gacha-demo-prize-label">SSR 角色解鎖</div>
+</div>
+</div>
+</div>
+</div>
+<div class="gacha-demo-timeline">
+<span class="t1">顯示卡片</span><span class="t2">錄音</span><span class="t3">解封</span><span class="t4">翻牌</span>
+</div>
 </div>
 </div>
 </div>
