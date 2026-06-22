@@ -10162,316 +10162,170 @@
     
 
         /* ========================================= */
-        /* ✅ v16 Collection gacha: equal panel height + real battle unlock face */
+        /* ✅ v16 Collection gacha: remove bottom floor + exact card fill */
         /* ========================================= */
 
-        /* 原因：前幾版同時留下 collection 專用 height / max-width，導致卡面沒有填滿 visual，底部看起來多一塊白色。 */
+        /* 原本 v13/v14 疊過來的地板網格 ::before 會在卡片下方留一大塊白色區域。
+           這裡直接關掉，讓這張跟左右 Apple visual 卡一樣是乾淨的視覺容器。 */
+        .collection-gacha-card .collection-gacha-ui::before {
+            display: none !important;
+            content: none !important;
+        }
+
+        /* 用全站 Apple visual 的同一套高度，不再讓 gacha 自己額外增高或縮高。 */
         .collection-gacha-card.apple-visual-card,
         .collection-gacha-card {
             min-height: auto !important;
             height: auto !important;
+            gap: 18px !important;
         }
 
+        .collection-gacha-card.apple-visual-card .tappie-feature-visual,
         .collection-gacha-card .tappie-feature-visual {
-            height: auto !important;
-            min-height: 0 !important;
+            height: clamp(300px, 22vw, 360px) !important;
+            min-height: clamp(300px, 22vw, 360px) !important;
             padding: 0 !important;
             overflow: visible !important;
+            flex: 0 0 auto !important;
+            display: flex !important;
+            align-items: stretch !important;
         }
 
-        /* 跟左右 Apple visual 卡同一套高度，不再用獨立 clamp */
+        .collection-gacha-card.apple-visual-card .collection-gacha-ui,
         .collection-gacha-card .collection-gacha-ui {
             width: 100% !important;
-            height: 338px !important;
-            min-height: 338px !important;
-            max-height: 338px !important;
-            border-radius: 34px !important;
+            height: clamp(300px, 22vw, 360px) !important;
+            min-height: clamp(300px, 22vw, 360px) !important;
+            border-radius: 32px !important;
             overflow: hidden !important;
             background: #f5f5f7 !important;
         }
 
-        .collection-gacha-demo {
-            width: 100% !important;
+        .collection-gacha-card .collection-gacha-demo {
             height: 100% !important;
-            min-height: 0 !important;
-            max-height: 100% !important;
+            width: 100% !important;
             padding: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            overflow: hidden !important;
-            box-sizing: border-box !important;
-        }
-
-        /* 卡面填滿 visual 高度，消掉底部白色空塊 */
-        .gacha-demo-card-wrap {
-            height: calc(100% - 16px) !important;
-            width: auto !important;
-            max-width: none !important;
-            max-height: none !important;
-            aspect-ratio: .718 !important;
-            align-self: center !important;
-            justify-self: center !important;
-            margin: 0 !important;
-        }
-
-        .gacha-demo-card,
-        .gacha-demo-inner,
-        .gacha-demo-front,
-        .gacha-demo-back {
-            width: 100% !important;
-            height: 100% !important;
-            border-radius: 20px !important;
-            overflow: hidden !important;
-        }
-
-        /* 解鎖正面：改成 battle 的卡片層級結構 */
-        .gacha-demo-front.gacha-front {
             display: grid !important;
-            grid-template-columns: 1fr !important;
+            place-items: center !important;
             grid-template-rows: 1fr !important;
-            background: transparent !important;
-            border: 0 !important;
-            box-shadow: 0 16px 34px rgba(15,23,42,.28) !important;
-            transform-style: preserve-3d !important;
         }
 
-        .gacha-demo-front.gacha-front > * {
-            grid-area: 1 / 1 !important;
+        /* 卡片本體吃滿容器高度，避免下方再露出一大塊白底。 */
+        .collection-gacha-card .gacha-demo-card-wrap {
+            height: 100% !important;
+            width: auto !important;
+            aspect-ratio: .718 !important;
+            max-width: calc(100% - 72px) !important;
+            max-height: none !important;
+            align-self: stretch !important;
+            justify-self: center !important;
         }
 
-        .gacha-demo-front .card__bg,
-        .gacha-demo-front .card__shine,
-        .gacha-demo-front .card__glare {
+        .collection-gacha-card .gacha-demo-card,
+        .collection-gacha-card .gacha-demo-inner,
+        .collection-gacha-card .gacha-demo-front,
+        .collection-gacha-card .gacha-demo-back {
+            inset: 0 !important;
             width: 100% !important;
             height: 100% !important;
-            border-radius: inherit !important;
-            box-sizing: border-box !important;
-            pointer-events: none !important;
-            transform-style: preserve-3d !important;
+            border-radius: 18px !important;
         }
 
-        .gacha-demo-cover.card__bg {
-            position: relative !important;
-            inset: auto !important;
-            background-color: #2c3e50 !important;
-            background-image: url('/assets/BOX_COVER_N.webp') !important;
-            background-size: cover !important;
-            background-position: center center !important;
-            background-repeat: no-repeat !important;
-            border: 2px solid transparent !important;
-            opacity: 1 !important;
-            animation: none !important;
-            transform: translateZ(0px) !important;
-            z-index: 1 !important;
-        }
-
-        /* battle.html 的尚未翻開錫箔反光 */
-        .gacha-demo-front.gacha-front .card__bg::before {
-            content: '' !important;
-            position: absolute !important;
-            top: -50% !important;
-            left: -50% !important;
-            width: 200% !important;
-            height: 200% !important;
-            background: conic-gradient(from 0deg, transparent, rgba(0, 210, 211, 0.3), transparent, rgba(155, 89, 182, 0.3), transparent) !important;
-            animation: spin-hologram 4s linear infinite !important;
-            pointer-events: none !important;
-            opacity: .5 !important;
-            z-index: 2 !important;
-        }
-
-        .gacha-demo-front .card__shine {
-            display: grid !important;
-            transform: translateZ(1px) !important;
-            z-index: 4 !important;
-            background: transparent !important;
-            background-size: cover !important;
-            background-position: center !important;
-            filter: brightness(.85) contrast(2.75) saturate(.65) !important;
-            mix-blend-mode: color-dodge !important;
-        }
-
-        .gacha-demo-front .card__shine::before,
-        .gacha-demo-front .card__shine::after {
-            grid-area: 1 / 1 !important;
-            border-radius: inherit !important;
-            content: '' !important;
-            display: block !important;
-        }
-
-        .gacha-demo-front .card__glare {
-            transform: translateZ(1.41px) !important;
-            z-index: 3 !important;
-            background-image: radial-gradient(farthest-corner circle at 50% 50%, hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.4) 30%, hsla(0, 0%, 0%, 0.6) 90%) !important;
-            opacity: .46 !important;
-            mix-blend-mode: overlay !important;
-        }
-
-        .gacha-demo-unlock-ui.unlock-ui {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            z-index: 20 !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: scale(1) translateZ(30px) !important;
-            pointer-events: none !important;
-            padding: 0 18px !important;
-            box-sizing: border-box !important;
-            animation: gachaUnlockUiFade 9s infinite !important;
-        }
-
-        .gacha-demo-unlock-ui .unlock-hint,
-        .gacha-demo-unlock-ui .gacha-demo-hint {
-            font-size: 14px !important;
-            color: #a4b0be !important;
-            letter-spacing: 2px !important;
-            margin-bottom: 10px !important;
-            font-weight: 800 !important;
-        }
-
-        .gacha-demo-unlock-ui .unlock-word,
-        .gacha-demo-unlock-ui .gacha-demo-word {
-            font-size: 40px !important;
-            font-weight: 900 !important;
-            color: #00d2d3 !important;
-            text-shadow: 0 0 20px rgba(0,210,211,.8) !important;
-            margin-bottom: 25px !important;
-            letter-spacing: 2px !important;
-            text-transform: uppercase !important;
-            line-height: 1.12 !important;
-        }
-
-        .gacha-demo-unlock-ui .voice-lock-btn,
-        .gacha-demo-unlock-ui .gacha-demo-record-btn {
-            width: 80px !important;
-            height: 80px !important;
-            border-radius: 50% !important;
-            background: rgba(0,0,0,.6) !important;
-            border: 3px solid #0fb9b1 !important;
-            color: #fff !important;
-            font-size: 35px !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            box-shadow: 0 0 20px rgba(15,185,177,.5) !important;
-            margin-bottom: 10px !important;
-        }
-
-        .gacha-demo-unlock-ui .voice-status,
-        .gacha-demo-unlock-ui .gacha-demo-status {
-            font-size: 14px !important;
-            color: #f1c40f !important;
-            margin-top: 10px !important;
-            font-weight: 800 !important;
-        }
-
-        /* 翻面後：蒙太奇直接就是卡面，填滿卡牌，不再上下留白 */
-        .gacha-demo-back {
-            padding: 0 !important;
+        /* 解鎖面：拿掉自製假科技漸層，回到 battle 的 N 卡封面視覺。 */
+        .collection-gacha-card .gacha-demo-front {
             background: transparent !important;
             border: 0 !important;
             box-shadow: none !important;
         }
 
-        .gacha-prize-showcase,
-        .gacha-prize-showcase .card,
-        .gacha-prize-showcase .card__rotator,
-        .gacha-prize-showcase .card__front,
-        .gacha-prize-showcase .card__bg,
-        .gacha-prize-showcase .card__shine,
-        .gacha-prize-showcase .card__glare {
+        .collection-gacha-card .gacha-demo-cover {
             position: absolute !important;
             inset: 0 !important;
             width: 100% !important;
             height: 100% !important;
-            max-width: none !important;
-            max-height: none !important;
             border-radius: inherit !important;
-            transform: none !important;
+            background: url('/assets/BOX_COVER_N.webp') center center / cover no-repeat !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            opacity: 1 !important;
             animation: none !important;
+            z-index: 1 !important;
         }
 
-        .gacha-prize-showcase .card__bg {
+        .collection-gacha-card .gacha-demo-cover::before,
+        .collection-gacha-card .gacha-demo-cover::after {
+            display: none !important;
+            content: none !important;
+        }
+
+        /* battle 風格解鎖 UI 只留在 N 卡上，不再有假卡底色。 */
+        .collection-gacha-card .gacha-demo-unlock-ui {
+            z-index: 5 !important;
+            transform: translateZ(30px) !important;
+            padding: 0 18px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 解封閃光保留，但不要改變卡面尺寸。 */
+        .collection-gacha-card .gacha-demo-front::after {
+            border-radius: inherit !important;
+            z-index: 7 !important;
+        }
+
+        /* 翻轉後蒙太奇仍然直接貼滿整張卡。 */
+        .collection-gacha-card .gacha-demo-back,
+        .collection-gacha-card .gacha-prize-showcase,
+        .collection-gacha-card .gacha-prize-showcase .card,
+        .collection-gacha-card .gacha-prize-showcase .card__rotator,
+        .collection-gacha-card .gacha-prize-showcase .card__front,
+        .collection-gacha-card .gacha-prize-showcase .card__bg,
+        .collection-gacha-card .gacha-prize-showcase .card__shine,
+        .collection-gacha-card .gacha-prize-showcase .card__glare {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: inherit !important;
+            transform: none !important;
+        }
+
+        .collection-gacha-card .gacha-prize-showcase .card__rotator {
+            animation: none !important;
+            box-shadow: none !important;
+        }
+
+        .collection-gacha-card .gacha-prize-showcase .card__bg {
             background-size: cover !important;
             background-position: center center !important;
         }
 
-        .gacha-demo-header,
-        .gacha-demo-timeline,
-        .gacha-demo-prize-label {
-            display: none !important;
-        }
-
-        @media (max-width: 1024px) {
+        @media (max-width: 860px) {
+            .collection-gacha-card.apple-visual-card .tappie-feature-visual,
+            .collection-gacha-card .tappie-feature-visual,
+            .collection-gacha-card.apple-visual-card .collection-gacha-ui,
             .collection-gacha-card .collection-gacha-ui {
-                height: 320px !important;
-                min-height: 320px !important;
-                max-height: 320px !important;
-            }
-        }
-
-        @media (max-width: 767px) {
-            .collection-gacha-card .collection-gacha-ui {
-                height: 236px !important;
-                min-height: 236px !important;
-                max-height: 236px !important;
+                height: 300px !important;
+                min-height: 300px !important;
                 border-radius: 26px !important;
             }
 
-            .gacha-demo-card-wrap {
-                height: calc(100% - 8px) !important;
-                max-width: none !important;
+            .collection-gacha-card .gacha-demo-card-wrap {
+                height: 100% !important;
+                max-width: calc(100% - 58px) !important;
             }
 
-            .gacha-demo-card,
-            .gacha-demo-inner,
-            .gacha-demo-front,
-            .gacha-demo-back {
-                border-radius: 16px !important;
-            }
-
-            .gacha-demo-unlock-ui.unlock-ui {
-                padding: 0 10px !important;
-            }
-
-            .gacha-demo-unlock-ui .unlock-hint,
-            .gacha-demo-unlock-ui .gacha-demo-hint {
-                font-size: 10px !important;
-                margin-bottom: 6px !important;
-                letter-spacing: 1px !important;
-            }
-
-            .gacha-demo-unlock-ui .unlock-word,
-            .gacha-demo-unlock-ui .gacha-demo-word {
-                font-size: clamp(22px, 6vw, 30px) !important;
-                margin-bottom: 12px !important;
-                letter-spacing: 1px !important;
-            }
-
-            .gacha-demo-unlock-ui .voice-lock-btn,
-            .gacha-demo-unlock-ui .gacha-demo-record-btn {
-                width: 52px !important;
-                height: 52px !important;
-                font-size: 24px !important;
-                border-width: 2px !important;
-                margin-bottom: 6px !important;
-            }
-
-            .gacha-demo-unlock-ui .voice-status,
-            .gacha-demo-unlock-ui .gacha-demo-status {
-                font-size: 10px !important;
-                margin-top: 4px !important;
+            .collection-gacha-card .gacha-demo-unlock-ui {
+                padding: 0 12px !important;
             }
         }
 
         @media (max-width: 390px) {
+            .collection-gacha-card.apple-visual-card .tappie-feature-visual,
+            .collection-gacha-card .tappie-feature-visual,
+            .collection-gacha-card.apple-visual-card .collection-gacha-ui,
             .collection-gacha-card .collection-gacha-ui {
-                height: 226px !important;
-                min-height: 226px !important;
-                max-height: 226px !important;
+                height: 286px !important;
+                min-height: 286px !important;
             }
         }
 
@@ -10862,15 +10716,14 @@
 <div class="gacha-demo-card-wrap">
 <div class="gacha-demo-card">
 <div class="gacha-demo-inner">
-<div class="gacha-demo-front gacha-front">
-<div class="card__bg gacha-demo-cover"></div>
-<div class="card__shine"></div><div class="card__glare"></div>
+<div class="gacha-demo-front">
+<div class="gacha-demo-cover"></div>
 <div class="gacha-demo-orbit"></div>
-<div class="unlock-ui gacha-demo-unlock-ui">
-<div class="gacha-demo-hint battle-like-unlock-hint unlock-hint">解鎖密語 <span class="gacha-demo-play">🔊 讀音</span></div>
-<div class="gacha-demo-word battle-like-unlock-word unlock-word">brother</div>
-<div class="gacha-demo-record-btn battle-like-voice-btn voice-lock-btn">🎙️</div>
-<div class="gacha-demo-status battle-like-voice-status voice-status"><span class="idle">點擊開始解鎖</span><span class="rec">錄音中...</span><span class="open">封印解除</span></div>
+<div class="gacha-demo-unlock-ui">
+<div class="gacha-demo-hint battle-like-unlock-hint">解鎖密語 <span class="gacha-demo-play">🔊 讀音</span></div>
+<div class="gacha-demo-word battle-like-unlock-word">brother</div>
+<div class="gacha-demo-record-btn battle-like-voice-btn">🎙️</div>
+<div class="gacha-demo-status battle-like-voice-status"><span class="idle">點擊開始解鎖</span><span class="rec">錄音中...</span><span class="open">封印解除</span></div>
 </div>
 <div class="gacha-demo-crack c1"></div>
 <div class="gacha-demo-crack c2"></div>
