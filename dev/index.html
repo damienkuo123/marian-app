@@ -13477,13 +13477,21 @@
     
 
         /* ========================================= */
-        /* ✅ v28 final micro fixes                   */
+        /* ✅ v28 final micro tuning                 */
+        /* points score spacing + analysis center    */
         /* ========================================= */
 
-        /* 1. 加點扣點：點數置中，+10 移到右上角且不疊 PTS */
         .teacher-points-card .points-v25-scorebox {
-            min-height: 68px !important;
-            padding: 9px 8px 8px !important;
+            position: relative !important;
+            min-height: 76px !important;
+            padding: 10px 10px 9px !important;
+            overflow: hidden !important;
+        }
+
+        .teacher-points-card .points-v25-scorebox small {
+            display: block !important;
+            margin-bottom: 4px !important;
+            text-align: center !important;
         }
 
         .teacher-points-card .points-v25-score {
@@ -13492,67 +13500,87 @@
             display: flex !important;
             align-items: flex-end !important;
             justify-content: center !important;
-            gap: 5px !important;
-            line-height: 1 !important;
+            padding-right: 28px !important;
+            box-sizing: border-box !important;
         }
 
-        .teacher-points-card .points-v25-score .score-num {
-            position: relative !important;
-            display: inline-block !important;
-            width: 68px !important;
-            height: 38px !important;
-            flex: 0 0 68px !important;
-        }
-
-        .teacher-points-card .points-v25-score .score-num em.old,
-        .teacher-points-card .points-v25-score .score-num em.new {
+        .teacher-points-card .points-v25-score em.old,
+        .teacher-points-card .points-v25-score em.new {
             position: absolute !important;
-            inset: 0 !important;
-            left: auto !important;
-            right: auto !important;
-            top: auto !important;
+            left: 50% !important;
             bottom: 0 !important;
-            width: 100% !important;
-            text-align: center !important;
             font-size: 34px !important;
-            line-height: 1 !important;
+            line-height: .95 !important;
+            letter-spacing: -0.06em !important;
+            transform: translateX(-50%) !important;
+        }
+
+        .teacher-points-card .points-v25-score em.old {
+            animation: pointsOldV28 7.2s infinite ease-in-out !important;
+        }
+
+        .teacher-points-card .points-v25-score em.new {
+            animation: pointsNewV28 7.2s infinite ease-in-out !important;
         }
 
         .teacher-points-card .points-v25-score strong {
-            position: static !important;
-            right: auto !important;
-            bottom: auto !important;
-            margin: 0 0 4px 0 !important;
+            position: absolute !important;
+            right: 6px !important;
+            bottom: 3px !important;
             font-size: 11px !important;
             line-height: 1 !important;
+            margin: 0 !important;
         }
 
         .teacher-points-card .points-v25-burst {
-            top: 12px !important;
-            right: 14px !important;
+            position: absolute !important;
+            top: 25px !important;
+            right: 13px !important;
             font-size: 18px !important;
             line-height: 1 !important;
-            z-index: 4 !important;
+            transform-origin: center center !important;
+            animation: pointsBurstV28 7.2s infinite ease-in-out !important;
+            z-index: 3 !important;
         }
 
-        @keyframes pointsBurstV25 {
+        @keyframes pointsOldV28 {
+            0%, 48% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            58%, 100% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
+
+        @keyframes pointsNewV28 {
+            0%, 50% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(5px);
+            }
+            60%, 100% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes pointsBurstV28 {
             0%, 52% {
                 opacity: 0;
-                transform: translateY(6px) scale(.9);
+                transform: translateY(5px) scale(.88);
             }
             60%, 78% {
                 opacity: 1;
-                transform: translateY(-5px) scale(1);
+                transform: translateY(-3px) scale(1);
             }
             100% {
                 opacity: 0;
-                transform: translateY(-10px) scale(1);
+                transform: translateY(-7px) scale(1);
             }
         }
 
-        /* 2. 一眼看透：移除上方趨勢空框，讓學習模式比例成為視覺中心 */
-        .manager-analysis-card .analysis-v25-trend--v27,
-        .manager-analysis-card .analysis-v25-trend {
+        .manager-analysis-card .analysis-v25-trend--v27 {
             display: none !important;
         }
 
@@ -13560,72 +13588,90 @@
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            padding-top: 2px !important;
+            height: 100% !important;
             min-height: 0 !important;
         }
 
         .manager-analysis-card .analysis-v25-mode {
-            width: min(86%, 330px) !important;
-            min-height: 232px !important;
+            width: min(94%, 360px) !important;
+            height: auto !important;
+            min-height: 250px !important;
             margin: 0 auto !important;
-            transform: translateY(-2px) !important;
+            padding: 18px 18px 16px !important;
             display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 10px !important;
+            overflow: visible !important;
         }
 
-        .manager-analysis-card .mode-donut-v25 {
-            width: 152px !important;
-            height: 152px !important;
-            margin-top: 4px !important;
+        .manager-analysis-card .analysis-v25-mode .av25-panel-title {
+            width: 100% !important;
+            text-align: left !important;
+            font-size: 18px !important;
             margin-bottom: 2px !important;
         }
 
+        .manager-analysis-card .mode-donut-v25 {
+            width: 138px !important;
+            height: 138px !important;
+            margin: 0 auto 2px !important;
+            flex: 0 0 auto !important;
+        }
+
         .manager-analysis-card .mode-donut-v25 .mode-donut-inner {
-            width: 82px !important;
-            height: 82px !important;
+            width: 74px !important;
+            height: 74px !important;
         }
 
         .manager-analysis-card .mode-donut-v25 .mode-donut-inner strong {
-            font-size: 25px !important;
+            font-size: 23px !important;
         }
 
         .manager-analysis-card .mode-stats-v25 {
-            margin-top: 6px !important;
+            width: 100% !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+            margin-top: 2px !important;
         }
 
         @media (max-width: 860px) {
-            .teacher-points-card .points-v25-score .score-num {
-                width: 60px !important;
+            .teacher-points-card .points-v25-score {
                 height: 34px !important;
-                flex-basis: 60px !important;
+                padding-right: 24px !important;
             }
 
-            .teacher-points-card .points-v25-score .score-num em.old,
-            .teacher-points-card .points-v25-score .score-num em.new {
+            .teacher-points-card .points-v25-score em.old,
+            .teacher-points-card .points-v25-score em.new {
                 font-size: 30px !important;
             }
 
+            .teacher-points-card .points-v25-score strong {
+                font-size: 10px !important;
+                right: 4px !important;
+            }
+
             .teacher-points-card .points-v25-burst {
-                top: 10px !important;
-                right: 11px !important;
+                top: 24px !important;
+                right: 9px !important;
                 font-size: 16px !important;
             }
 
             .manager-analysis-card .analysis-v25-mode {
-                width: min(88%, 310px) !important;
-                min-height: 218px !important;
-                transform: translateY(-1px) !important;
+                width: 94% !important;
+                min-height: 232px !important;
+                padding: 14px !important;
             }
 
             .manager-analysis-card .mode-donut-v25 {
-                width: 138px !important;
-                height: 138px !important;
+                width: 124px !important;
+                height: 124px !important;
             }
 
             .manager-analysis-card .mode-donut-v25 .mode-donut-inner {
-                width: 74px !important;
-                height: 74px !important;
+                width: 68px !important;
+                height: 68px !important;
             }
         }
 
@@ -14286,7 +14332,7 @@
 <div class="points-v25-studentbox"><b>郝聰明</b><span>A1</span></div>
 <div class="points-v25-scorebox">
 <small>目前點數</small>
-<div class="points-v25-score"><span class="score-num"><em class="old">826</em><em class="new">836</em></span><strong>PTS</strong></div>
+<div class="points-v25-score"><em class="old">826</em><em class="new">836</em><strong>PTS</strong></div>
 <div class="points-v25-burst">+10</div>
 </div>
 <div class="points-v25-controls">
