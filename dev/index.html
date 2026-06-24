@@ -13932,6 +13932,42 @@
             }
         }
 
+    
+
+        /* ✅ v33 media reliability fix */
+        .implementation-product-video {
+            object-fit: contain;
+        }
+
+        .implementation-product-final {
+            color: transparent;
+            font-size: 0;
+        }
+
+        .implementation-product-final:not(.is-visible) {
+            opacity: 0 !important;
+        }
+
+        .implementation-product-final.is-broken {
+            display: none !important;
+        }
+
+        .implementation-product-visual.is-loading::before {
+            content: "";
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 3px solid rgba(0, 113, 227, .12);
+            border-top-color: rgba(0, 113, 227, .5);
+            animation: implementationMediaSpinV33 .8s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes implementationMediaSpinV33 {
+            to { transform: rotate(360deg); }
+        }
+
     </style>
 </head>
 <body>
@@ -14913,18 +14949,24 @@
                 <video
                     class="implementation-product-video"
                     data-implementation-video
-                    src="/assets/video/tappie-process.MP4"
                     muted
                     playsinline
                     preload="metadata"
-                    poster="/assets/video/tappie-process-last-frame.PNG"
-                ></video>
+                    poster="assets/video/tappie-process-last-frame.PNG?v=impl-v33"
+                    aria-label="Tappie 感應名牌產品展示"
+                >
+                    <source src="assets/video/tappie-process.MP4?v=impl-v33" type="video/mp4">
+                    <source src="assets/video/tappie-process.mp4?v=impl-v33" type="video/mp4">
+                </video>
                 <img
-                    class="implementation-product-final is-visible"
+                    class="implementation-product-final"
                     data-implementation-final
-                    src="assets/video/tappie-process-last-frame.PNG"
-                    alt="Tappie 感應名牌產品展示"
-                    loading="lazy"
+                    src="assets/video/tappie-process-last-frame.PNG?v=impl-v33"
+                    data-fallback-src="assets/video/tappie-process-last-frame.png?v=impl-v33"
+                    alt=""
+                    loading="eager"
+                    decoding="async"
+                    aria-hidden="true"
                 >
             </div>
 
@@ -16514,9 +16556,10 @@
 
 
 
+
 <script>
 (() => {
-    function setupImplementationProductVideoV32() {
+    function setupImplementationProductVideoV33() {
         const visual = document.querySelector('[data-implementation-product]');
         if (!visual) return;
         const video = visual.querySelector('[data-implementation-video]');
@@ -16525,10 +16568,41 @@
 
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         let played = false;
+        let finalReady = false;
+
+        visual.classList.add('is-loading');
+
+        function markFinalReady() {
+            finalReady = true;
+            visual.classList.remove('is-loading');
+        }
+
+        function hideBrokenFinal() {
+            finalImage.classList.add('is-broken');
+            visual.classList.remove('is-loading');
+        }
+
+        finalImage.addEventListener('load', markFinalReady, { once: true });
+        finalImage.addEventListener('error', () => {
+            const fallback = finalImage.getAttribute('data-fallback-src');
+            if (fallback && finalImage.src.indexOf(fallback.split('?')[0]) === -1) {
+                finalImage.src = fallback;
+                return;
+            }
+            hideBrokenFinal();
+        });
+
+        if (finalImage.complete && finalImage.naturalWidth > 0) markFinalReady();
 
         function showFinal() {
-            finalImage.classList.add('is-visible');
-            visual.classList.add('is-ended');
+            visual.classList.remove('is-loading');
+            if (finalReady && !finalImage.classList.contains('is-broken')) {
+                finalImage.classList.add('is-visible');
+                visual.classList.add('is-ended');
+            } else {
+                visual.classList.remove('is-ended');
+                finalImage.classList.remove('is-visible');
+            }
         }
 
         function playOnce() {
@@ -16536,20 +16610,33 @@
                 showFinal();
                 return;
             }
+
             played = true;
             visual.classList.remove('is-ended');
             finalImage.classList.remove('is-visible');
+
             try {
                 video.currentTime = 0;
             } catch (e) {}
+
             const attempt = video.play();
             if (attempt && typeof attempt.catch === 'function') {
-                attempt.catch(showFinal);
+                attempt.catch(() => {
+                    played = false;
+                    showFinal();
+                });
             }
         }
 
+        video.addEventListener('loadeddata', () => {
+            visual.classList.remove('is-loading');
+        });
+
         video.addEventListener('ended', showFinal);
-        video.addEventListener('error', showFinal);
+
+        video.addEventListener('error', () => {
+            showFinal();
+        });
 
         if (!('IntersectionObserver' in window)) {
             playOnce();
@@ -16558,20 +16645,20 @@
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
-                if (entry.isIntersecting && entry.intersectionRatio >= 0.38) {
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.26) {
                     playOnce();
                     observer.disconnect();
                 }
             });
-        }, { threshold: [0, 0.25, 0.38, 0.55] });
+        }, { threshold: [0, 0.18, 0.26, 0.42] });
 
         observer.observe(visual);
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupImplementationProductVideoV32);
+        document.addEventListener('DOMContentLoaded', setupImplementationProductVideoV33);
     } else {
-        setupImplementationProductVideoV32();
+        setupImplementationProductVideoV33();
     }
 })();
 </script>
