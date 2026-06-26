@@ -18093,6 +18093,20 @@
             }
         }
 
+
+
+        /* ========================================== */
+        /* ✅ v57.1 Desktop role reveal restore       */
+        /* Keep role cards visible if JS is delayed   */
+        /* ========================================== */
+        @media (min-width: 861px) {
+            .tappie-role-story {
+                --role-cards: .001;
+                --role-hero: 1;
+                --role-blur: 0;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -21163,6 +21177,84 @@
         document.addEventListener('DOMContentLoaded', setupTappieSiteHeaderV55);
     } else {
         setupTappieSiteHeaderV55();
+    }
+})();
+</script>
+
+
+
+
+<script>
+(() => {
+    const clamp01 = v => Math.min(1, Math.max(0, v));
+    const smooth = v => {
+        v = clamp01(v);
+        return v * v * (3 - 2 * v);
+    };
+
+    function setupTappieDesktopRoleRevealV57Fix() {
+        const sections = Array.from(document.querySelectorAll('[data-tappie-role-story]'));
+        if (!sections.length) return;
+
+        let raf = 0;
+
+        const resetDesktopValues = () => {
+            sections.forEach(section => {
+                section.style.setProperty('--role-progress', '0');
+                section.style.setProperty('--role-blur', '0');
+                section.style.setProperty('--role-cards', '1');
+                section.style.setProperty('--role-hero', '1');
+            });
+        };
+
+        const update = () => {
+            raf = 0;
+            const isMobile = window.matchMedia('(max-width: 860px)').matches;
+            if (isMobile) return;
+
+            const vh = Math.max(1, window.innerHeight || 1);
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                const total = Math.max(1, rect.height - vh);
+                const y = Math.min(Math.max(-rect.top, 0), total);
+                const p = y / total;
+
+                const blur = smooth((p - 0.06) / 0.42);
+                const cards = smooth((p - 0.20) / 0.38);
+                const hero = 1 - smooth((p - 0.12) / 0.42) * .88;
+
+                section.style.setProperty('--role-progress', p.toFixed(3));
+                section.style.setProperty('--role-blur', blur.toFixed(3));
+                section.style.setProperty('--role-cards', cards.toFixed(3));
+                section.style.setProperty('--role-hero', hero.toFixed(3));
+            });
+        };
+
+        const requestUpdate = () => {
+            if (raf) return;
+            raf = requestAnimationFrame(update);
+        };
+
+        const onResize = () => {
+            if (window.matchMedia('(max-width: 860px)').matches) return;
+            requestUpdate();
+        };
+
+        if (window.matchMedia('(max-width: 860px)').matches) {
+            resetDesktopValues();
+        } else {
+            update();
+        }
+
+        window.addEventListener('scroll', requestUpdate, { passive: true });
+        window.addEventListener('resize', onResize, { passive: true });
+        window.addEventListener('orientationchange', () => setTimeout(onResize, 220));
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupTappieDesktopRoleRevealV57Fix, { once: true });
+    } else {
+        setupTappieDesktopRoleRevealV57Fix();
     }
 })();
 </script>
