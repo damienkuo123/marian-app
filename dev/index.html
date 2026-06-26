@@ -17599,6 +17599,78 @@
             }
         }
 
+
+
+        /* ========================================== */
+        /* ✅ v54 Mobile height + smoother value tabs */
+        /* ========================================== */
+
+        @media (max-width: 860px) {
+            .tappie-problem-photo {
+                min-height: 78svh !important;
+                padding: 78px 26px 56px !important;
+            }
+
+            .tappie-problem-photo__content {
+                margin-top: 0 !important;
+            }
+
+            .tappie-problem-photo h2 {
+                font-size: clamp(2.8rem, 12.6vw, 4.9rem) !important;
+            }
+
+            .tappie-problem-photo p {
+                margin-top: 18px !important;
+            }
+
+            .tappie-problem-photo__tags {
+                margin-top: 22px !important;
+            }
+
+            .tappie-day-loop__stage {
+                margin-top: -16px !important;
+                transform: translateY(-16px);
+            }
+        }
+
+        .value-tabs-v51__stage {
+            contain: layout paint style;
+        }
+
+        .value-tabs-v51__media {
+            transform: none !important;
+            transition: opacity 260ms ease, visibility 260ms ease !important;
+            will-change: opacity;
+            backface-visibility: hidden;
+        }
+
+        .value-tabs-v51__media.is-active {
+            transform: none !important;
+        }
+
+        .value-tabs-v51__media img {
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+
+        .value-tabs-v51__tab:hover {
+            transform: none !important;
+        }
+
+        .value-tabs-v51__tab {
+            transform: none !important;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .value-tabs-v51__copy {
+            transform: none !important;
+            transition: opacity 240ms ease, visibility 240ms ease !important;
+        }
+
+        .value-tabs-v51__copy.is-active {
+            transform: none !important;
+        }
+
     </style>
 </head>
 <body>
@@ -20734,15 +20806,32 @@
         const copies = Array.from(section.querySelectorAll('.value-tabs-v51__copy'));
         if (!tabs.length || !panels.length || !copies.length) return;
 
+        const imageCache = new Map();
+        panels.forEach((panel) => {
+            const img = panel.querySelector('img');
+            if (!img || !img.currentSrc && !img.src) return;
+            const src = img.currentSrc || img.src;
+            const preload = new Image();
+            preload.decoding = 'async';
+            preload.src = src;
+            imageCache.set(panel.dataset.valuePanel, preload);
+            if (preload.decode) preload.decode().catch(() => {});
+        });
+
         function activate(key) {
-            tabs.forEach((tab) => {
-                tab.setAttribute('aria-selected', tab.dataset.valueTarget === key ? 'true' : 'false');
-            });
-            panels.forEach((panel) => {
-                panel.classList.toggle('is-active', panel.dataset.valuePanel === key);
-            });
-            copies.forEach((copy) => {
-                copy.classList.toggle('is-active', copy.dataset.valueCopy === key);
+            const cached = imageCache.get(key);
+            if (cached && cached.decode) cached.decode().catch(() => {});
+
+            window.requestAnimationFrame(() => {
+                tabs.forEach((tab) => {
+                    tab.setAttribute('aria-selected', tab.dataset.valueTarget === key ? 'true' : 'false');
+                });
+                panels.forEach((panel) => {
+                    panel.classList.toggle('is-active', panel.dataset.valuePanel === key);
+                });
+                copies.forEach((copy) => {
+                    copy.classList.toggle('is-active', copy.dataset.valueCopy === key);
+                });
             });
         }
 
