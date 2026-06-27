@@ -399,11 +399,13 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             display: grid;
             place-items: center;
             padding: 28px;
-            background: #ffffff;
+            background: rgba(255,255,255,.58);
             color: #101828;
             opacity: 1;
             visibility: visible;
-            transition: opacity 0.42s ease, visibility 0.42s ease;
+            backdrop-filter: blur(18px) saturate(1.08);
+            -webkit-backdrop-filter: blur(18px) saturate(1.08);
+            transition: opacity 0.52s ease, visibility 0.52s ease, backdrop-filter 0.52s ease;
             --boot-progress: 0;
             --boot-logo-mask: url("/assets/logo.webp");
         }body.tappie-boot-lock {
@@ -413,15 +415,15 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             visibility: hidden;
             pointer-events: none;
         }.tappie-boot-loader__inner {
-            width: min(92vw, 520px);
+            width: min(92vw, 420px);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 24px;
-            transform: translateY(-2vh);
+            gap: 16px;
+            transform: translateY(-1vh);
         }.tappie-boot-loader__logo {
             position: relative;
-            width: min(42vw, 230px);
+            width: min(22vw, 108px);
             aspect-ratio: 1;
             isolation: isolate;
         }.tappie-boot-loader__logo::before {
@@ -429,10 +431,10 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             position: absolute;
             inset: 10%;
             border-radius: 999px;
-            background: radial-gradient(circle, rgba(37, 99, 235, .13), transparent 62%);
-            filter: blur(22px);
+            background: radial-gradient(circle, rgba(37, 99, 235, .10), transparent 64%);
+            filter: blur(18px);
             z-index: -1;
-            opacity: calc(.28 + var(--boot-progress) * .44);
+            opacity: calc(.18 + var(--boot-progress) * .24);
         }.tappie-boot-loader__logo-img {
             position: absolute;
             inset: 0;
@@ -493,54 +495,33 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 9px;
+            gap: 0;
             text-align: center;
         }.tappie-boot-loader__brand {
-            font-size: 12px;
-            letter-spacing: .22em;
-            text-transform: uppercase;
-            color: rgba(16, 24, 40, .58);
-            font-weight: 850;
+            display: none;
         }.tappie-boot-loader__title {
             margin: 0;
-            font-size: clamp(26px, 6vw, 44px);
-            letter-spacing: -.055em;
-            line-height: 1.04;
-            font-weight: 900;
-            color: #101828;
-        }.tappie-boot-loader__subtitle {
-            margin: 0;
-            color: rgba(16, 24, 40, .58);
-            font-size: 15px;
-            font-weight: 650;
-            line-height: 1.7;
+            font-size: clamp(15px, 2.8vw, 18px);
             letter-spacing: -.02em;
+            line-height: 1.45;
+            font-weight: 700;
+            color: rgba(16, 24, 40, .56);
+        }.tappie-boot-loader__subtitle {
+            display: none;
         }.tappie-boot-loader__progress {
-            width: min(74vw, 260px);
-            height: 4px;
-            border-radius: 999px;
-            overflow: hidden;
-            background: rgba(16, 24, 40, .07);
+            display: none;
         }.tappie-boot-loader__progress > span {
-            display: block;
-            width: calc(var(--boot-progress) * 100%);
-            height: 100%;
-            border-radius: inherit;
-            background: #2563eb;
-            transition: width .12s linear;
+            display: none;
         }.tappie-boot-loader__count {
-            font-size: 13px;
-            color: rgba(16, 24, 40, .58);
-            font-weight: 750;
-            letter-spacing: .02em;
+            display: none;
         }@media (max-width: 680px) {
 .tappie-boot-loader__logo {
-                width: min(58vw, 230px);
+                width: min(28vw, 96px);
             }.tappie-boot-loader__inner {
-                gap: 22px;
-                transform: translateY(-5vh);
-            }.tappie-boot-loader__subtitle {
-                max-width: 28ch;
+                gap: 14px;
+                transform: translateY(-3vh);
+            }.tappie-boot-loader__title {
+                font-size: 15px;
             }
 }.tappie-scroll-hero {
             position: relative;
@@ -8455,9 +8436,7 @@ body nav.tappie-site-header .nav-logo span {
                 <div class="tappie-boot-loader__front-glow"></div>
             </div>
             <div class="tappie-boot-loader__copy">
-                <div class="tappie-boot-loader__brand">Tappie</div>
-                <h1 class="tappie-boot-loader__title">正在準備你的體驗</h1>
-                <p class="tappie-boot-loader__subtitle">載入口說名牌的完整首屏動畫。</p>
+                <h1 class="tappie-boot-loader__title">正在準備你的 Tappie 名牌…</h1>
             </div>
             <div class="tappie-boot-loader__progress" aria-hidden="true"><span></span></div>
             <div class="tappie-boot-loader__count" id="tappieBootLoaderCount">0 / 241</div>
@@ -10719,14 +10698,23 @@ body nav.tappie-site-header .nav-logo span {
 
         const framePath = (index) => `/assets/tappie-hero-frames/frame_${String(index + 1).padStart(4, '0')}.webp`;
 
+        function getBootRequiredFrames() {
+            return window.matchMedia('(max-width: 768px)').matches ? 120 : frameCount;
+        }
+
+        function shouldReleaseBoot() {
+            return loaded.size >= getBootRequiredFrames();
+        }
+
         function updateBootProgress() {
             const loadedCount = loaded.size;
-            const progress = Math.max(0, Math.min(1, loadedCount / frameCount));
+            const requiredFrames = getBootRequiredFrames();
+            const progress = Math.max(0, Math.min(1, loadedCount / requiredFrames));
             if (bootLoader) {
                 bootLoader.style.setProperty('--boot-progress', progress.toFixed(4));
             }
             if (bootCount) {
-                bootCount.textContent = `${loadedCount} / ${frameCount}`;
+                bootCount.textContent = `${Math.min(loadedCount, requiredFrames)} / ${requiredFrames}`;
             }
         }
 
@@ -10818,7 +10806,7 @@ body nav.tappie-site-header .nav-logo span {
                     drawFrame(0, true);
                 }
 
-                if (loaded.size >= frameCount) {
+                if (shouldReleaseBoot()) {
                     updateBootProgress();
                     releaseBoot();
                     return;
@@ -10829,7 +10817,7 @@ body nav.tappie-site-header .nav-logo span {
             };
 
             img.onerror = () => {
-                // Strict 241/241 policy: do not release on failed frame.
+                // Strict boot policy: desktop releases at 241/241; mobile releases at 120 loaded frames.
                 // Keep the loader visible so missing asset problems are obvious during testing.
                 images[index] = null;
                 updateBootProgress();
@@ -10878,7 +10866,7 @@ body nav.tappie-site-header .nav-logo span {
                         active -= 1;
                         images[index] = null;
                         updateBootProgress();
-                        // Strict mode: keep trying to finish the rest, but do not release unless all 241 loaded.
+                        // Strict mode: keep trying to finish the rest; boot release uses the device-specific threshold.
                         loadNext();
                     };
 
