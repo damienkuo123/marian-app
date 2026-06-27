@@ -10705,87 +10705,14 @@ body nav.tappie-site-header .nav-logo span {
         }
 
         function normalizeBootLogoBackdrop() {
-            const logoImages = Array.from(document.querySelectorAll('.tappie-boot-loader__logo-img'));
-            if (!logoImages.length) return;
-
-            const src = '/assets/logo.webp';
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                try {
-                    const offscreen = document.createElement('canvas');
-                    offscreen.width = img.naturalWidth;
-                    offscreen.height = img.naturalHeight;
-                    const logoCtx = offscreen.getContext('2d', { willReadFrequently: true });
-                    logoCtx.drawImage(img, 0, 0);
-
-                    const imageData = logoCtx.getImageData(0, 0, offscreen.width, offscreen.height);
-                    const data = imageData.data;
-                    const width = offscreen.width;
-                    const height = offscreen.height;
-
-                    function samplePixel(x, y) {
-                        const i = ((Math.max(0, Math.min(height - 1, y)) * width) + Math.max(0, Math.min(width - 1, x))) * 4;
-                        return [data[i], data[i + 1], data[i + 2]];
-                    }
-
-                    // Use the four corners as the actual square-background color.
-                    // This is more reliable than guessing "near white" thresholds.
-                    const samples = [
-                        samplePixel(2, 2),
-                        samplePixel(width - 3, 2),
-                        samplePixel(2, height - 3),
-                        samplePixel(width - 3, height - 3)
-                    ];
-                    const bg = samples.reduce((acc, px) => {
-                        acc[0] += px[0]; acc[1] += px[1]; acc[2] += px[2];
-                        return acc;
-                    }, [0, 0, 0]).map(v => v / samples.length);
-
-                    function distanceToBg(r, g, b) {
-                        const dr = r - bg[0];
-                        const dg = g - bg[1];
-                        const db = b - bg[2];
-                        return Math.sqrt(dr * dr + dg * dg + db * db);
-                    }
-
-                    for (let i = 0; i < data.length; i += 4) {
-                        const r = data[i];
-                        const g = data[i + 1];
-                        const b = data[i + 2];
-                        const max = Math.max(r, g, b);
-                        const min = Math.min(r, g, b);
-                        const neutral = (max - min) < 32;
-                        const veryLight = max > 200;
-                        const closeToCornerBg = distanceToBg(r, g, b) < 46;
-
-                        // Remove the flat square backdrop. Keep the yellow circle and dark mascot untouched.
-                        // White eyes/outlines may become pure white, which is visually safe.
-                        if ((closeToCornerBg && neutral) || (veryLight && neutral)) {
-                            data[i] = 255;
-                            data[i + 1] = 255;
-                            data[i + 2] = 255;
-                        }
-                    }
-
-                    logoCtx.putImageData(imageData, 0, 0);
-                    const processedLogo = offscreen.toDataURL('image/png');
-                    logoImages.forEach((node) => {
-                        node.src = processedLogo;
-                    });
-                    if (bootLoader) bootLoader.style.setProperty('--boot-logo-mask', `url("${processedLogo}")`);
-                } catch (_) {
-                    // If canvas processing is blocked, keep the original logo.
-                    // The correct long-term fix is exporting /assets/logo.webp with a real transparent or pure-white background.
-                }
-            };
-            img.src = src;
+            // Keep /assets/logo.webp exactly as exported.
+            // The gray square seen in the loader comes from the source logo file itself;
+            // it should be fixed by replacing the logo asset later, not by pixel processing here.
         }
 
         function lockBoot() {
             document.body.classList.add('tappie-boot-lock');
             updateBootProgress();
-            normalizeBootLogoBackdrop();
         }
 
         function releaseBoot() {
@@ -10866,9 +10793,10 @@ body nav.tappie-site-header .nav-logo span {
                     img.decoding = 'async';
                     if (index === 0) img.fetchPriority = 'high';
 
+                    images[index] = img;
+
                     img.onload = () => {
                         active -= 1;
-                        images[index] = img;
                         loaded.add(index);
                         updateBootProgress();
 
@@ -10985,6 +10913,12 @@ body nav.tappie-site-header .nav-logo span {
         function updateTargetFromScroll() {
             const progress = getProgress();
             targetFrame = progress * (frameCount - 1);
+
+            // After mobile releases at 60/241, the user may scroll faster than the
+            // remaining sequential preload. Prioritize frames around the current target
+            // so later sections catch up faster instead of waiting strictly for 61, 62, 63...
+            if (bootReleased) preloadAround(Math.round(targetFrame));
+
             updateHeroText(progress);
         }
 
