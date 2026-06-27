@@ -19,6 +19,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="/assets/app-icon.png" type="image/png">
     <link rel="apple-touch-icon" href="/assets/app-icon.png">
+    <link rel="preload" as="image" href="/assets/tappie-hero-frames/frame_0001.webp" type="image/webp" fetchpriority="high">
     <meta name="theme-color" content="#0b0f1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -406,6 +407,19 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             overflow: hidden;
             background: #f7f9fc;
             isolation: isolate;
+        }.tappie-scroll-hero__first-frame {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            object-position: center center;
+            z-index: 0;
+            opacity: 1;
+            transition: opacity 0.35s ease;
+            pointer-events: none;
+            user-select: none;
         }.tappie-scroll-hero__canvas {
             position: absolute;
             inset: 0;
@@ -413,6 +427,12 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             height: 100%;
             display: block;
             z-index: 1;
+            opacity: 0;
+            transition: opacity 0.24s ease;
+        }.tappie-scroll-hero.is-sequence-ready .tappie-scroll-hero__canvas {
+            opacity: 1;
+        }.tappie-scroll-hero.is-sequence-ready .tappie-scroll-hero__first-frame {
+            opacity: 0;
         }.tappie-scroll-hero__shade {
             position: absolute;
             inset: 0;
@@ -528,23 +548,9 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
         }.tappie-scroll-hero__step.is-active::after {
             transform: scaleX(1);
         }.tappie-scroll-hero__loading {
-            position: absolute;
-            right: 18px;
-            bottom: 18px;
-            z-index: 4;
-            padding: 8px 12px;
-            border-radius: 999px;
-            color: rgba(16, 24, 40, 0.6);
-            background: rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(16, 24, 40, 0.08);
-            font-size: 12px;
-            font-weight: 800;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: opacity 0.3s ease;
+            display: none;
         }.tappie-scroll-hero__loading.is-hidden {
-            opacity: 0;
-            pointer-events: none;
+            display: none;
         }@media (max-width: 768px) {
 .tappie-scroll-hero {
                 height: 460vh;
@@ -8331,6 +8337,7 @@ body nav.tappie-site-header .nav-logo span {
 
     <section class="tappie-scroll-hero" id="tappie-scroll-hero" aria-label="Tappie 數位口說名牌展示">
         <div class="tappie-scroll-hero__sticky">
+            <img id="tappieHeroFirstFrame" class="tappie-scroll-hero__first-frame" src="/assets/tappie-hero-frames/frame_0001.webp" alt="" aria-hidden="true" decoding="async" fetchpriority="high">
             <canvas id="tappieHeroCanvas" class="tappie-scroll-hero__canvas"></canvas>
             <div class="tappie-scroll-hero__shade"></div>
             <div class="tappie-scroll-hero__copy" aria-live="polite">
@@ -8602,8 +8609,8 @@ body nav.tappie-site-header .nav-logo span {
 
 <section class="tappie-role-story theme-student" data-tappie-role-story="">
 <div aria-hidden="true" class="tappie-role-bg">
-<img alt="" class="tappie-role-bg-img" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-student.PNG"/>
-<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-student.PNG"/>
+<img alt="" class="tappie-role-bg-img" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-student.PNG"/>
+<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-student.PNG"/>
 <div class="tappie-role-bg-shade"></div>
 </div>
 <div class="tappie-role-hero">
@@ -8772,8 +8779,8 @@ body nav.tappie-site-header .nav-logo span {
 </section>
 <section class="tappie-role-story theme-parent" data-tappie-role-story="">
 <div aria-hidden="true" class="tappie-role-bg">
-<img alt="" class="tappie-role-bg-img" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-parent.PNG"/>
-<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-parent.PNG"/>
+<img alt="" class="tappie-role-bg-img" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-parent.PNG"/>
+<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-parent.PNG"/>
 <div class="tappie-role-bg-shade"></div>
 </div>
 <div class="tappie-role-hero">
@@ -8911,8 +8918,8 @@ body nav.tappie-site-header .nav-logo span {
 </section>
 <section class="tappie-role-story theme-teacher" data-tappie-role-story="">
 <div aria-hidden="true" class="tappie-role-bg">
-<img alt="" class="tappie-role-bg-img" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-teacher.PNG"/>
-<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-teacher.PNG"/>
+<img alt="" class="tappie-role-bg-img" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-teacher.PNG"/>
+<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-teacher.PNG"/>
 <div class="tappie-role-bg-shade"></div>
 </div>
 <div class="tappie-role-hero">
@@ -9055,8 +9062,8 @@ body nav.tappie-site-header .nav-logo span {
 </section>
 <section class="tappie-role-story theme-manager" data-tappie-role-story="">
 <div aria-hidden="true" class="tappie-role-bg">
-<img alt="" class="tappie-role-bg-img" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-manager.PNG"/>
-<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="eager" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-manager.PNG"/>
+<img alt="" class="tappie-role-bg-img" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-manager.PNG"/>
+<img alt="" class="tappie-role-bg-img tappie-role-bg-blur" loading="lazy" decoding="async" fetchpriority="low" src="/assets/official/tappie-scenario-manager.PNG"/>
 <div class="tappie-role-bg-shade"></div>
 </div>
 <div class="tappie-role-hero">
@@ -10531,18 +10538,29 @@ body nav.tappie-site-header .nav-logo span {
         const frameCount = 241;
         const images = new Array(frameCount);
         const loaded = new Set();
+
         let currentIndex = -1;
+        let targetFrame = 0;
+        let displayFrame = 0;
         let rafId = null;
-        let lastRequestedIndex = 0;
-        let loadedCount = 0;
+        let sequenceReady = false;
 
         const framePath = (index) => `/assets/tappie-hero-frames/frame_${String(index + 1).padStart(4, '0')}.webp`;
 
+        function markSequenceReady() {
+            if (sequenceReady) return;
+            sequenceReady = true;
+            scene.classList.add('is-sequence-ready');
+            if (loading) loading.classList.add('is-hidden');
+        }
+
         function resizeCanvas() {
+            // Keep the original high-quality sequence files. Cap canvas DPR to prevent iOS/Safari canvas
+            // memory crashes that can show "重複發生錯誤" while still keeping the visual sharp.
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
             canvas.width = Math.round(window.innerWidth * dpr);
             canvas.height = Math.round(window.innerHeight * dpr);
-            drawFrame(Math.max(currentIndex, 0));
+            drawFrame(currentIndex >= 0 ? currentIndex : 0, true);
         }
 
         function preloadFrame(index, priority = false) {
@@ -10553,50 +10571,80 @@ body nav.tappie-site-header .nav-logo span {
             if (priority) img.fetchPriority = 'high';
 
             img.onload = () => {
-                if (!loaded.has(index)) {
-                    loaded.add(index);
-                    loadedCount += 1;
+                loaded.add(index);
+
+                if (index === 0 && currentIndex < 0) {
+                    drawFrame(0, true);
+                    markSequenceReady();
                 }
-                if (loading && loadedCount >= Math.min(frameCount, window.innerWidth <= 768 ? 8 : 36)) {
-                    loading.classList.add('is-hidden');
-                }
-                if (lastRequestedIndex === index || currentIndex === -1) {
-                    currentIndex = index;
-                    drawCover(img);
-                }
+
+                const roundedTarget = Math.round(targetFrame);
+                if (Math.abs(index - roundedTarget) <= 1) requestUpdate();
+            };
+
+            img.onerror = () => {
+                images[index] = null;
             };
 
             img.src = framePath(index);
             images[index] = img;
         }
 
+        function preloadRange(start, end, priority = false) {
+            for (let i = Math.max(0, start); i <= Math.min(frameCount - 1, end); i += 1) {
+                preloadFrame(i, priority);
+            }
+        }
+
         function preloadInitial() {
             const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            const initialCount = isMobile ? 8 : 14;
-            for (let i = 0; i < Math.min(initialCount, frameCount); i += 1) preloadFrame(i, true);
+            const initialCount = isMobile ? 8 : 16;
+            preloadRange(0, initialCount - 1, true);
 
-            // Mobile Safari is sensitive to hundreds of decoded frames in memory.
-            // On mobile, keep loading on-demand around the current scroll position instead of preloading all 241 frames.
+            // Desktop can safely warm more frames in the background.
+            // Mobile keeps the same 241 full-quality frame set, but loads around scroll position
+            // to avoid browser memory crashes.
             if (isMobile) return;
 
             let i = initialCount;
-            const batchSize = 10;
-            const delay = 40;
+            const batchSize = 8;
+            const delay = 80;
 
             const batch = () => {
-                const end = Math.min(i + batchSize, frameCount);
-                for (; i < end; i += 1) preloadFrame(i);
+                const end = Math.min(i + batchSize - 1, frameCount - 1);
+                preloadRange(i, end);
+                i = end + 1;
                 if (i < frameCount) window.setTimeout(batch, delay);
             };
-            window.setTimeout(batch, 140);
+
+            window.setTimeout(batch, 180);
         }
 
         function preloadAround(index) {
-            for (let i = index - 5; i <= index + 10; i += 1) preloadFrame(i);
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+            const before = isMobile ? 5 : 8;
+            const after = isMobile ? 12 : 18;
+            preloadRange(index - before, index + after);
+        }
+
+        function nearestLoadedIndex(index) {
+            index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
+            if (loaded.has(index) && images[index]) return index;
+
+            const maxDistance = 28;
+            for (let distance = 1; distance <= maxDistance; distance += 1) {
+                const prev = index - distance;
+                const next = index + distance;
+                if (prev >= 0 && loaded.has(prev) && images[prev]) return prev;
+                if (next < frameCount && loaded.has(next) && images[next]) return next;
+            }
+
+            if (loaded.has(0) && images[0]) return 0;
+            return currentIndex >= 0 ? currentIndex : -1;
         }
 
         function drawCover(img) {
-            if (!img || !img.complete || !img.naturalWidth) return;
+            if (!img || !img.complete || !img.naturalWidth) return false;
 
             const canvasWidth = canvas.width;
             const canvasHeight = canvas.height;
@@ -10609,29 +10657,30 @@ body nav.tappie-site-header .nav-logo span {
             const y = (canvasHeight - height) / 2;
 
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.imageSmoothingEnabled = true;
+            if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, x, y, width, height);
+            return true;
         }
 
-        function drawFrame(index) {
-            index = Math.max(0, Math.min(frameCount - 1, index));
-            lastRequestedIndex = index;
+        function drawFrame(index, force = false) {
+            index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
             preloadAround(index);
 
-            const img = images[index];
-            if (!img) return;
-
-            if (!img.complete || !img.naturalWidth) {
-                img.onload = () => {
-                    if (lastRequestedIndex === index) {
-                        currentIndex = index;
-                        drawCover(img);
-                    }
-                };
-                return;
+            const drawableIndex = nearestLoadedIndex(index);
+            if (drawableIndex < 0) {
+                preloadFrame(0, true);
+                return false;
             }
 
-            currentIndex = index;
-            drawCover(img);
+            if (!force && drawableIndex === currentIndex) return true;
+
+            const img = images[drawableIndex];
+            if (!drawCover(img)) return false;
+
+            currentIndex = drawableIndex;
+            if (drawableIndex === 0 || !sequenceReady) markSequenceReady();
+            return true;
         }
 
         function getProgress() {
@@ -10661,21 +10710,37 @@ body nav.tappie-site-header .nav-logo span {
             scene.style.setProperty('--hero-end-fade', endFade.toFixed(3));
         }
 
-        function update() {
-            rafId = null;
+        function updateTargetFromScroll() {
             const progress = getProgress();
-            const nextIndex = Math.round(progress * (frameCount - 1));
-            if (nextIndex !== currentIndex) drawFrame(nextIndex);
+            targetFrame = progress * (frameCount - 1);
+            preloadAround(Math.round(targetFrame));
             updateHeroText(progress);
         }
 
+        function renderLoop() {
+            rafId = null;
+            updateTargetFromScroll();
+
+            const diff = targetFrame - displayFrame;
+            if (Math.abs(diff) < 0.08) {
+                displayFrame = targetFrame;
+            } else {
+                displayFrame += diff * 0.18;
+            }
+
+            drawFrame(displayFrame);
+
+            if (Math.abs(targetFrame - displayFrame) > 0.12) requestUpdate();
+        }
+
         function requestUpdate() {
-            if (!rafId) rafId = requestAnimationFrame(update);
+            if (!rafId) rafId = requestAnimationFrame(renderLoop);
         }
 
         resizeCanvas();
         preloadInitial();
-        drawFrame(0);
+        preloadFrame(0, true);
+        updateTargetFromScroll();
         requestUpdate();
 
         window.addEventListener('resize', () => {
