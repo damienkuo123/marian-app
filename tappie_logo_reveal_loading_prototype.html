@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tappie Logo Reveal Loading Prototype</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --surface: rgba(255,255,255,0.92);
+      --border: rgba(17,24,39,0.08);
+      --shadow: 0 20px 60px rgba(15,23,42,0.08);
+      --progress: 0;
+      --logo-width: min(54vw, 320px);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+        "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .prototype-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(37,99,235,.06), rgba(37,99,235,0) 32%),
+        #fff;
+    }
+
+    .loader-stage {
+      display: grid;
+      place-items: center;
+      padding: 48px 24px 24px;
+    }
+
+    .loader-wrap {
+      width: min(92vw, 760px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .brand-lockup {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .logo-reveal {
+      position: relative;
+      width: var(--logo-width);
+      max-width: 100%;
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      isolation: isolate;
+    }
+
+    .logo-reveal::before {
+      content: "";
+      position: absolute;
+      inset: 8% 8% 12%;
+      background: radial-gradient(circle at 50% 60%, rgba(37,99,235,.10), rgba(37,99,235,0) 62%);
+      filter: blur(12px);
+      z-index: -1;
+    }
+
+    .logo-base,
+    .logo-fill {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .logo-base {
+      opacity: 0.14;
+      filter: grayscale(1) brightness(0.8);
+    }
+
+    .logo-fill-viewport {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: calc(var(--progress) * 100%);
+      overflow: hidden;
+      transition: height .12s linear;
+      mask-image: linear-gradient(to top, #000 96%, rgba(0,0,0,0.92) 100%);
+      -webkit-mask-image: linear-gradient(to top, #000 96%, rgba(0,0,0,0.92) 100%);
+    }
+
+    .logo-fill {
+      bottom: 0;
+      top: auto;
+      transform: translateY(calc((1 - var(--progress)) * 100%));
+    }
+
+    .wave-edge {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -10px;
+      height: 22px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .wave-edge::before,
+    .wave-edge::after {
+      content: "";
+      position: absolute;
+      left: -8%;
+      width: 116%;
+      height: 100%;
+      background-repeat: repeat-x;
+      background-size: 110px 22px;
+      opacity: 0.92;
+    }
+
+    .wave-edge::before {
+      top: 2px;
+      background-image:
+        radial-gradient(circle at 14px 16px, rgba(255,255,255,0) 14px, #ffffff 15px);
+      animation: waveA 3s linear infinite;
+    }
+
+    .wave-edge::after {
+      top: 0;
+      background-image:
+        radial-gradient(circle at 20px 8px, rgba(255,255,255,0) 16px, rgba(255,255,255,0.9) 17px);
+      opacity: .45;
+      animation: waveB 4.2s linear infinite;
+    }
+
+    @keyframes waveA {
+      from { transform: translateX(0); }
+      to { transform: translateX(-110px); }
+    }
+
+    @keyframes waveB {
+      from { transform: translateX(-55px); }
+      to { transform: translateX(-165px); }
+    }
+
+    .loading-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .loading-title {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.02;
+      letter-spacing: -.06em;
+      font-weight: 800;
+    }
+
+    .loading-subtitle {
+      margin: 0;
+      max-width: 540px;
+      font-size: clamp(16px, 1.5vw, 19px);
+      line-height: 1.7;
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: -.02em;
+    }
+
+    .progress-panel {
+      width: min(92vw, 520px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .progress-bar {
+      position: relative;
+      width: 100%;
+      height: 10px;
+      background: rgba(15,23,42,0.06);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: calc(var(--progress) * 100%);
+      background: linear-gradient(90deg, #111827 0%, #2563eb 100%);
+      border-radius: inherit;
+      transition: width .12s linear;
+    }
+
+    .prototype-controls {
+      width: min(96vw, 920px);
+      margin: 0 auto 28px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: grid;
+      gap: 18px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #2563eb;
+    }
+
+    button {
+      border: 0;
+      background: #111827;
+      color: white;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #eef2f7;
+      color: #111827;
+    }
+
+    .control-note {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    code {
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(15,23,42,0.05);
+      font-size: .92em;
+    }
+
+    @media (max-width: 760px) {
+      .loader-stage {
+        padding-top: 38px;
+      }
+
+      .prototype-controls {
+        border-radius: 20px;
+      }
+
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .range-wrap {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="prototype-shell">
+    <section class="loader-stage">
+      <div class="loader-wrap">
+        <div class="brand-lockup">
+          <div class="logo-reveal" aria-hidden="true">
+            <img class="logo-base" src="/assets/logo.webp" alt="">
+            <div class="logo-fill-viewport">
+              <div class="wave-edge"></div>
+              <img class="logo-fill" src="/assets/logo.webp" alt="">
+            </div>
+          </div>
+
+          <div class="loading-copy">
+            <div class="eyebrow">Tappie Prototype</div>
+            <h1 class="loading-title">Logo Reveal Loading</h1>
+            <p class="loading-subtitle">
+              這是獨立原型：用同一張 <code>logo.webp</code> 做底圖與 reveal 圖層，
+              由下往上跟隨載入進度顯示。你可以先看整體視覺感，再決定要不要接進首頁 Hero。
+            </p>
+          </div>
+        </div>
+
+        <div class="progress-panel">
+          <div class="progress-row">
+            <span id="progressLabel">載入中 0%</span>
+            <span id="frameLabel">0 / 24</span>
+          </div>
+          <div class="progress-bar" aria-hidden="true">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="prototype-controls">
+      <div class="controls-grid">
+        <div class="range-wrap">
+          <input id="progressSlider" type="range" min="0" max="100" step="1" value="0">
+        </div>
+        <button id="playBtn">自動播放</button>
+        <button id="resetBtn" class="secondary">重置</button>
+        <button id="themeBtn" class="secondary">深色背景預覽</button>
+      </div>
+      <div class="control-note">
+        目前這個 prototype 用 <code>24</code> 張作為「首段 Hero 必要 frame」的示意。
+        真正接進首頁時，可以改成桌面 <code>24–36</code>、手機 <code>8–16</code> 的啟動門檻，
+        而不是等完整 <code>241</code> 張全部載完。
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const progressSlider = document.getElementById('progressSlider');
+      const playBtn = document.getElementById('playBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const themeBtn = document.getElementById('themeBtn');
+      const progressLabel = document.getElementById('progressLabel');
+      const frameLabel = document.getElementById('frameLabel');
+
+      const requiredFrames = 24;
+      let progress = 0;
+      let isPlaying = false;
+      let rafId = null;
+      let isDark = false;
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function applyProgress(value) {
+        progress = clamp(value, 0, 1);
+        root.style.setProperty('--progress', progress.toFixed(4));
+
+        const percent = Math.round(progress * 100);
+        const loadedFrames = Math.min(requiredFrames, Math.round(progress * requiredFrames));
+        progressLabel.textContent = `載入中 ${percent}%`;
+        frameLabel.textContent = `${loadedFrames} / ${requiredFrames}`;
+        progressSlider.value = String(percent);
+
+        if (percent >= 100) {
+          progressLabel.textContent = '已準備完成 100%';
+        }
+      }
+
+      function stopPlayback() {
+        isPlaying = false;
+        playBtn.textContent = '自動播放';
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+
+      function runPlayback() {
+        const startValue = progress;
+        const duration = 2600;
+        const startTime = performance.now();
+
+        function tick(now) {
+          const elapsed = now - startTime;
+          const t = clamp(elapsed / duration, 0, 1);
+          const eased = 1 - Math.pow(1 - t, 3);
+          applyProgress(startValue + (1 - startValue) * eased);
+
+          if (t < 1 && isPlaying) {
+            rafId = requestAnimationFrame(tick);
+          } else {
+            stopPlayback();
+            applyProgress(1);
+          }
+        }
+
+        rafId = requestAnimationFrame(tick);
+      }
+
+      progressSlider.addEventListener('input', (event) => {
+        stopPlayback();
+        applyProgress(Number(event.target.value) / 100);
+      });
+
+      playBtn.addEventListener('click', () => {
+        if (isPlaying) {
+          stopPlayback();
+          return;
+        }
+        isPlaying = true;
+        playBtn.textContent = '停止';
+        runPlayback();
+      });
+
+      resetBtn.addEventListener('click', () => {
+        stopPlayback();
+        applyProgress(0);
+      });
+
+      themeBtn.addEventListener('click', () => {
+        isDark = !isDark;
+        if (isDark) {
+          root.style.setProperty('--bg', '#020617');
+          root.style.setProperty('--text', '#f8fafc');
+          root.style.setProperty('--muted', 'rgba(226,232,240,.78)');
+          root.style.setProperty('--surface', 'rgba(8,15,31,.78)');
+          root.style.setProperty('--border', 'rgba(255,255,255,.08)');
+          root.style.setProperty('--shadow', '0 24px 60px rgba(0,0,0,.34)');
+          themeBtn.textContent = '白色背景預覽';
+        } else {
+          root.style.setProperty('--bg', '#ffffff');
+          root.style.setProperty('--text', '#111827');
+          root.style.setProperty('--muted', '#6b7280');
+          root.style.setProperty('--surface', 'rgba(255,255,255,.92)');
+          root.style.setProperty('--border', 'rgba(17,24,39,.08)');
+          root.style.setProperty('--shadow', '0 20px 60px rgba(15,23,42,.08)');
+          themeBtn.textContent = '深色背景預覽';
+        }
+      });
+
+      applyProgress(0);
+    })();
+  </script>
+</body>
+</html>
