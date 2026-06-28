@@ -8278,6 +8278,274 @@
       }
     }
 
+  
+
+    /* =======================================================
+       Avatar Console UI Tidy v2
+       - Reduce role card noise
+       - Show asset diagnostics only in Owner single-school mode
+       - Stack save / hide actions consistently
+       - Add Lobby-style holographic card preview on avatar image click
+       ======================================================= */
+    .avatar-source-note span:nth-child(2),
+    .avatar-source-note span:nth-child(3) { display: none; }
+    .avatar-source-note span:first-child {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      font-weight: 760;
+    }
+    .avatar-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+    .avatar-card { gap: 16px !important; }
+    .avatar-card-head { align-items: center !important; }
+    .avatar-thumb-button,
+    .avatar-table-thumb-button {
+      appearance: none;
+      border: 0;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      cursor: zoom-in;
+      border-radius: 20px;
+      line-height: 0;
+      flex: 0 0 auto;
+      position: relative;
+    }
+    .avatar-table-thumb-button { border-radius: 14px; }
+    .avatar-thumb-button:focus-visible,
+    .avatar-table-thumb-button:focus-visible {
+      outline: 3px solid rgba(37,99,235,.24);
+      outline-offset: 4px;
+    }
+    .avatar-thumb-button::after,
+    .avatar-table-thumb-button::after {
+      content: "放大";
+      position: absolute;
+      left: 50%;
+      bottom: -8px;
+      transform: translateX(-50%) translateY(6px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: rgba(15,23,42,.84);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      transition: .16s ease;
+      white-space: nowrap;
+      z-index: 5;
+    }
+    .avatar-thumb-button:hover::after,
+    .avatar-table-thumb-button:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .avatar-thumb-button .avatar-thumb,
+    .avatar-table-thumb-button .avatar-table-thumb { transition: transform .18s ease, box-shadow .18s ease; }
+    .avatar-thumb-button:hover .avatar-thumb,
+    .avatar-table-thumb-button:hover .avatar-table-thumb { transform: translateY(-1px) scale(1.025); box-shadow: 0 14px 28px rgba(16,24,40,.14); }
+    .avatar-control-panel {
+      padding: 14px !important;
+      border-radius: 20px !important;
+      gap: 10px !important;
+    }
+    .avatar-control-row { display: block !important; }
+    .avatar-field-compact label {
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    .avatar-cost-line,
+    .avatar-table-cost-line {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 10px !important;
+    }
+    .avatar-cost-line .btn-compact,
+    .avatar-table-cost-line .btn-compact,
+    .avatar-life-action .btn-compact,
+    .avatar-action-btn {
+      width: 100% !important;
+      justify-content: center !important;
+      text-align: center !important;
+      min-height: 46px !important;
+      border-radius: 16px !important;
+      font-size: 14px !important;
+      font-weight: 900 !important;
+      box-shadow: 0 10px 20px rgba(16,24,40,.06) !important;
+    }
+    .avatar-life-action {
+      border-top: 0 !important;
+      padding-top: 0 !important;
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 7px !important;
+      align-items: stretch !important;
+    }
+    .avatar-life-note {
+      text-align: center !important;
+      font-size: 12px !important;
+      line-height: 1.45 !important;
+      color: var(--muted);
+      font-weight: 750;
+    }
+    .avatar-system-panel {
+      padding: 12px 13px !important;
+      border-radius: 16px !important;
+      min-height: 0 !important;
+    }
+    .avatar-system-panel span { display: none !important; }
+    .avatar-table-wrap .avatar-table-v2 { min-width: 620px !important; }
+    .avatar-table-v2 th,
+    .avatar-table-v2 td { vertical-align: top !important; }
+    .avatar-table-v2 th:nth-child(1), .avatar-table-v2 td:nth-child(1) { width: 48% !important; }
+    .avatar-table-v2 th:nth-child(2), .avatar-table-v2 td:nth-child(2) { width: 90px !important; }
+    .avatar-table-v2 th:nth-child(3), .avatar-table-v2 td:nth-child(3) { width: 120px !important; }
+    .avatar-table-v2 th:nth-child(4), .avatar-table-v2 td:nth-child(4) { width: 200px !important; }
+    .avatar-table-action-stack {
+      min-width: 160px !important;
+      width: min(210px, 100%) !important;
+      gap: 10px !important;
+      align-items: stretch !important;
+    }
+    .avatar-table-action-stack .avatar-life-action { width: 100%; }
+    .avatar-table-action-stack .avatar-life-note { text-align: center !important; }
+    .avatar-table-role { align-items: center !important; }
+    .avatar-table-thumb { width: 54px !important; height: 54px !important; border-radius: 14px !important; }
+    .avatar-badges .state-normal,
+    .avatar-badges .state-hidden,
+    .avatar-badges .state-event,
+    .avatar-badges .state-system { font-weight: 950; }
+    @media (max-width:700px){
+      .avatar-grid { grid-template-columns: 1fr !important; }
+      .avatar-card { padding: 18px !important; }
+      .avatar-card-head { align-items: center !important; }
+      .avatar-control-panel { margin-top: 2px; }
+      .avatar-table-wrap { margin-left: -2px; margin-right: -2px; }
+      .avatar-table-wrap .avatar-table-v2 { min-width: 560px !important; }
+    }
+
+    #avatar-console-showcase-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10050;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 9, 15, 0.95);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      --gold: #f1c40f;
+      --grain: url("/assets/grain.webp");
+      --glitter: url("/assets/glitter.png");
+      --foil: url("/assets/illusion.png");
+      --trainer-foil: url("/assets/trainerbg.png");
+      --cosmos-bottom: url("/assets/cosmos-bottom.png");
+      --cosmos-mid: url("/assets/cosmos-middle-trans.png");
+      --cosmos-top: url("/assets/cosmos-top-trans.png");
+      --space: 5%;
+      --angle: 133deg;
+      --imgsize: 33%;
+      --card-aspect: 0.718;
+      --card-radius: 4.55% / 3.5%;
+      --sunpillar-1: hsl(2, 100%, 73%);
+      --sunpillar-2: hsl(53, 100%, 69%);
+      --sunpillar-3: hsl(93, 100%, 69%);
+      --sunpillar-4: hsl(176, 100%, 76%);
+      --sunpillar-5: hsl(228, 100%, 74%);
+      --sunpillar-6: hsl(283, 100%, 73%);
+      --sunpillar-clr-1: var(--sunpillar-1);
+      --sunpillar-clr-2: var(--sunpillar-2);
+      --sunpillar-clr-3: var(--sunpillar-3);
+      --sunpillar-clr-4: var(--sunpillar-4);
+      --sunpillar-clr-5: var(--sunpillar-5);
+      --sunpillar-clr-6: var(--sunpillar-6);
+    }
+    #avatar-console-showcase-modal.active { opacity: 1; pointer-events: auto; }
+    #avatar-console-showcase-modal .avatar-showcase-close {
+      position: absolute;
+      top: max(20px, env(safe-area-inset-top));
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      font-size: 22px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      transition: 0.3s;
+    }
+    #avatar-console-showcase-modal .avatar-showcase-name {
+      color: white;
+      letter-spacing: 4px;
+      margin: 0 22px 20px;
+      text-align: center;
+      text-shadow: 0 0 10px rgba(255,255,255,0.5);
+      font-weight: 900;
+      line-height: 1.2;
+      font-size: clamp(22px, 5vw, 32px);
+    }
+    #avatar-console-showcase-modal .showcase-wrapper { width: 85vw; max-width: 400px; aspect-ratio: var(--card-aspect); perspective: 800px; }
+    #avatar-console-showcase-modal .card {
+      width: 100%; height: 100%; position: relative; padding: 0 !important; margin: 0 !important;
+      background: transparent !important; border: 0 !important; box-shadow: none !important;
+      transform: translate3d(0px, 0px, 0.01px);
+      transform-style: preserve-3d;
+      --pointer-x: 50%; --pointer-y: 50%;
+      --pointer-from-center: 0; --pointer-from-top: 0.5; --pointer-from-left: 0.5;
+      --rotate-x: 0deg; --rotate-y: 0deg;
+      --card-opacity: 1; --card-scale: 1; --translate-x: 0px; --translate-y: 0px;
+    }
+    #avatar-console-showcase-modal .card__translater,
+    #avatar-console-showcase-modal .card__rotator { width: 100%; height: 100%; display: grid; perspective: 600px; transform-origin: center; transform-style: preserve-3d; }
+    #avatar-console-showcase-modal .card__translater { transform: translate3d(var(--translate-x), var(--translate-y), 0.1px) scale(var(--card-scale)); }
+    #avatar-console-showcase-modal .card__rotator { transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y)); box-shadow: 0px 20px 40px -5px rgba(0,0,0,0.8), 0 2px 15px -5px black; border-radius: var(--card-radius); }
+    #avatar-console-showcase-modal .card__rotator * { transform-style: preserve-3d; }
+    #avatar-console-showcase-modal .card__front { display: grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr; width: 100%; height: 100%; border-radius: var(--card-radius); transform-style: preserve-3d !important; transform: translate3d(0px, 0px, 0.01px); }
+    #avatar-console-showcase-modal .card__bg,
+    #avatar-console-showcase-modal .card__shine,
+    #avatar-console-showcase-modal .card__glare { grid-area: 1/1; width: 100%; height: 100%; border-radius: var(--card-radius); box-sizing: border-box; pointer-events: none; transform-style: preserve-3d !important; }
+    #avatar-console-showcase-modal .card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0px); z-index: 1; }
+    #avatar-console-showcase-modal .card__glare { transform: translateZ(1.41px); z-index: 3; background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%); opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay; }
+    #avatar-console-showcase-modal .card__shine { display: grid; transform: translateZ(1px); z-index: 4; transform-style: preserve-3d; background: transparent; background-size: cover; background-position: center; filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge; }
+    #avatar-console-showcase-modal .card__shine:before,
+    #avatar-console-showcase-modal .card__shine:after { grid-area: 1/1; border-radius: var(--card-radius); content: ""; display: block !important; }
+    #avatar-console-showcase-modal .card__shine:before { transform: translateZ(1.2px); }
+    #avatar-console-showcase-modal .card__shine:after { transform: translateZ(1.6px); }
+    #avatar-console-showcase-modal .card.masked .card__shine,
+    #avatar-console-showcase-modal .card.masked .card__shine:before,
+    #avatar-console-showcase-modal .card.masked .card__shine:after { -webkit-mask-image: linear-gradient(white, white), var(--mask) !important; -webkit-mask-composite: destination-out !important; mask-image: linear-gradient(white, white), var(--mask) !important; mask-composite: exclude !important; -webkit-mask-size: cover !important; mask-size: cover !important; -webkit-mask-position: center center !important; mask-position: center center !important; }
+    #avatar-console-showcase-modal .card[data-rarity="R"] .card__shine { --space: 4%; background-image: var(--cosmos-bottom), repeating-linear-gradient(82deg, hsl(53,65%,60%) calc(var(--space)*1), hsl(93,56%,50%) calc(var(--space)*2), hsl(176,54%,49%) calc(var(--space)*3), hsl(228,59%,55%) calc(var(--space)*4), hsl(283,60%,55%) calc(var(--space)*5), hsl(326,59%,51%) calc(var(--space)*6), hsl(326,59%,51%) calc(var(--space)*7), hsl(283,60%,55%) calc(var(--space)*8), hsl(228,59%,55%) calc(var(--space)*9), hsl(176,54%,49%) calc(var(--space)*10), hsl(93,56%,50%) calc(var(--space)*11), hsl(53,65%,60%) calc(var(--space)*12)), radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(180,100%,89%,0.5) 5%, hsla(180,14%,57%,0.3) 40%, hsl(0,0%,0%) 130%) !important; background-blend-mode: color-burn, multiply !important; background-position: center, calc(10% + (var(--pointer-from-left)*80%)) calc(10% + (var(--pointer-from-top)*80%)), center !important; background-size: cover, 400% 900%, cover !important; filter: brightness(1) contrast(1) saturate(.8) !important; mix-blend-mode: color-dodge !important; opacity: 1 !important; }
+    #avatar-console-showcase-modal .card[data-rarity="R"] .card__bg { border-color: #3498db !important; box-shadow: inset 0 0 10px rgba(52,152,219,0.5) !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__shine,
+    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__shine:after { background-image: var(--trainer-foil) !important; background-size: var(--imgsize) !important; filter: brightness(calc((var(--pointer-from-center)*0.05) + .6)) contrast(1.5) saturate(1.2) !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__shine:before { background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0,0%,100%) 0%, hsla(0,0%,0%,0) 80%) !important; mix-blend-mode: screen !important; opacity: .5 !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__bg { border-color: #bdc3c7 !important; box-shadow: inset 0 0 10px rgba(189,195,199,0.5) !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine { opacity: 1 !important; background-image: var(--foil), repeating-linear-gradient(0deg, var(--sunpillar-clr-1) calc(var(--space)*1), var(--sunpillar-clr-2) calc(var(--space)*2), var(--sunpillar-clr-3) calc(var(--space)*3), var(--sunpillar-clr-4) calc(var(--space)*4), var(--sunpillar-clr-5) calc(var(--space)*5), var(--sunpillar-clr-6) calc(var(--space)*6), var(--sunpillar-clr-1) calc(var(--space)*7)), repeating-linear-gradient(var(--angle), #0e152e 0%, hsl(180,10%,60%) 3.8%, hsl(180,29%,66%) 4.5%, hsl(180,10%,60%) 5.2%, #0e152e 10%, #0e152e 12%), radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0,0%,0%,0.1) 12%, hsla(0,0%,0%,0.15) 20%, hsla(0,0%,0%,0.25) 120%) !important; background-position: center center, 0% var(--pointer-y), calc(var(--pointer-x) + (var(--pointer-y)*0.2)) var(--pointer-y), var(--pointer-x) var(--pointer-y) !important; background-blend-mode: soft-light, hue, hard-light !important; background-size: var(--imgsize), 200% 700%, 300% 100%, 200% 100% !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine:before { display: none !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine:after { background-position: center center, 0% var(--pointer-y), calc((var(--pointer-x) + (var(--pointer-y)*0.2)) * -1) calc(var(--pointer-y) * -1), var(--pointer-x) var(--pointer-y) !important; background-size: var(--imgsize), 200% 400%, 195% 100%, 200% 100% !important; filter: brightness(calc((var(--pointer-from-center)*.4) + .8)) contrast(1.5) saturate(1.25) !important; mix-blend-mode: exclusion !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__glare { background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0,0%,75%) 5%, hsl(200,5%,35%) 60%, hsl(320,40%,10%) 150%) !important; background-size: 120% 150% !important; background-position: center center !important; mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75) !important; }
+    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__bg { border-color: var(--gold) !important; box-shadow: inset 0 0 15px rgba(241,196,15,0.5) !important; }
+    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__shine { --r-clr-1:hsl(0,57%,37%); --r-clr-2:hsl(40,53%,39%); --r-clr-3:hsl(90,60%,35%); --r-clr-4:hsl(180,60%,35%); --r-clr-5:hsl(180,60%,35%); --r-clr-6:hsl(210,57%,39%); --r-clr-7:hsl(280,55%,31%); background-image: linear-gradient(-45deg, var(--r-clr-1), var(--r-clr-5)), var(--glitter), linear-gradient(-30deg, var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), var(--r-clr-1)) !important; background-blend-mode: soft-light !important; background-size: 100% 100%, 30% 30%, 400% 400% !important; background-position: center center, center center, var(--pointer-x) var(--pointer-y) !important; filter: brightness(calc((var(--pointer-from-center)*0.3) + 0.55)) contrast(2) saturate(1) !important; mix-blend-mode: color-dodge !important; opacity: 1 !important; }
+    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__shine:before { background-image: var(--foil) !important; background-size: var(--imgsize) !important; background-position: center center !important; filter: brightness(2.5) contrast(1) !important; opacity: calc((var(--pointer-from-center) + .4) * .6) !important; background-blend-mode: difference !important; mix-blend-mode: darken !important; }
+    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__glare { background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0,0%,100%) 5%, hsl(200,5%,85%) 60%, hsl(320,40%,10%) 150%) !important; mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75) !important; }
+    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__bg { border-color: #ff9ff3 !important; box-shadow: inset 0 0 15px rgba(255,159,243,0.8) !important; }
+    #avatar-console-showcase-modal .avatar-showcase-tip { color:rgba(255,255,255,0.6); font-size:13px; font-weight:bold; margin-top:25px; letter-spacing:2px; background:rgba(0,0,0,0.5); padding:8px 20px; border-radius:20px; backdrop-filter:blur(5px); text-align:center; }
+
+  
+    .avatar-overview-metrics:has(.avatar-overview-mini:nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0,1fr)); }
+
   </style>
 </head>
 <body>
@@ -16122,7 +16390,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
             <div class="avatar-overview-metrics">
               <div class="avatar-overview-mini"><span>可編輯</span><strong id="avatarEditableCount">—</strong></div>
               <div class="avatar-overview-mini"><span>系統鎖定</span><strong id="avatarLockedCount">—</strong></div>
-              <div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>
+              ${showAvatarAssetDiagnosticsForConsole() ? `<div class="avatar-overview-mini"><span>素材缺漏</span><strong id="avatarAssetIssueCount">—</strong></div>` : ""}
             </div>
           </div>
           <div class="avatar-overview-card">
@@ -16159,7 +16427,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
               <option value="預設">預設</option>
               <option value="AI">AI</option>
               <option value="locked">鎖定角色</option>
-              <option value="assetIssue">素材缺漏</option>
+              ${showAvatarAssetDiagnosticsForConsole() ? `<option value="assetIssue">素材缺漏</option>` : ""}
             </select>
             <select id="avatarRarityFilter" class="console-select" onchange="renderAvatarsConsoleList()">
               <option value="">全部稀有度</option>
@@ -16226,6 +16494,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         const id = avatarIdOf(a); const name = avatarNameOf(a); const locked = isAvatarLockedForConsole(a); const normalizedCat = avatarTypeLabelForConsole(a);
         if (q && !`${id} ${name}`.toLowerCase().includes(q)) return false;
         if (cat === "locked" && !locked) return false;
+        if (cat === "assetIssue" && !showAvatarAssetDiagnosticsForConsole()) return true;
         if (cat === "assetIssue" && !avatarHasAssetIssue(a)) return false;
         if (cat && cat !== "locked" && cat !== "assetIssue" && normalizedCat !== cat) return false;
         if (rarity && String(a.rarity || "N") !== rarity) return false;
@@ -16251,7 +16520,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       setText("avatarEventCount", eventCount);
       setText("avatarAvgCost", editable.length ? avg : "—");
       const statusEl = document.getElementById("avatarsConsoleStatus");
-      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。素材缺漏會影響盲盒與對戰結果畫面；活動角色由排程自動管理，隱藏角色不進商城與盲盒。`;
+      if (statusEl) {
+        const assetNote = showAvatarAssetDiagnosticsForConsole() ? "素材缺漏會影響盲盒與對戰結果畫面；" : "";
+        statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。${assetNote}活動角色由排程自動管理，隱藏角色不進商城與盲盒。`;
+      }
       document.getElementById("avatarViewCardsBtn")?.classList.toggle("btn-success", avatarsConsoleView === "cards");
       document.getElementById("avatarViewTableBtn")?.classList.toggle("btn-success", avatarsConsoleView === "table");
       const listEl = document.getElementById("avatarsConsoleList");
@@ -16260,16 +16532,17 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       listEl.innerHTML = avatarsConsoleView === "table" ? renderAvatarConsoleTable(avatars) : `<div class="avatar-grid">${avatars.map(renderAvatarConsoleCard).join("")}</div>`;
     }
     function rarityBadgeClass(rarity){ const r=String(rarity||"N").toLowerCase(); return ["ssr","sr","r"].includes(r) ? r : ""; }
-    function avatarReservedByEventForConsole(a){ return Boolean(a.reservedByEventSchedule || a.reserved_by_event_schedule || (Array.isArray(a.eventReservations) && a.eventReservations.length) || (Array.isArray(a.event_reservations) && a.event_reservations.length)); }
+    function showAvatarAssetDiagnosticsForConsole(){
+      return isOwner() && isSingleSchoolMode();
+    }
     function avatarLifecycleActionHtml(a, id){
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       if (category === "一般") {
         const reserved = avatarReservedByEventForConsole(a);
-        return `<div class="avatar-life-action"><button class="btn-compact danger" ${reserved ? "disabled" : ""} onclick="hideAvatarConsoleItem('${escapeJs(id)}', this)">隱藏</button><span class="avatar-life-note">${reserved ? "已被活動使用 / 預約" : "不進商城與盲盒；已擁有仍可用"}</span></div>`;
+        return `<div class="avatar-life-action"><button class="btn-compact avatar-action-btn" ${reserved ? "disabled" : ""} onclick="hideAvatarConsoleItem('${escapeJs(id)}', this)">隱藏</button>${reserved ? `<span class="avatar-life-note">已被活動排程使用 / 預約，暫不能隱藏</span>` : ""}</div>`;
       }
-      if (category === "隱藏") return `<div class="avatar-life-action"><button class="btn-compact ok" onclick="unhideAvatarConsoleItem('${escapeJs(id)}', this)">取消隱藏</button><span class="avatar-life-note">恢復後可重新列入獎池，機率預設 0</span></div>`;
-      if (category === "活動") return `<div class="avatar-life-action"><span class="avatar-state-pill event">活動中</span><span class="avatar-life-note">由活動排程自動管理</span></div>`;
-      return `<div class="avatar-life-action"><span class="avatar-state-pill system">系統保護</span><span class="avatar-life-note">不可手動調整</span></div>`;
+      if (category === "隱藏") return `<div class="avatar-life-action"><button class="btn-compact btn-success avatar-action-btn" onclick="unhideAvatarConsoleItem('${escapeJs(id)}', this)">取消隱藏</button><span class="avatar-life-note">恢復後可重新列入獎池，機率預設 0</span></div>`;
+      return "";
     }
     function avatarStatePillClassForConsole(category, locked=false){
       const cat = normalizeAvatarCategoryForConsole(category);
@@ -16277,6 +16550,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       if (cat === "活動") return "event";
       if (locked || cat === "預設" || cat === "AI") return "system";
       return "normal";
+    }
+    function renderAvatarThumbButtonForConsole(a, className="avatar-thumb"){
+      const id = avatarIdOf(a);
+      return `<button type="button" class="${className === "avatar-table-thumb" ? "avatar-table-thumb-button" : "avatar-thumb-button"}" onclick="openAvatarConsolePreview('${escapeJs(id)}')" aria-label="預覽 ${escapeHtml(avatarNameOf(a))}"><img class="${className}" src="${escapeHtml(avatarImgOf(a))}" onerror="this.src='/assets/gacha-box.png'" /></button>`;
     }
     function renderAvatarConsoleCard(a){
       const id = avatarIdOf(a);
@@ -16292,10 +16569,11 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const stateClass = avatarStatePillClassForConsole(editableCategory, locked);
       const assetImgClass = hasImg ? "ok" : "warn";
       const maskChipClass = maskClass === "warn" ? "warn" : maskClass === "ok" ? "ok" : "neutral";
+      const showAssets = showAvatarAssetDiagnosticsForConsole();
       return `<div class="avatar-card ${locked ? "locked" : ""}" data-avatar-id="${escapeHtml(id)}">
         <div class="avatar-card-head">
           <div class="avatar-thumb-wrap">
-            <img class="avatar-thumb" src="${escapeHtml(avatarImgOf(a))}" onerror="this.src='/assets/gacha-box.png'" />
+            ${renderAvatarThumbButtonForConsole(a)}
             ${locked ? `<span class="avatar-lock-dot">🔒</span>` : `<span class="avatar-lock-dot">✏️</span>`}
           </div>
           <div style="min-width:0;flex:1;">
@@ -16309,21 +16587,17 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
             </div>
           </div>
         </div>
-        <div class="avatar-card-health">
+        ${showAssets ? `<div class="avatar-card-health">
           <div class="avatar-health-chip ${assetImgClass}"><span>圖片</span><strong>${hasImg ? "OK" : "缺少"}</strong></div>
           <div class="avatar-health-chip ${maskChipClass}"><span>Mask</span><strong>${escapeHtml(maskLabel)}</strong></div>
-        </div>
-        ${locked ? `<div class="avatar-system-panel"><strong>${escapeHtml(lockReason)}</strong><span>不開放改價或切換狀態；若需調整素材，請走素材管理流程。</span></div>` : `
+        </div>` : ""}
+        ${locked ? `<div class="avatar-system-panel"><strong>${escapeHtml(lockReason)}</strong></div>` : `
         <div class="avatar-control-panel">
           <div class="avatar-control-row">
             <div class="avatar-field-compact">
               <label>兌換點數</label>
-              <div class="avatar-cost-line"><input class="avatar-cost-input console-input" type="number" min="0" value="${Number(a.cost || 0)}" /><button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button></div>
+              <div class="avatar-cost-line"><input class="avatar-cost-input console-input" type="number" min="0" value="${Number(a.cost || 0)}" /><button class="btn-compact btn-success avatar-action-btn" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button></div>
               <span class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></span>
-            </div>
-            <div class="avatar-field-compact">
-              <label>狀態</label>
-              <span class="avatar-state-pill ${stateClass}">${escapeHtml(editableCategory)}</span>
             </div>
           </div>
           ${avatarLifecycleActionHtml(a, id)}
@@ -16331,6 +16605,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       </div>`;
     }
     function renderAvatarConsoleTable(avatars){
+      const showAssets = showAvatarAssetDiagnosticsForConsole();
       const rows = avatars.map(a => {
         const id=avatarIdOf(a);
         const locked=isAvatarLockedForConsole(a);
@@ -16343,20 +16618,131 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         const maskClass=avatarMaskAssetClass(a);
         const lockReason=avatarLockReasonForConsole(a);
         const stateClass=avatarStatePillClassForConsole(editableCat, locked);
-        const assetHtml = `<div class="avatar-table-assets"><span class="avatar-badge ${hasImg ? "asset-ok" : "asset-warn"}">圖片 ${hasImg ? "OK" : "缺"}</span><span class="avatar-badge ${maskClass === "ok" ? "asset-ok" : maskClass === "warn" ? "asset-warn" : "asset-neutral"}">Mask ${escapeHtml(maskLabel)}</span></div>`;
+        const assetHtml = `<td><div class="avatar-table-assets"><span class="avatar-badge ${hasImg ? "asset-ok" : "asset-warn"}">圖片 ${hasImg ? "OK" : "缺"}</span><span class="avatar-badge ${maskClass === "ok" ? "asset-ok" : maskClass === "warn" ? "asset-warn" : "asset-neutral"}">Mask ${escapeHtml(maskLabel)}</span></div></td>`;
         const actionHtml = locked
-          ? `<span class="small-note">${escapeHtml(lockReason)}</span>`
-          : `<div class="avatar-table-action-stack"><div class="avatar-table-cost-line"><input class="console-input avatar-cost-input" type="number" min="0" value="${Number(a.cost||0)}" /><button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button></div><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>${avatarLifecycleActionHtml(a, id)}</div>`;
+          ? `<div class="avatar-table-action-stack"><strong>${escapeHtml(Number(a.cost||0))}</strong><span class="small-note">${escapeHtml(lockReason)}</span></div>`
+          : `<div class="avatar-table-action-stack"><input class="console-input avatar-cost-input" type="number" min="0" value="${Number(a.cost||0)}" /><button class="btn-compact btn-success avatar-action-btn" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>${avatarLifecycleActionHtml(a, id)}</div>`;
         return `<tr data-avatar-id="${escapeHtml(id)}">
-          <td><div class="avatar-table-role"><img class="avatar-table-thumb" src="${escapeHtml(avatarImgOf(a))}" onerror="this.src='/assets/gacha-box.png'" /><div><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)} · ${escapeHtml(scope)}</span></div></div></td>
+          <td><div class="avatar-table-role">${renderAvatarThumbButtonForConsole(a, "avatar-table-thumb")}<div><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)} · ${escapeHtml(scope)}</span><div class="avatar-badges"><span class="avatar-badge state-${stateClass}">${escapeHtml(cat)}</span><span class="avatar-badge ${locked ? "locked-badge" : "editable"}">${locked ? "鎖定" : "可編輯"}</span></div></div></div></td>
           <td><span class="avatar-badge ${rarityBadgeClass(rarity)}">${escapeHtml(rarity)}</span></td>
-          <td><span class="avatar-state-pill ${stateClass}">${escapeHtml(cat)}</span></td>
-          <td>${assetHtml}</td>
-          <td>${locked?`<strong>${escapeHtml(Number(a.cost||0))}</strong>`:`<span class="small-note">可編輯</span>`}</td>
+          ${showAssets ? assetHtml : ""}
           <td>${actionHtml}</td>
         </tr>`;
       }).join("");
-      return `<div class="avatar-table-wrap"><table class="avatar-table-v2"><thead><tr><th>角色</th><th>稀有度</th><th>狀態</th><th>素材</th><th>點數</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      return `<div class="avatar-table-wrap"><table class="avatar-table-v2"><thead><tr><th>角色</th><th>稀有度</th>${showAssets ? "<th>素材</th>" : ""}<th>點數 / 操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+    function ensureAvatarConsolePreviewModal(){
+      let modal = document.getElementById("avatar-console-showcase-modal");
+      if (modal) return modal;
+      modal = document.createElement("div");
+      modal.id = "avatar-console-showcase-modal";
+      modal.innerHTML = `<button type="button" class="avatar-showcase-close" onclick="closeAvatarConsolePreview()">✕</button>
+        <h2 id="avatar-showcase-name" class="avatar-showcase-name">角色名稱</h2>
+        <div class="showcase-wrapper">
+          <div id="avatar-showcase-card" class="card" data-rarity="N">
+            <div class="card__translater"><div class="card__rotator"><div class="card__front">
+              <div id="avatar-showcase-bg" class="card__bg"></div>
+              <div class="card__shine"></div>
+              <div class="card__glare"></div>
+            </div></div></div>
+          </div>
+        </div>
+        <p class="avatar-showcase-tip">👆 觸摸並轉動卡片欣賞全息特效</p>`;
+      document.body.appendChild(modal);
+      modal.addEventListener("click", (e) => { if (e.target === modal) closeAvatarConsolePreview(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAvatarConsolePreview(); });
+      return modal;
+    }
+    function findAvatarForConsolePreview(id){
+      const list = Array.isArray(avatarsConsoleCache?.avatars) ? avatarsConsoleCache.avatars : [];
+      return list.find(a => avatarIdOf(a) === id);
+    }
+    let avatarConsolePreviewEngineActive = false;
+    function openAvatarConsolePreview(id){
+      const a = findAvatarForConsolePreview(id);
+      if (!a) return consoleNotice("找不到角色預覽資料。 ");
+      const modal = ensureAvatarConsolePreviewModal();
+      const card = document.getElementById("avatar-showcase-card");
+      const bg = document.getElementById("avatar-showcase-bg");
+      document.getElementById("avatar-showcase-name").textContent = avatarNameOf(a);
+      bg.style.backgroundImage = `url('${String(avatarImgOf(a)).replace(/'/g, "\\'")}')`;
+      const rarity = avatarRarityOf(a) || "N";
+      card.setAttribute("data-rarity", rarity);
+      const mask = avatarMaskOf(a);
+      if (mask) {
+        card.classList.add("masked");
+        const maskString = String(mask).includes("url(") ? String(mask) : `url('${String(mask).replace(/'/g, "\\'")}')`;
+        card.style.setProperty("--mask", maskString);
+      } else {
+        card.classList.remove("masked");
+        card.style.removeProperty("--mask");
+      }
+      resetAvatarConsolePreviewCard(card, true);
+      modal.classList.add("active");
+      document.body.classList.add("console-modal-open");
+      if (!avatarConsolePreviewEngineActive) {
+        initAvatarConsolePreviewHoloEngine();
+        avatarConsolePreviewEngineActive = true;
+      }
+    }
+    function closeAvatarConsolePreview(){
+      const modal = document.getElementById("avatar-console-showcase-modal");
+      if (modal) modal.classList.remove("active");
+      document.body.classList.remove("console-modal-open");
+    }
+    function resetAvatarConsolePreviewCard(card, immediate=false){
+      if (!card) return;
+      if (!immediate) card.style.transition = "transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+      card.style.setProperty("--rotate-x", "0deg");
+      card.style.setProperty("--rotate-y", "0deg");
+      card.style.setProperty("--pointer-from-center", "0");
+      card.style.setProperty("--pointer-x", "50%");
+      card.style.setProperty("--pointer-y", "50%");
+      card.style.setProperty("--pointer-from-top", "0.5");
+      card.style.setProperty("--pointer-from-left", "0.5");
+      if (!immediate) setTimeout(() => { card.style.transition = "none"; }, 500);
+      else card.style.transition = "none";
+    }
+    function initAvatarConsolePreviewHoloEngine(){
+      const card = document.getElementById("avatar-showcase-card");
+      if (!card) return;
+      let bounds;
+      let ticking = false;
+      function updateCard(x, y){
+        const leftX = x / bounds.width;
+        const topY = y / bounds.height;
+        const center = { x: leftX - 0.5, y: topY - 0.5 };
+        const distance = Math.sqrt(center.x ** 2 + center.y ** 2);
+        const clampLocal = (val, min, max) => Math.min(Math.max(val, min), max);
+        card.style.setProperty("--pointer-x", `${leftX * 100}%`);
+        card.style.setProperty("--pointer-y", `${topY * 100}%`);
+        card.style.setProperty("--pointer-from-center", clampLocal(distance * 2, 0, 1));
+        card.style.setProperty("--pointer-from-top", topY);
+        card.style.setProperty("--pointer-from-left", leftX);
+        card.style.setProperty("--rotate-x", `${center.y * -20}deg`);
+        card.style.setProperty("--rotate-y", `${center.x * 20}deg`);
+        ticking = false;
+      }
+      function rotateToPointer(e){
+        if (!bounds) bounds = card.getBoundingClientRect();
+        const point = e.touches ? e.touches[0] : e;
+        const mouseX = point.clientX - bounds.left;
+        const mouseY = point.clientY - bounds.top;
+        if (!ticking) {
+          requestAnimationFrame(() => updateCard(mouseX, mouseY));
+          ticking = true;
+        }
+      }
+      function startInteraction(){
+        bounds = card.getBoundingClientRect();
+        card.style.transition = "none";
+      }
+      card.addEventListener("pointerenter", startInteraction);
+      card.addEventListener("pointermove", rotateToPointer);
+      card.addEventListener("pointerleave", () => resetAvatarConsolePreviewCard(card));
+      card.addEventListener("touchstart", startInteraction, { passive: true });
+      card.addEventListener("touchmove", rotateToPointer, { passive: true });
+      card.addEventListener("touchend", () => resetAvatarConsolePreviewCard(card));
     }
     function cssSafeId(value){ return String(value||"").replace(/[^a-zA-Z0-9_-]/g,"_"); }
     function escapeJs(value){ return String(value ?? "").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\n/g,"\\n"); }
