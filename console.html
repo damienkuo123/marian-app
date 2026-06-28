@@ -15092,7 +15092,7 @@
         eventAvatarId: s.eventAvatarId || s.event_avatar_id || s.avatar || "",
         isEvent: Boolean(s.isEvent || s.is_event || isEventClassCode(s.classId || s.classCode || s.class_code))
       }));
-      const eventAvatars = data.eventAvatars || data.event_avatars || [];
+      const eventAvatars = data.eventBossCandidates || data.event_boss_candidates || data.eventAvatars || data.event_avatars || [];
       const classSet = new Set(["EVENT"]);
       const classNameMap = {};
 
@@ -15768,7 +15768,7 @@ function openCurriculumUnitModal(unitId = "") {
       const endDate = schedule?.endDate || ws.dateKey || "";
       const schedulable = getSchedulableUnitsForCurrentFilter();
       const isEvent = isEventClassCode(classCode);
-      const avatarOptions = '<option value="">-- 請選擇活動首領 --</option>' + (curriculumCache?.eventAvatars || []).map(a => `<option value="${escapeHtml(a.id || a.avatarId)}" ${String(schedule?.eventAvatarId || "") === String(a.id || a.avatarId) ? "selected" : ""}>${escapeHtml(a.name || a.id || a.avatarId)} (${escapeHtml(a.id || a.avatarId)})</option>`).join("");
+      const avatarOptions = '<option value="">-- 請選擇活動首領 --</option>' + (curriculumCache?.eventAvatars || curriculumCache?.eventBossCandidates || []).map(a => `<option value="${escapeHtml(a.id || a.avatarId)}" ${String(schedule?.eventAvatarId || "") === String(a.id || a.avatarId) ? "selected" : ""}>${escapeHtml(a.name || a.id || a.avatarId)} (${escapeHtml(normalizeAvatarCategoryForConsole(a.category || a.rawCategory || '一般'))}｜${escapeHtml(a.id || a.avatarId)})</option>`).join("");
       const picker = ws.pickable ? `
         <div class="r2-form-field" style="grid-column:1/-1;"><label>選擇要排程的單元</label><select id="curWsScheduleUnitPicker" onchange="onWorkspaceScheduleUnitPickerChange(); markCurriculumWorkspaceDirty();">${schedulable.map(u => `<option value="${escapeHtml(u.id || u.unitId)}" ${String(u.id || u.unitId) === String(unit?.id || unit?.unitId) ? "selected" : ""}>${escapeHtml(u.unitName || "未命名單元")}</option>`).join("")}</select></div>` : "";
       return `
@@ -15785,7 +15785,7 @@ function openCurriculumUnitModal(unitId = "") {
             <div class="r2-workspace-main ds-editor-main r25-editor-main">
               <div class="r2-form-section">
                 <h3>排程基本資料</h3>
-                <p>同一班級的日期不可與其他啟用排程重疊。活動單元需要選擇活動首領角色。</p>
+                <p>同一班級的日期不可與其他啟用排程重疊。活動單元需要選擇活動首領角色；可從一般角色中選擇，活動開始時系統會自動轉為活動角色。</p>
                 <input id="curWsScheduleId" type="hidden" value="${escapeHtml(schedule?.id || "")}" />
                 <input id="curWsScheduleUnitId" type="hidden" value="${escapeHtml(unit?.id || schedule?.unitId || "")}" />
                 <div class="r2-form-grid">
@@ -15989,8 +15989,10 @@ function avatarMaskOf(a){ return a.mask || a.mask_url || a.maskUrl || a.mask_img
 function normalizeAvatarCategoryForConsole(category){
       const raw=String(category||"").trim();
       const key=raw.toLowerCase();
-      if (raw === "活動" || key === "event") return "活動";
-      if (raw === "預設" || key === "default") return "預設";
+      if (raw === "活動" || key === "event" || key === "activity") return "活動";
+      if (raw === "隱藏" || key === "hidden" || key === "hide") return "隱藏";
+      if (raw === "AI" || raw === "Ai" || key === "ai" || key === "a.i." || raw === "機器人" || raw === "AI角色") return "AI";
+      if (raw === "預設" || key === "default" || key === "preset" || key === "starter") return "預設";
       return "一般";
     }
 
@@ -16005,7 +16007,7 @@ function isCoreAiAvatarIdForConsole(id){
 function avatarTypeLabelForConsole(a){
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
-      if (isCoreAiAvatarIdForConsole(upperId)) return "AI 對手";
+      if (isCoreAiAvatarIdForConsole(upperId)) return "AI";
       return category;
     }
 
@@ -16030,8 +16032,12 @@ function avatarHasAssetIssue(a){ return !avatarHasImage(a) || (avatarNeedsMask(a
 function avatarLockReasonForConsole(a){
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
+      if (avatarScopeOf(a) === "global") return "全域角色，系統保護";
       if (isCoreAiAvatarIdForConsole(upperId)) return "核心 AI 對手，系統保護";
       if (category === "預設") return "預設角色，系統保護";
+      if (category === "AI") return "AI 角色，系統保護";
+      if (category === "活動") return "活動排程中，類型由系統管理";
+      if (category === "隱藏") return "已隱藏，不進商城與盲盒";
       return "可編輯本校角色";
     }
 
@@ -16043,7 +16049,8 @@ function isAvatarLockedForConsole(a){
       const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
       const upperId = avatarIdOf(a).toUpperCase();
       const isBaseAi = isCoreAiAvatarIdForConsole(upperId);
-      return category === "預設" || isBaseAi;
+      if (avatarScopeOf(a) === "global") return true;
+      return category === "預設" || category === "AI" || isBaseAi;
     }
 
 function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsConsoleList(); }
@@ -16064,12 +16071,12 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
           <div class="avatar-overview-card">
             <div class="avatar-overview-label">一般角色</div>
             <div id="avatarNormalCount" class="avatar-overview-value">—</div>
-            <div class="avatar-overview-note">可用於學生兌換與盲盒獎池。</div>
+            <div class="avatar-overview-note">可用於商城兌換、活動預約與盲盒獎池。</div>
           </div>
           <div class="avatar-overview-card">
-            <div class="avatar-overview-label">活動角色</div>
+            <div class="avatar-overview-label">活動 / 隱藏</div>
             <div id="avatarEventCount" class="avatar-overview-value">—</div>
-            <div class="avatar-overview-note">活動或特殊角色使用。</div>
+            <div class="avatar-overview-note">活動由排程自動切換；隱藏不進商城與盲盒。</div>
           </div>
           <div class="avatar-overview-card">
             <div class="avatar-overview-label">平均價格</div>
@@ -16080,8 +16087,8 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
 
       const body = `
         <div class="avatar-source-note">
-          <span>可編輯：本校一般 / 活動角色</span>
-          <span>系統保護：預設角色與基礎 AI 對手</span>
+          <span>可編輯：本校一般 / 活動 / 隱藏角色的點數</span>
+          <span>狀態規則：一般可隱藏；活動由排程管理；預設與 AI 系統保護</span>
           <span>素材缺漏會影響學生端顯示</span>
         </div>
         <div class="avatar-toolbar">
@@ -16091,7 +16098,9 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
               <option value="">全部類型</option>
               <option value="一般">一般</option>
               <option value="活動">活動</option>
+              <option value="隱藏">隱藏</option>
               <option value="預設">預設</option>
+              <option value="AI">AI</option>
               <option value="locked">鎖定角色</option>
               <option value="assetIssue">素材缺漏</option>
             </select>
@@ -16118,7 +16127,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
           ${renderConsolePageIntro({
             group: "系統",
             title: "角色收集",
-            description: "管理學生可獲得與可兌換的角色素材、類型與兌換點數。",
+            description: "管理學生可獲得與可兌換的角色素材、狀態與兌換點數。活動狀態由活動排程自動管理。",
             actions: `<button class="btn-compact primary" onclick="loadAvatarsConsole(true)">重新整理</button>`
           })}
           ${renderConsoleSummaryToggle({ id: "avatarSummaryToggle", title: "角色摘要", note: "點擊展開查看角色數量、鎖定與素材狀態", body: summary })}
@@ -16172,8 +16181,8 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const all = avatarsConsoleCache?.avatars || [];
       const editable = all.filter(a=>!isAvatarLockedForConsole(a));
       const lockedCount = all.filter(a=>isAvatarLockedForConsole(a)).length;
-      const eventCount = all.filter(a=>normalizeAvatarCategoryForConsole(a.category)==="活動").length;
-      const normalCount = all.filter(a=>normalizeAvatarCategoryForConsole(a.category)==="一般" && !["AI_EASY","AI_MED","AI_HARD"].includes(avatarIdOf(a).toUpperCase())).length;
+      const eventCount = all.filter(a=>["活動","隱藏"].includes(normalizeAvatarCategoryForConsole(a.category))).length;
+      const normalCount = all.filter(a=>normalizeAvatarCategoryForConsole(a.category)==="一般" && !isCoreAiAvatarIdForConsole(avatarIdOf(a))).length;
       const assetIssueCount = all.filter(a=>avatarHasAssetIssue(a)).length;
       const avg = editable.length ? Math.round(editable.reduce((sum,a)=>sum + Number(a.cost || 0),0) / editable.length) : 0;
       const setText=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
@@ -16185,7 +16194,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       setText("avatarEventCount", eventCount);
       setText("avatarAvgCost", editable.length ? avg : "—");
       const statusEl = document.getElementById("avatarsConsoleStatus");
-      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。素材缺漏會影響盲盒與對戰結果畫面；預設角色與三個基礎 AI 對手維持鎖定。`;
+      if (statusEl) statusEl.textContent = `顯示 ${avatars.length} / ${all.length} 個角色。素材缺漏會影響盲盒與對戰結果畫面；活動角色由排程自動管理，隱藏角色不進商城與盲盒。`;
       document.getElementById("avatarViewCardsBtn")?.classList.toggle("btn-success", avatarsConsoleView === "cards");
       document.getElementById("avatarViewTableBtn")?.classList.toggle("btn-success", avatarsConsoleView === "table");
       const listEl = document.getElementById("avatarsConsoleList");
@@ -16194,6 +16203,17 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       listEl.innerHTML = avatarsConsoleView === "table" ? renderAvatarConsoleTable(avatars) : `<div class="avatar-grid">${avatars.map(renderAvatarConsoleCard).join("")}</div>`;
     }
     function rarityBadgeClass(rarity){ const r=String(rarity||"N").toLowerCase(); return ["ssr","sr","r"].includes(r) ? r : ""; }
+    function avatarReservedByEventForConsole(a){ return Boolean(a.reservedByEventSchedule || a.reserved_by_event_schedule || (Array.isArray(a.eventReservations) && a.eventReservations.length) || (Array.isArray(a.event_reservations) && a.event_reservations.length)); }
+    function avatarLifecycleActionHtml(a, id){
+      const category = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? "");
+      if (category === "一般") {
+        const reserved = avatarReservedByEventForConsole(a);
+        return `<button class="btn-compact danger" ${reserved ? "disabled" : ""} onclick="hideAvatarConsoleItem('${escapeJs(id)}', this)">隱藏</button><div class="small-note">${reserved ? "已被活動使用或預約，不能隱藏" : "隱藏後不進商城與盲盒；已擁有學生仍可使用"}</div>`;
+      }
+      if (category === "隱藏") return `<button class="btn-compact ok" onclick="unhideAvatarConsoleItem('${escapeJs(id)}', this)">取消隱藏</button><div class="small-note">恢復後會重新列入可設定獎池，機率預設 0</div>`;
+      if (category === "活動") return `<span class="small-note">活動狀態由活動排程自動管理，不可手動切換或隱藏。</span>`;
+      return `<span class="small-note">系統保護角色不可調整狀態。</span>`;
+    }
     function renderAvatarConsoleCard(a){
       const id = avatarIdOf(a);
       const locked = isAvatarLockedForConsole(a);
@@ -16229,9 +16249,9 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         ${locked ? `<div class="avatar-lock-note"><strong>${escapeHtml(lockReason)}</strong>此角色不開放在 Console 中改價或改類型；若要調整素材，請回到資料庫或素材管理流程處理。</div>` : `
         <div class="avatar-edit-grid">
           <div class="form-field"><label>兌換點數</label><input class="avatar-cost-input" type="number" min="0" value="${Number(a.cost || 0)}" /></div>
-          <div class="form-field"><label>角色類型</label><select class="avatar-category-select"><option value="一般" ${editableCategory==="一般"?"selected":""}>一般</option><option value="活動" ${editableCategory==="活動"?"selected":""}>活動</option></select></div>
+          <div class="form-field"><label>角色狀態</label><div><span class="badge ${editableCategory==="隱藏"?"danger":editableCategory==="活動"?"warn":"ok"}">${escapeHtml(editableCategory)}</span><div class="small-note">狀態不可在此切換；活動由排程管理。</div></div></div>
         </div>
-        <div class="avatar-save-row"><span class="avatar-status" id="avatarStatus-${cssSafeId(id)}">可編輯本校角色</span><button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存設定</button></div>`}
+        <div class="avatar-save-row"><span class="avatar-status" id="avatarStatus-${cssSafeId(id)}">${escapeHtml(lockReason)}</span><button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存點數</button>${avatarLifecycleActionHtml(a, id)}</div>`}
       </div>`;
     }
     function renderAvatarConsoleTable(avatars){
@@ -16250,10 +16270,10 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         return `<tr data-avatar-id="${escapeHtml(id)}">
           <td><div class="avatar-table-role"><img class="avatar-table-thumb" src="${escapeHtml(avatarImgOf(a))}" onerror="this.src='/assets/gacha-box.png'" /><div><strong>${escapeHtml(avatarNameOf(a))}</strong><br><span class="small-note">${escapeHtml(id)} · ${escapeHtml(scope)}</span></div></div></td>
           <td><span class="avatar-badge ${rarityBadgeClass(rarity)}">${escapeHtml(rarity)}</span></td>
-          <td>${locked?`<span class="badge warn">${escapeHtml(cat)}</span><br><span class="small-note">系統保護</span>`:`<select class="console-select avatar-category-select"><option value="一般" ${editableCat==="一般"?"selected":""}>一般</option><option value="活動" ${editableCat==="活動"?"selected":""}>活動</option></select><div class="small-note" style="margin-top:6px;">可編輯本校角色</div>`}</td>
+          <td><span class="badge ${editableCat==="隱藏"?"danger":editableCat==="活動"?"warn":locked?"warn":"ok"}">${escapeHtml(cat)}</span><br><span class="small-note">${locked?"系統保護":"狀態由規則管理"}</span></td>
           <td>${assetHtml}</td>
           <td>${locked?`<strong>${escapeHtml(Number(a.cost||0))}</strong>`:`<input class="console-input avatar-cost-input" type="number" min="0" value="${Number(a.cost||0)}" style="max-width:140px;" />`}</td>
-          <td>${locked?`<span class="small-note">${escapeHtml(lockReason)}</span>`:`<button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>`}</td>
+          <td>${locked?`<span class="small-note">${escapeHtml(lockReason)}</span>`:`<button class="btn-compact btn-success" onclick="saveAvatarConsoleItem('${escapeJs(id)}', this)">儲存點數</button><div class="avatar-status" id="avatarStatus-${cssSafeId(id)}"></div>${avatarLifecycleActionHtml(a, id)}`}</td>
         </tr>`;
       }).join("");
       return `<div class="avatar-table-wrap"><table class="avatar-table-v2"><thead><tr><th>角色</th><th>稀有度</th><th>類型 / 狀態</th><th>素材</th><th>點數</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -16264,7 +16284,6 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const card = document.querySelector(`[data-avatar-id="${CSS.escape(avatarId)}"]`);
       if (!card) return consoleNotice("找不到角色卡片。 ");
       const cost = Number(card.querySelector(".avatar-cost-input")?.value);
-      const category = card.querySelector(".avatar-category-select")?.value || "一般";
       if (!Number.isFinite(cost) || cost < 0) return consoleNotice("請輸入有效點數，且不可為負數。 ");
       const statusEl = document.getElementById(`avatarStatus-${cssSafeId(avatarId)}`);
       const old = btn?.textContent || "儲存";
@@ -16273,9 +16292,9 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       try {
         const schoolCode = getSchoolCodeForAdmin();
         const base = TappieAPI?.supabaseBaseUrl || "https://diptahklguohjtjnwnbf.supabase.co/functions/v1";
-        const data = await TappieAPI.consoleSaveAvatarSettings({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode, avatarId, cost, category });
+        const data = await TappieAPI.consoleSaveAvatarSettings({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode, avatarId, cost, action: "update_cost" });
         if (!data.success) throw new Error(data.message || data.error || "角色設定儲存失敗");
-        if (avatarsConsoleCache?.avatars) avatarsConsoleCache.avatars = avatarsConsoleCache.avatars.map(a => avatarIdOf(a) === avatarId ? { ...a, cost, category } : a);
+        if (avatarsConsoleCache?.avatars) avatarsConsoleCache.avatars = avatarsConsoleCache.avatars.map(a => avatarIdOf(a) === avatarId ? { ...a, cost, category: data.avatar?.category || a.category } : a);
         if (statusEl) statusEl.textContent = "已儲存";
         toast("角色設定已儲存");
         renderAvatarsConsoleList();
@@ -16747,6 +16766,35 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     // =======================================================
     let gamificationConsoleCache = null;
     let gamificationAvatarCache = [];
+
+    async function hideAvatarConsoleItem(avatarId, btn){
+      const input = window.prompt(`請輸入「隱藏」確認隱藏角色：${avatarId}`);
+      if (input !== "隱藏") return consoleNotice("已取消隱藏操作。 ");
+      await updateAvatarHiddenState(avatarId, "hide_avatar", btn);
+    }
+    async function unhideAvatarConsoleItem(avatarId, btn){
+      if (!window.confirm(`確定要將角色恢復為一般角色？
+${avatarId}`)) return;
+      await updateAvatarHiddenState(avatarId, "unhide_avatar", btn);
+    }
+    async function updateAvatarHiddenState(avatarId, action, btn){
+      const old = btn?.textContent || "處理";
+      if (btn) { btn.textContent = "處理中..."; btn.disabled = true; }
+      try {
+        const schoolCode = getSchoolCodeForAdmin();
+        const data = await TappieAPI.consoleSaveAvatarSettings({ token: session?.token || "", schoolCode, scopeMode: getActiveScopePayload().scopeMode, avatarId, action });
+        if (!data.success) throw new Error(data.message || data.error || "角色狀態更新失敗");
+        toast(data.message || "角色狀態已更新");
+        await loadAvatarsConsole(true);
+        if (typeof loadGamificationConsole === "function") gamificationConsoleCache = null;
+      } catch (err) {
+        console.error("[updateAvatarHiddenState]", err);
+        consoleNotice(err.message || err);
+      } finally {
+        if (btn) { btn.textContent = old; btn.disabled = false; }
+      }
+    }
+
     function defaultConsoleGamification(){
       return {
         dailyChallenge: { passScore: 60, tiers: [{min:80,pts:30},{min:70,pts:20},{min:60,pts:10}] },
@@ -16790,10 +16838,8 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
     }
     function isGeneralSchoolAvatarForGacha(a){
       const scope = typeof avatarScopeOf === 'function' ? avatarScopeOf(a) : (a.school_id || a.schoolId ? 'school' : 'global');
-      const catRaw = String(a.category || '').trim();
-      const cat = catRaw.toLowerCase();
-      const isGeneral = ['一般','general','normal','regular'].includes(catRaw) || ['general','normal','regular'].includes(cat) || catRaw === '';
-      return scope === 'school' && isGeneral && a.isActive !== false && a.is_active !== false;
+      const cat = normalizeAvatarCategoryForConsole(a.rawCategory ?? a.raw_category ?? a.category ?? '');
+      return scope === 'school' && (cat === '一般' || cat === '活動') && a.isActive !== false && a.is_active !== false && !isCoreAiAvatarIdForConsole(a.id || a.avatarId || a.avatar_id);
     }
     function mergeGachaItemsWithSchoolAvatars(items){
       const existing = Array.isArray(items) ? items.map(x=>({ ...x })) : [];
@@ -16904,7 +16950,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
                 <div class="r7-gami-card-head">
                   <div>
                     <h3>盲盒獎池與機率</h3>
-                    <p>點數獎項可以新增 / 刪除；本校類別為「一般」的角色會自動列入角色獎項，新角色預設機率為 0。角色稀有度只顯示，不在這裡調整。</p>
+                    <p>點數獎項可以新增 / 刪除；本校「一般 / 活動」角色會自動列入角色獎項；隱藏、預設與 AI 角色不會顯示，也不參與機率計算。新角色預設機率為 0。</p>
                   </div>
                   <span class="r7-gami-section-badge">總機率需 100%</span>
                 </div>
@@ -16925,7 +16971,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
                   <div id="gamiPointItemsList" class="gami-table-like"></div>
                 </div>
                 <div class="gami-gacha-section">
-                  <div class="gami-gacha-section-head"><div><h4>角色獎項</h4><p>只顯示本校「一般」角色。機率為 0 代表目前不會抽中。</p></div></div>
+                  <div class="gami-gacha-section-head"><div><h4>角色獎項</h4><p>顯示本校「一般 / 活動」角色；隱藏角色不會出現，也不會被抽中。</p></div></div>
                   <div id="gamiAvatarItemsList" class="gami-table-like"></div>
                 </div>
               </section>
@@ -16955,7 +17001,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         if(!data.success) throw new Error(data.message || data.error || '讀取失敗');
         gamificationConsoleCache = normalizeGamiConsole(data.config || data.gamification || data.value || data);
         fillGamificationForm(gamificationConsoleCache);
-        setGamificationStatus('遊戲化設定已同步；本校一般角色已自動列入盲盒清單。','ok');
+        setGamificationStatus('遊戲化設定已同步；本校一般 / 活動角色已自動列入盲盒清單。','ok');
       }catch(err){ setGamificationStatus('⚠️ 讀取失敗：' + (err.message || err), 'danger'); }
     }
     function setGamificationStatus(message,type=''){
@@ -16977,7 +17023,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       const points=arr.filter(x=>String(x.type||'points')!=='avatar');
       const avatars=arr.filter(x=>String(x.type||'points')==='avatar');
       pointEl.innerHTML = points.length ? points.map((it,i)=>renderGamificationItemRow(it,i)).join('') : `<div class="curriculum-empty">目前沒有點數獎項。</div>`;
-      avatarEl.innerHTML = avatars.length ? avatars.map((it,i)=>renderGamificationItemRow(it,i)).join('') : `<div class="curriculum-empty">目前沒有可加入盲盒的本校一般角色。</div>`;
+      avatarEl.innerHTML = avatars.length ? avatars.map((it,i)=>renderGamificationItemRow(it,i)).join('') : `<div class="curriculum-empty">目前沒有可加入盲盒的本校一般 / 活動角色。</div>`;
       updateGamificationProbability();
     }
     function renderGamificationItemRow(it={},i=0){
@@ -16989,7 +17035,7 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
         const rarity = it.rarity || 'N';
         const img = it.img || '/assets/gacha-box.png';
         return `<div class="gami-prob-row avatar" data-gami-item-row data-gami-fixed="avatar">
-          <div class="gami-prob-main"><img class="gami-item-icon" src="${escapeHtml(img)}" onerror="this.src='/assets/gacha-box.png'"><div class="gami-prob-name"><strong>${escapeHtml(name)}</strong><span>本校一般角色｜${escapeHtml(id)}</span></div></div>
+          <div class="gami-prob-main"><img class="gami-item-icon" src="${escapeHtml(img)}" onerror="this.src='/assets/gacha-box.png'"><div class="gami-prob-name"><strong>${escapeHtml(name)}</strong><span>本校一般 / 活動角色｜${escapeHtml(id)}</span></div></div>
           <span class="gami-rarity-pill">${escapeHtml(rarity)}</span>
           <div class="gami-prob-readonly">角色稀有度不可在此調整</div>
           <div class="gami-field"><label>機率 %</label><input class="gami-prob-input" data-gami-prob type="number" step="0.1" min="0" max="100" value="${prob}" oninput="syncGamiProbInputs(this)"><div class="gami-prob-mini-bar"><div class="gami-prob-mini-fill" style="width:${Math.max(0,Math.min(100,prob))}%"></div></div></div>
