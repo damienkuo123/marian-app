@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <title>Tappie 1v1 對戰</title>
+    <!-- TAPPIE_PRIVATE_PAGE_ROBOTS_20260627: prevent internal app/admin pages from being indexed. -->
+  <meta name="robots" content="noindex,nofollow">
+<title>Tappie 1v1 對戰</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1271,6 +1273,451 @@
       .btn-finish { font-size: 26px; padding: 25px; border-radius: 20px; margin-top: 30px; }
     }
     
+  
+    /* =======================================================
+       🎙️ Speech Grace UX：非阻擋式玻璃提示與額度小字
+       ======================================================= */
+    .tappie-soft-toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(24px, calc(env(safe-area-inset-bottom) + 18px));
+      transform: translateX(-50%) translateY(18px);
+      min-width: min(86vw, 360px);
+      max-width: min(90vw, 460px);
+      padding: 13px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(255,255,255,.92);
+      box-shadow: 0 18px 45px rgba(15,23,42,.16), inset 0 1px 1px rgba(255,255,255,.95);
+      backdrop-filter: blur(22px) saturate(145%);
+      -webkit-backdrop-filter: blur(22px) saturate(145%);
+      color: #1f2937;
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 850;
+      letter-spacing: -.01em;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999999;
+      transition: opacity .22s ease, transform .22s ease;
+    }
+    .tappie-soft-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .tappie-soft-toast.grace { color: #9a5b00; background: rgba(255,248,232,.88); border-color: rgba(255,218,150,.82); }
+    .tappie-soft-toast.exhausted { color: #a33a28; background: rgba(255,241,238,.90); border-color: rgba(255,180,170,.80); }
+
+    .speech-grace-hint {
+      color: #c47a00 !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+    }
+    .speech-grace-hint.exhausted {
+      color: #c0392b !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    #record-btn.speech-exhausted,
+    .unlock-btn.speech-exhausted,
+    [id^="lock-btn-"].speech-exhausted {
+      filter: grayscale(.45);
+      opacity: .72;
+      pointer-events: none !important;
+      box-shadow: none !important;
+    }
+
+    /* =======================================================
+       ⚔️ Battle Result Responsive Fix：平板/大螢幕結果卡片自適應
+       ======================================================= */
+    #impact-overlay.active {
+      min-height: 100dvh;
+    }
+    #impact-stand-stage {
+      width: min(94vw, 560px) !important;
+      height: min(86dvh, 820px) !important;
+      max-width: min(94vw, 560px) !important;
+      max-height: 86dvh !important;
+      padding: clamp(12px, 2.2dvh, 22px) clamp(10px, 2vw, 18px) !important;
+      box-sizing: border-box !important;
+      gap: clamp(6px, 1.5dvh, 14px) !important;
+      overflow: visible !important;
+    }
+    .impact-card-wrapper {
+      width: min(72vw, 330px, 40dvh) !important;
+      max-width: 330px !important;
+      min-width: 170px !important;
+      margin: clamp(4px, 1dvh, 10px) 0 !important;
+      flex: 0 1 auto !important;
+    }
+    #impact-result {
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+      max-width: 96vw !important;
+      font-size: clamp(42px, 8vw, 80px) !important;
+      letter-spacing: clamp(3px, 1.1vw, 10px) !important;
+      line-height: .96 !important;
+      margin: clamp(-12px, -1dvh, 0px) 0 0 !important;
+    }
+    .is-final #impact-result {
+      font-size: clamp(40px, 7vw, 72px) !important;
+      letter-spacing: clamp(2px, .9vw, 8px) !important;
+    }
+    #impact-subtitle {
+      font-size: clamp(12px, 2.2vw, 16px) !important;
+      letter-spacing: clamp(2px, .8vw, 8px) !important;
+      white-space: nowrap !important;
+    }
+    .impact-score-board {
+      max-width: min(92vw, 420px) !important;
+      padding: clamp(10px, 1.7dvh, 15px) clamp(16px, 4vw, 32px) !important;
+      gap: clamp(12px, 3vw, 25px) !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+    }
+    .score-number {
+      font-size: clamp(36px, 7vw, 60px) !important;
+    }
+    @media (min-width: 820px) and (min-height: 760px) {
+      .impact-card-wrapper {
+        width: min(34vw, 320px, 39dvh) !important;
+      }
+      #impact-stand-stage {
+        justify-content: center !important;
+      }
+    }
+    @media (max-height: 680px) {
+      .impact-card-wrapper {
+        width: min(60vw, 260px, 34dvh) !important;
+      }
+      .impact-score-board {
+        transform: scale(.92) translateY(30px);
+      }
+    }
+
+    /* =======================================================
+       🎯 Hotfix：Grace 小字完全沿用原本 voice-status 字型，只改顏色
+       ======================================================= */
+    .voice-status.speech-grace-hint {
+      color: #c47a00 !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+    }
+    .voice-status.speech-grace-hint.exhausted {
+      color: #c0392b !important;
+    }
+
+    /* =======================================================
+       🎯 Hotfix：Battle Impact 結果畫面手機 / 平板自適應
+       - 避免 FINAL MATCH RESULT 與 對戰勝利/失敗重疊
+       - 避免分數偏離框框
+       - 避免平板卡片立繪過小
+       ======================================================= */
+    #impact-overlay.active {
+      align-items: center !important;
+      justify-content: center !important;
+      padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+    }
+    #impact-stand-stage {
+      width: min(94vw, 620px) !important;
+      height: auto !important;
+      min-height: min(82dvh, 760px) !important;
+      max-height: 88dvh !important;
+      padding: clamp(12px, 2dvh, 22px) clamp(10px, 2.2vw, 22px) !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: clamp(8px, 1.6dvh, 16px) !important;
+      overflow: visible !important;
+    }
+    #impact-stand-stage > div:first-child {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: clamp(2px, .8dvh, 8px) !important;
+      flex: 0 0 auto !important;
+    }
+    #impact-subtitle {
+      margin: 0 !important;
+      font-size: clamp(11px, 2.4vmin, 16px) !important;
+      line-height: 1.15 !important;
+      letter-spacing: clamp(2px, .85vmin, 7px) !important;
+      white-space: nowrap !important;
+    }
+    #impact-result {
+      margin: 0 !important;
+      max-width: 96vw !important;
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+      line-height: 1.02 !important;
+      font-size: clamp(42px, 9.5vmin, 80px) !important;
+      letter-spacing: clamp(3px, 1.3vmin, 10px) !important;
+      transform-origin: center center !important;
+    }
+    .is-final #impact-result {
+      font-size: clamp(38px, 8.4vmin, 72px) !important;
+      letter-spacing: clamp(2px, 1vmin, 8px) !important;
+    }
+    .impact-card-wrapper {
+      width: clamp(190px, 52vw, 335px) !important;
+      max-width: 335px !important;
+      min-width: 190px !important;
+      margin: 0 !important;
+      flex: 0 1 auto !important;
+    }
+    .impact-score-board {
+      width: min(92vw, 440px) !important;
+      max-width: 440px !important;
+      padding: clamp(10px, 1.7dvh, 15px) clamp(16px, 4vw, 32px) !important;
+      gap: clamp(14px, 4vw, 28px) !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+      margin-bottom: 0 !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .score-col {
+      min-width: clamp(60px, 18vw, 96px) !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+    .score-number {
+      width: 100% !important;
+      text-align: center !important;
+      font-size: clamp(38px, 8.2vmin, 60px) !important;
+      line-height: .95 !important;
+    }
+    .score-vs {
+      flex: 0 0 auto !important;
+      line-height: 1 !important;
+    }
+    @media (min-width: 700px) and (min-height: 700px) {
+      .impact-card-wrapper {
+        width: clamp(280px, 36vw, 380px) !important;
+        max-width: 380px !important;
+      }
+      #impact-stand-stage {
+        min-height: min(84dvh, 820px) !important;
+      }
+    }
+    @media (max-height: 700px) {
+      #impact-stand-stage {
+        min-height: 0 !important;
+        max-height: 92dvh !important;
+        gap: 6px !important;
+      }
+      .impact-card-wrapper {
+        width: clamp(165px, 36dvh, 260px) !important;
+        min-width: 165px !important;
+      }
+      #impact-result {
+        font-size: clamp(34px, 8dvh, 62px) !important;
+      }
+      .impact-score-board {
+        padding: 8px 18px !important;
+      }
+    }
+
+  
+    /* =======================================================
+       🎴 Impact Portrait Size Fix v4｜只修結果立繪區
+       目標：
+       1. 將「? VS ?」分數框納入立繪整體高度配置
+       2. 放大手機 / 平板上的結果立繪
+       3. 縮小外層舞台空白感，避免看起來像大框包小卡
+       4. 不修改抽獎、grace、對戰邏輯
+       ======================================================= */
+
+    #impact-overlay.active {
+      min-height: 100dvh !important;
+      padding: max(8px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)) !important;
+      box-sizing: border-box !important;
+    }
+
+    #impact-stand-stage {
+      width: min(94vw, 760px) !important;
+      max-width: 760px !important;
+      height: auto !important;
+      min-height: auto !important;
+      max-height: calc(100dvh - 18px) !important;
+      padding: clamp(8px, 1.3dvh, 14px) clamp(6px, 1.6vw, 14px) !important;
+      box-sizing: border-box !important;
+      background: rgba(5, 9, 20, 0.72) !important;
+      border-radius: clamp(22px, 4vw, 34px) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: clamp(3px, .8dvh, 8px) !important;
+      overflow: visible !important;
+    }
+
+    #impact-stand-stage > div:first-child {
+      margin-top: 0 !important;
+      margin-bottom: clamp(0px, .4dvh, 4px) !important;
+      text-align: center !important;
+      flex: 0 0 auto !important;
+      max-width: 96vw !important;
+    }
+
+    #impact-subtitle {
+      font-size: clamp(10px, 2.2vw, 15px) !important;
+      line-height: 1 !important;
+      letter-spacing: clamp(2px, .75vw, 7px) !important;
+      margin: 0 0 clamp(2px, .4dvh, 5px) 0 !important;
+      white-space: nowrap !important;
+    }
+
+    #impact-result {
+      font-size: clamp(40px, 10vw, 88px) !important;
+      line-height: .9 !important;
+      letter-spacing: clamp(2px, 1vw, 9px) !important;
+      margin: 0 !important;
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+      max-width: 96vw !important;
+    }
+
+    .is-final #impact-result {
+      font-size: clamp(34px, 8.5vw, 76px) !important;
+      letter-spacing: clamp(1px, .72vw, 7px) !important;
+    }
+
+    .impact-card-wrapper {
+      width: min(92vw, 60dvh, 560px) !important;
+      max-width: 560px !important;
+      min-width: min(86vw, 285px) !important;
+      margin: clamp(2px, .6dvh, 8px) 0 !important;
+      flex: 0 1 auto !important;
+      align-self: center !important;
+      z-index: 10 !important;
+    }
+
+    #impact-card,
+    #impact-card .card__translater,
+    #impact-card .card__rotator,
+    #impact-card .card__front {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .impact-score-board {
+      width: min(90vw, 520px) !important;
+      max-width: 520px !important;
+      display: grid !important;
+      grid-template-columns: minmax(74px, 1fr) auto minmax(74px, 1fr) !important;
+      align-items: center !important;
+      justify-items: center !important;
+      gap: clamp(8px, 2.6vw, 24px) !important;
+      padding: clamp(8px, 1.25dvh, 14px) clamp(14px, 3.2vw, 30px) !important;
+      margin: clamp(2px, .8dvh, 8px) 0 0 0 !important;
+      box-sizing: border-box !important;
+      flex: 0 0 auto !important;
+      transform-origin: center !important;
+    }
+
+    .score-col {
+      width: 100% !important;
+      min-width: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .score-number {
+      width: 100% !important;
+      display: block !important;
+      text-align: center !important;
+      font-size: clamp(32px, 7.8vw, 62px) !important;
+      line-height: .95 !important;
+      font-variant-numeric: tabular-nums !important;
+    }
+
+    .score-label {
+      width: 100% !important;
+      text-align: center !important;
+      font-size: clamp(8px, 1.8vw, 11px) !important;
+      letter-spacing: clamp(1px, .45vw, 2px) !important;
+      margin-top: 4px !important;
+      white-space: nowrap !important;
+    }
+
+    .score-vs {
+      min-width: clamp(32px, 7vw, 50px) !important;
+      text-align: center !important;
+      justify-self: center !important;
+      font-size: clamp(15px, 3.5vw, 22px) !important;
+      line-height: 1 !important;
+    }
+
+    @media (min-width: 700px) and (min-height: 760px) {
+      #impact-stand-stage {
+        width: min(88vw, 820px) !important;
+        max-width: 820px !important;
+        padding: clamp(10px, 1.5dvh, 18px) clamp(10px, 2vw, 20px) !important;
+      }
+
+      .impact-card-wrapper {
+        width: min(70vw, 58dvh, 600px) !important;
+        max-width: 600px !important;
+      }
+
+      .impact-score-board {
+        width: min(66vw, 560px) !important;
+        max-width: 560px !important;
+      }
+    }
+
+    @media (max-height: 720px) {
+      #impact-stand-stage {
+        max-height: calc(100dvh - 12px) !important;
+        gap: 2px !important;
+        padding: 7px 6px !important;
+      }
+
+      #impact-subtitle {
+        font-size: clamp(9px, 2vw, 12px) !important;
+      }
+
+      #impact-result {
+        font-size: clamp(32px, 8.4vw, 64px) !important;
+      }
+
+      .is-final #impact-result {
+        font-size: clamp(28px, 7.2vw, 54px) !important;
+      }
+
+      .impact-card-wrapper {
+        width: min(88vw, 54dvh, 460px) !important;
+      }
+
+      .impact-score-board {
+        padding: 7px 14px !important;
+        margin-top: 2px !important;
+      }
+
+      .score-number {
+        font-size: clamp(28px, 6.8vw, 50px) !important;
+      }
+    }
+
   </style>
   <!-- Supabase Battle from arena v1 -->
 </head>
@@ -1532,6 +1979,86 @@
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
   const params = new URLSearchParams(window.location.search);
   const STUDENT_ID = params.get('id') || "S001";
+
+  // Feature Gate F5｜頁面初始化 Guard：優先讀 Dashboard sessionStorage，沒有快取才 fallback get-dashboard
+  const DEFAULT_PAGE_FEATURES = {
+    attendance_enabled: true,
+    manual_points_enabled: true,
+    practice_enabled: true,
+    battle_enabled: true,
+    weekly_report_enabled: true,
+    newsletter_enabled: true,
+    station_enabled: true
+  };
+
+  function normalizePageFeatures(value) {
+    const raw = value && typeof value === 'object' ? value : {};
+    const out = {};
+    Object.keys(DEFAULT_PAGE_FEATURES).forEach(key => {
+      out[key] = raw[key] === false ? false : true;
+    });
+    return out;
+  }
+
+  function readEffectiveFeaturesCache(uid) {
+    if (!uid) return null;
+    try {
+      const raw = sessionStorage.getItem(`tappie_effective_features_${uid}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.features ? normalizePageFeatures(parsed.features) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function saveEffectiveFeaturesCache(uid, features) {
+    if (!uid || !features) return;
+    try {
+      sessionStorage.setItem(
+        `tappie_effective_features_${uid}`,
+        JSON.stringify({ features: normalizePageFeatures(features) })
+      );
+    } catch (_) {}
+  }
+
+  async function getEffectiveFeaturesForGuard(uid) {
+    const cached = readEffectiveFeaturesCache(uid);
+    if (cached) return cached;
+
+    try {
+      if (!window.TappieAPI || typeof TappieAPI.getDashboard !== 'function') return normalizePageFeatures({});
+      const data = await TappieAPI.getDashboard(uid);
+      const features =
+        data?.effectiveFeatures ||
+        data?.features ||
+        data?.data?.effectiveFeatures ||
+        data?.data?.features ||
+        null;
+      const normalized = normalizePageFeatures(features);
+      saveEffectiveFeaturesCache(uid, normalized);
+      return normalized;
+    } catch (err) {
+      console.warn('[Feature Gate] fallback get-dashboard failed:', err);
+      return normalizePageFeatures({});
+    }
+  }
+
+  function getFeatureDisabledDashboardUrl(uid) {
+    return `./dashboard.html?id=${encodeURIComponent(uid || '')}`;
+  }
+
+  async function guardPageFeature(featureKey, message) {
+    const features = await getEffectiveFeaturesForGuard(STUDENT_ID);
+    if (features?.[featureKey] === false) {
+      alert(message);
+      window.location.href = getFeatureDisabledDashboardUrl(STUDENT_ID);
+      return false;
+    }
+    return true;
+  }
+
+
   let azureAuthToken = "";
   let azureRegionCode = "";
   const TARGET_UNIT = params.get('unit') || "";
@@ -2164,13 +2691,166 @@ const payload = isUuidLike(room)
   const MAX_TOKEN_FETCHES = 4; // 最多允許拿 4 次 (約 32 分鐘極限)
 
 
+  // =======================================================
+  // 🎙️ Speech Grace UX：後端回傳 speechUsage / overLimit 時的柔性提示
+  // =======================================================
+  const tappieVoiceGraceState = {
+    announced: false,
+    exhaustedAnnounced: false,
+    exhausted: false,
+    active: false,
+    remaining: null
+  };
+
+  function showTappieSoftToast(message, type = 'grace') {
+    let toast = document.getElementById('tappie-soft-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'tappie-soft-toast';
+      toast.className = 'tappie-soft-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.className = `tappie-soft-toast ${type}`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, type === 'exhausted' ? 4200 : 3400);
+  }
+
+  function normalizeSpeechUsage(data = {}) {
+    const usage = data.speechUsage || data.usage || data.voiceUsage || data || {};
+    const dailyLimit = Number(usage.dailyLimit ?? usage.limit ?? data.limit ?? 0);
+    const voiceCount = Number(usage.voiceCount ?? usage.count ?? data.count ?? 0);
+    const graceLimit = Number(usage.graceLimit ?? usage.voiceGraceLimit ?? data.graceLimit ?? 10);
+    const graceUsed = Number(usage.graceUsed ?? usage.voiceGraceCount ?? data.graceUsed ?? 0);
+    const explicitRemaining = usage.graceRemaining ?? data.graceRemaining;
+    const graceRemaining = Number.isFinite(Number(explicitRemaining))
+      ? Number(explicitRemaining)
+      : Math.max(0, graceLimit - graceUsed);
+    const status = String(usage.status || data.status || '').toLowerCase();
+    const ignoredGraceStatus = status === 'battle_unlimited' || status === 'normal' || status === 'duel';
+    const exhausted = data.error === 'speech_limit_exhausted' || status === 'exhausted' || data.success === false && data.overLimit === true;
+    const isGrace = !exhausted && !ignoredGraceStatus && (
+      usage.isUsingGrace === true ||
+      data.isUsingGrace === true ||
+      status === 'grace' ||
+      Number(graceUsed) > 0 ||
+      (data.success === true && data.overLimit === true)
+    );
+    return { dailyLimit, voiceCount, graceLimit, graceUsed, graceRemaining, status, exhausted, isGrace };
+  }
+
+  function updateSpeechGraceHint(data = {}, opts = {}) {
+    const usage = normalizeSpeechUsage(data);
+    const statusEl = opts.statusEl || document.getElementById(opts.statusId || 'status');
+    const recordBtn = opts.recordBtn || document.getElementById(opts.recordBtnId || 'record-btn');
+
+    if (usage.exhausted) {
+      tappieVoiceGraceState.exhausted = true;
+      tappieVoiceGraceState.active = false;
+      tappieVoiceGraceState.remaining = 0;
+      if (!tappieVoiceGraceState.exhaustedAnnounced) {
+        showTappieSoftToast('今日語音額度已使用完畢，你仍可以查看送出目前結果。', 'exhausted');
+        tappieVoiceGraceState.exhaustedAnnounced = true;
+      }
+      if (statusEl) {
+        statusEl.innerText = '已抵達今日語音上限';
+        statusEl.classList.add('speech-grace-hint', 'exhausted');
+      }
+      if (recordBtn) {
+        recordBtn.classList.add('speech-exhausted');
+        recordBtn.disabled = true;
+        recordBtn.setAttribute('aria-disabled', 'true');
+      }
+      applySpeechGraceToIdleHints();
+      setTimeout(applySpeechGraceToIdleHints, 0);
+      setTimeout(applySpeechGraceToIdleHints, 250);
+      return { allowed: false, usage };
+    }
+
+    if (usage.isGrace) {
+      tappieVoiceGraceState.active = true;
+      tappieVoiceGraceState.exhausted = false;
+      tappieVoiceGraceState.remaining = Math.max(0, usage.graceRemaining);
+      if (!tappieVoiceGraceState.announced) {
+        showTappieSoftToast('✨ 已到達本日使用上限，系統贈送你額外練習 10 次。', 'grace');
+        tappieVoiceGraceState.announced = true;
+      }
+      if (statusEl) {
+        applySpeechGraceLabelTo(statusEl);
+      }
+      applySpeechGraceToIdleHints();
+      setTimeout(applySpeechGraceToIdleHints, 0);
+      setTimeout(applySpeechGraceToIdleHints, 250);
+      return { allowed: true, usage };
+    }
+
+    return { allowed: true, usage };
+  }
+
+  function applySpeechGraceLabelTo(el) {
+    if (!el) return false;
+
+    if (tappieVoiceGraceState.exhausted) {
+      el.innerText = '已抵達今日語音上限';
+      el.classList.add('speech-grace-hint', 'exhausted');
+      return true;
+    }
+
+    if (tappieVoiceGraceState.active) {
+      const remain = Math.max(0, Number(tappieVoiceGraceState.remaining ?? 0));
+      el.innerText = `剩餘贈送 ${remain} 次`;
+      el.classList.add('speech-grace-hint');
+      el.classList.remove('exhausted');
+      return true;
+    }
+
+    return false;
+  }
+
+  function clearSpeechGraceLabelFrom(el, defaultText = '') {
+    if (!el) return;
+    el.classList.remove('speech-grace-hint', 'exhausted');
+    if (defaultText) el.innerText = defaultText;
+  }
+
+  function applySpeechGraceToIdleHints() {
+    const mainStatus = document.getElementById('status');
+    if (mainStatus && (
+      mainStatus.classList.contains('speech-grace-hint') ||
+      mainStatus.innerText.includes('點擊開始錄音') ||
+      mainStatus.innerText.includes('剩餘贈送') ||
+      mainStatus.innerText.includes('已抵達今日語音上限')
+    )) {
+      applySpeechGraceLabelTo(mainStatus);
+    }
+
+    document.querySelectorAll('.voice-status').forEach((el) => {
+      if (
+        el.classList.contains('speech-grace-hint') ||
+        el.innerText.includes('點擊開始解鎖') ||
+        el.innerText.includes('剩餘贈送') ||
+        el.innerText.includes('已抵達今日語音上限')
+      ) {
+        applySpeechGraceLabelTo(el);
+      }
+    });
+  }
+
+  function isSpeechExhausted() {
+    return tappieVoiceGraceState.exhausted === true;
+  }
+
+
+
 
   // =======================================================
   // 🎙️ Voice Usage Guard：每次真正進入 Azure 評分前，先累加 daily_usage.voice_count
   // =======================================================
-  async function incrementVoiceUsageOrBlock(source = 'unknown') {
-    // ✅ battle.html 不阻擋已進入的對戰；但每次真正呼叫 Azure 前仍要嘗試累加 voice_count。
-    // 若今日已超額，increment-voice-usage 可能回 overLimit；這裡只記錄，不跳彈窗、不阻斷流程。
+  async function incrementVoiceUsageOrBlock(source = 'unknown', opts = {}) {
+    // ✅ battle.html 對戰本體不阻擋；抽獎密語可用同一套 grace UI 提示。
     try {
       const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
         method: 'POST',
@@ -2178,12 +2858,15 @@ const payload = isUuidLike(room)
         body: JSON.stringify({ uid: STUDENT_ID, source })
       });
       const data = await res.json().catch(() => ({}));
-      if (!data.success) {
-        console.warn('voice usage not incremented, but battle continues:', data);
+      const usageState = updateSpeechGraceHint(data, opts);
+
+      if (!data.success && (data.overLimit || data.error === 'speech_limit_exhausted')) {
+        return false;
       }
-      return true;
+      if (!data.success) console.warn('voice usage not incremented:', data);
+      return usageState.allowed !== false;
     } catch (err) {
-      console.warn('voice usage increment failed, but battle continues:', err);
+      console.warn('voice usage increment failed:', err);
       return true;
     }
   }
@@ -2371,6 +3054,8 @@ const payload = isUuidLike(room)
   }
   
   window.onload = async () => {
+    if (!(await guardPageFeature('battle_enabled', "🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。"))) return;
+
     // 🚀 開發者測試外掛：直接進入高階 AI 抽獎畫面
     if (MODE === 'test_gacha') {
         document.getElementById('main-card').style.display = 'none';
@@ -2713,8 +3398,11 @@ const payload = isUuidLike(room)
 
     isGrading = false;
     isRecording = false;
-    document.getElementById('status').innerText = "點擊開始錄音";
-    document.getElementById('status').style.color = "#636e72"; 
+    const idleStatus = document.getElementById('status');
+    if (!applySpeechGraceLabelTo(idleStatus)) {
+      clearSpeechGraceLabelFrom(idleStatus, "點擊開始錄音");
+      idleStatus.style.color = "#636e72";
+    }
   }
   
   let isGrading = false; 
@@ -2822,7 +3510,7 @@ const payload = isUuidLike(room)
                     const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                     pronConfig.applyTo(recognizer);
 
-                    await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge_in_battle_html' : 'arena_review_in_battle_html');
+                    await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge_in_battle_html' : 'arena_review_in_battle_html', { statusId: 'status', recordBtnId: 'record-btn' });
 
                     recognizer.recognizeOnceAsync(
                         (result) => {
@@ -2847,6 +3535,7 @@ const payload = isUuidLike(room)
                                     clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
                                     return data;
                                 }).then(data => {
+                                    updateSpeechGraceHint(data, { statusId: 'status', recordBtnId: 'record-btn' });
                                     scores[currentIndex] = data.practice?.score ?? data.score; 
                                     if(!window.feedbacks) window.feedbacks = [];
                                     window.feedbacks[currentIndex] = data.practice?.feedback || data.feedback || '已完成評分';
@@ -4113,11 +4802,23 @@ const payload = isUuidLike(room)
   // =======================================================
     // 🚀 升級 1：靜置 3 分鐘自動登出回首頁 (Portal)
     // =======================================================
+
+    // Station-aware return helper: only affects idle/logout return target.
+    function getStationAwareHomeUrl() {
+      try {
+        const raw = localStorage.getItem('tappie_station_session');
+        if (!raw) return 'index.html';
+        const session = JSON.parse(raw);
+        if (session && session.stationAuthorized === true && session.schoolCode) return 'station.html';
+      } catch (_) {}
+      return 'index.html';
+    }
+
     let idleTimer;
     const resetIdleTimer = () => {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        window.location.href = "index.html"; 
+        window.location.href = getStationAwareHomeUrl(); 
       }, 180000); // 3 分鐘無動作就踢回大門
     };
     document.addEventListener('touchstart', resetIdleTimer);
@@ -4131,8 +4832,10 @@ const payload = isUuidLike(room)
   let gachaCardsData = [];
   let gachaWonItems = [];
   let isGachaResolving = false;
+  let currentGachaSessionKey = ""; // v1 local lock: 同一場勝利固定 6 張盲盒與翻開狀態
   let gachaAwaitingRevealAll = false; // 最後一抽收合後，等待玩家點擊揭曉剩餘盲盒
-  let gachaRevealAllDone = false;     // 防止剩餘盲盒重複翻開 / 重複結算
+  let gachaRevealAllDone = false;
+  let gachaAutoPickDone = false;     // 防止剩餘盲盒重複翻開 / 重複結算
   let focusedCardIndex = -1; // 目前放大等待聲控的卡片
   
   // 🎙️ 抽獎專用語音參數
@@ -4229,6 +4932,72 @@ const payload = isUuidLike(room)
       };
   }
 
+  // =======================================================
+  // 🛡️ battle-gacha-lock-local-v1
+  // 同一場勝利固定 6 張盲盒、剩餘次數與已翻狀態，避免刷新重抽。
+  // 注意：這是前端快速止血版；正式防作弊仍應改為後端 reward session。
+  // =======================================================
+  function getGachaSessionKey(opponentName = "") {
+      const params = new URLSearchParams(window.location.search);
+      const rawRoom = String(ROOM_ID || params.get('roomCode') || params.get('roomId') || params.get('code') || '').trim();
+      const safeRoom = rawRoom || `no_room_${String(opponentName || 'unknown').replace(/\s+/g, '_')}`;
+      const eventFlag = params.get('isEvent') === 'true' ? 'event' : 'normal';
+      return `tappie_gacha_lock_v1:${STUDENT_ID}:${safeRoom}:${eventFlag}`;
+  }
+
+  function loadGachaSession(key) {
+      if (!key) return null;
+      try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          const session = JSON.parse(raw);
+          if (!session || !Array.isArray(session.cards) || session.cards.length !== 6) return null;
+          return session;
+      } catch (err) {
+          console.warn("讀取抽獎鎖定資料失敗，將重新建立", err);
+          return null;
+      }
+  }
+
+  function saveGachaSession(patch = {}) {
+      if (!currentGachaSessionKey) return;
+      try {
+          const existing = loadGachaSession(currentGachaSessionKey) || {};
+          const session = {
+              ...existing,
+              ...patch,
+              key: currentGachaSessionKey,
+              uid: STUDENT_ID,
+              roomCode: ROOM_ID || '',
+              cards: Array.isArray(gachaCardsData) ? gachaCardsData : (patch.cards || []),
+              picksLeft: Number(gachaPicksLeft || 0),
+              wonItems: Array.isArray(gachaWonItems) ? gachaWonItems : [],
+              wonPoints: Number(window.wonPoints || 0),
+              wonAvatars: Array.isArray(window.wonAvatars) ? window.wonAvatars : [],
+              updatedAt: new Date().toISOString()
+          };
+          localStorage.setItem(currentGachaSessionKey, JSON.stringify(session));
+      } catch (err) {
+          console.warn("儲存抽獎鎖定資料失敗", err);
+      }
+  }
+
+  function restoreGachaSession(session) {
+      gachaCardsData = Array.isArray(session.cards) ? session.cards : [];
+      gachaPicksLeft = Math.max(0, Math.min(6, Number(session.picksLeft ?? session.picksTotal ?? 0)));
+      gachaWonItems = Array.isArray(session.wonItems) ? session.wonItems : [];
+      window.wonPoints = Number(session.wonPoints || 0);
+      window.wonAvatars = Array.isArray(session.wonAvatars) ? session.wonAvatars : [];
+      isGachaResolving = gachaPicksLeft <= 0;
+      gachaAwaitingRevealAll = false;
+      gachaRevealAllDone = !!session.revealAllDone;
+      gachaAutoPickDone = !!session.autoPickedByGrace;
+  }
+
+  function markGachaSessionClaimed() {
+      saveGachaSession({ claimed: true, claimedAt: new Date().toISOString() });
+  }
+
   function initGacha(opponentName) {
     window.wonPoints = 0;   
     window.wonAvatars = []; 
@@ -4272,50 +5041,71 @@ const payload = isUuidLike(room)
 
     console.log("🎁 Gacha picks resolved:", { opponentName, isEventMode, picksConf, gachaPicksLeft, gamiConfig: window.gamiConfig });
 
-    picksSpan.innerText = gachaPicksLeft;
-    gachaWonItems = [];
-    isGachaResolving = false;
-    gachaAwaitingRevealAll = false;
-    gachaRevealAllDone = false;
-    focusedCardIndex = -1;
-    board.innerHTML = ""; 
+    currentGachaSessionKey = getGachaSessionKey(opponentName);
+    const existingSession = loadGachaSession(currentGachaSessionKey);
+    const shouldRestoreSession = !!existingSession;
 
-    // 🚀 2. 盲盒畫面永遠固定顯示 6 張；gachaPicksLeft 只代表可以翻幾張。
-    const cardCount = 6;
-    gachaCardsData = [];
-    
-    for(let i = 0; i < cardCount; i++) {
-        let randomWord = battleQuizArr.length > 0 ? battleQuizArr[Math.floor(Math.random() * battleQuizArr.length)].en : "OPEN";
-        let boxRarity, prize;
+    if (shouldRestoreSession) {
+        console.log("🛡️ 已載入同場抽獎鎖定資料，不重新抽 6 張卡", existingSession);
+        restoreGachaSession(existingSession);
+    } else {
+        window.wonPoints = 0;
+        window.wonAvatars = [];
+        gachaWonItems = [];
+        isGachaResolving = false;
+        gachaAwaitingRevealAll = false;
+        gachaRevealAllDone = false;
+        gachaAutoPickDone = false;
 
-        // 🚀 3. 獎池分流：活動用專屬獎池，一般用常規獎池
-        if (isEventMode) {
-            // (活動 Boss 邏輯不變)
-            let bossRarity = 'SSR';
-            let prizeClass = 'prize-SSR';
-            let prizeGlow = 'crack-gold';
-
-            if (EVENT_AVATAR && window.characterAssets && window.characterAssets[EVENT_AVATAR]) {
-                bossRarity = window.characterAssets[EVENT_AVATAR].rarity || 'SSR';
-                if (bossRarity === 'SR') { prizeClass = 'prize-SR'; prizeGlow = 'crack-purple'; }
-                else if (bossRarity === 'R') { prizeClass = 'prize-R'; prizeGlow = 'crack-white'; }
-                else if (bossRarity === 'N') { prizeClass = 'prize-N'; prizeGlow = 'crack-white'; }
-            }
-
-            boxRarity = bossRarity; 
-            if (Math.random() < 0.3) {
-                prize = { type: 'avatar', value: EVENT_AVATAR, label: '活動限定', class: prizeClass, glow: prizeGlow };
-            } else {
-                prize = { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white' };
-            }
-        } else {
-            // 🚀 一般模式：一鍵抽出卡片與對應外盒！
-            prize = drawSinglePrize();
-            boxRarity = prize.boxRarity; // 盲盒的外觀直接跟隨抽中的獎品
-        }
+        // 🚀 2. 盲盒畫面永遠固定顯示 6 張；gachaPicksLeft 只代表可以翻幾張。
+        const cardCount = 6;
+        gachaCardsData = [];
         
-        gachaCardsData.push({ id: i, word: randomWord, boxRarity: boxRarity, prize: prize, flipped: false });
+        for(let i = 0; i < cardCount; i++) {
+            let randomWord = battleQuizArr.length > 0 ? battleQuizArr[Math.floor(Math.random() * battleQuizArr.length)].en : "OPEN";
+            let boxRarity, prize;
+
+            // 🚀 3. 獎池分流：活動用專屬獎池，一般用常規獎池
+            if (isEventMode) {
+                // (活動 Boss 邏輯不變)
+                let bossRarity = 'SSR';
+                let prizeClass = 'prize-SSR';
+                let prizeGlow = 'crack-gold';
+
+                if (EVENT_AVATAR && window.characterAssets && window.characterAssets[EVENT_AVATAR]) {
+                    bossRarity = window.characterAssets[EVENT_AVATAR].rarity || 'SSR';
+                    if (bossRarity === 'SR') { prizeClass = 'prize-SR'; prizeGlow = 'crack-purple'; }
+                    else if (bossRarity === 'R') { prizeClass = 'prize-R'; prizeGlow = 'crack-white'; }
+                    else if (bossRarity === 'N') { prizeClass = 'prize-N'; prizeGlow = 'crack-white'; }
+                }
+
+                boxRarity = bossRarity;
+                if (Math.random() < 0.3) {
+                    prize = { type: 'avatar', value: EVENT_AVATAR, label: '活動限定', class: prizeClass, glow: prizeGlow };
+                } else {
+                    prize = { type: 'points', value: 10, label: '10 點', class: 'prize-N', glow: 'crack-white' };
+                }
+            } else {
+                // 🚀 一般模式：一鍵抽出卡片與對應外盒！
+                prize = drawSinglePrize();
+                boxRarity = prize.boxRarity; // 盲盒的外觀直接跟隨抽中的獎品
+            }
+            
+            gachaCardsData.push({ id: i, word: randomWord, boxRarity: boxRarity, prize: prize, flipped: false, missed: false });
+        }
+
+        saveGachaSession({
+            opponentName,
+            isEventMode,
+            picksTotal: gachaPicksLeft,
+            claimed: false,
+            createdAt: new Date().toISOString()
+        });
     }
+
+    picksSpan.innerText = gachaPicksLeft;
+    focusedCardIndex = -1;
+    board.innerHTML = "";
 
     gachaCardsData.forEach((card, index) => {
       const wrapperEl = document.createElement('div');
@@ -4388,6 +5178,25 @@ const payload = isUuidLike(room)
           </div>
         </div>
       `;
+
+      // 🛡️ 若是刷新後回到同一場抽獎，還原已翻 / 已揭曉狀態，不重新抽卡。
+      if (card.flipped) {
+          cardEl.classList.add('flipped');
+          const unlockUi = cardEl.querySelector('.unlock-ui');
+          if (unlockUi) unlockUi.style.display = 'none';
+          const cardRoot = cardEl.querySelector('.card');
+          const prizeInfo = card.prize || {};
+          let prizeRarity = 'N';
+          if (prizeInfo.class === 'prize-R') prizeRarity = 'R';
+          if (prizeInfo.class === 'prize-SR') prizeRarity = 'SR';
+          if (prizeInfo.class === 'prize-SSR') prizeRarity = 'SSR';
+          if (cardRoot) cardRoot.setAttribute('data-rarity', prizeRarity);
+          if (card.missed) cardEl.classList.add('missed');
+          if (prizeInfo.type === 'avatar' && characterAssets[prizeInfo.value] && characterAssets[prizeInfo.value].mask && cardRoot) {
+              cardRoot.classList.add('masked');
+              cardRoot.style.setProperty('--mask', `url('${characterAssets[prizeInfo.value].mask}')`);
+          }
+      }
       
       // 🚀 點擊邏輯大升級：可以隨時點擊已翻開的卡片欣賞！點放大中的卡片會自動收合！
       cardEl.onclick = (e) => {
@@ -4403,6 +5212,21 @@ const payload = isUuidLike(room)
     });
 
     overlay.classList.add('active');
+
+    const restoredSession = currentGachaSessionKey ? loadGachaSession(currentGachaSessionKey) : null;
+    if (restoredSession && restoredSession.claimed) {
+        const subtitle = document.getElementById('gacha-subtitle');
+        if (subtitle) subtitle.innerHTML = '此場獎勵已領取';
+        setTimeout(() => { showGachaSummary(); }, 350);
+    } else if (shouldRestoreSession && gachaPicksLeft <= 0 && gachaRevealAllDone) {
+        const subtitle = document.getElementById('gacha-subtitle');
+        if (subtitle) subtitle.innerHTML = '即將進入結算...';
+        setTimeout(() => { showGachaSummary(); }, 650);
+    } else if (shouldRestoreSession && gachaPicksLeft <= 0) {
+        const subtitle = document.getElementById('gacha-subtitle');
+        if (subtitle) subtitle.innerHTML = '抽卡次數已用完，點擊任意處揭曉剩餘盲盒';
+        waitForRevealAllClick();
+    }
     
     // 🚀 必須在此刻重新綁定 3D 感應，因為卡片是剛生成的！
     setTimeout(() => { initInteractiveHoloCards(); }, 100);
@@ -4428,7 +5252,10 @@ const payload = isUuidLike(room)
       document.getElementById(`gacha-card-${focusedCardIndex}`).classList.remove('focused');
       document.getElementById(`wrapper-${focusedCardIndex}`).classList.remove('has-focus');
       document.getElementById('gacha-overlay').classList.remove('focus-mode');
-      document.getElementById(`lock-status-${focusedCardIndex}`).innerText = "點擊開始解鎖";
+      const resetStatus = document.getElementById(`lock-status-${focusedCardIndex}`);
+      if (resetStatus && !applySpeechGraceLabelTo(resetStatus)) {
+        clearSpeechGraceLabelFrom(resetStatus, "點擊開始解鎖");
+      }
       focusedCardIndex = -1;
   }
 
@@ -4448,6 +5275,15 @@ const payload = isUuidLike(room)
 
           // 🔵 狀態 A：如果目前沒有在錄音 -> 啟動錄音
           if (!isGachaRecording) {
+              if (isSpeechExhausted()) {
+                updateSpeechGraceHint({
+                  success: false,
+                  overLimit: true,
+                  error: 'speech_limit_exhausted',
+                  speechUsage: { status: 'exhausted', graceRemaining: 0 }
+                }, { statusId: 'status', recordBtnId: 'record-btn' });
+                return;
+            }
               isGachaRecording = true;
               
               // 強制切斷所有正在播放的讀音
@@ -4534,7 +5370,19 @@ const payload = isUuidLike(room)
                       const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                       pronConfig.applyTo(recognizer);
 
-                      await incrementVoiceUsageOrBlock('battle_gacha_phrase');
+                      const voiceOk = await incrementVoiceUsageOrBlock('battle_gacha_phrase', { statusEl: status, recordBtn: btn });
+                      if (!voiceOk) {
+                          btn.style.pointerEvents = "none";
+                          btn.classList.add('speech-exhausted');
+                          status.innerText = "已抵達今日語音上限";
+                          status.style.color = "#c0392b";
+                          if (typeof autoPickRemainingGachaRewardsDueToGraceExhausted === 'function') {
+                              setTimeout(() => autoPickRemainingGachaRewardsDueToGraceExhausted(), 900);
+                          } else if (typeof revealAllRemainingGachaCards === 'function') {
+                              setTimeout(() => revealAllRemainingGachaCards(), 900);
+                          }
+                          return;
+                      }
 
                       recognizer.recognizeOnceAsync((result) => {
                           btn.style.pointerEvents = "auto"; // 判定完成，解開按鈕封印
@@ -4547,21 +5395,33 @@ const payload = isUuidLike(room)
                               } else {
                                   status.innerText = "密語不夠準確，請重唸";
                                   status.style.color = "#e74c3c";
+                                  if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                                      setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                                  }
                               }
                           } else {
                               status.innerText = "未辨識到密語";
                               status.style.color = "#e74c3c";
+                              if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                                  setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                              }
                           }
                           recognizer.close();
                       }, (err) => {
                           console.error("Azure 辨識錯誤:", err);
                           status.innerText = "🚨 引擎連線錯誤，請重試";
                           status.style.color = "#e74c3c";
+                          if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                              setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                          }
                           btn.style.pointerEvents = "auto"; // 必須解開按鈕，否則卡死
                           recognizer.close();
                       });
                   } catch(err) {
                       status.innerText = "判定失敗，請重試";
+                      if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                          setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                      }
                       btn.style.pointerEvents = "auto";
                   }
               };
@@ -4605,6 +5465,93 @@ const payload = isUuidLike(room)
       return clickReceiver;
   }
 
+
+  function awardGachaPrizeWithoutVoice(index, options = {}) {
+      const cardData = gachaCardsData[index];
+      const cardEl = document.getElementById(`gacha-card-${index}`);
+      if (!cardData || !cardEl || cardData.flipped) return false;
+
+      const prizeInfo = cardData.prize || {};
+      const cardRoot = cardEl.querySelector('.card');
+
+      cardData.flipped = true;
+      cardEl.classList.add('flipped');
+      if (options.autoPicked) cardEl.classList.add('auto-picked');
+
+      const unlockUi = cardEl.querySelector('.unlock-ui');
+      if (unlockUi) unlockUi.style.display = 'none';
+
+      let prizeRarity = 'N';
+      if (prizeInfo.class === 'prize-R') prizeRarity = 'R';
+      if (prizeInfo.class === 'prize-SR') prizeRarity = 'SR';
+      if (prizeInfo.class === 'prize-SSR') prizeRarity = 'SSR';
+      if (cardRoot) cardRoot.setAttribute('data-rarity', prizeRarity);
+
+      let prizeToAdd = { ...prizeInfo };
+
+      if (prizeToAdd.type === 'avatar') {
+          const charId = prizeToAdd.value;
+          if (cardRoot && characterAssets[charId] && characterAssets[charId].mask) {
+              cardRoot.classList.add('masked');
+              cardRoot.style.setProperty('--mask', `url('${characterAssets[charId].mask}')`);
+          }
+
+          const alreadyOwnedInAccount = (window.myUnlockedAvatars || []).includes(charId);
+          const alreadyGotInThisGacha = window.wonAvatars.includes(charId);
+
+          if (alreadyOwnedInAccount || alreadyGotInThisGacha) {
+              const charName = characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label;
+              prizeToAdd.realLabel = `(自動抽取・重複) ${charName} → 轉為 100 點`;
+              window.wonPoints += 100;
+          } else {
+              prizeToAdd.realLabel = `(自動抽取) ${characterAssets[charId] ? characterAssets[charId].name : prizeToAdd.label}`;
+              window.wonAvatars.push(charId);
+          }
+      } else {
+          window.wonPoints += Number(prizeToAdd.value || 0);
+          prizeToAdd.realLabel = `(自動抽取) ${prizeToAdd.label}`;
+      }
+
+      gachaWonItems.push(prizeToAdd);
+      return true;
+  }
+
+  function autoPickRemainingGachaRewardsDueToGraceExhausted() {
+      if (gachaAutoPickDone) return;
+      gachaAutoPickDone = true;
+
+      cancelFocus();
+
+      let remainingPicks = Math.max(0, Number(gachaPicksLeft || 0));
+      const allCards = document.querySelectorAll('.gacha-card');
+
+      for (let i = 0; i < gachaCardsData.length && remainingPicks > 0; i++) {
+          const cardData = gachaCardsData[i];
+          if (!cardData || cardData.flipped) continue;
+
+          const picked = awardGachaPrizeWithoutVoice(i, { autoPicked: true });
+          if (picked) {
+              remainingPicks--;
+              if (allCards[i]) allCards[i].classList.add('flipped', 'auto-picked');
+          }
+      }
+
+      gachaPicksLeft = 0;
+      const picksEl = document.getElementById('picks-left');
+      if (picksEl) picksEl.innerText = gachaPicksLeft;
+
+      isGachaResolving = true;
+      saveGachaSession({ autoPickedByGrace: true, picksLeft: 0 });
+
+      const subtitle = document.getElementById('gacha-subtitle');
+      if (subtitle) subtitle.innerHTML = "<span style='color:#f1c40f'>贈送額度已用完，系統已自動完成剩餘抽獎。點擊畫面揭曉剩餘盲盒</span>";
+
+      setTimeout(() => {
+          waitForRevealAllClick();
+      }, 650);
+  }
+
+
   function revealAllRemainingGachaCards() {
       if (gachaRevealAllDone) return;
       gachaRevealAllDone = true;
@@ -4617,9 +5564,11 @@ const payload = isUuidLike(room)
       gachaCardsData.forEach((c, i) => {
           if (!c.flipped && allCards[i]) {
               c.flipped = true;
+              c.missed = true;
               allCards[i].classList.add('flipped', 'missed');
           }
       });
+      saveGachaSession({ revealAllDone: true });
 
       const subtitle = document.getElementById('gacha-subtitle');
       if (subtitle) subtitle.innerHTML = '即將進入結算...';
@@ -4696,6 +5645,7 @@ const payload = isUuidLike(room)
           gachaWonItems.push(prizeToAdd);
           gachaPicksLeft--;
           document.getElementById('picks-left').innerText = gachaPicksLeft;
+          saveGachaSession({ lastRevealedIndex: index });
 
           if (gachaPicksLeft <= 0) {
               isGachaResolving = true;
@@ -4723,6 +5673,7 @@ const payload = isUuidLike(room)
   // 顯示戰利品並發送 Supabase claim-gacha
   function showGachaSummary() {
     const listEl = document.getElementById('gacha-won-list');
+    const lockedSession = currentGachaSessionKey ? loadGachaSession(currentGachaSessionKey) : null;
     let html = "";
 
     // 保留原本前端盲盒動畫算出的戰利品摘要。
@@ -4750,6 +5701,15 @@ const payload = isUuidLike(room)
     document.getElementById('gacha-summary-popup').classList.add('show');
 
     const claimBtn = document.getElementById('gacha-claim-btn');
+    if (lockedSession && lockedSession.claimed) {
+        claimBtn.innerText = "已領取，返回大廳";
+        claimBtn.style.pointerEvents = "auto";
+        claimBtn.onclick = () => {
+            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+        };
+        return;
+    }
+
     claimBtn.onclick = async () => {
         claimBtn.innerText = "發放獎勵中...";
         claimBtn.style.pointerEvents = "none";
@@ -4807,6 +5767,8 @@ const payload = isUuidLike(room)
                 ${after !== undefined ? `<div style="font-size: 14px; margin-top: 4px;">最新點數：${after}</div>` : ''}
               </div>
             `;
+
+            markGachaSessionClaimed();
 
             claimBtn.innerText = "返回大廳";
             claimBtn.style.pointerEvents = "auto";
