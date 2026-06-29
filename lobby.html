@@ -1449,23 +1449,19 @@
         const items = Object.entries(characterAssets).filter(([id, char]) => {
           if (char.rarity !== rarity) return false;
 
-          // 🛒 商店顯示規則（只修商店，不影響對戰展示/掉落）
-          // 預設：新生自動獲得，不進商店
-          // Ai：只在對戰時出現，不進商店
-          // 一般：可購買
-          // 活動：商店可展示，但只能顯示「活動限定」，不可購買
+          // 🛒 商店顯示規則：只顯示「可購買」角色。
+          // 隱藏 / 活動 / 預設 / AI 角色仍可作為已擁有資產顯示與裝備，
+          // 但不進商城，也不提供兌換按鈕。
           const category = String(char.category || '一般').trim();
           const categoryKey = category.toLowerCase();
-          const isAiCategory = ['ai', 'a.i.', '機器人', 'ai角色'].includes(categoryKey) || category === 'Ai' || category === 'AI';
-          const isDefaultCategory = ['default', 'preset', 'starter'].includes(categoryKey) || category === '預設' || category === '默认';
+          const isGeneralCategory = category === '一般' || categoryKey === 'normal' || categoryKey === 'general';
+          const isLegacyLimited = category === '限定';
 
-          if (isAiCategory || isDefaultCategory) return false;
+          if (!isGeneralCategory && !isLegacyLimited) return false;
 
-          if (category === "限定") {
-            if (char.endTime) {
-              const end = new Date(char.endTime);
-              if (now > end) return false; 
-            }
+          if (isLegacyLimited && char.endTime) {
+            const end = new Date(char.endTime);
+            if (now > end) return false;
           }
           return true;
         });
@@ -1484,7 +1480,6 @@
           const isOwned = userUnlocked.includes(id);
           const category = String(char.category || '一般').trim();
           const isLimited = (category === "限定");
-          const isEvent = (category === "活動"); 
           const cost = Number(char.cost || 500); 
 
           const cardEl = document.createElement('div');
@@ -1492,13 +1487,10 @@
           
           let limitedBadgeHtml = "";
           if (isLimited) limitedBadgeHtml = `<div class="shop-limited-badge">⏳ 限時販售</div>`;
-          if (isEvent) limitedBadgeHtml = `<div class="shop-limited-badge" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">✨ 活動專屬</div>`;
 
           let btnHtml = "";
           if (isOwned) {
               btnHtml = `<button class="btn-buy" disabled>已擁有</button>`;
-          } else if (isEvent) {
-              btnHtml = `<button class="btn-buy" disabled style="background: rgba(142,68,173,0.3); color: #fff; opacity: 1; border: 1px solid rgba(142,68,173,0.5); box-shadow: none;">活動限定</button>`;
           } else {
               btnHtml = `<button class="btn-buy" onclick="buyCharacter('${id}', ${cost})">${cost} 點兌換</button>`;
           }
@@ -1529,15 +1521,11 @@
       const char = characterAssets[id] || {};
       const category = String(char.category || '一般').trim();
       const categoryKey = category.toLowerCase();
-      const isAiCategory = ['ai', 'a.i.', '機器人', 'ai角色'].includes(categoryKey) || category === 'Ai' || category === 'AI';
-      const isDefaultCategory = ['default', 'preset', 'starter'].includes(categoryKey) || category === '預設' || category === '默认';
+      const isGeneralCategory = category === '一般' || categoryKey === 'normal' || categoryKey === 'general';
+      const isLegacyLimited = category === '限定';
 
-      if (isAiCategory || isDefaultCategory) {
+      if (!isGeneralCategory && !isLegacyLimited) {
           alert("這個角色不開放兌換。");
-          return;
-      }
-      if (category === "活動") {
-          alert("這是活動限定角色，只能透過活動獲得。");
           return;
       }
 
