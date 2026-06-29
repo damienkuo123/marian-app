@@ -8453,13 +8453,21 @@
       .avatar-table-wrap .avatar-table-v2 { min-width: 560px !important; }
     }
 
-    /* =======================================================
-       Console Avatar Preview v8 — exact Lobby showcase renderer
-       - This deliberately restores the Lobby modal/card CSS instead of patched variants.
-       - Scoped to #avatar-console-showcase-modal to avoid global Console .card pollution.
-       ======================================================= */
-
     #avatar-console-showcase-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10050;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: max(22px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+      background: rgba(248, 250, 252, 0.78);
+      backdrop-filter: blur(24px) saturate(150%);
+      -webkit-backdrop-filter: blur(24px) saturate(150%);
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       --gold: #f1c40f;
       --grain: url("/assets/grain.webp");
       --glitter: url("/assets/glitter.png");
@@ -8473,9 +8481,6 @@
       --imgsize: 33%;
       --card-aspect: 0.718;
       --card-radius: 4.55% / 3.5%;
-      --card-edge: hsl(47, 100%, 78%);
-      --card-back: hsl(205, 100%, 25%);
-      --card-glow: hsl(175, 100%, 90%);
       --sunpillar-1: hsl(2, 100%, 73%);
       --sunpillar-2: hsl(53, 100%, 69%);
       --sunpillar-3: hsl(93, 100%, 69%);
@@ -8489,20 +8494,47 @@
       --sunpillar-clr-5: var(--sunpillar-5);
       --sunpillar-clr-6: var(--sunpillar-6);
     }
-    #avatar-console-showcase-modal {
-      position: fixed; inset: 0;
-      background: rgba(5, 9, 15, 0.95); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-      z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    }
     #avatar-console-showcase-modal.active { opacity: 1; pointer-events: auto; }
-    #avatar-console-showcase-modal .avatar-showcase-close { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 22px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 100; backdrop-filter: blur(10px); transition: 0.3s; }
-    #avatar-console-showcase-modal .avatar-showcase-close:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
-
-    #avatar-console-showcase-modal .showcase-wrapper { width: 85vw; max-width: 400px; aspect-ratio: var(--card-aspect); perspective: 800px; }
-    
-    #avatar-console-showcase-modal .card {
-      width: 100%; height: 100%; position: relative;
+    html[data-theme="dark"] #avatar-console-showcase-modal { background: rgba(15,23,42,.72); }
+    html[data-theme="dark"] #avatar-console-showcase-modal .avatar-showcase-name { color: var(--text); }
+    html[data-theme="dark"] #avatar-console-showcase-modal .avatar-showcase-close,
+    html[data-theme="dark"] #avatar-console-showcase-modal .avatar-showcase-tip { background: rgba(17,24,39,.82); border-color: rgba(148,163,184,.20); }
+    #avatar-console-showcase-modal .avatar-showcase-close {
+      position: absolute;
+      top: max(20px, env(safe-area-inset-top));
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.86);
+      border: 1px solid rgba(16,24,40,.10);
+      color: var(--text);
+      font-size: 22px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 100;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 16px 38px rgba(16,24,40,.14);
+      transition: 0.2s ease;
+    }
+    #avatar-console-showcase-modal .avatar-showcase-name {
+      color: var(--text);
+      letter-spacing: .08em;
+      margin: 0 22px 20px;
+      text-align: center;
+      text-shadow: none;
+      font-weight: 950;
+      line-height: 1.2;
+      font-size: clamp(22px, 5vw, 32px);
+    }
+    #avatar-console-showcase-modal .showcase-wrapper { width: 84vw; max-width: 390px; aspect-ratio: var(--card-aspect); perspective: 900px; overflow: visible !important; position: relative; z-index: 3; }
+    #avatar-console-showcase-modal .tappie-preview-card {
+      width: 100%; height: 100%; position: relative; padding: 0 !important; margin: 0 !important;
+      background: transparent !important; border: 0 !important; box-shadow: none !important;
+      z-index: 4;
+      filter: drop-shadow(0 30px 52px rgba(16,24,40,.22));
       transform: translate3d(0px, 0px, 0.01px);
       transform-style: preserve-3d;
       --pointer-x: 50%; --pointer-y: 50%;
@@ -8510,178 +8542,41 @@
       --rotate-x: 0deg; --rotate-y: 0deg;
       --card-opacity: 1; --card-scale: 1; --translate-x: 0px; --translate-y: 0px;
     }
-
-    #avatar-console-showcase-modal .card__translater, #avatar-console-showcase-modal .card__rotator { width: 100%; height: 100%; display: grid; perspective: 600px; transform-origin: center; transform-style: preserve-3d; }
-    #avatar-console-showcase-modal .card__translater { transform: translate3d(var(--translate-x), var(--translate-y), 0.1px) scale(var(--card-scale)); }
-    #avatar-console-showcase-modal .card__rotator { transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y)); box-shadow: 0px 20px 40px -5px rgba(0,0,0,0.8), 0 2px 15px -5px black; border-radius: var(--card-radius); }
-    
-    /* 🚀 重新啟動 3D 引擎 (保留 Z 軸深度，讓星空跟雷射浮起來！) */
-    #avatar-console-showcase-modal .card__rotator * { transform-style: preserve-3d; }
-    
-    #avatar-console-showcase-modal .card__front { 
-      display: grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr; 
-      width: 100%; height: 100%; border-radius: var(--card-radius); 
-      transform-style: preserve-3d !important; 
-      transform: translate3d(0px, 0px, 0.01px);
-    }
-    
-    #avatar-console-showcase-modal .card__bg, #avatar-console-showcase-modal .card__shine, #avatar-console-showcase-modal .card__glare { 
-      grid-area: 1/1; width: 100%; height: 100%; border-radius: var(--card-radius); box-sizing: border-box; 
-      pointer-events: none; transform-style: preserve-3d !important;
-    }
-
-    #avatar-console-showcase-modal .card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0px); z-index: 1; }
-
-    /* 原版基礎眩光 (恢復 Z 軸 1.41px) */
-    #avatar-console-showcase-modal .card__glare {
-      transform: translateZ(1.41px); z-index: 3;
-      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%);
-      opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay;
-    }
-
-    /* 光澤圖層本體宣告 (恢復 3D Z軸深度 1px) */
-    #avatar-console-showcase-modal .card__shine {
-      display: grid; transform: translateZ(1px); z-index: 4; transform-style: preserve-3d;
-      background: transparent; background-size: cover; background-position: center;
-      filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge;
-    }
-    #avatar-console-showcase-modal .card__shine:before, #avatar-console-showcase-modal .card__shine:after { grid-area: 1/1; border-radius: var(--card-radius); content: ""; display: block !important; }
-    #avatar-console-showcase-modal .card__shine:before { transform: translateZ(1.2px); }
-    #avatar-console-showcase-modal .card__shine:after { transform: translateZ(1.6px); }
-
-    /* 🚀 你的進化版 Masking (絕對強制挖空) */
-    #avatar-console-showcase-modal .card.masked .card__shine, #avatar-console-showcase-modal .card.masked .card__shine:before, #avatar-console-showcase-modal .card.masked .card__shine:after {
-      -webkit-mask-image: linear-gradient(white, white), var(--mask) !important;
-      -webkit-mask-composite: destination-out !important;
-      mask-image: linear-gradient(white, white), var(--mask) !important;
-      mask-composite: exclude !important;
-      -webkit-mask-size: cover !important; mask-size: cover !important;
-      -webkit-mask-position: center center !important; mask-position: center center !important;
-    }
-
-    /* 🔵【R卡：Cosmos 星空】 */
-    #avatar-console-showcase-modal .card[data-rarity="R"] .card__shine {
-      --space: 4%;
-      background-image: var(--cosmos-bottom), repeating-linear-gradient(82deg, hsl(53, 65%, 60%) calc(var(--space)*1), hsl(93, 56%, 50%) calc(var(--space)*2), hsl(176, 54%, 49%) calc(var(--space)*3), hsl(228, 59%, 55%) calc(var(--space)*4), hsl(283, 60%, 55%) calc(var(--space)*5), hsl(326, 59%, 51%) calc(var(--space)*6), hsl(326, 59%, 51%) calc(var(--space)*7), hsl(283, 60%, 55%) calc(var(--space)*8), hsl(228, 59%, 55%) calc(var(--space)*9), hsl(176, 54%, 49%) calc(var(--space)*10), hsl(93, 56%, 50%) calc(var(--space)*11), hsl(53, 65%, 60%) calc(var(--space)*12) ), radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(180, 100%, 89%, 0.5) 5%, hsla(180, 14%, 57%, 0.3) 40%, hsl(0, 0%, 0%) 130% ) !important;
-      background-blend-mode: color-burn, multiply !important; background-position: center, calc(10% + (var(--pointer-from-left)*80%)) calc(10% + (var(--pointer-from-top)*80%)), center !important;
-      background-size: cover, 400% 900%, cover !important; filter: brightness(1) contrast(1) saturate(.8) !important; mix-blend-mode: color-dodge !important; opacity: 1 !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="R"] .card__shine:before {
-      content: "" !important; display: block !important;
-      background-image: var(--cosmos-mid), repeating-linear-gradient(82deg, hsl(53, 65%, 60%) calc(var(--space)*1), hsl(93, 56%, 50%) calc(var(--space)*2), hsl(176, 54%, 49%) calc(var(--space)*3), hsl(228, 59%, 55%) calc(var(--space)*4), hsl(283, 60%, 55%) calc(var(--space)*5), hsl(326, 59%, 51%) calc(var(--space)*6), hsl(326, 59%, 51%) calc(var(--space)*7), hsl(283, 60%, 55%) calc(var(--space)*8), hsl(228, 59%, 55%) calc(var(--space)*9), hsl(176, 54%, 49%) calc(var(--space)*10), hsl(93, 56%, 50%) calc(var(--space)*11), hsl(53, 65%, 60%) calc(var(--space)*12) ) !important;
-      background-blend-mode: lighten, multiply !important; background-position: center, calc(15% + (var(--pointer-from-left)*70%)) calc(15% + (var(--pointer-from-top)*70%)), center !important;
-      background-size: cover, 400% 900%, cover !important; filter: brightness(1.25) contrast(1.75) saturate(.8) !important; mix-blend-mode: overlay !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="R"] .card__shine:after {
-      content: "" !important; display: block !important;
-      background-image: var(--cosmos-top), repeating-linear-gradient(82deg, hsl(53, 65%, 60%) calc(var(--space)*1), hsl(93, 56%, 50%) calc(var(--space)*2), hsl(176, 54%, 49%) calc(var(--space)*3), hsl(228, 59%, 55%) calc(var(--space)*4), hsl(283, 60%, 55%) calc(var(--space)*5), hsl(326, 59%, 51%) calc(var(--space)*6), hsl(326, 59%, 51%) calc(var(--space)*7), hsl(283, 60%, 55%) calc(var(--space)*8), hsl(228, 59%, 55%) calc(var(--space)*9), hsl(176, 54%, 49%) calc(var(--space)*10), hsl(93, 56%, 50%) calc(var(--space)*11), hsl(53, 65%, 60%) calc(var(--space)*12) ) !important;
-      background-blend-mode: multiply, multiply !important; background-position: center, calc(20% + (var(--pointer-from-left)*60%)) calc(20% + (var(--pointer-from-top)*60%)), center !important;
-      background-size: cover, 400% 900%, cover !important; filter: brightness(1.25) contrast(1.75) saturate(.8) !important; mix-blend-mode: multiply !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="R"] .card__bg { border-color: #3498db !important; box-shadow: inset 0 0 10px rgba(52, 152, 219, 0.5) !important; }
-
-    /* 🟣【SR卡：Trainer Full Art】 */
-    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__shine {
-      --imgsize: 33%; mix-blend-mode: color-dodge !important; opacity: 1 !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__shine, #avatar-console-showcase-modal .card[data-rarity="SR"] .card__shine:after {
-      background-image: var(--trainer-foil) !important; background-size: var(--imgsize) !important;
-      filter: brightness(calc((var(--pointer-from-center)*0.05) + .6)) contrast(1.5) saturate(1.2) !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__shine:before {
-      content: "" !important; display: block !important;
-      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0, 0%, 100%) 0%, hsla(0, 0%, 0%, 0) 80%) !important;
-      mix-blend-mode: screen !important; opacity: 0.5 !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__glare {
-      opacity: calc(var(--card-opacity) * .75) !important; mix-blend-mode: multiply !important; filter: brightness(1.5) contrast(1.4) saturate(1) !important; background-size: 170% 170% !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SR"] .card__bg { border-color: #bdc3c7 !important; box-shadow: inset 0 0 10px rgba(189, 195, 199, 0.5) !important; }
-
-    /* 🟡【SSR卡：V-Full Art】 */
-    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine, #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine:after {
-      background-blend-mode: exclusion, hue, hard-light !important;
-      filter: brightness(calc((var(--pointer-from-center)*.3) + .35)) contrast(2) saturate(1.5) !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine:before { display: none !important; }
-    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine:after { content: "" !important; display: block !important; filter: brightness(calc((var(--pointer-from-center)*.5) + .8)) contrast(1.6) saturate(1.4) !important; }
-    
-    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine {
-      opacity: 1 !important;
-      background-image: var(--foil), repeating-linear-gradient( 0deg, var(--sunpillar-clr-1) calc(var(--space)*1), var(--sunpillar-clr-2) calc(var(--space)*2), var(--sunpillar-clr-3) calc(var(--space)*3), var(--sunpillar-clr-4) calc(var(--space)*4), var(--sunpillar-clr-5) calc(var(--space)*5), var(--sunpillar-clr-6) calc(var(--space)*6), var(--sunpillar-clr-1) calc(var(--space)*7) ), repeating-linear-gradient( var(--angle), #0e152e 0%, hsl(180, 10%, 60%) 3.8%, hsl(180, 29%, 66%) 4.5%, hsl(180, 10%, 60%) 5.2%, #0e152e 10% , #0e152e 12% ), radial-gradient( farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 0%, 0.1) 12%, hsla(0, 0%, 0%, 0.15) 20%, hsla(0, 0%, 0%, 0.25) 120% ) !important;
-      background-position: center center, 0% var(--pointer-y), calc( var(--pointer-x) + (var(--pointer-y)*0.2) ) var(--pointer-y), var(--pointer-x) var(--pointer-y) !important;
-      background-blend-mode: soft-light, hue, hard-light !important; background-size: var(--imgsize), 200% 700%, 300% 100%, 200% 100% !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__shine:after {
-      background-position: center center, 0% var(--pointer-y), calc( (var(--pointer-x) + (var(--pointer-y)*0.2)) * -1) calc( var(--pointer-y) * -1), var(--pointer-x) var(--pointer-y) !important;
-      background-size: var(--imgsize), 200% 400%, 195% 100%, 200% 100% !important;
-      filter: brightness(calc((var(--pointer-from-center)*.4) + .8)) contrast(1.5) saturate(1.25) !important; mix-blend-mode: exclusion !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__glare {
-      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0, 0%, 75%) 5%, hsl(200, 5%, 35%) 60%, hsl(320, 40%, 10%) 150%) !important;
-      background-size: 120% 150% !important; background-position: center center !important; mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75 ) !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="SSR"] .card__bg { border-color: var(--gold) !important; box-shadow: inset 0 0 15px rgba(241,196,15,0.5) !important; }
-
-    /* 🌈【UR卡：Rainbow Secret Holo 彩虹隱藏亮面】(特效拉滿新增！) */
-    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__shine {
-      --r-clr-1: hsl(0, 57%, 37%); --r-clr-2: hsl(40, 53%, 39%); --r-clr-3: hsl(90, 60%, 35%);
-      --r-clr-4: hsl(180, 60%, 35%); --r-clr-5: hsl(180, 60%, 35%); --r-clr-6: hsl(210, 57%, 39%);
-      --r-clr-7: hsl(280, 55%, 31%);
-
-      background-image: 
-        linear-gradient(-45deg, var(--r-clr-1), var(--r-clr-5)),
-        var(--glitter),
-        linear-gradient( -30deg, 
-          var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), 
-          var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), 
-          var(--r-clr-1)
-        ) !important;
-      background-blend-mode: soft-light !important;
-      background-size: 100% 100%, 30% 30%, 400% 400% !important;
-      background-position: center center, center center, var(--pointer-x) var(--pointer-y) !important;
-      filter: brightness(calc((var(--pointer-from-center)*0.3) + 0.55)) contrast(2) saturate(1) !important;
-      mix-blend-mode: color-dodge !important; opacity: 1 !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__shine:before {
-      content: "" !important; display: block !important;
-      background-image: var(--foil) !important;
-      background-size: var(--imgsize) !important;
-      background-position: center center !important;
-      filter: brightness(2.5) contrast(1) !important;
-      opacity: calc((var(--pointer-from-center) + 0.4 ) * 0.6 ) !important;
-      background-blend-mode: difference !important;
-      mix-blend-mode: darken !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__glare {
-      background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0, 0%, 100%) 5%, hsl(200, 5%, 85%) 60%, hsl(320, 40%, 10%) 150%) !important;
-      mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75 ) !important;
-    }
-    #avatar-console-showcase-modal .card[data-rarity="UR"] .card__bg { border-color: #ff9ff3 !important; box-shadow: inset 0 0 15px rgba(255,159,243,0.8) !important; }
-
-    
-    #avatar-console-showcase-modal .avatar-showcase-name {
-      color: white;
-      letter-spacing: 4px;
-      margin: 0 18px 20px;
-      text-shadow: 0 0 10px rgba(255,255,255,0.5);
-      font-weight: 900;
-      text-align: center;
-      line-height: 1.2;
-      font-size: clamp(24px, 6vw, 36px);
-    }
-    #avatar-console-showcase-modal .avatar-showcase-tip {
-      color: rgba(255,255,255,0.6);
-      font-size: 13px;
-      font-weight: bold;
-      margin-top: 25px;
-      letter-spacing: 2px;
-      background: rgba(0,0,0,0.5);
-      padding: 8px 20px;
-      border-radius: 20px;
-      backdrop-filter: blur(5px);
-      -webkit-backdrop-filter: blur(5px);
-    }
+    #avatar-console-showcase-modal .tappie-preview-card__translater,
+    #avatar-console-showcase-modal .tappie-preview-card__rotator { width: 100%; height: 100%; display: grid; perspective: 600px; transform-origin: center; transform-style: preserve-3d; overflow: visible !important; }
+    #avatar-console-showcase-modal .tappie-preview-card__translater { transform: translate3d(var(--translate-x), var(--translate-y), 0.1px) scale(var(--card-scale)); }
+    #avatar-console-showcase-modal .tappie-preview-card__rotator { transform: rotateY(var(--rotate-x)) rotateX(var(--rotate-y)); box-shadow: 0px 20px 38px -10px rgba(16,24,40,.38), 0 2px 12px -5px rgba(16,24,40,.28); border-radius: var(--card-radius); }
+    #avatar-console-showcase-modal .tappie-preview-card__rotator * { transform-style: preserve-3d; }
+    #avatar-console-showcase-modal .tappie-preview-card__front { display: grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr; width: 100%; height: 100%; border-radius: var(--card-radius); transform-style: preserve-3d !important; transform: translate3d(0px, 0px, 0.01px); }
+    #avatar-console-showcase-modal .tappie-preview-card__bg,
+    #avatar-console-showcase-modal .tappie-preview-card__shine,
+    #avatar-console-showcase-modal .tappie-preview-card__glare { grid-area: 1/1; width: 100%; height: 100%; border-radius: var(--card-radius); box-sizing: border-box; pointer-events: none; transform-style: preserve-3d !important; }
+    #avatar-console-showcase-modal .tappie-preview-card__bg { background-size: cover; background-position: center; border: 2px solid transparent; transform: translateZ(0px); z-index: 1; overflow: hidden; }
+    #avatar-console-showcase-modal .tappie-preview-card__glare { transform: translateZ(1.41px); z-index: 3; background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0, 0%, 100%, 0.8) 10%, hsla(0, 0%, 100%, 0.65) 20%, hsla(0, 0%, 0%, 0.5) 90%); opacity: calc(var(--pointer-from-center) * 0.8); mix-blend-mode: overlay; }
+    #avatar-console-showcase-modal .tappie-preview-card__shine { display: grid; transform: translateZ(1px); z-index: 4; transform-style: preserve-3d; background: transparent; background-size: cover; background-position: center; filter: brightness(.85) contrast(2.75) saturate(.65); mix-blend-mode: color-dodge; }
+    #avatar-console-showcase-modal .tappie-preview-card__shine:before,
+    #avatar-console-showcase-modal .tappie-preview-card__shine:after { grid-area: 1/1; border-radius: var(--card-radius); content: ""; display: block !important; }
+    #avatar-console-showcase-modal .tappie-preview-card__shine:before { transform: translateZ(1.2px); }
+    #avatar-console-showcase-modal .tappie-preview-card__shine:after { transform: translateZ(1.6px); }
+    #avatar-console-showcase-modal .tappie-preview-card.masked .tappie-preview-card__shine,
+    #avatar-console-showcase-modal .tappie-preview-card.masked .tappie-preview-card__shine:before,
+    #avatar-console-showcase-modal .tappie-preview-card.masked .tappie-preview-card__shine:after { -webkit-mask-image: linear-gradient(white, white), var(--mask) !important; -webkit-mask-composite: destination-out !important; mask-image: linear-gradient(white, white), var(--mask) !important; mask-composite: exclude !important; -webkit-mask-size: cover !important; mask-size: cover !important; -webkit-mask-position: center center !important; mask-position: center center !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="R"] .tappie-preview-card__shine { --space: 4%; background-image: var(--cosmos-bottom), repeating-linear-gradient(82deg, hsl(53,65%,60%) calc(var(--space)*1), hsl(93,56%,50%) calc(var(--space)*2), hsl(176,54%,49%) calc(var(--space)*3), hsl(228,59%,55%) calc(var(--space)*4), hsl(283,60%,55%) calc(var(--space)*5), hsl(326,59%,51%) calc(var(--space)*6), hsl(326,59%,51%) calc(var(--space)*7), hsl(283,60%,55%) calc(var(--space)*8), hsl(228,59%,55%) calc(var(--space)*9), hsl(176,54%,49%) calc(var(--space)*10), hsl(93,56%,50%) calc(var(--space)*11), hsl(53,65%,60%) calc(var(--space)*12)), radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(180,100%,89%,0.5) 5%, hsla(180,14%,57%,0.3) 40%, hsl(0,0%,0%) 130%) !important; background-blend-mode: color-burn, multiply !important; background-position: center, calc(10% + (var(--pointer-from-left)*80%)) calc(10% + (var(--pointer-from-top)*80%)), center !important; background-size: cover, 400% 900%, cover !important; filter: brightness(1) contrast(1) saturate(.8) !important; mix-blend-mode: color-dodge !important; opacity: 1 !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="R"] .tappie-preview-card__bg { border-color: #3498db !important; box-shadow: inset 0 0 10px rgba(52,152,219,0.5) !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SR"] .tappie-preview-card__shine,
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SR"] .tappie-preview-card__shine:after { background-image: var(--trainer-foil) !important; background-size: var(--imgsize) !important; filter: brightness(calc((var(--pointer-from-center)*0.05) + .6)) contrast(1.5) saturate(1.2) !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SR"] .tappie-preview-card__shine:before { background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0,0%,100%) 0%, hsla(0,0%,0%,0) 80%) !important; mix-blend-mode: screen !important; opacity: .5 !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SR"] .tappie-preview-card__bg { border-color: #bdc3c7 !important; box-shadow: inset 0 0 10px rgba(189,195,199,0.5) !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SSR"] .tappie-preview-card__shine { opacity: 1 !important; background-image: var(--foil), repeating-linear-gradient(0deg, var(--sunpillar-clr-1) calc(var(--space)*1), var(--sunpillar-clr-2) calc(var(--space)*2), var(--sunpillar-clr-3) calc(var(--space)*3), var(--sunpillar-clr-4) calc(var(--space)*4), var(--sunpillar-clr-5) calc(var(--space)*5), var(--sunpillar-clr-6) calc(var(--space)*6), var(--sunpillar-clr-1) calc(var(--space)*7)), repeating-linear-gradient(var(--angle), #0e152e 0%, hsl(180,10%,60%) 3.8%, hsl(180,29%,66%) 4.5%, hsl(180,10%,60%) 5.2%, #0e152e 10%, #0e152e 12%), radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsla(0,0%,0%,0.1) 12%, hsla(0,0%,0%,0.15) 20%, hsla(0,0%,0%,0.25) 120%) !important; background-position: center center, 0% var(--pointer-y), calc(var(--pointer-x) + (var(--pointer-y)*0.2)) var(--pointer-y), var(--pointer-x) var(--pointer-y) !important; background-blend-mode: soft-light, hue, hard-light !important; background-size: var(--imgsize), 200% 700%, 300% 100%, 200% 100% !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SSR"] .tappie-preview-card__shine:before { display: none !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SSR"] .tappie-preview-card__shine:after { background-position: center center, 0% var(--pointer-y), calc((var(--pointer-x) + (var(--pointer-y)*0.2)) * -1) calc(var(--pointer-y) * -1), var(--pointer-x) var(--pointer-y) !important; background-size: var(--imgsize), 200% 400%, 195% 100%, 200% 100% !important; filter: brightness(calc((var(--pointer-from-center)*.4) + .8)) contrast(1.5) saturate(1.25) !important; mix-blend-mode: exclusion !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SSR"] .tappie-preview-card__glare { background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0,0%,75%) 5%, hsl(200,5%,35%) 60%, hsl(320,40%,10%) 150%) !important; background-size: 120% 150% !important; background-position: center center !important; mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75) !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="SSR"] .tappie-preview-card__bg { border-color: var(--gold) !important; box-shadow: inset 0 0 15px rgba(241,196,15,0.5) !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="UR"] .tappie-preview-card__shine { --r-clr-1:hsl(0,57%,37%); --r-clr-2:hsl(40,53%,39%); --r-clr-3:hsl(90,60%,35%); --r-clr-4:hsl(180,60%,35%); --r-clr-5:hsl(180,60%,35%); --r-clr-6:hsl(210,57%,39%); --r-clr-7:hsl(280,55%,31%); background-image: linear-gradient(-45deg, var(--r-clr-1), var(--r-clr-5)), var(--glitter), linear-gradient(-30deg, var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), var(--r-clr-1), var(--r-clr-2), var(--r-clr-3), var(--r-clr-4), var(--r-clr-5), var(--r-clr-6), var(--r-clr-7), var(--r-clr-1)) !important; background-blend-mode: soft-light !important; background-size: 100% 100%, 30% 30%, 400% 400% !important; background-position: center center, center center, var(--pointer-x) var(--pointer-y) !important; filter: brightness(calc((var(--pointer-from-center)*0.3) + 0.55)) contrast(2) saturate(1) !important; mix-blend-mode: color-dodge !important; opacity: 1 !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="UR"] .tappie-preview-card__shine:before { background-image: var(--foil) !important; background-size: var(--imgsize) !important; background-position: center center !important; filter: brightness(2.5) contrast(1) !important; opacity: calc((var(--pointer-from-center) + .4) * .6) !important; background-blend-mode: difference !important; mix-blend-mode: darken !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="UR"] .tappie-preview-card__glare { background-image: radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), hsl(0,0%,100%) 5%, hsl(200,5%,85%) 60%, hsl(320,40%,10%) 150%) !important; mix-blend-mode: hard-light !important; filter: brightness(1) contrast(1.2) saturate(1) !important; opacity: calc(var(--card-opacity) * .75) !important; }
+    #avatar-console-showcase-modal .tappie-preview-card[data-rarity="UR"] .tappie-preview-card__bg { border-color: #ff9ff3 !important; box-shadow: inset 0 0 15px rgba(255,159,243,0.8) !important; }
+    #avatar-console-showcase-modal .avatar-showcase-tip { margin: 18px 0 0; color: var(--muted); background: rgba(255,255,255,.78); border: 1px solid rgba(16,24,40,.08); border-radius: 999px; padding: 10px 18px; font-weight: 900; letter-spacing: .04em; font-size: 13px; box-shadow: 0 10px 24px rgba(16,24,40,.08); }
 
   
     .avatar-overview-metrics:has(.avatar-overview-mini:nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -16791,11 +16686,11 @@ function setAvatarConsoleView(view){ avatarsConsoleView = view; renderAvatarsCon
       modal.innerHTML = `<button type="button" class="avatar-showcase-close" onclick="closeAvatarConsolePreview()">✕</button>
         <h2 id="avatar-showcase-name" class="avatar-showcase-name">角色名稱</h2>
         <div class="showcase-wrapper">
-          <div id="avatar-showcase-card" class="card" data-rarity="N">
-            <div class="card__translater"><div class="card__rotator"><div class="card__front">
-              <div id="avatar-showcase-bg" class="card__bg"></div>
-              <div class="card__shine"></div>
-              <div class="card__glare"></div>
+          <div id="avatar-showcase-card" class="tappie-preview-card" data-rarity="N">
+            <div class="tappie-preview-card__translater"><div class="tappie-preview-card__rotator"><div class="tappie-preview-card__front">
+              <div id="avatar-showcase-bg" class="tappie-preview-card__bg"></div>
+              <div class="tappie-preview-card__shine"></div>
+              <div class="tappie-preview-card__glare"></div>
             </div></div></div>
           </div>
         </div>
