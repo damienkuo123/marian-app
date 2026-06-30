@@ -103,10 +103,9 @@
             margin: 0; padding: 0;
             width: 100%; max-width: 100vw;
 
-            overflow-x: clip;
-        }body {
+            }body {
             
-            background: var(--bg-dark);
+            background: #f7f9fc;
             color: white;
             scroll-behavior: smooth;
         }.ambient-orb {
@@ -414,6 +413,23 @@ body {
     }
 }
 
+/* TAPPIE_BASE_BACKGROUND_AND_WIDTH_V5_4
+   Light page background prevents mobile webviews from exposing the old dark body color during horizontal rubber-band.
+   Do not set overflow on html/body here; sticky sections depend on normal page scrolling.
+*/
+html,
+body {
+            background: #f7f9fc;
+            overscroll-behavior-x: none;
+        }
+body {
+            position: relative;
+            min-width: 0;
+        }
+body > * {
+            max-width: 100vw;
+        }
+
 
 /* 01-hero-sequence.css
    Source: index_19_solution_showcase_v3_clean_text.html lines 306-496
@@ -422,18 +438,22 @@ body {
 .tappie-scroll-hero {
             position: relative;
             height: 560vh;
+            min-height: 560vh;
             background: #f7f9fc;
             color: #101828;
             margin: 0;
             overflow: visible;
+            isolation: isolate;
         }.tappie-scroll-hero__sticky {
             position: sticky;
             top: 0;
+            height: 100vh;
             height: 100svh;
             min-height: 100vh;
             overflow: hidden;
             background: #f7f9fc;
             isolation: isolate;
+            z-index: 1;
         }.tappie-scroll-hero__first-frame {
             position: absolute;
             inset: 0;
@@ -612,44 +632,26 @@ body {
 nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.nav-logo img { width: 32px; }.nav-actions { gap: 6px; }.nav-btn { padding: 7px 9px; font-size: 11px; }
 }
 
-/* TAPPIE_V5_3_HERO_SEQUENCE_REPAIR
-   Keeps the scroll sequence sticky on desktop/mobile and anchors the white fade to the section end.
+/* TAPPIE_HERO_SEQUENCE_END_FADE_V5_4
+   Fade is owned by the hero section. The sticky shade handles in-sequence fade; this bottom fade only appears at section exit.
 */
-.tappie-scroll-hero {
-    position: relative !important;
-    min-height: 560vh !important;
-    height: 560vh !important;
-    overflow: clip !important;
-    background: #f7f9fc !important;
-}
-.tappie-scroll-hero__sticky {
-    position: sticky !important;
-    top: 0 !important;
-    height: 100vh !important;
-    height: 100svh !important;
-    min-height: 100vh !important;
-    overflow: hidden !important;
-    z-index: 1;
-}
-.tappie-scroll-hero__shade {
-    opacity: 0 !important;
-}
 .tappie-scroll-hero::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -1px;
-    height: min(42vh, 420px);
-    background: linear-gradient(180deg, rgba(247,249,252,0) 0%, #f7f9fc 76%, #f7f9fc 100%);
-    pointer-events: none;
-    z-index: 2;
-}
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: min(36vh, 360px);
+            background: linear-gradient(180deg, rgba(247,249,252,0) 0%, #f7f9fc 78%, #f7f9fc 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
 @media (max-width: 768px) {
-    .tappie-scroll-hero {
-        min-height: 460vh !important;
-        height: 460vh !important;
-    }
+.tappie-scroll-hero {
+                height: 460vh;
+                min-height: 460vh;
+                overflow: visible;
+            }
 }
 
 
@@ -890,7 +892,6 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
             }
 }
 .tappie-day-loop {
-
             position: relative;
             height: 650vh;
             background:
@@ -899,7 +900,8 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
                 linear-gradient(180deg, #f7f9fc 0%, #ffffff 38%, #f6f9fd 100%);
             color: #101828;
             margin-top: -1px;
-            overflow: clip;
+            overflow: visible;
+            isolation: isolate;
         }.tappie-day-loop__sticky {
             position: sticky;
             top: 75px;
@@ -977,7 +979,7 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
             transition: width 0.34s ease;
         }.tappie-day-loop__stage {
             position: relative;
-            
+            min-height: min(640px, calc(100svh - 130px));
             display: grid;
             place-items: center;
             perspective: 1200px;
@@ -992,16 +994,16 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
             pointer-events: none;
         }.tappie-day-phone {
             position: relative;
-            
-            
+            width: min(335px, 54vw);
+            aspect-ratio: 0.49;
             border-radius: 48px;
             background: #101828;
             border: 10px solid #111827;
-            
+            overflow: hidden;
             box-shadow:
                 0 50px 120px rgba(16,24,40,0.20),
                 inset 0 0 0 1px rgba(255,255,255,0.14);
-            
+            transform: translateZ(0);
         }.tappie-day-phone::before {
             content: "";
             position: absolute;
@@ -1424,6 +1426,60 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
     .tappie-problem-photo__tags {
         margin-top: 22px !important;
     }
+}
+
+/* TAPPIE_DAY_LOOP_STICKY_CANONICAL_V5_4
+   Restores sticky scroll behavior and phone dimensions in the day-loop module.
+*/
+@media (max-width: 860px) {
+.tappie-day-loop {
+                height: 720vh;
+                overflow: visible;
+            }.tappie-day-loop__sticky {
+                position: sticky;
+                top: 75px;
+                height: calc(100svh - 75px);
+                min-height: 720px;
+                width: calc(100vw - 32px);
+                grid-template-columns: 1fr;
+                align-content: start;
+                gap: 18px;
+                padding: 32px 0 76px;
+            }.tappie-day-loop__stage {
+                min-height: 392px;
+                padding-top: 34px;
+                padding-bottom: 26px;
+            }.tappie-day-phone {
+                width: min(216px, 55vw);
+                border-width: 8px;
+                border-radius: 40px;
+                transform: translateY(-8px) translateZ(0);
+            }
+}
+@media (min-width: 861px) {
+.tappie-day-loop__sticky {
+                position: sticky;
+                top: 75px;
+            }.tappie-day-loop__stage {
+                min-height: min(680px, calc(100svh - 92px));
+                padding-bottom: 18px;
+            }.tappie-day-phone {
+                height: min(620px, calc(100svh - 128px));
+                max-height: calc(100svh - 128px);
+                width: auto;
+                aspect-ratio: 0.49;
+                transform: translateY(-22px) translateZ(0);
+            }
+}
+@media (max-width: 390px) {
+.tappie-day-phone {
+                width: min(202px, 54vw);
+            }.tappie-day-loop__sticky {
+                min-height: 690px;
+                padding-bottom: 68px;
+            }.tappie-day-loop__stage {
+                min-height: 372px;
+            }
 }
 
 
@@ -3162,9 +3218,7 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
                 width: min(202px, 54vw) !important;
                 
             }
-}.tappie-scroll-hero,
-        .tappie-scroll-hero__sticky,
-        #tappieHeroCanvas {
+}#tappieHeroCanvas {
             backface-visibility: hidden;
             transform: translateZ(0);
         }#tappieHeroCanvas {
@@ -7862,6 +7916,41 @@ body nav.tappie-site-header .nav-logo span {
         aspect-ratio: 1 / .86 !important;
         border-radius: 22px !important;
     }
+}
+
+/* TAPPIE_VALUE_TABS_SQUARE_MEDIA_V5_4
+   The official value-tab images are 1:1. Keep the media card square and centered instead of stretching to a wide 16:10 stage.
+*/
+.value-tabs-v51 {
+            background-color: #f5f5f7;
+        }.value-tabs-v51__stage {
+            width: min(760px, calc(100vw - 48px));
+            aspect-ratio: 1 / 1;
+            border-radius: clamp(24px, 4vw, 38px);
+            background: #fff;
+            overflow: hidden;
+            box-shadow:
+                inset 0 0 0 1px rgba(255,255,255,0.72),
+                0 28px 80px rgba(15, 23, 42, 0.08);
+        }.value-tabs-v51__media {
+            inset: 0;
+            padding: 0;
+        }.value-tabs-v51__media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            border-radius: inherit;
+        }
+@media (min-width: 861px) {
+.value-tabs-v51__stage {
+                width: min(720px, calc(100vw - 96px));
+            }
+}
+@media (max-width: 720px) {
+.value-tabs-v51__stage {
+                width: calc(100vw - 52px);
+            }
 }
 
 </style>
