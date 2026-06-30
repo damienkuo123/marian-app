@@ -101,14 +101,14 @@
             --glass-border: rgba(255, 255, 255, 0.1);
         }html, body {
             margin: 0; padding: 0;
-            width: 100%; max-width: 100vw;
-
-            overflow-x: clip;
+            width: 100%; max-width: 100%;
+        }html {
+            background: #f5f5f7;
         }body {
-            
-            background: var(--bg-dark);
+            background: #f5f5f7;
             color: white;
             scroll-behavior: smooth;
+            overscroll-behavior-x: none;
         }.ambient-orb {
             position: fixed; border-radius: 50%; filter: blur(100px);
             z-index: -1; opacity: 0.4; pointer-events: none;
@@ -390,27 +390,16 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             margin: 0;
         }body.login-modal-open { overflow: hidden; }@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }@keyframes modalPanelIn { from { opacity: 0; transform: translateY(22px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-/* TAPPIE_FOUNDATION_HORIZONTAL_GUARD_V5_4
-   Base owner: prevent mobile sideways rubber-band from revealing dark background without changing vertical scroll behavior.
+
+/* TAPPIE_FOUNDATION_SECTION_X_GUARD_V5_5
+   Horizontal containment is scoped to non-sticky sections only; html/body remain overflow-visible so sticky works.
 */
-html {
-    max-width: 100%;
-    overflow-x: hidden;
-    background: #f5f5f7;
-}
-body {
-    max-width: 100%;
-    overflow-x: hidden;
-    background: #f5f5f7;
-}
 @media (max-width: 860px) {
-    html,
-    body {
-        width: 100%;
-        min-width: 0;
+    body > section:not(.tappie-scroll-hero):not(.tappie-day-loop) {
+        max-width: 100%;
+        overflow-x: clip;
     }
 }
-
 
 /* 01-hero-sequence.css
    Source: index_19_solution_showcase_v3_clean_text.html lines 306-496
@@ -424,6 +413,7 @@ body {
             margin: 0;
             overflow: visible;
         }.tappie-scroll-hero__sticky {
+            position: -webkit-sticky;
             position: sticky;
             top: 0;
             height: 100svh;
@@ -609,8 +599,8 @@ body {
 nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.nav-logo img { width: 32px; }.nav-actions { gap: 6px; }.nav-btn { padding: 7px 9px; font-size: 11px; }
 }
 
-/* TAPPIE_HERO_SEQUENCE_CANONICAL_V5_4
-   Section owner: scroll sequence. Sticky must not sit inside an overflow-clipped parent.
+/* TAPPIE_HERO_SEQUENCE_CANONICAL_V5_5
+   Section owner: scroll sequence. No root overflow/parent transform; sticky owns the sequence.
 */
 .tappie-scroll-hero {
     position: relative !important;
@@ -633,17 +623,6 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
 }
 .tappie-scroll-hero__shade {
     opacity: var(--hero-end-fade, 0) !important;
-}
-.tappie-scroll-hero::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -1px;
-    height: min(38vh, 360px);
-    background: linear-gradient(180deg, rgba(247,249,252,0) 0%, #f7f9fc 78%, #f7f9fc 100%);
-    pointer-events: none;
-    z-index: 2;
 }
 @media (max-width: 768px) {
     .tappie-scroll-hero {
@@ -1426,8 +1405,8 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
     }
 }
 
-/* TAPPIE_DAY_LOOP_CANONICAL_V5_4
-   Section owner: day loop. Parent stays overflow-visible so sticky does not collapse.
+/* TAPPIE_DAY_LOOP_CANONICAL_V5_5
+   Section owner: day loop. Parent stays overflow-visible; root overflow is not used.
 */
 .tappie-day-loop {
     position: relative;
@@ -3187,12 +3166,9 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
                 width: min(202px, 54vw) !important;
                 
             }
-}.tappie-scroll-hero,
-        .tappie-scroll-hero__sticky,
-        #tappieHeroCanvas {
+}#tappieHeroCanvas {
             backface-visibility: hidden;
             transform: translateZ(0);
-        }#tappieHeroCanvas {
             image-rendering: auto;
         }@media (min-width: 861px) {
 .tappie-day-loop__sticky {
@@ -7817,8 +7793,8 @@ body nav.tappie-site-header .nav-logo span {
             pointer-events: none !important;
         }
 
-/* TAPPIE_VALUE_TABS_CANONICAL_V5_4
-   Section owner: value tabs. Images are square assets, so the media stage crops cleanly instead of showing empty side margins.
+/* TAPPIE_VALUE_TABS_CANONICAL_V5_5
+   Section owner: value tabs. Media assets are 1:1, so the stage is square and width is controlled.
 */
 .value-tabs-v51 {
     background:
@@ -7845,8 +7821,8 @@ body nav.tappie-site-header .nav-logo span {
 }
 .value-tabs-v51__stage {
     position: relative !important;
-    width: min(880px, 100%) !important;
-    aspect-ratio: 16 / 10 !important;
+    width: min(780px, 100%) !important;
+    aspect-ratio: 1 / 1 !important;
     margin: clamp(42px, 5vw, 68px) auto 0 !important;
     border-radius: 32px !important;
     background: #fff !important;
@@ -7890,7 +7866,7 @@ body nav.tappie-site-header .nav-logo span {
     }
     .value-tabs-v51__stage {
         width: 100% !important;
-        aspect-ratio: 1 / 1.06 !important;
+        aspect-ratio: 1 / 1 !important;
         border-radius: 22px !important;
     }
 }
