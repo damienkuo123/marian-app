@@ -103,9 +103,10 @@
             margin: 0; padding: 0;
             width: 100%; max-width: 100vw;
 
-            }body {
+            overflow-x: clip;
+        }body {
             
-            background: #f7f9fc;
+            background: var(--bg-dark);
             color: white;
             scroll-behavior: smooth;
         }.ambient-orb {
@@ -389,46 +390,26 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             margin: 0;
         }body.login-modal-open { overflow: hidden; }@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }@keyframes modalPanelIn { from { opacity: 0; transform: translateY(22px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-/* TAPPIE_V5_3_FOUNDATION_BLEED_GUARD
-   Prevents mobile horizontal overscroll from revealing the dark body background.
+/* TAPPIE_FOUNDATION_HORIZONTAL_GUARD_V5_4
+   Base owner: prevent mobile sideways rubber-band from revealing dark background without changing vertical scroll behavior.
 */
 html {
     max-width: 100%;
     overflow-x: hidden;
-    overscroll-behavior-x: none;
     background: #f5f5f7;
 }
 body {
     max-width: 100%;
     overflow-x: hidden;
-    overscroll-behavior-x: none;
     background: #f5f5f7;
 }
 @media (max-width: 860px) {
     html,
     body {
         width: 100%;
-        position: relative;
-        touch-action: pan-y;
+        min-width: 0;
     }
 }
-
-/* TAPPIE_BASE_BACKGROUND_AND_WIDTH_V5_4
-   Light page background prevents mobile webviews from exposing the old dark body color during horizontal rubber-band.
-   Do not set overflow on html/body here; sticky sections depend on normal page scrolling.
-*/
-html,
-body {
-            background: #f7f9fc;
-            overscroll-behavior-x: none;
-        }
-body {
-            position: relative;
-            min-width: 0;
-        }
-body > * {
-            max-width: 100vw;
-        }
 
 
 /* 01-hero-sequence.css
@@ -438,22 +419,18 @@ body > * {
 .tappie-scroll-hero {
             position: relative;
             height: 560vh;
-            min-height: 560vh;
             background: #f7f9fc;
             color: #101828;
             margin: 0;
             overflow: visible;
-            isolation: isolate;
         }.tappie-scroll-hero__sticky {
             position: sticky;
             top: 0;
-            height: 100vh;
             height: 100svh;
             min-height: 100vh;
             overflow: hidden;
             background: #f7f9fc;
             isolation: isolate;
-            z-index: 1;
         }.tappie-scroll-hero__first-frame {
             position: absolute;
             inset: 0;
@@ -632,26 +609,47 @@ body > * {
 nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.nav-logo img { width: 32px; }.nav-actions { gap: 6px; }.nav-btn { padding: 7px 9px; font-size: 11px; }
 }
 
-/* TAPPIE_HERO_SEQUENCE_END_FADE_V5_4
-   Fade is owned by the hero section. The sticky shade handles in-sequence fade; this bottom fade only appears at section exit.
+/* TAPPIE_HERO_SEQUENCE_CANONICAL_V5_4
+   Section owner: scroll sequence. Sticky must not sit inside an overflow-clipped parent.
 */
-.tappie-scroll-hero::after {
-            content: "";
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: -1px;
-            height: min(36vh, 360px);
-            background: linear-gradient(180deg, rgba(247,249,252,0) 0%, #f7f9fc 78%, #f7f9fc 100%);
-            pointer-events: none;
-            z-index: 0;
-        }
-@media (max-width: 768px) {
 .tappie-scroll-hero {
-                height: 460vh;
-                min-height: 460vh;
-                overflow: visible;
-            }
+    position: relative !important;
+    height: 560vh !important;
+    min-height: 560vh !important;
+    overflow: visible !important;
+    background: #f7f9fc !important;
+    color: #101828;
+}
+.tappie-scroll-hero__sticky {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: 0 !important;
+    height: 100vh !important;
+    height: 100svh !important;
+    min-height: 100vh !important;
+    overflow: hidden !important;
+    background: #f7f9fc !important;
+    z-index: 1;
+}
+.tappie-scroll-hero__shade {
+    opacity: var(--hero-end-fade, 0) !important;
+}
+.tappie-scroll-hero::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: min(38vh, 360px);
+    background: linear-gradient(180deg, rgba(247,249,252,0) 0%, #f7f9fc 78%, #f7f9fc 100%);
+    pointer-events: none;
+    z-index: 2;
+}
+@media (max-width: 768px) {
+    .tappie-scroll-hero {
+        height: 460vh !important;
+        min-height: 460vh !important;
+    }
 }
 
 
@@ -892,6 +890,7 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
             }
 }
 .tappie-day-loop {
+
             position: relative;
             height: 650vh;
             background:
@@ -901,7 +900,6 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
             color: #101828;
             margin-top: -1px;
             overflow: visible;
-            isolation: isolate;
         }.tappie-day-loop__sticky {
             position: sticky;
             top: 75px;
@@ -979,7 +977,7 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
             transition: width 0.34s ease;
         }.tappie-day-loop__stage {
             position: relative;
-            min-height: min(640px, calc(100svh - 130px));
+            
             display: grid;
             place-items: center;
             perspective: 1200px;
@@ -994,16 +992,16 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
             pointer-events: none;
         }.tappie-day-phone {
             position: relative;
-            width: min(335px, 54vw);
-            aspect-ratio: 0.49;
+            
+            
             border-radius: 48px;
             background: #101828;
             border: 10px solid #111827;
-            overflow: hidden;
+            
             box-shadow:
                 0 50px 120px rgba(16,24,40,0.20),
                 inset 0 0 0 1px rgba(255,255,255,0.14);
-            transform: translateZ(0);
+            
         }.tappie-day-phone::before {
             content: "";
             position: absolute;
@@ -1428,58 +1426,29 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
     }
 }
 
-/* TAPPIE_DAY_LOOP_STICKY_CANONICAL_V5_4
-   Restores sticky scroll behavior and phone dimensions in the day-loop module.
+/* TAPPIE_DAY_LOOP_CANONICAL_V5_4
+   Section owner: day loop. Parent stays overflow-visible so sticky does not collapse.
 */
-@media (max-width: 860px) {
 .tappie-day-loop {
-                height: 720vh;
-                overflow: visible;
-            }.tappie-day-loop__sticky {
-                position: sticky;
-                top: 75px;
-                height: calc(100svh - 75px);
-                min-height: 720px;
-                width: calc(100vw - 32px);
-                grid-template-columns: 1fr;
-                align-content: start;
-                gap: 18px;
-                padding: 32px 0 76px;
-            }.tappie-day-loop__stage {
-                min-height: 392px;
-                padding-top: 34px;
-                padding-bottom: 26px;
-            }.tappie-day-phone {
-                width: min(216px, 55vw);
-                border-width: 8px;
-                border-radius: 40px;
-                transform: translateY(-8px) translateZ(0);
-            }
+    position: relative;
+    height: 650vh;
+    overflow: visible !important;
 }
-@media (min-width: 861px) {
 .tappie-day-loop__sticky {
-                position: sticky;
-                top: 75px;
-            }.tappie-day-loop__stage {
-                min-height: min(680px, calc(100svh - 92px));
-                padding-bottom: 18px;
-            }.tappie-day-phone {
-                height: min(620px, calc(100svh - 128px));
-                max-height: calc(100svh - 128px);
-                width: auto;
-                aspect-ratio: 0.49;
-                transform: translateY(-22px) translateZ(0);
-            }
+    position: -webkit-sticky;
+    position: sticky;
+    top: 75px;
 }
-@media (max-width: 390px) {
-.tappie-day-phone {
-                width: min(202px, 54vw);
-            }.tappie-day-loop__sticky {
-                min-height: 690px;
-                padding-bottom: 68px;
-            }.tappie-day-loop__stage {
-                min-height: 372px;
-            }
+@media (max-width: 860px) {
+    .tappie-day-loop {
+        height: 720vh;
+        overflow: visible !important;
+    }
+    .tappie-day-loop__sticky {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 75px;
+    }
 }
 
 
@@ -3218,7 +3187,9 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
                 width: min(202px, 54vw) !important;
                 
             }
-}#tappieHeroCanvas {
+}.tappie-scroll-hero,
+        .tappie-scroll-hero__sticky,
+        #tappieHeroCanvas {
             backface-visibility: hidden;
             transform: translateZ(0);
         }#tappieHeroCanvas {
@@ -7846,13 +7817,8 @@ body nav.tappie-site-header .nav-logo span {
             pointer-events: none !important;
         }
 
-    
-
-
-
-
-/* TAPPIE_V5_3_VALUE_TABS_REPAIR
-   Restores the Apple-like contained media stage and keeps this section white/light at the bottom.
+/* TAPPIE_VALUE_TABS_CANONICAL_V5_4
+   Section owner: value tabs. Images are square assets, so the media stage crops cleanly instead of showing empty side margins.
 */
 .value-tabs-v51 {
     background:
@@ -7861,6 +7827,9 @@ body nav.tappie-site-header .nav-logo span {
         #f5f5f7 !important;
     overflow: hidden !important;
     padding-bottom: clamp(96px, 11vw, 156px) !important;
+}
+.value-tabs-v51__inner {
+    width: min(1180px, calc(100% - 48px)) !important;
 }
 .value-tabs-v51__title {
     max-width: 900px !important;
@@ -7876,11 +7845,11 @@ body nav.tappie-site-header .nav-logo span {
 }
 .value-tabs-v51__stage {
     position: relative !important;
-    width: min(960px, 100%) !important;
-    aspect-ratio: 16 / 9.8 !important;
+    width: min(880px, 100%) !important;
+    aspect-ratio: 16 / 10 !important;
     margin: clamp(42px, 5vw, 68px) auto 0 !important;
     border-radius: 32px !important;
-    background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(245,245,247,0.98)) !important;
+    background: #fff !important;
     box-shadow:
         inset 0 0 0 1px rgba(255,255,255,0.72),
         0 28px 80px rgba(15, 23, 42, 0.08) !important;
@@ -7889,68 +7858,41 @@ body nav.tappie-site-header .nav-logo span {
 .value-tabs-v51__media {
     position: absolute !important;
     inset: 0 !important;
-    padding: clamp(18px, 2.4vw, 34px) !important;
+    display: grid !important;
+    place-items: stretch !important;
+    padding: 0 !important;
+    opacity: 0;
+    visibility: hidden;
     transform: translateY(10px);
     transition: opacity 320ms ease, visibility 320ms ease, transform 320ms ease;
-    background:
-        radial-gradient(circle at 18% 18%, rgba(0, 122, 255, 0.08), transparent 0 28%),
-        radial-gradient(circle at 82% 82%, rgba(255, 214, 10, 0.08), transparent 0 26%),
-        #fff !important;
+    background: #fff !important;
 }
 .value-tabs-v51__media.is-active {
+    opacity: 1;
+    visibility: visible;
     transform: translateY(0) !important;
 }
 .value-tabs-v51__media img {
+    display: block !important;
     width: 100% !important;
     height: 100% !important;
-    object-fit: contain !important;
     max-width: none !important;
     max-height: none !important;
+    object-fit: cover !important;
+    object-position: center center !important;
 }
 .value-tabs-v51__tabbar {
     width: min(700px, 100%) !important;
 }
 @media (max-width: 640px) {
+    .value-tabs-v51__inner {
+        width: min(100%, calc(100% - 32px)) !important;
+    }
     .value-tabs-v51__stage {
         width: 100% !important;
-        aspect-ratio: 1 / .86 !important;
+        aspect-ratio: 1 / 1.06 !important;
         border-radius: 22px !important;
     }
-}
-
-/* TAPPIE_VALUE_TABS_SQUARE_MEDIA_V5_4
-   The official value-tab images are 1:1. Keep the media card square and centered instead of stretching to a wide 16:10 stage.
-*/
-.value-tabs-v51 {
-            background-color: #f5f5f7;
-        }.value-tabs-v51__stage {
-            width: min(760px, calc(100vw - 48px));
-            aspect-ratio: 1 / 1;
-            border-radius: clamp(24px, 4vw, 38px);
-            background: #fff;
-            overflow: hidden;
-            box-shadow:
-                inset 0 0 0 1px rgba(255,255,255,0.72),
-                0 28px 80px rgba(15, 23, 42, 0.08);
-        }.value-tabs-v51__media {
-            inset: 0;
-            padding: 0;
-        }.value-tabs-v51__media img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-            border-radius: inherit;
-        }
-@media (min-width: 861px) {
-.value-tabs-v51__stage {
-                width: min(720px, calc(100vw - 96px));
-            }
-}
-@media (max-width: 720px) {
-.value-tabs-v51__stage {
-                width: calc(100vw - 52px);
-            }
 }
 
 </style>
