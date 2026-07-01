@@ -8247,7 +8247,7 @@ body nav.tappie-site-header .nav-logo span {
     <div class="ambient-orb orb-2"></div>
 
     <nav class="tappie-site-header" data-tappie-site-header>
-        <a class="nav-logo" href="#tappie-scroll-hero" aria-label="回到 Tappie 首頁">
+        <a class="nav-logo" href="/" data-tappie-home-link aria-label="回到 Tappie 首頁">
             <img src="/assets/logo.webp" alt="Tappie Logo" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'50\' cy=\'50\' r=\'40\' fill=\'%23f1c40f\'/></svg>'">
             <span>Tappie</span>
         </a>
@@ -10517,23 +10517,57 @@ body nav.tappie-site-header .nav-logo span {
 
     <script>
 // 01-hero-sequence.js
-// Extracted from index_19_solution_showcase_v3_clean_text.html
+// TAPPIE_HERO_SEQUENCE_STABILITY_V5_14
+// Section owner: hero sequence.
+// Goal: keep the 241-frame high-quality sequence, but make mobile Safari playback safer.
+// This rewrites the sequence loader directly instead of adding an override patch.
 (() => {
         const scene = document.getElementById('tappie-scroll-hero');
         const canvas = document.getElementById('tappieHeroCanvas');
         if (!scene || !canvas) return;
+
+        // If Safari restores a crashed tab with #tappie-scroll-hero, remove the hash so
+        // a recovered page does not repeatedly reopen directly at the heaviest sequence area.
+        if (window.location.hash === '#tappie-scroll-hero' && window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+
+        const homeLink = document.querySelector('[data-tappie-home-link]');
+        if (homeLink) {
+            homeLink.addEventListener('click', (event) => {
+                event.preventDefault();
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
 
         const ctx = canvas.getContext('2d');
         const loading = document.getElementById('tappieHeroLoading');
         const frameCount = 241;
         const images = new Array(frameCount);
         const loaded = new Set();
+        const pending = new Set();
+        const queued = new Set();
+        const highPriority = new Set();
+        const failed = new Set();
+        let loadQueue = [];
+        let activeLoads = 0;
 
         let currentIndex = -1;
         let targetFrame = 0;
         let displayFrame = 0;
         let rafId = null;
         let sequenceReady = false;
+        let settleTimer = null;
+
+        const mobileQuery = window.matchMedia('(max-width: 768px)');
+        let isMobile = mobileQuery.matches;
+
+        let lastScrollY = window.scrollY || window.pageYOffset || 0;
+        let lastScrollTime = performance.now();
+        let fastScrollUntil = 0;
 
         const framePath = (index) => `/assets/tappie-hero-frames/frame_${String(index + 1).padStart(4, '0')}.webp`;
 
@@ -10544,84 +10578,196 @@ body nav.tappie-site-header .nav-logo span {
             if (loading) loading.classList.add('is-hidden');
         }
 
-        function resizeCanvas() {
-            // Keep the original high-quality sequence files. Cap canvas DPR to prevent iOS/Safari canvas
-            // memory crashes that can show "重複發生錯誤" while still keeping the visual sharp.
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width = Math.round(window.innerWidth * dpr);
-            canvas.height = Math.round(window.innerHeight * dpr);
-            drawFrame(currentIndex >= 0 ? currentIndex : 0, true);
+        function isFastScrolling() {
+            return isMobile && performance.now() < fastScrollUntil;
         }
 
-        function preloadFrame(index, priority = false) {
-            if (index < 0 || index >= frameCount || images[index]) return;
+        function updateScrollVelocity() {
+            const now = performance.now();
+            const y = window.scrollY || window.pageYOffset || 0;
+            const dt = Math.max(16, now - lastScrollTime);
+            const velocity = Math.abs(y - lastScrollY) / dt;
 
-            const img = new Image();
-            img.decoding = 'async';
-            if (priority) img.fetchPriority = 'high';
+            lastScrollY = y;
+            lastScrollTime = now;
 
-            img.onload = () => {
-                loaded.add(index);
-
-                if (index === 0 && currentIndex < 0) {
-                    drawFrame(0, true);
-                    markSequenceReady();
-                }
-
-                const roundedTarget = Math.round(targetFrame);
-                if (Math.abs(index - roundedTarget) <= 1) requestUpdate();
-            };
-
-            img.onerror = () => {
-                images[index] = null;
-            };
-
-            img.src = framePath(index);
-            images[index] = img;
-        }
-
-        function preloadRange(start, end, priority = false) {
-            for (let i = Math.max(0, start); i <= Math.min(frameCount - 1, end); i += 1) {
-                preloadFrame(i, priority);
+            // A fast iOS flick can cross hundreds of vh quickly. During that burst, do not
+            // aggressively decode image ranges; draw the closest available frame and wait.
+            if (isMobile && velocity > 1.35) {
+                fastScrollUntil = now + 240;
             }
         }
 
-        function preloadInitial() {
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            const initialCount = isMobile ? 8 : 16;
-            preloadRange(0, initialCount - 1, true);
+        function resizeCanvas() {
+            // Keep original high-quality 241-frame assets. Only cap the canvas pixel ratio on mobile
+            // to avoid very large canvas backing stores on iOS Safari.
+            const dprCap = isMobile ? 1.5 : 2;
+            const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+            const width = Math.round(window.innerWidth * dpr);
+            const height = Math.round(window.innerHeight * dpr);
 
-            // Desktop can safely warm more frames in the background.
-            // Mobile keeps the same 241 full-quality frame set, but loads around scroll position
-            // to avoid browser memory crashes.
+            if (canvas.width !== width || canvas.height !== height) {
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            drawFrame(currentIndex >= 0 ? currentIndex : 0, true);
+        }
+
+        function trimMobileQueue(centerIndex) {
+            if (!isMobile || loadQueue.length <= 32) return;
+
+            const keep = loadQueue
+                .slice()
+                .sort((a, b) => Math.abs(a - centerIndex) - Math.abs(b - centerIndex))
+                .slice(0, 32);
+
+            queued.clear();
+            loadQueue = keep;
+            keep.forEach((index) => queued.add(index));
+        }
+
+        function pumpLoadQueue() {
+            const maxConcurrent = isMobile ? 2 : 4;
+
+            while (activeLoads < maxConcurrent && loadQueue.length) {
+                const index = loadQueue.shift();
+                queued.delete(index);
+
+                if (
+                    index < 0 ||
+                    index >= frameCount ||
+                    images[index] ||
+                    loaded.has(index) ||
+                    pending.has(index) ||
+                    failed.has(index)
+                ) {
+                    continue;
+                }
+
+                const priority = highPriority.has(index);
+                highPriority.delete(index);
+                pending.add(index);
+                activeLoads += 1;
+
+                const img = new Image();
+                img.decoding = 'async';
+                if (priority) img.fetchPriority = 'high';
+
+                img.onload = () => {
+                    pending.delete(index);
+                    loaded.add(index);
+                    images[index] = img;
+                    activeLoads = Math.max(0, activeLoads - 1);
+
+                    if (index === 0 && currentIndex < 0) {
+                        drawFrame(0, true);
+                        markSequenceReady();
+                    }
+
+                    const roundedTarget = Math.round(targetFrame);
+                    if (Math.abs(index - roundedTarget) <= 1) requestUpdate();
+
+                    pumpLoadQueue();
+                };
+
+                img.onerror = () => {
+                    pending.delete(index);
+                    failed.add(index);
+                    images[index] = null;
+                    activeLoads = Math.max(0, activeLoads - 1);
+                    pumpLoadQueue();
+                };
+
+                img.src = framePath(index);
+            }
+        }
+
+        function preloadFrame(index, priority = false) {
+            index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
+            if (
+                images[index] ||
+                loaded.has(index) ||
+                pending.has(index) ||
+                queued.has(index) ||
+                failed.has(index)
+            ) {
+                return;
+            }
+
+            if (priority) {
+                highPriority.add(index);
+                loadQueue.unshift(index);
+            } else {
+                loadQueue.push(index);
+            }
+
+            queued.add(index);
+            trimMobileQueue(Math.round(targetFrame || index));
+            pumpLoadQueue();
+        }
+
+        function preloadInitial() {
+            const initialCount = isMobile ? 10 : 16;
+            for (let i = 0; i < Math.min(initialCount, frameCount); i += 1) {
+                preloadFrame(i, true);
+            }
+
+            // Desktop can safely warm more frames in the background. Mobile keeps the same
+            // 241-frame set, but only decodes near the current scroll position.
             if (isMobile) return;
 
             let i = initialCount;
             const batchSize = 8;
-            const delay = 80;
+            const delay = 90;
 
             const batch = () => {
                 const end = Math.min(i + batchSize - 1, frameCount - 1);
-                preloadRange(i, end);
-                i = end + 1;
+                for (; i <= end; i += 1) preloadFrame(i);
                 if (i < frameCount) window.setTimeout(batch, delay);
             };
 
             window.setTimeout(batch, 180);
         }
 
-        function preloadAround(index) {
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        function preloadAround(index, force = false) {
+            index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
+
+            if (isMobile && isFastScrolling() && !force) {
+                preloadFrame(index);
+                scheduleSettledPreload(index);
+                return;
+            }
+
             const before = isMobile ? 5 : 8;
-            const after = isMobile ? 12 : 18;
-            preloadRange(index - before, index + after);
+            const after = isMobile ? 10 : 18;
+            const candidates = [];
+
+            for (let i = index - before; i <= index + after; i += 1) {
+                if (i >= 0 && i < frameCount) candidates.push(i);
+            }
+
+            candidates
+                .sort((a, b) => Math.abs(a - index) - Math.abs(b - index))
+                .forEach((frameIndex) => preloadFrame(frameIndex));
+
+            trimMobileQueue(index);
+        }
+
+        function scheduleSettledPreload(index) {
+            if (!isMobile) return;
+            window.clearTimeout(settleTimer);
+            settleTimer = window.setTimeout(() => {
+                preloadAround(index, true);
+                requestUpdate();
+            }, 260);
         }
 
         function nearestLoadedIndex(index) {
             index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
             if (loaded.has(index) && images[index]) return index;
 
-            const maxDistance = 28;
+            const maxDistance = isMobile ? 18 : 28;
             for (let distance = 1; distance <= maxDistance; distance += 1) {
                 const prev = index - distance;
                 const next = index + distance;
@@ -10648,7 +10794,7 @@ body nav.tappie-site-header .nav-logo span {
 
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
             ctx.imageSmoothingEnabled = true;
-            if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+            if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = isFastScrolling() ? 'medium' : 'high';
             ctx.drawImage(img, x, y, width, height);
             return true;
         }
@@ -10701,9 +10847,10 @@ body nav.tappie-site-header .nav-logo span {
         }
 
         function updateTargetFromScroll() {
+            updateScrollVelocity();
+
             const progress = getProgress();
             targetFrame = progress * (frameCount - 1);
-            preloadAround(Math.round(targetFrame));
             updateHeroText(progress);
         }
 
@@ -10711,16 +10858,20 @@ body nav.tappie-site-header .nav-logo span {
             rafId = null;
             updateTargetFromScroll();
 
-            const diff = targetFrame - displayFrame;
-            if (Math.abs(diff) < 0.08) {
+            if (isFastScrolling()) {
                 displayFrame = targetFrame;
             } else {
-                displayFrame += diff * 0.18;
+                const diff = targetFrame - displayFrame;
+                if (Math.abs(diff) < 0.08) {
+                    displayFrame = targetFrame;
+                } else {
+                    displayFrame += diff * 0.18;
+                }
             }
 
             drawFrame(displayFrame);
 
-            if (Math.abs(targetFrame - displayFrame) > 0.12) requestUpdate();
+            if (Math.abs(targetFrame - displayFrame) > 0.12 && !isFastScrolling()) requestUpdate();
         }
 
         function requestUpdate() {
@@ -10734,12 +10885,24 @@ body nav.tappie-site-header .nav-logo span {
         requestUpdate();
 
         window.addEventListener('resize', () => {
+            isMobile = mobileQuery.matches;
             resizeCanvas();
             requestUpdate();
         });
+
         window.addEventListener('scroll', requestUpdate, { passive: true });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            } else if (!document.hidden) {
+                requestUpdate();
+            }
+        });
     })();
 
+</script>
 </script>
 
 
