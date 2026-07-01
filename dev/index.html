@@ -436,13 +436,12 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
     }
 }
 
-/* 01-hero-sequence.css
-   Source: index_19_solution_showcase_v3_clean_text.html lines 306-496
-   Scope: scroll sequence hero and responsive hero rules
+/* 01-hero-video.css
+   Scope: sticky hero video, video-time copy sync and responsive hero rules
 */
 .tappie-scroll-hero {
             position: relative;
-            height: 560vh;
+            height: 260vh;
             background: #f7f9fc;
             color: #101828;
             margin: 0;
@@ -469,7 +468,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             transition: opacity 0.35s ease;
             pointer-events: none;
             user-select: none;
-        }.tappie-scroll-hero__canvas {
+        }.tappie-scroll-hero__video {
             position: absolute;
             inset: 0;
             width: 100%;
@@ -478,9 +477,9 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             z-index: 1;
             opacity: 0;
             transition: opacity 0.24s ease;
-        }.tappie-scroll-hero.is-sequence-ready .tappie-scroll-hero__canvas {
+        }.tappie-scroll-hero.is-video-ready .tappie-scroll-hero__video {
             opacity: 1;
-        }.tappie-scroll-hero.is-sequence-ready .tappie-scroll-hero__first-frame {
+        }.tappie-scroll-hero.is-video-ready .tappie-scroll-hero__first-frame {
             opacity: 0;
         }.tappie-scroll-hero__shade {
             position: absolute;
@@ -602,7 +601,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             display: none;
         }@media (max-width: 768px) {
 .tappie-scroll-hero {
-                height: 460vh;
+                height: 240vh;
             }.tappie-scroll-hero__copy {
                 left: 16px;
                 right: auto;
@@ -634,13 +633,13 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
 nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.nav-logo img { width: 32px; }.nav-actions { gap: 6px; }.nav-btn { padding: 7px 9px; font-size: 11px; }
 }
 
-/* TAPPIE_HERO_SEQUENCE_CANONICAL_V5_5
-   Section owner: scroll sequence. No root overflow/parent transform; sticky owns the sequence.
+/* TAPPIE_HERO_VIDEO_CANONICAL_V5_13
+   Section owner: sticky hero video. Scroll only reserves stage time; video.currentTime owns copy cues.
 */
 .tappie-scroll-hero {
     position: relative !important;
-    height: 560vh !important;
-    min-height: 560vh !important;
+    height: 260vh !important;
+    min-height: 260vh !important;
     overflow: visible !important;
     background: #f7f9fc !important;
     color: #101828;
@@ -661,8 +660,8 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
 }
 @media (max-width: 768px) {
     .tappie-scroll-hero {
-        height: 460vh !important;
-        min-height: 460vh !important;
+        height: 240vh !important;
+        min-height: 240vh !important;
     }
 }
 
@@ -3201,10 +3200,11 @@ nav { padding: 0 12px; }.nav-logo { font-size: 16px; letter-spacing: 1.2px; }.na
                 width: min(202px, 54vw) !important;
                 
             }
-}#tappieHeroCanvas {
+}#tappieHeroVideo {
             backface-visibility: hidden;
             transform: translateZ(0);
-            image-rendering: auto;
+            object-fit: cover;
+            object-position: center center;
         }@media (min-width: 861px) {
 .tappie-day-loop__sticky {
                 padding-bottom: clamp(82px, 9vw, 128px) !important;
@@ -8285,33 +8285,45 @@ body nav.tappie-site-header .nav-logo span {
     <section class="tappie-scroll-hero" id="tappie-scroll-hero" aria-label="Tappie 數位口說名牌展示">
         <div class="tappie-scroll-hero__sticky">
             <img id="tappieHeroFirstFrame" class="tappie-scroll-hero__first-frame" src="/assets/tappie-hero-frames/frame_0001.webp" alt="" aria-hidden="true" decoding="async" fetchpriority="high">
-            <canvas id="tappieHeroCanvas" class="tappie-scroll-hero__canvas"></canvas>
+            <video
+                id="tappieHeroVideo"
+                class="tappie-scroll-hero__video"
+                muted
+                playsinline
+                autoplay
+                preload="auto"
+                poster="/assets/tappie-hero-frames/frame_0001.webp"
+                aria-hidden="true"
+            >
+                <source src="/assets/video/tappie-hero-sequence.webm" type="video/webm">
+                <source src="/assets/video/tappie-hero-sequence.mp4" type="video/mp4">
+            </video>
             <div class="tappie-scroll-hero__shade"></div>
             <div class="tappie-scroll-hero__copy" aria-live="polite">
                 <div class="tappie-scroll-hero__steps">
-                    <article class="tappie-scroll-hero__step is-active" data-start="0" data-end="0.24">
+                    <article class="tappie-scroll-hero__step is-active" data-start="0" data-end="0.24" data-time-start="0" data-time-end="2.4">
                         <div class="tappie-scroll-hero__step-kicker">01 / 國小學號牌</div>
                         <h1>戴上<br>名牌</h1>
                         <p>每天都會戴，就是最自然的口說入口。</p>
                     </article>
-                    <article class="tappie-scroll-hero__step" data-start="0.24" data-end="0.48">
+                    <article class="tappie-scroll-hero__step" data-start="0.24" data-end="0.48" data-time-start="2.4" data-time-end="4.8">
                         <div class="tappie-scroll-hero__step-kicker">02 / 名牌客製化</div>
                         <h1>品牌<br>客製</h1>
                         <p>讓學生的日常都是你品牌的舞台。</p>
                     </article>
-                    <article class="tappie-scroll-hero__step" data-start="0.48" data-end="0.74">
+                    <article class="tappie-scroll-hero__step" data-start="0.48" data-end="0.74" data-time-start="4.8" data-time-end="7.4">
                         <div class="tappie-scroll-hero__step-kicker">03 / 阿嬤都會用</div>
                         <h1>一嗶<br>登入</h1>
                         <p>不用帳密、不用下載 App。</p>
                     </article>
-                    <article class="tappie-scroll-hero__step" data-start="0.74" data-end="1">
+                    <article class="tappie-scroll-hero__step" data-start="0.74" data-end="1" data-time-start="7.4">
                         <div class="tappie-scroll-hero__step-kicker">04 / 個人學習系統</div>
                         <h1>學習<br>就那麼簡單</h1>
                         <p>從任何裝置直接進入練習。</p>
                     </article>
                 </div>
             </div>
-            <div class="tappie-scroll-hero__loading" id="tappieHeroLoading">Loading hero…</div>
+            <div class="tappie-scroll-hero__loading" id="tappieHeroLoading">Preparing hero video…</div>
         </div>
     </section>
 
@@ -10516,228 +10528,162 @@ body nav.tappie-site-header .nav-logo span {
 
 
     <script>
-// 01-hero-sequence.js
-// Extracted from index_19_solution_showcase_v3_clean_text.html
+// 01-hero-video.js
+// v5.13 Hero Video Pass: video.currentTime controls the copy cues; scroll only reserves sticky stage time.
 (() => {
         const scene = document.getElementById('tappie-scroll-hero');
-        const canvas = document.getElementById('tappieHeroCanvas');
-        if (!scene || !canvas) return;
+        const video = document.getElementById('tappieHeroVideo');
+        if (!scene || !video) return;
 
-        const ctx = canvas.getContext('2d');
         const loading = document.getElementById('tappieHeroLoading');
-        const frameCount = 241;
-        const images = new Array(frameCount);
-        const loaded = new Set();
-
-        let currentIndex = -1;
-        let targetFrame = 0;
-        let displayFrame = 0;
-        let rafId = null;
-        let sequenceReady = false;
-
-        const framePath = (index) => `/assets/tappie-hero-frames/frame_${String(index + 1).padStart(4, '0')}.webp`;
-
-        function markSequenceReady() {
-            if (sequenceReady) return;
-            sequenceReady = true;
-            scene.classList.add('is-sequence-ready');
-            if (loading) loading.classList.add('is-hidden');
-        }
-
-        function resizeCanvas() {
-            // Keep the original high-quality sequence files. Cap canvas DPR to prevent iOS/Safari canvas
-            // memory crashes that can show "重複發生錯誤" while still keeping the visual sharp.
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width = Math.round(window.innerWidth * dpr);
-            canvas.height = Math.round(window.innerHeight * dpr);
-            drawFrame(currentIndex >= 0 ? currentIndex : 0, true);
-        }
-
-        function preloadFrame(index, priority = false) {
-            if (index < 0 || index >= frameCount || images[index]) return;
-
-            const img = new Image();
-            img.decoding = 'async';
-            if (priority) img.fetchPriority = 'high';
-
-            img.onload = () => {
-                loaded.add(index);
-
-                if (index === 0 && currentIndex < 0) {
-                    drawFrame(0, true);
-                    markSequenceReady();
-                }
-
-                const roundedTarget = Math.round(targetFrame);
-                if (Math.abs(index - roundedTarget) <= 1) requestUpdate();
-            };
-
-            img.onerror = () => {
-                images[index] = null;
-            };
-
-            img.src = framePath(index);
-            images[index] = img;
-        }
-
-        function preloadRange(start, end, priority = false) {
-            for (let i = Math.max(0, start); i <= Math.min(frameCount - 1, end); i += 1) {
-                preloadFrame(i, priority);
-            }
-        }
-
-        function preloadInitial() {
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            const initialCount = isMobile ? 8 : 16;
-            preloadRange(0, initialCount - 1, true);
-
-            // Desktop can safely warm more frames in the background.
-            // Mobile keeps the same 241 full-quality frame set, but loads around scroll position
-            // to avoid browser memory crashes.
-            if (isMobile) return;
-
-            let i = initialCount;
-            const batchSize = 8;
-            const delay = 80;
-
-            const batch = () => {
-                const end = Math.min(i + batchSize - 1, frameCount - 1);
-                preloadRange(i, end);
-                i = end + 1;
-                if (i < frameCount) window.setTimeout(batch, delay);
-            };
-
-            window.setTimeout(batch, 180);
-        }
-
-        function preloadAround(index) {
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            const before = isMobile ? 5 : 8;
-            const after = isMobile ? 12 : 18;
-            preloadRange(index - before, index + after);
-        }
-
-        function nearestLoadedIndex(index) {
-            index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
-            if (loaded.has(index) && images[index]) return index;
-
-            const maxDistance = 28;
-            for (let distance = 1; distance <= maxDistance; distance += 1) {
-                const prev = index - distance;
-                const next = index + distance;
-                if (prev >= 0 && loaded.has(prev) && images[prev]) return prev;
-                if (next < frameCount && loaded.has(next) && images[next]) return next;
-            }
-
-            if (loaded.has(0) && images[0]) return 0;
-            return currentIndex >= 0 ? currentIndex : -1;
-        }
-
-        function drawCover(img) {
-            if (!img || !img.complete || !img.naturalWidth) return false;
-
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const imageWidth = img.naturalWidth;
-            const imageHeight = img.naturalHeight;
-            const scale = Math.max(canvasWidth / imageWidth, canvasHeight / imageHeight);
-            const width = imageWidth * scale;
-            const height = imageHeight * scale;
-            const x = (canvasWidth - width) / 2;
-            const y = (canvasHeight - height) / 2;
-
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-            ctx.imageSmoothingEnabled = true;
-            if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, x, y, width, height);
-            return true;
-        }
-
-        function drawFrame(index, force = false) {
-            index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
-            preloadAround(index);
-
-            const drawableIndex = nearestLoadedIndex(index);
-            if (drawableIndex < 0) {
-                preloadFrame(0, true);
-                return false;
-            }
-
-            if (!force && drawableIndex === currentIndex) return true;
-
-            const img = images[drawableIndex];
-            if (!drawCover(img)) return false;
-
-            currentIndex = drawableIndex;
-            if (drawableIndex === 0 || !sequenceReady) markSequenceReady();
-            return true;
-        }
-
-        function getProgress() {
-            const maxScroll = scene.offsetHeight - window.innerHeight;
-            const rect = scene.getBoundingClientRect();
-            const y = Math.min(Math.max(-rect.top, 0), maxScroll);
-            return maxScroll > 0 ? y / maxScroll : 0;
-        }
-
         const heroSteps = Array.from(scene.querySelectorAll('.tappie-scroll-hero__step'));
+        const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        let activeIndex = -1;
+        let rafId = null;
+        let observer = null;
 
-        function updateHeroText(progress) {
-            let activeFound = false;
-            heroSteps.forEach((step) => {
-                const start = Number(step.dataset.start || 0);
-                const end = Number(step.dataset.end || 1);
-                const active = progress >= start && progress < end;
-                step.classList.toggle('is-active', active);
-                if (active) activeFound = true;
+        function getVideoDuration() {
+            return Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 10;
+        }
+
+        function cueForStep(step, index) {
+            const duration = getVideoDuration();
+            const explicitStart = Number(step.dataset.timeStart);
+            const explicitEnd = Number(step.dataset.timeEnd);
+
+            // Preferred: seconds mapped to the edited hero video.
+            if (Number.isFinite(explicitStart)) {
+                return {
+                    start: explicitStart,
+                    end: Number.isFinite(explicitEnd) ? explicitEnd : Number.POSITIVE_INFINITY
+                };
+            }
+
+            // Fallback: reuse the old scroll ratios against the actual video duration.
+            const ratioStart = Number(step.dataset.start || 0);
+            const ratioEnd = Number(step.dataset.end || 1);
+            return {
+                start: Math.max(0, ratioStart) * duration,
+                end: Math.max(ratioEnd, ratioStart) * duration || Number.POSITIVE_INFINITY
+            };
+        }
+
+        function setActiveStep(index) {
+            if (!heroSteps.length) return;
+            index = Math.max(0, Math.min(heroSteps.length - 1, index));
+            if (index === activeIndex) return;
+            activeIndex = index;
+            heroSteps.forEach((step, i) => {
+                step.classList.toggle('is-active', i === index);
+            });
+        }
+
+        function updateHeroTextFromVideo() {
+            const currentTime = video.currentTime || 0;
+            let nextIndex = 0;
+
+            heroSteps.forEach((step, index) => {
+                const cue = cueForStep(step, index);
+                if (currentTime >= cue.start && currentTime < cue.end) {
+                    nextIndex = index;
+                }
             });
 
-            if (!activeFound && heroSteps.length) {
-                heroSteps[heroSteps.length - 1].classList.add('is-active');
-            }
+            // When the video reaches the end, hold the final message with the final frame.
+            if (video.ended && heroSteps.length) nextIndex = heroSteps.length - 1;
+            setActiveStep(nextIndex);
 
+            const duration = getVideoDuration();
+            const progress = Math.max(0, Math.min(1, currentTime / duration));
             const endFade = Math.max(0, Math.min(1, (progress - 0.86) / 0.14));
             scene.style.setProperty('--hero-end-fade', endFade.toFixed(3));
         }
 
-        function updateTargetFromScroll() {
-            const progress = getProgress();
-            targetFrame = progress * (frameCount - 1);
-            preloadAround(Math.round(targetFrame));
-            updateHeroText(progress);
+        function requestSync() {
+            if (!rafId) rafId = requestAnimationFrame(syncLoop);
         }
 
-        function renderLoop() {
+        function syncLoop() {
             rafId = null;
-            updateTargetFromScroll();
+            updateHeroTextFromVideo();
+            if (!video.paused && !video.ended) requestSync();
+        }
 
-            const diff = targetFrame - displayFrame;
-            if (Math.abs(diff) < 0.08) {
-                displayFrame = targetFrame;
-            } else {
-                displayFrame += diff * 0.18;
+        function markVideoReady() {
+            scene.classList.add('is-video-ready');
+            if (loading) loading.classList.add('is-hidden');
+            updateHeroTextFromVideo();
+        }
+
+        function playHeroVideo() {
+            if (reducedMotionQuery.matches || video.ended) return;
+            const playAttempt = video.play();
+            if (playAttempt && typeof playAttempt.catch === 'function') {
+                playAttempt.catch(() => {
+                    // iOS Low Power Mode or strict autoplay settings can reject playback.
+                    // Keep the poster/first frame and the first copy visible instead of breaking the section.
+                    setActiveStep(0);
+                });
+            }
+        }
+
+        function setupViewportPlayback() {
+            if (!('IntersectionObserver' in window)) {
+                playHeroVideo();
+                return;
             }
 
-            drawFrame(displayFrame);
+            observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.18) {
+                        playHeroVideo();
+                    } else if (!video.ended) {
+                        video.pause();
+                    }
+                });
+            }, { threshold: [0, 0.18, 0.5] });
 
-            if (Math.abs(targetFrame - displayFrame) > 0.12) requestUpdate();
+            observer.observe(scene);
         }
 
-        function requestUpdate() {
-            if (!rafId) rafId = requestAnimationFrame(renderLoop);
-        }
-
-        resizeCanvas();
-        preloadInitial();
-        preloadFrame(0, true);
-        updateTargetFromScroll();
-        requestUpdate();
-
-        window.addEventListener('resize', () => {
-            resizeCanvas();
-            requestUpdate();
+        video.addEventListener('loadedmetadata', () => {
+            updateHeroTextFromVideo();
         });
-        window.addEventListener('scroll', requestUpdate, { passive: true });
+        video.addEventListener('loadeddata', markVideoReady, { once: true });
+        video.addEventListener('canplay', markVideoReady, { once: true });
+        video.addEventListener('play', requestSync);
+        video.addEventListener('timeupdate', requestSync);
+        video.addEventListener('ended', () => {
+            scene.classList.add('is-video-ended');
+            scene.style.setProperty('--hero-end-fade', '1');
+            setActiveStep(heroSteps.length - 1);
+        });
+        video.addEventListener('error', () => {
+            scene.classList.add('is-video-unavailable');
+            if (loading) loading.classList.add('is-hidden');
+            setActiveStep(0);
+        });
+
+        reducedMotionQuery.addEventListener?.('change', () => {
+            if (reducedMotionQuery.matches) {
+                video.pause();
+                setActiveStep(0);
+            } else {
+                playHeroVideo();
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                video.pause();
+            } else {
+                playHeroVideo();
+            }
+        });
+
+        setActiveStep(0);
+        setupViewportPlayback();
+        requestSync();
     })();
 
 </script>
