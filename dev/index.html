@@ -137,16 +137,16 @@
             --tappie-vs-stage-shadow-card: 0 22px 62px rgba(15, 23, 42, .075);}html, body {
             margin: 0; padding: 0;
             width: 100%; max-width: 100%;
-            overflow-x: hidden;
+            overflow-x: clip;
+            overscroll-behavior-x: none;
         }html {
             background: #f5f5f7;
         }body {
-            position: relative;
             background: #f5f5f7;
             color: white;
             scroll-behavior: smooth;
+            overflow-x: clip;
             overscroll-behavior-x: none;
-            overflow-x: hidden;
         }.ambient-orb {
             position: fixed; border-radius: 50%; filter: blur(100px);
             z-index: -1; opacity: 0.4; pointer-events: none;
@@ -429,13 +429,83 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
         }body.login-modal-open { overflow: hidden; }@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }@keyframes modalPanelIn { from { opacity: 0; transform: translateY(22px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 
-/* TAPPIE_FOUNDATION_SECTION_X_GUARD_V5_5
-   Horizontal containment is scoped to non-sticky sections only; html/body remain overflow-visible so sticky works.
+/* TAPPIE_STABILITY_VIEWPORT_AND_MEDIA_GUARD_V8
+   Purpose: prevent mobile horizontal exposure and give image-heavy sections a designed fallback while assets load.
+   Rule: this is the foundation guard block; do not duplicate at the end of the file.
 */
+@supports not (overflow-x: clip) {
+    html,
+    body {
+        overflow-x: hidden;
+    }
+}
+body > section {
+    max-width: 100%;
+}
+img,
+video,
+canvas,
+svg {
+    max-width: 100%;
+}
+.tappie-day-loop,
+.tappie-scroll-hero,
+.tappie-role-story,
+.tappie-implementation-media-v36,
+.tappie-physical-products-v38,
+.tappie-pricing-v46,
+.tappie-booking-v47,
+.tappie-faq-v49,
+.tappie-footer-v49 {
+    max-width: 100%;
+}
+.tappie-role-bg,
+.tappie-feature-photo,
+.booking-v47-media,
+.physical-v38-card,
+.physical-v38-charm,
+.physical-v38-stand,
+.tappie-solution-showcase__hero-figure,
+.tappie-day-screen {
+    background:
+        radial-gradient(circle at 74% 24%, rgba(0, 123, 255, .08), transparent 38%),
+        radial-gradient(circle at 22% 78%, rgba(241, 196, 15, .075), transparent 42%),
+        linear-gradient(135deg, #f8fafc 0%, #eef5fb 100%);
+}
+.tappie-day-screen img,
+.tappie-feature-photo,
+.tappie-role-bg-img,
+.booking-v47-media img,
+.tappie-solution-showcase__hero-figure img,
+.physical-v38-card img,
+.physical-v38-charm,
+.physical-v38-stand {
+    background:
+        radial-gradient(circle at 68% 20%, rgba(0, 123, 255, .10), transparent 36%),
+        linear-gradient(135deg, #f8fafc 0%, #edf4fb 100%);
+}
+.tappie-media-ready {
+    animation: tappieMediaReadyFade .28s ease both;
+}
+@keyframes tappieMediaReadyFade {
+    from { opacity: .985; }
+    to { opacity: 1; }
+}
 @media (max-width: 860px) {
-    body > section:not(.tappie-scroll-hero):not(.tappie-day-loop) {
-        max-width: 100%;
+    body > section:not(.tappie-scroll-hero) {
         overflow-x: clip;
+    }
+    .tappie-scroll-hero,
+    .tappie-day-loop,
+    .tappie-day-loop__sticky,
+    .tappie-day-loop__stage,
+    .tappie-role-story,
+    .tappie-feature-track,
+    .pricing-v46-track {
+        max-width: 100%;
+    }
+    .tappie-day-loop__sticky {
+        box-sizing: border-box;
     }
 }
 
@@ -969,7 +1039,8 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             position: relative;
             height: 650vh;
             margin-top: -1px;
-            overflow: visible;
+            overflow-x: clip;
+            overflow-y: visible;
             isolation: isolate;
             color: var(--day-ink, #0b1526);
             --day-ink: #0b1526;
@@ -1013,15 +1084,14 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             left: 0;
             right: 0;
             top: 0;
-            height: clamp(360px, 46svh, 620px);
+            height: clamp(92px, 12svh, 176px);
             z-index: 0;
             pointer-events: none;
             background:
                 linear-gradient(180deg,
                     #f5f5f7 0%,
-                    rgba(245,245,247,.94) 16%,
-                    rgba(245,245,247,.68) 42%,
-                    rgba(245,245,247,.24) 72%,
+                    rgba(245,245,247,.70) 34%,
+                    rgba(245,245,247,.18) 72%,
                     rgba(245,245,247,0) 100%);
         }
         .tappie-day-loop::after {
@@ -1275,6 +1345,9 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             place-items: center;
             perspective: 1200px;
             z-index: 2;
+            min-width: 0;
+            max-width: 100%;
+            background: transparent;
         }
         .tappie-day-loop__glow {
             position: absolute;
@@ -1292,8 +1365,11 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
         .tappie-day-phone {
             position: relative;
             border-radius: 48px;
-            background: #101828;
+            background:
+                radial-gradient(circle at 50% 18%, rgba(255,255,255,.08), transparent 36%),
+                linear-gradient(180deg, #101828 0%, #070b14 100%);
             border: 10px solid #111827;
+            isolation: isolate;
             box-shadow:
                 0 52px 118px rgba(8, 15, 31, .22),
                 0 12px 34px rgba(8, 15, 31, .16),
@@ -1317,7 +1393,11 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             opacity: 0;
             transform: scale(1.025);
             transition: opacity 0.46s ease, transform 0.46s ease;
-            background: #f8fafc;
+            background:
+                radial-gradient(circle at 68% 22%, rgba(0,123,255,.10), transparent 38%),
+                radial-gradient(circle at 30% 86%, rgba(241,196,15,.08), transparent 44%),
+                linear-gradient(135deg, #f8fafc 0%, #edf4fb 100%);
+            will-change: opacity, transform;
         }
         .tappie-day-screen.is-active {
             opacity: 1;
@@ -1328,6 +1408,9 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             height: 100%;
             object-fit: cover;
             display: block;
+            background:
+                radial-gradient(circle at 72% 24%, rgba(0,123,255,.09), transparent 38%),
+                linear-gradient(135deg, #f8fafc 0%, #edf4fb 100%);
         }
         .tappie-day-screen.mock {
             padding: 56px 26px 32px;
@@ -1576,15 +1659,12 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             }.tappie-day-loop__sticky {
                 top: 75px;
                 height: calc(100svh - 75px);
-                width: 100%;
-                max-width: 100vw;
-                box-sizing: border-box;
+                
+                width: calc(100vw - 32px);
                 grid-template-columns: 1fr;
-                padding: 28px 26px 80px;
-            }.tappie-day-loop__copy,
-            .tappie-day-loop__stage {
-                min-width: 0;
-                max-width: 100%;
+                
+                
+                padding: 28px 0 80px;
             }.tappie-day-loop__copy h2 {
                 font-size: clamp(2.25rem, 10.5vw, 4.35rem);
             }.tappie-day-loop__step-title {
@@ -1593,7 +1673,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
                 max-width: 31ch;
                 font-size: 0.94rem;
             }.tappie-day-phone {
-                max-width: min(360px, calc(100vw - 72px));
+                
                 border-width: 8px;
                 border-radius: 40px;
             }
@@ -1754,13 +1834,14 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
     }
 }
 
-/* TAPPIE_DAY_LOOP_CANONICAL_V5_5
-   Section owner: day loop. Parent stays overflow-visible; root overflow is not used.
+/* TAPPIE_DAY_LOOP_CANONICAL_V8
+   Section owner: day loop. Sticky remains vertical-visible; horizontal paint is clipped to prevent mobile side exposure.
 */
 .tappie-day-loop {
     position: relative;
     height: 650vh;
-    overflow: visible !important;
+    overflow-x: clip;
+    overflow-y: visible;
 }
 .tappie-day-loop__sticky {
     position: -webkit-sticky;
@@ -1770,12 +1851,14 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
 @media (max-width: 860px) {
     .tappie-day-loop {
         height: 720vh;
-        overflow: visible !important;
+        overflow-x: clip;
+        overflow-y: visible;
     }
     .tappie-day-loop__sticky {
         position: -webkit-sticky;
         position: sticky;
         top: 75px;
+        max-width: calc(100vw - 32px);
     }
 }
 
@@ -5129,7 +5212,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             color: #101828 !important;
         }.mode-donut-inner {
             width: 94px; height: 94px; border-radius: 50%; background:#fff; display:grid; place-items:center; text-align:center; box-shadow: inset 0 0 0 1px rgba(15,23,42,.06);
-        }.mode-donut-inner strong { display:block; font-size: 30px; line-height:.92; letter-spacing:-.05em; transform: translateY(2px); }.mode-donut-inner span { display:block; margin-top:0; color:#64748b; font-size: 11px; font-weight: 850; transform: translateY(-2px); }.manager-kit-ui { background: #f6f7fb !important; }.manager-kit-ui .kit-card .kit-status.muted { display:none !important; }@media (max-width: 860px) {
+        }.mode-donut-inner strong { display:block; font-size: 30px; line-height:.92; letter-spacing:-.05em; transform: translateY(6px); }.mode-donut-inner span { display:block; margin-top:0; color:#64748b; font-size: 11px; font-weight: 850; transform: translateY(-2px); }.manager-kit-ui { background: #f6f7fb !important; }.manager-kit-ui .kit-card .kit-status.muted { display:none !important; }@media (max-width: 860px) {
 .student-guide-card .ref-guide-ui .anim-chat-bubble {
                 margin-top: 14px !important;
             }.kit-console {padding: 14px; }.mode-donut-inner { width: 76px; height: 76px; }.mode-donut-inner strong { font-size: 24px; }
@@ -7261,15 +7344,15 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             appearance: none;
             border: 0;
             background: transparent;
-            padding: 24px 28px;
+            padding: 22px 26px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 22px;
             color: #1d1d1f;
-            font-size: clamp(1.02rem, 1.22vw, 1.14rem);
-            line-height: 1.3;
-            font-weight: 880;
+            font-size: clamp(1.02rem, 1.32vw, 1.14rem);
+            line-height: 1.30;
+            font-weight: 840;
             letter-spacing: -.04em;
             text-align: left;
             cursor: pointer;
@@ -7407,8 +7490,8 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             }.faq-v49-item {
                 border-radius: 22px;
             }.faq-v49-question {
-                padding: 21px 22px;
-                font-size: 1.02rem;
+                padding: 22px 22px;
+                font-size: 1.12rem;
             }.faq-v49-answer p {
                 padding: 0 22px 22px;
                 font-size: 1rem;
@@ -10227,9 +10310,9 @@ body nav.tappie-site-header .nav-logo span {
             <div class="footer-v49-col">
                 <h3>聯絡我們</h3>
                 <div class="footer-v49-links">
-                    <a href="https://lin.ee/zvNUN4Q" target="_blank" rel="noopener noreferrer">官方 LINE</a>
                     <a href="tel:0958965733">0958965733</a>
                     <a href="mailto:system@tappieapp.com">system@tappieapp.com</a>
+                    <a href="https://lin.ee/zvNUN4Q" target="_blank" rel="noopener noreferrer">官方 LINE</a>
                 </div>
             </div>
         </div>
@@ -11202,63 +11285,111 @@ body nav.tappie-site-header .nav-logo span {
 
     <script>
 // 02-day-loop.js
-// Clean v6: day-loop state + premium atmosphere phase, no overlay patch stack.
+// Stability v8: day-loop state, premium atmosphere phase, and ready-safe screen switching.
 (() => {
-        const section = document.getElementById('tappie-day-loop');
-        if (!section) return;
+    const section = document.getElementById('tappie-day-loop');
+    if (!section) return;
 
-        const steps = Array.from(section.querySelectorAll('.tappie-day-loop__step'));
-        const screens = Array.from(section.querySelectorAll('.tappie-day-screen'));
-        const dots = Array.from(section.querySelectorAll('.tappie-day-dot'));
-        const progress = section.querySelector('#tappieDayProgress');
-        const total = steps.length;
-        let activeIndex = -1;
-        let rafId = null;
-        let manualUntil = 0;
+    const steps = Array.from(section.querySelectorAll('.tappie-day-loop__step'));
+    const screens = Array.from(section.querySelectorAll('.tappie-day-screen'));
+    const dots = Array.from(section.querySelectorAll('.tappie-day-dot'));
+    const progress = section.querySelector('#tappieDayProgress');
+    const total = steps.length;
+    let activeIndex = -1;
+    let activeScreenIndex = 0;
+    let pendingScreenIndex = 0;
+    let rafId = null;
+    let manualUntil = 0;
 
-        function setActive(index) {
-            index = Math.max(0, Math.min(total - 1, index));
-            if (index === activeIndex) return;
-            activeIndex = index;
-
-            section.dataset.dayPhase = String(index);
-            steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
-            screens.forEach((el, i) => el.classList.toggle('is-active', i === index));
-            dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
-
-            if (progress) progress.style.width = `${((index + 1) / total) * 100}%`;
+    const screenReady = screens.map((screen, index) => {
+        const img = screen.querySelector('img');
+        if (!img) {
+            screen.dataset.mediaReady = 'true';
+            return true;
         }
 
-        function indexFromScroll() {
-            const rect = section.getBoundingClientRect();
-            const maxScroll = section.offsetHeight - window.innerHeight;
-            const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(maxScroll, 1));
-            const p = scrolled / Math.max(maxScroll, 1);
-            return Math.min(total - 1, Math.floor(p * total));
+        img.decoding = 'async';
+        img.loading = 'eager';
+        if (index === 0) img.fetchPriority = 'high';
+
+        if (img.complete && img.naturalWidth > 0) {
+            screen.dataset.mediaReady = 'true';
+            img.classList.add('tappie-media-ready');
+            return true;
         }
 
-        function update() {
-            rafId = null;
-            if (Date.now() < manualUntil) return;
-            setActive(indexFromScroll());
-        }
+        screen.dataset.mediaReady = 'false';
+        const markReady = () => {
+            screenReady[index] = true;
+            screen.dataset.mediaReady = 'true';
+            img.classList.add('tappie-media-ready');
+            if (activeIndex === index || pendingScreenIndex === index) {
+                activateScreen(index, { force: true });
+            }
+        };
+        img.addEventListener('load', markReady, { once: true });
+        img.addEventListener('error', markReady, { once: true });
 
-        function requestUpdate() {
-            if (!rafId) rafId = requestAnimationFrame(update);
-        }
+        const preloader = new Image();
+        preloader.decoding = 'async';
+        preloader.src = img.currentSrc || img.getAttribute('src') || img.src;
+        return false;
+    });
 
-        dots.forEach((dot) => {
-            dot.addEventListener('click', () => {
-                manualUntil = Date.now() + 1000;
-                setActive(Number(dot.dataset.dotStep || 0));
-            });
+    function activateScreen(index, options = {}) {
+        index = Math.max(0, Math.min(screens.length - 1, index));
+        const canShow = screenReady[index] || options.force || index === 0;
+        pendingScreenIndex = index;
+        if (!canShow) return;
+
+        activeScreenIndex = index;
+        screens.forEach((el, i) => el.classList.toggle('is-active', i === index));
+    }
+
+    function setActive(index) {
+        index = Math.max(0, Math.min(total - 1, index));
+        if (index === activeIndex) return;
+        activeIndex = index;
+
+        section.dataset.dayPhase = String(index);
+        steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
+        dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
+        activateScreen(index);
+
+        if (progress) progress.style.width = `${((index + 1) / total) * 100}%`;
+    }
+
+    function indexFromScroll() {
+        const rect = section.getBoundingClientRect();
+        const maxScroll = section.offsetHeight - window.innerHeight;
+        const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(maxScroll, 1));
+        const p = scrolled / Math.max(maxScroll, 1);
+        return Math.min(total - 1, Math.floor(p * total));
+    }
+
+    function update() {
+        rafId = null;
+        if (Date.now() < manualUntil) return;
+        setActive(indexFromScroll());
+    }
+
+    function requestUpdate() {
+        if (!rafId) rafId = requestAnimationFrame(update);
+    }
+
+    dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+            manualUntil = Date.now() + 1000;
+            setActive(Number(dot.dataset.dotStep || 0));
         });
+    });
 
-        setActive(0);
-        window.addEventListener('scroll', requestUpdate, { passive: true });
-        window.addEventListener('resize', requestUpdate);
-        requestUpdate();
-    })();
+    activateScreen(0, { force: true });
+    setActive(0);
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+    requestUpdate();
+})();
 
 </script>
 
@@ -12066,7 +12197,7 @@ body nav.tappie-site-header .nav-logo span {
         root.classList.add('tappie-mobile-safe');
 
         document.querySelectorAll('img').forEach((img) => {
-            if (!img.closest('.tappie-scroll-hero, .tappie-glass-header, .site-header')) {
+            if (!img.closest('.tappie-scroll-hero, .tappie-glass-header, .site-header, .tappie-day-loop')) {
                 if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
             }
             if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
@@ -12115,17 +12246,46 @@ body nav.tappie-site-header .nav-logo span {
 
 
 <script>
-// TAPPIE_ORDERED_IMAGE_PRELOAD_V1
-// Preloads in-page images in DOM order after first paint, without forcing all assets to eager-load.
+// TAPPIE_MEDIA_STABILITY_AND_ORDERED_PRELOAD_V8
+// Designed fallback state + DOM-order preloading. Images should never be the only thing holding a section together.
 (() => {
     const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
-    if (connection && (connection.saveData || /2g/.test(connection.effectiveType || ''))) return;
+    const saveData = connection && connection.saveData;
 
-    const run = () => {
-        const urls = Array.from(document.images)
-            .map((img) => img.currentSrc || img.getAttribute('src'))
-            .filter((src) => src && !src.startsWith('data:'));
-        const queue = [...new Set(urls)];
+    function markMediaState() {
+        document.querySelectorAll('img').forEach((img) => {
+            img.dataset.tappieMedia = 'true';
+            if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
+            const ready = img.complete && img.naturalWidth > 0;
+            img.classList.toggle('tappie-media-ready', ready);
+            if (!ready) {
+                const mark = () => img.classList.add('tappie-media-ready');
+                img.addEventListener('load', mark, { once: true });
+                img.addEventListener('error', mark, { once: true });
+            }
+        });
+    }
+
+    function collectUrls() {
+        const urls = [];
+        document.querySelectorAll('img').forEach((img) => {
+            const src = img.currentSrc || img.getAttribute('src');
+            if (src && !src.startsWith('data:')) urls.push(src);
+        });
+        document.querySelectorAll('[style*="background-image"]').forEach((el) => {
+            const style = window.getComputedStyle(el).backgroundImage || '';
+            const matches = style.match(/url\(["']?([^"')]+)["']?\)/g) || [];
+            matches.forEach((raw) => {
+                const url = raw.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
+                if (url && !url.startsWith('data:')) urls.push(url);
+            });
+        });
+        return [...new Set(urls)];
+    }
+
+    function orderedPreload() {
+        if (saveData) return;
+        const queue = collectUrls();
         const maxConcurrent = window.matchMedia('(max-width: 860px)').matches ? 2 : 3;
         let active = 0;
         let index = 0;
@@ -12144,14 +12304,25 @@ body nav.tappie-site-header .nav-logo span {
             }
         };
         loadNext();
+    }
+
+    const run = () => {
+        markMediaState();
+        const startPreload = () => orderedPreload();
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(startPreload, { timeout: 900 });
+        } else {
+            window.setTimeout(startPreload, 180);
+        }
     };
 
-    if ('requestIdleCallback' in window) {
-        requestIdleCallback(run, { timeout: 1800 });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run, { once: true });
     } else {
-        setTimeout(run, 900);
+        run();
     }
 })();
+
 </script>
 </body>
 </html>
