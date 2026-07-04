@@ -1402,6 +1402,15 @@ img[data-tappie-stable-media] {
                 --day-key-x: 76%;
                 --day-key-y: 17%;
             }
+            .tappie-day-loop__step {
+                transform: none;
+                filter: blur(3px);
+                transition: opacity 0.32s ease, filter 0.32s ease;
+            }
+            .tappie-day-loop__step.is-active {
+                transform: none;
+                filter: blur(0);
+            }
         }
         .notice-scene {position: relative;
             width: 100%;
@@ -11239,7 +11248,7 @@ body nav.tappie-site-header .nav-logo span {
 
     <script>
 // 02-day-loop.js
-// Stability v10: ready-aware screen switching + premium atmosphere phase.
+// Stability precise v11: scroll target + display queue, ready-aware scenes, no boundary jitter.
 (() => {
         const section = document.getElementById('tappie-day-loop');
         if (!section) return;
@@ -11249,12 +11258,31 @@ body nav.tappie-site-header .nav-logo span {
         const dots = Array.from(section.querySelectorAll('.tappie-day-dot'));
         const progress = section.querySelector('#tappieDayProgress');
         const total = steps.length;
-        let activeIndex = -1;
+
+        let displayedIndex = -1;
         let activeScreenIndex = -1;
+        let targetIndex = 0;
         let rafId = null;
         let manualUntil = 0;
+        let queueTimer = 0;
+        let stabilityTimer = 0;
+        let isQueueRunning = false;
+        let lastAppliedAt = 0;
+        let lastScrollTarget = 0;
+        let lastScrollTargetAt = 0;
+
+        const isMobile = window.matchMedia('(max-width: 860px)').matches;
+        const STEP_INTERVAL = isMobile ? 155 : 135;
+        const MIN_SWITCH_GAP = isMobile ? 210 : 150;
+        const BOUNDARY_STABLE_MS = isMobile ? 96 : 56;
+        const READY_WAIT_MS = 720;
 
         const screenReady = new WeakMap();
+        const screenReadyPromise = new WeakMap();
+
+        function clampIndex(index) {
+            return Math.max(0, Math.min(total - 1, Number(index) || 0));
+        }
 
         function getPrimaryImage(screen) {
             if (!screen) return null;
@@ -11280,6 +11308,54 @@ body nav.tappie-site-header .nav-logo span {
             return ready;
         }
 
+        function waitForScreenReady(index) {
+            const screen = screens[index];
+            if (!screen || isScreenReady(screen)) return Promise.resolve(true);
+            if (screenReadyPromise.has(screen)) return screenReadyPromise.get(screen);
+
+            const img = getPrimaryImage(screen);
+            if (!img) {
+                markScreenReady(screen, true);
+                return Promise.resolve(true);
+            }
+
+            const promise = new Promise(resolve => {
+                let done = false;
+                let timer = 0;
+
+                const cleanup = () => {
+                    img.removeEventListener('load', onLoad);
+                    img.removeEventListener('error', onError);
+                    clearTimeout(timer);
+                };
+                const finish = ready => {
+                    if (done) return;
+                    done = true;
+                    markScreenReady(screen, ready);
+                    cleanup();
+                    resolve(ready);
+                };
+                const onLoad = () => finish(true);
+                const onError = () => finish(true);
+
+                timer = setTimeout(() => finish(true), READY_WAIT_MS);
+                img.addEventListener('load', onLoad, { once: true });
+                img.addEventListener('error', onError, { once: true });
+
+                if (img.decode) {
+                    img.decode().then(() => finish(true)).catch(() => {});
+                }
+                if (img.complete) {
+                    finish(img.naturalWidth > 0 || true);
+                }
+            }).finally(() => {
+                screenReadyPromise.delete(screen);
+            });
+
+            screenReadyPromise.set(screen, promise);
+            return promise;
+        }
+
         function applyScreen(index) {
             const target = screens[index];
             if (!target) return;
@@ -11287,42 +11363,14 @@ body nav.tappie-site-header .nav-logo span {
             activeScreenIndex = index;
         }
 
-        screens.forEach((screen, index) => {
-            const img = getPrimaryImage(screen);
-            if (!img) {
-                markScreenReady(screen, true);
-                return;
-            }
-            const updateReady = () => {
-                const ok = img.naturalWidth > 0 || img.complete;
-                markScreenReady(screen, ok);
-                if (ok && index === activeIndex) applyScreen(index);
-            };
-            if (img.complete && img.naturalWidth > 0) {
-                markScreenReady(screen, true);
-            } else {
-                markScreenReady(screen, false);
-                img.addEventListener('load', updateReady, { once: true });
-                img.addEventListener('error', () => {
-                    markScreenReady(screen, true);
-                    if (index === activeIndex) applyScreen(index);
-                }, { once: true });
-            }
-            if (img.decode) {
-                img.decode().then(updateReady).catch(() => {});
-            }
-        });
-
-        function setActive(index) {
-            index = Math.max(0, Math.min(total - 1, index));
-            const changed = index !== activeIndex;
-            activeIndex = index;
+        function applyStep(index) {
+            index = clampIndex(index);
+            displayedIndex = index;
+            lastAppliedAt = Date.now();
 
             section.dataset.dayPhase = String(index);
-            if (changed) {
-                steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
-                dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
-            }
+            steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
+            dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
 
             const targetScreen = screens[index];
             if (targetScreen && isScreenReady(targetScreen)) {
@@ -11334,32 +11382,137 @@ body nav.tappie-site-header .nav-logo span {
             if (progress) progress.style.width = `${((index + 1) / total) * 100}%`;
         }
 
-        function indexFromScroll() {
+        function rawIndexFromScroll() {
             const rect = section.getBoundingClientRect();
             const maxScroll = section.offsetHeight - window.innerHeight;
             const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(maxScroll, 1));
             const p = scrolled / Math.max(maxScroll, 1);
-            return Math.min(total - 1, Math.floor(p * total));
-        }
-
-        function update() {
-            rafId = null;
-            if (Date.now() < manualUntil) return;
-            setActive(indexFromScroll());
+            return clampIndex(Math.floor(p * total));
         }
 
         function requestUpdate() {
             if (!rafId) rafId = requestAnimationFrame(update);
         }
 
+        function stableIndexFromScroll() {
+            const now = Date.now();
+            const next = rawIndexFromScroll();
+
+            if (next !== lastScrollTarget) {
+                lastScrollTarget = next;
+                lastScrollTargetAt = now;
+            }
+
+            if (next === targetIndex) return targetIndex;
+
+            // If the user scrolls across multiple scenes quickly, accept it and let the display queue catch up.
+            if (Math.abs(next - targetIndex) > 1) return next;
+
+            // For adjacent scene boundaries, wait briefly so 05/06 does not bounce back and forth.
+            if (now - lastScrollTargetAt < BOUNDARY_STABLE_MS) {
+                if (!stabilityTimer) {
+                    stabilityTimer = window.setTimeout(() => {
+                        stabilityTimer = 0;
+                        requestUpdate();
+                    }, BOUNDARY_STABLE_MS + 24);
+                }
+                return targetIndex;
+            }
+
+            return next;
+        }
+
+        function scheduleQueue(delay = 0) {
+            if (queueTimer) clearTimeout(queueTimer);
+            queueTimer = window.setTimeout(runQueue, delay);
+        }
+
+        async function runQueue() {
+            queueTimer = 0;
+            if (isQueueRunning) return;
+            if (displayedIndex === targetIndex) return;
+
+            isQueueRunning = true;
+
+            try {
+                while (displayedIndex !== targetIndex) {
+                    const now = Date.now();
+                    const wait = Math.max(0, MIN_SWITCH_GAP - (now - lastAppliedAt));
+                    if (wait > 0) {
+                        await new Promise(resolve => setTimeout(resolve, wait));
+                    }
+
+                    const direction = targetIndex > displayedIndex ? 1 : -1;
+                    const nextIndex = clampIndex(displayedIndex + direction);
+
+                    await waitForScreenReady(nextIndex);
+                    applyStep(nextIndex);
+
+                    if (displayedIndex !== targetIndex) {
+                        await new Promise(resolve => setTimeout(resolve, STEP_INTERVAL));
+                    }
+                }
+            } finally {
+                isQueueRunning = false;
+                if (displayedIndex !== targetIndex) scheduleQueue(STEP_INTERVAL);
+            }
+        }
+
+        function setTarget(index) {
+            index = clampIndex(index);
+            if (index === targetIndex && displayedIndex === index) return;
+
+            targetIndex = index;
+            scheduleQueue(0);
+        }
+
+        screens.forEach((screen, index) => {
+            const img = getPrimaryImage(screen);
+            if (!img) {
+                markScreenReady(screen, true);
+                return;
+            }
+
+            const updateReady = () => {
+                const ok = img.naturalWidth > 0 || img.complete;
+                markScreenReady(screen, ok);
+                if (ok && index === displayedIndex) applyScreen(index);
+            };
+
+            if (img.complete && img.naturalWidth > 0) {
+                markScreenReady(screen, true);
+            } else {
+                markScreenReady(screen, false);
+                img.addEventListener('load', updateReady, { once: true });
+                img.addEventListener('error', () => {
+                    markScreenReady(screen, true);
+                    if (index === displayedIndex) applyScreen(index);
+                }, { once: true });
+            }
+
+            if (img.decode) {
+                img.decode().then(updateReady).catch(() => {});
+            }
+        });
+
+        function update() {
+            rafId = null;
+            if (Date.now() < manualUntil) return;
+            setTarget(stableIndexFromScroll());
+        }
+
         dots.forEach((dot) => {
             dot.addEventListener('click', () => {
                 manualUntil = Date.now() + 1000;
-                setActive(Number(dot.dataset.dotStep || 0));
+                setTarget(dot.dataset.dotStep || 0);
             });
         });
 
-        setActive(0);
+        applyStep(0);
+        targetIndex = 0;
+        lastScrollTarget = 0;
+        lastScrollTargetAt = Date.now();
+
         window.addEventListener('scroll', requestUpdate, { passive: true });
         window.addEventListener('resize', requestUpdate);
         requestUpdate();
