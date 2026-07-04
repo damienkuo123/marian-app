@@ -137,9 +137,9 @@
             --tappie-vs-stage-shadow-card: 0 22px 62px rgba(15, 23, 42, .075);}html, body {
             margin: 0; padding: 0;
             width: 100%; max-width: 100%;
-            overflow-x: clip;
-        }@supports not (overflow: clip) {
-            html, body { overflow-x: hidden; }
+            overflow-x: hidden;
+        }@supports (overflow: clip) {
+            html, body { overflow-x: clip; }
         }html {
             background: #f5f5f7;
         }body {
@@ -147,7 +147,6 @@
             color: white;
             scroll-behavior: smooth;
             overscroll-behavior-x: none;
-            touch-action: pan-y;
         }.ambient-orb {
             position: fixed; border-radius: 50%; filter: blur(100px);
             z-index: -1; opacity: 0.4; pointer-events: none;
@@ -430,52 +429,52 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
         }body.login-modal-open { overflow: hidden; }@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }@keyframes modalPanelIn { from { opacity: 0; transform: translateY(22px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 
-/* TAPPIE_STABILITY_HORIZONTAL_GUARD_V9
-   Keeps mobile pages from exposing body background during sideways pan.
-   Scope is structural; sticky sections keep their own vertical behavior.
+/* TAPPIE_FOUNDATION_SECTION_X_GUARD_V5_10
+   Stability-first horizontal containment.
+   html/body prevent sideways rubber-band exposure; non-sticky sections stay locally clipped.
+   Sticky hero/day-loop are not turned into local scroll containers.
 */
 @media (max-width: 860px) {
     body {
         min-width: 0;
+        overscroll-behavior-x: none;
     }
-    body > section,
-    .tappie-scroll-hero,
-    .tappie-day-loop,
-    .tappie-glass-header,
-    .site-header,
-    .tappie-footer-v49 {
-        max-width: 100vw;
-    }
-    body > section:not(.tappie-scroll-hero):not(.tappie-day-loop),
-    .tappie-role-stories,
-    .tappie-feature-showcase,
-    .tappie-solution-showcase,
-    .tappie-booking-v47,
-    .tappie-faq-v49,
-    .tappie-footer-v49 {
+    body > section:not(.tappie-scroll-hero):not(.tappie-day-loop) {
+        max-width: 100%;
         overflow-x: clip;
     }
-    @supports not (overflow: clip) {
-        body > section:not(.tappie-scroll-hero):not(.tappie-day-loop),
-        .tappie-role-stories,
-        .tappie-feature-showcase,
-        .tappie-solution-showcase,
-        .tappie-booking-v47,
-        .tappie-faq-v49,
-        .tappie-footer-v49 {
-            overflow-x: hidden;
-        }
-    }
-    .tappie-day-loop__sticky {
-        width: min(100%, calc(100vw - 32px));
-        max-width: calc(100vw - 32px);
-        box-sizing: border-box;
-    }
-    .tappie-day-loop__copy,
-    .tappie-day-loop__stage {
-        min-width: 0;
+    body > section:not(.tappie-scroll-hero):not(.tappie-day-loop) > * {
+        max-width: 100%;
     }
 }
+
+/* TAPPIE_MEDIA_STABILITY_FALLBACK_V10
+   Targeted visual fallback only. Preload can scan broadly, but fallback styling is opt-in via JS.
+   Excludes day-loop screens and the implementation animation, which keep their own logic.
+*/
+[data-tappie-stable-wrap] {
+    background:
+        radial-gradient(circle at 72% 18%, rgba(0, 123, 255, .075), transparent 38%),
+        radial-gradient(circle at 18% 86%, rgba(241, 196, 15, .07), transparent 42%),
+        linear-gradient(135deg, #fbfcff 0%, #f4f7fb 46%, #eef3f8 100%);
+}
+img[data-tappie-stable-media] {
+    background:
+        radial-gradient(circle at 66% 22%, rgba(0, 123, 255, .075), transparent 36%),
+        linear-gradient(135deg, #fafcff 0%, #f3f7fb 100%);
+}
+.tappie-day-screen:not(.mock):not(.custom-notice):not(.custom-console) {
+    background:
+        radial-gradient(circle at 70% 16%, rgba(255,255,255,.78), transparent 32%),
+        radial-gradient(circle at 24% 84%, rgba(0,123,255,.08), transparent 38%),
+        linear-gradient(135deg, #f8fafc 0%, #eef4fa 100%);
+}
+.tappie-day-screen[data-screen-ready="false"] > img {
+    background:
+        radial-gradient(circle at 70% 16%, rgba(255,255,255,.80), transparent 34%),
+        linear-gradient(135deg, #f8fafc 0%, #eef4fa 100%);
+}
+
 
 /* 01-hero-video.css
    Scope: editorial looping hero video, video-time copy sync and cinematic product section rules.
@@ -1366,65 +1365,6 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             object-fit: cover;
             display: block;
         }
-        html.tappie-media-stability .tappie-day-screen {
-            background:
-                radial-gradient(circle at 72% 18%, rgba(0, 123, 255, .12), transparent 34%),
-                radial-gradient(circle at 18% 76%, rgba(241, 196, 15, .10), transparent 38%),
-                linear-gradient(180deg, #ffffff 0%, #f5f8fc 100%);
-        }
-        html.tappie-media-stability .tappie-day-screen > img {
-            opacity: 0;
-            transition: opacity .42s ease;
-            backface-visibility: hidden;
-        }
-        html.tappie-media-stability .tappie-day-screen.is-media-loaded > img {
-            opacity: 1;
-        }
-        html.tappie-media-stability .tappie-day-screen.is-media-error > img {
-            opacity: 0;
-        }
-        .tappie-media-shell {
-            position: relative;
-            overflow: hidden;
-            background:
-                radial-gradient(circle at 78% 18%, rgba(0, 123, 255, .10), transparent 36%),
-                radial-gradient(circle at 20% 82%, rgba(241, 196, 15, .09), transparent 42%),
-                linear-gradient(180deg, #ffffff 0%, #f5f7fb 100%);
-        }
-        .tappie-day-screen.tappie-media-shell {
-            position: absolute;
-        }
-        .tappie-media-shell::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            opacity: 1;
-            transition: opacity .42s ease;
-            background:
-                linear-gradient(110deg, rgba(255,255,255,.00) 0%, rgba(255,255,255,.42) 46%, rgba(255,255,255,.00) 78%),
-                radial-gradient(circle at 50% 42%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%);
-        }
-        .tappie-media-shell > img,
-        .tappie-media-shell picture,
-        .tappie-media-shell video,
-        .tappie-media-shell canvas,
-        .tappie-media-shell .tappie-day-screen {
-            position: relative;
-            z-index: 1;
-        }
-        .tappie-media-shell.is-media-loaded::before,
-        .tappie-media-shell.is-media-error::before {
-            opacity: 0;
-        }
-        html.tappie-media-stability img[data-tappie-media="pending"] {
-            opacity: 0;
-            transition: opacity .42s ease;
-        }
-        html.tappie-media-stability img[data-tappie-media="loaded"] {
-            opacity: 1;
-        }
         .tappie-day-screen.mock {
             padding: 56px 26px 32px;
             color: #101828;
@@ -1668,7 +1608,9 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
                 
                 font-size: 1rem;
             }.tappie-day-loop {
-                height: 720vh;
+                height: calc(720vh + 120px);
+                padding-bottom: 112px;
+                box-sizing: content-box;
             }.tappie-day-loop__sticky {
                 top: 75px;
                 height: calc(100svh - 75px);
@@ -1677,7 +1619,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
                 grid-template-columns: 1fr;
                 
                 
-                padding: 28px 0 80px;
+                padding: 28px 0 108px;
             }.tappie-day-loop__copy h2 {
                 font-size: clamp(2.25rem, 10.5vw, 4.35rem);
             }.tappie-day-loop__step-title {
@@ -1862,7 +1804,9 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
 }
 @media (max-width: 860px) {
     .tappie-day-loop {
-        height: 720vh;
+        height: calc(720vh + 120px);
+        padding-bottom: 112px;
+        box-sizing: content-box;
         overflow: visible !important;
     }
     .tappie-day-loop__sticky {
@@ -3582,7 +3526,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
                 align-content: start !important;
                 gap: 18px !important;
                 padding-top: 32px !important;
-                padding-bottom: 76px !important;
+                padding-bottom: 118px !important;
             }.tappie-day-loop__caption {
                 min-height: 142px !important;
                 margin-top: 24px !important;
@@ -3628,7 +3572,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             }
 }@media (max-width: 860px) {
 .tappie-day-loop__stage {
-                padding-bottom: 26px !important;
+                padding-bottom: 72px !important;
             }.tappie-day-phone {
                 transform: translateY(-8px) translateZ(0) !important;
             }
@@ -5222,7 +5166,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             color: #101828 !important;
         }.mode-donut-inner {
             width: 94px; height: 94px; border-radius: 50%; background:#fff; display:grid; place-items:center; text-align:center; box-shadow: inset 0 0 0 1px rgba(15,23,42,.06);
-        }.mode-donut-inner strong { display:block; font-size: 30px; line-height:.92; letter-spacing:-.05em; transform: translateY(7px); }.mode-donut-inner span { display:block; margin-top:0; color:#64748b; font-size: 11px; font-weight: 850; transform: translateY(2px); }.manager-kit-ui { background: #f6f7fb !important; }.manager-kit-ui .kit-card .kit-status.muted { display:none !important; }@media (max-width: 860px) {
+        }.mode-donut-inner strong { display:block; font-size: 30px; line-height:.92; letter-spacing:-.05em; transform: translateY(5px); }.mode-donut-inner span { display:block; margin-top:0; color:#64748b; font-size: 11px; font-weight: 850; transform: translateY(0); }.manager-kit-ui { background: #f6f7fb !important; }.manager-kit-ui .kit-card .kit-status.muted { display:none !important; }@media (max-width: 860px) {
 .student-guide-card .ref-guide-ui .anim-chat-bubble {
                 margin-top: 14px !important;
             }.kit-console {padding: 14px; }.mode-donut-inner { width: 76px; height: 76px; }.mode-donut-inner strong { font-size: 24px; }
@@ -5389,7 +5333,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
         .mode-donut-v25 .mode-donut-inner {
             width: 98px; height: 98px; border-radius:50%; background:#fff; box-shadow: inset 0 0 0 1px rgba(15,23,42,.06);
             display:grid; place-items:center; text-align:center;
-        }.mode-donut-v25 .mode-donut-inner strong { display:block; font-size:32px; line-height:1; letter-spacing:-.05em; }.mode-donut-v25 .mode-donut-inner span { display:block; margin-top:4px; color:#64748b; font-size:11px; font-weight:850; }.mode-stats-v25 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }.mode-stats-v25 div { background:#f8fafc; border-radius:16px; padding:10px; box-shadow: inset 0 0 0 1px rgba(15,23,42,.06); transform: translateY(8px); opacity:0; animation: av25StatIn 7s infinite ease-in-out; }.mode-stats-v25 div:nth-child(2){ animation-delay:.08s; }.mode-stats-v25 div:nth-child(3){ animation-delay:.16s; }.mode-stats-v25 div:nth-child(4){ animation-delay:.24s; }.mode-stats-v25 span { display:block; font-size:10px; color:#64748b; font-weight:850; }.mode-stats-v25 strong { display:block; font-size:18px; letter-spacing:-.04em; margin-top:4px; color:#111827; }.mode-stats-v25 em { font-style:normal; color:#94a3b8; font-size:11px; font-weight:900; margin-left:4px; }@keyframes av25StatIn {
+        }.mode-donut-v25 .mode-donut-inner strong { display:block; font-size:32px; line-height:.92; letter-spacing:-.05em; transform: translateY(3px); }.mode-donut-v25 .mode-donut-inner span { display:block; margin-top:0; color:#64748b; font-size:11px; font-weight:850; }.mode-stats-v25 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }.mode-stats-v25 div { background:#f8fafc; border-radius:16px; padding:10px; box-shadow: inset 0 0 0 1px rgba(15,23,42,.06); transform: translateY(8px); opacity:0; animation: av25StatIn 7s infinite ease-in-out; }.mode-stats-v25 div:nth-child(2){ animation-delay:.08s; }.mode-stats-v25 div:nth-child(3){ animation-delay:.16s; }.mode-stats-v25 div:nth-child(4){ animation-delay:.24s; }.mode-stats-v25 span { display:block; font-size:10px; color:#64748b; font-weight:850; }.mode-stats-v25 strong { display:block; font-size:18px; letter-spacing:-.04em; margin-top:4px; color:#111827; }.mode-stats-v25 em { font-style:normal; color:#94a3b8; font-size:11px; font-weight:900; margin-left:4px; }@keyframes av25StatIn {
             0%, 30% { opacity:0; transform: translateY(8px); }
             40%, 84% { opacity:1; transform: translateY(0); }
             100% { opacity:1; transform: translateY(0); }
@@ -7360,10 +7304,10 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             justify-content: space-between;
             gap: 22px;
             color: #1d1d1f;
-            font-size: clamp(1rem, 1.24vw, 1.12rem);
+            font-size: clamp(1.02rem, 1.24vw, 1.12rem);
             line-height: 1.32;
             font-weight: 840;
-            letter-spacing: -.034em;
+            letter-spacing: -.04em;
             text-align: left;
             cursor: pointer;
         }.faq-v49-plus {
@@ -7501,7 +7445,7 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
                 border-radius: 22px;
             }.faq-v49-question {
                 padding: 22px 22px;
-                font-size: 1.12rem;
+                font-size: 1.02rem;
             }.faq-v49-answer p {
                 padding: 0 22px 22px;
                 font-size: 1rem;
@@ -8397,7 +8341,7 @@ body nav.tappie-site-header .nav-logo span {
     font-size: clamp(18px, 1.24vw, 22px);
     line-height: 1.28;
     letter-spacing: -0.022em;
-    font-weight: 760;
+    font-weight: 740;
 }
 .faq-v49-plus {
     width: 32px;
@@ -8557,11 +8501,11 @@ body nav.tappie-site-header .nav-logo span {
     .tappie-role-hero { margin-bottom: 36px; }
     .tappie-role-features { margin-top: 20px; }
     .faq-v49-question {
-        font-size: clamp(17px, 4.25vw, 20px);
+        font-size: clamp(16px, 4.05vw, 19px);
         line-height: 1.28;
         font-weight: 740;
-        padding: 18px 18px;
-        letter-spacing: -0.016em;
+        padding: 17px 18px;
+        letter-spacing: -0.018em;
     }
     .faq-v49-plus {
         width: 28px;
@@ -10320,9 +10264,9 @@ body nav.tappie-site-header .nav-logo span {
             <div class="footer-v49-col">
                 <h3>聯絡我們</h3>
                 <div class="footer-v49-links">
+                    <a href="https://lin.ee/zvNUN4Q" target="_blank" rel="noopener noreferrer">官方 LINE</a>
                     <a href="tel:0958965733">0958965733</a>
                     <a href="mailto:system@tappieapp.com">system@tappieapp.com</a>
-                    <a href="https://lin.ee/zvNUN4Q" target="_blank" rel="noopener noreferrer">官方 LINE</a>
                 </div>
             </div>
         </div>
@@ -11295,7 +11239,7 @@ body nav.tappie-site-header .nav-logo span {
 
     <script>
 // 02-day-loop.js
-// Stability-only v9: day-loop state + image-ready safe switching; keeps v6 visual atmosphere.
+// Stability v10: ready-aware screen switching + premium atmosphere phase.
 (() => {
         const section = document.getElementById('tappie-day-loop');
         if (!section) return;
@@ -11306,68 +11250,86 @@ body nav.tappie-site-header .nav-logo span {
         const progress = section.querySelector('#tappieDayProgress');
         const total = steps.length;
         let activeIndex = -1;
-        let activeScreenIndex = Math.max(0, screens.findIndex((el) => el.classList.contains('is-active')));
+        let activeScreenIndex = -1;
         let rafId = null;
         let manualUntil = 0;
 
         const screenReady = new WeakMap();
 
+        function getPrimaryImage(screen) {
+            if (!screen) return null;
+            if (screen.classList.contains('mock') || screen.classList.contains('custom-notice') || screen.classList.contains('custom-console')) return null;
+            return screen.querySelector(':scope > img') || screen.querySelector('img');
+        }
+
         function markScreenReady(screen, ready) {
-            screenReady.set(screen, Boolean(ready));
-            screen.classList.toggle('is-media-loaded', Boolean(ready));
+            screenReady.set(screen, ready);
+            screen.dataset.screenReady = ready ? 'true' : 'false';
         }
 
-        function prepareScreen(screen) {
-            const directImg = screen.querySelector(':scope > img');
-            if (!directImg) {
+        function isScreenReady(screen) {
+            if (!screen) return true;
+            if (screenReady.has(screen)) return screenReady.get(screen);
+            const img = getPrimaryImage(screen);
+            if (!img) {
                 markScreenReady(screen, true);
-                return;
+                return true;
             }
-
-            if (!directImg.hasAttribute('decoding')) directImg.setAttribute('decoding', 'async');
-            if (!directImg.hasAttribute('loading')) directImg.setAttribute('loading', 'eager');
-
-            const isReady = () => directImg.complete && directImg.naturalWidth > 0;
-            if (isReady()) {
-                markScreenReady(screen, true);
-                return;
-            }
-
-            screenReady.set(screen, false);
-            directImg.addEventListener('load', () => {
-                markScreenReady(screen, true);
-                if (Number(screen.dataset.screenStep || 0) === activeIndex) activateScreen(activeIndex);
-            }, { once: true });
-            directImg.addEventListener('error', () => {
-                screenReady.set(screen, true);
-                screen.classList.add('is-media-error');
-                if (Number(screen.dataset.screenStep || 0) === activeIndex) activateScreen(activeIndex);
-            }, { once: true });
+            const ready = !!(img.complete && img.naturalWidth > 0);
+            markScreenReady(screen, ready);
+            return ready;
         }
 
-        function activateScreen(index) {
+        function applyScreen(index) {
             const target = screens[index];
             if (!target) return;
+            screens.forEach((el, i) => el.classList.toggle('is-active', i === index));
+            activeScreenIndex = index;
+        }
 
-            if (screenReady.get(target) !== true) {
-                section.dataset.pendingScreen = String(index);
+        screens.forEach((screen, index) => {
+            const img = getPrimaryImage(screen);
+            if (!img) {
+                markScreenReady(screen, true);
                 return;
             }
-
-            delete section.dataset.pendingScreen;
-            activeScreenIndex = index;
-            screens.forEach((el, i) => el.classList.toggle('is-active', i === index));
-        }
+            const updateReady = () => {
+                const ok = img.naturalWidth > 0 || img.complete;
+                markScreenReady(screen, ok);
+                if (ok && index === activeIndex) applyScreen(index);
+            };
+            if (img.complete && img.naturalWidth > 0) {
+                markScreenReady(screen, true);
+            } else {
+                markScreenReady(screen, false);
+                img.addEventListener('load', updateReady, { once: true });
+                img.addEventListener('error', () => {
+                    markScreenReady(screen, true);
+                    if (index === activeIndex) applyScreen(index);
+                }, { once: true });
+            }
+            if (img.decode) {
+                img.decode().then(updateReady).catch(() => {});
+            }
+        });
 
         function setActive(index) {
             index = Math.max(0, Math.min(total - 1, index));
-            if (index === activeIndex) return;
+            const changed = index !== activeIndex;
             activeIndex = index;
 
             section.dataset.dayPhase = String(index);
-            steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
-            dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
-            activateScreen(index);
+            if (changed) {
+                steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
+                dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
+            }
+
+            const targetScreen = screens[index];
+            if (targetScreen && isScreenReady(targetScreen)) {
+                applyScreen(index);
+            } else if (activeScreenIndex < 0) {
+                applyScreen(index);
+            }
 
             if (progress) progress.style.width = `${((index + 1) / total) * 100}%`;
         }
@@ -11389,11 +11351,6 @@ body nav.tappie-site-header .nav-logo span {
         function requestUpdate() {
             if (!rafId) rafId = requestAnimationFrame(update);
         }
-
-        screens.forEach(prepareScreen);
-
-        if (activeScreenIndex < 0) activeScreenIndex = 0;
-        if (screens[activeScreenIndex]) screens[activeScreenIndex].classList.add('is-active');
 
         dots.forEach((dot) => {
             dot.addEventListener('click', () => {
@@ -12263,107 +12220,97 @@ body nav.tappie-site-header .nav-logo span {
 
 
 <script>
-// TAPPIE_MEDIA_STABILITY_PRELOAD_V9
-// Ordered media preload + designed fallback state for slow networks.
+// TAPPIE_MEDIA_STABILITY_PRELOAD_V10
+// DOM-order preload + opt-in fallback tagging. Does not touch implementation animation or day-loop screens.
 (() => {
-    const root = document.documentElement;
-    root.classList.add('tappie-media-stability');
-
     const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
-    const saveData = connection && connection.saveData;
-    const slowConnection = connection && /2g/.test(connection.effectiveType || '');
+    const constrained = connection && (connection.saveData || /2g/.test(connection.effectiveType || ''));
 
-    const skipImage = (img) => {
+    const EXCLUDE_SELECTOR = [
+        'nav',
+        '.tappie-scroll-hero',
+        '.tappie-day-loop',
+        '.tappie-implementation-media-v36',
+        '.booking-v47-modal',
+        '.ios-note__icon',
+        '.footer-v49-logo',
+        '.nav-logo'
+    ].join(',');
+
+    function normalizeUrl(src) {
+        if (!src || src.startsWith('data:') || src.startsWith('blob:')) return null;
+        try { return new URL(src, window.location.href).href; } catch (_) { return null; }
+    }
+
+    function shouldTagFallback(img) {
+        if (!img || img.closest(EXCLUDE_SELECTOR)) return false;
         const src = img.currentSrc || img.getAttribute('src') || '';
-        if (!src || src.startsWith('data:')) return true;
-        if (img.closest('.tappie-glass-header, .site-header, nav')) return true;
-        if (/app-icon|favicon/i.test(src)) return true;
-        return false;
-    };
+        if (!/\/assets\/official\//.test(src)) return false;
+        if (/tappie-process-last-frame/i.test(src)) return false;
+        return true;
+    }
 
-    const eligibleShell = (img) => {
-        const screen = img.closest('.tappie-day-screen');
-        if (screen) return screen;
-
-        const parent = img.parentElement;
-        if (!parent) return null;
-        if (parent.closest('.footer-v49-logo, .nav-logo, .notice-scene__hud')) return null;
-        return parent;
-    };
-
-    const mark = (img, state) => {
-        img.dataset.tappieMedia = state;
-        img.classList.toggle('is-media-loaded', state === 'loaded');
-        img.classList.toggle('is-media-error', state === 'error');
-        const shell = eligibleShell(img);
-        if (shell) {
-            shell.classList.add('tappie-media-shell');
-            shell.classList.toggle('is-media-loaded', state === 'loaded');
-            shell.classList.toggle('is-media-error', state === 'error');
-        }
-    };
-
-    const setupState = () => {
-        Array.from(document.images).forEach((img) => {
-            if (skipImage(img)) return;
-            if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
-
-            const shell = eligibleShell(img);
-            if (shell) shell.classList.add('tappie-media-shell');
-
-            if (img.complete && img.naturalWidth > 0) {
-                mark(img, 'loaded');
-            } else {
-                mark(img, 'pending');
-                img.addEventListener('load', () => mark(img, 'loaded'), { once: true });
-                img.addEventListener('error', () => mark(img, 'error'), { once: true });
+    function tagFallbackImages() {
+        document.querySelectorAll('img[src]').forEach((img) => {
+            if (!shouldTagFallback(img)) return;
+            img.dataset.tappieStableMedia = 'true';
+            const parent = img.parentElement;
+            if (parent && !parent.closest('.tappie-implementation-media-v36')) {
+                parent.dataset.tappieStableWrap = 'true';
             }
         });
-    };
+    }
 
-    const runPreload = () => {
-        if (saveData || slowConnection) return;
+    function collectUrls() {
+        const urls = [];
+        const seen = new Set();
+        const push = (src) => {
+            const url = normalizeUrl(src);
+            if (!url || seen.has(url)) return;
+            seen.add(url);
+            urls.push(url);
+        };
 
-        const urls = Array.from(document.images)
-            .filter((img) => !skipImage(img))
-            .map((img) => img.currentSrc || img.getAttribute('src'))
-            .filter(Boolean);
+        document.querySelectorAll('#tappie-day-loop .tappie-day-screen > img[src]').forEach((img) => push(img.currentSrc || img.getAttribute('src')));
+        document.querySelectorAll('img[src]').forEach((img) => push(img.currentSrc || img.getAttribute('src')));
+        document.querySelectorAll('video[poster]').forEach((video) => push(video.getAttribute('poster')));
+        return urls;
+    }
 
-        const queue = [...new Set(urls)];
+    function preloadQueue(urls) {
+        if (constrained || !urls.length) return;
         const maxConcurrent = window.matchMedia('(max-width: 860px)').matches ? 2 : 3;
         let active = 0;
         let index = 0;
 
         const loadNext = () => {
-            while (active < maxConcurrent && index < queue.length) {
-                const src = queue[index++];
+            while (active < maxConcurrent && index < urls.length) {
+                const src = urls[index++];
                 active += 1;
-                const image = new Image();
-                image.decoding = 'async';
-                image.onload = image.onerror = () => {
+                const img = new Image();
+                img.decoding = 'async';
+                img.onload = img.onerror = () => {
                     active -= 1;
                     loadNext();
                 };
-                image.src = src;
+                img.src = src;
             }
         };
-
         loadNext();
-    };
+    }
 
-    const start = () => {
-        setupState();
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(runPreload, { timeout: 1200 });
-        } else {
-            setTimeout(runPreload, 600);
-        }
+    const run = () => {
+        tagFallbackImages();
+        const urls = collectUrls();
+        const start = () => preloadQueue(urls);
+        if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 1200 });
+        else setTimeout(start, 700);
     };
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', start, { once: true });
+        document.addEventListener('DOMContentLoaded', run, { once: true });
     } else {
-        start();
+        run();
     }
 })();
 </script>
