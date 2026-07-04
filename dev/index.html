@@ -966,13 +966,26 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
 
             position: relative;
             height: 650vh;
-            background:
-                radial-gradient(circle at 78% 18%, rgba(0,123,255,0.10), transparent 28%),
-                radial-gradient(circle at 12% 92%, rgba(241,196,15,0.13), transparent 32%),
-                linear-gradient(180deg, #f7f9fc 0%, #ffffff 38%, #f6f9fd 100%);
-            color: #101828;
+            color: var(--day-text, #f8fbff);
             margin-top: -1px;
             overflow: visible;
+            --day-sky-top: #76c9f5;
+            --day-sky-mid: #c7f0ff;
+            --day-sky-bottom: #f8fbff;
+            --day-haze: rgba(255, 255, 255, 0.54);
+            --day-sun-x: 72%;
+            --day-sun-y: 31%;
+            --day-sun-size: 28%;
+            --day-sun-opacity: 0.56;
+            --day-moon-x: 74%;
+            --day-moon-y: 28%;
+            --day-moon-opacity: 0;
+            --day-star-opacity: 0;
+            --day-cloud-opacity: 0.46;
+            --day-text: #f8fbff;
+            --day-text-muted: rgba(248, 251, 255, 0.72);
+            --day-accent: #cde9ff;
+            --day-shadow: rgba(15, 23, 42, 0.34);
         }.tappie-day-loop__sticky {
             position: sticky;
             top: 75px;
@@ -982,21 +995,59 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             margin: 0 auto;
             display: grid;
             grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-            
             gap: clamp(28px, 6vw, 78px);
             padding: clamp(32px, 5vw, 64px) 0;
+            isolation: isolate;
+            overflow: hidden;
+        }.tappie-day-loop__sticky::before {
+            content: "";
+            position: absolute;
+            inset: -75px calc((100vw - 100%) / -2) 0;
+            z-index: -3;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at var(--day-sun-x) var(--day-sun-y), rgba(255, 232, 154, var(--day-sun-opacity)) 0%, rgba(255, 224, 128, calc(var(--day-sun-opacity) * 0.38)) var(--day-sun-size), rgba(255, 224, 128, 0) calc(var(--day-sun-size) + 16%)),
+                radial-gradient(circle at var(--day-moon-x) var(--day-moon-y), rgba(255, 255, 236, var(--day-moon-opacity)) 0%, rgba(207, 225, 255, calc(var(--day-moon-opacity) * 0.5)) 12%, rgba(207, 225, 255, 0) 28%),
+                radial-gradient(circle at 18% 18%, rgba(255, 255, 255, calc(var(--day-cloud-opacity) * 0.26)) 0%, rgba(255, 255, 255, 0) 28%),
+                radial-gradient(circle at 84% 78%, rgba(255, 255, 255, calc(var(--day-cloud-opacity) * 0.22)) 0%, rgba(255, 255, 255, 0) 32%),
+                linear-gradient(180deg, var(--day-sky-top) 0%, var(--day-sky-mid) 48%, var(--day-sky-bottom) 100%);
+            transition: background 0.45s ease;
+        }.tappie-day-loop__sticky::after {
+            content: "";
+            position: absolute;
+            inset: -75px calc((100vw - 100%) / -2) 0;
+            z-index: -2;
+            pointer-events: none;
+            opacity: 1;
+            background:
+                radial-gradient(circle at 72% 26%, rgba(255, 255, 255, calc(var(--day-star-opacity) * 0.76)) 0 1px, transparent 2px),
+                radial-gradient(circle at 82% 19%, rgba(255, 255, 255, calc(var(--day-star-opacity) * 0.58)) 0 1px, transparent 2px),
+                radial-gradient(circle at 64% 36%, rgba(255, 255, 255, calc(var(--day-star-opacity) * 0.48)) 0 1px, transparent 2px),
+                linear-gradient(90deg, rgba(6, 11, 25, 0.28) 0%, rgba(6, 11, 25, 0.12) 34%, rgba(6, 11, 25, 0.00) 68%),
+                linear-gradient(180deg, rgba(255,255,255,0.00) 0%, var(--day-haze) 100%);
         }.tappie-day-loop__copy {
             position: relative;
             z-index: 2;
             min-width: 0;
+        }.tappie-day-loop__copy::before {
+            content: "";
+            position: absolute;
+            inset: -22px -30px -28px -28px;
+            z-index: -1;
+            pointer-events: none;
+            border-radius: 36px;
+            background:
+                linear-gradient(90deg, rgba(6, 11, 25, 0.24) 0%, rgba(6, 11, 25, 0.12) 42%, rgba(6, 11, 25, 0) 100%);
+            filter: blur(0.2px);
         }.tappie-day-loop__copy h2 {
             margin: 0;
             font-size: clamp(2.55rem, 6vw, 6.45rem);
             line-height: 0.96;
             letter-spacing: -0.075em;
             font-weight: 950;
-            color: #101828;
+            color: var(--day-text);
             text-wrap: balance;
+            text-shadow: 0 16px 38px var(--day-shadow);
         }.tappie-day-loop__caption {
             position: relative;
             min-height: 138px;
@@ -1015,23 +1066,25 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             pointer-events: auto;
         }.tappie-day-loop__step-number {
             display: block;
-            color: var(--primary-blue);
+            color: var(--day-accent);
             font-size: 12px;
             font-weight: 950;
             letter-spacing: 0.16em;
             text-transform: uppercase;
             margin-bottom: 13px;
+            text-shadow: 0 8px 24px var(--day-shadow);
         }.tappie-day-loop__step-title {
             display: block;
-            color: #101828;
+            color: var(--day-text);
             font-size: clamp(1.72rem, 3vw, 2.65rem);
             line-height: 1.06;
             letter-spacing: -0.06em;
             font-weight: 950;
+            text-shadow: 0 12px 30px var(--day-shadow);
         }.tappie-day-loop__step-desc {
             display: block;
             margin-top: 10px;
-            color: rgba(16,24,40,0.58);
+            color: var(--day-text-muted);
             font-size: clamp(0.98rem, 1.42vw, 1.12rem);
             line-height: 1.62;
             font-weight: 760;
@@ -1039,18 +1092,19 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             width: min(430px, 100%);
             height: 3px;
             border-radius: 999px;
-            background: rgba(16,24,40,0.10);
+            background: rgba(255,255,255,0.24);
             overflow: hidden;
             margin-top: clamp(18px, 3vw, 30px);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
         }.tappie-day-loop__progress-bar {
             height: 100%;
             width: 14.285%;
             border-radius: 999px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--marian-gold));
+            background: linear-gradient(90deg, #ffffff, var(--day-accent));
             transition: width 0.34s ease;
         }.tappie-day-loop__stage {
             position: relative;
-            
+            z-index: 1;
             display: grid;
             place-items: center;
             perspective: 1200px;
@@ -1059,8 +1113,8 @@ nav { padding: 0 16px; }.nav-logo { font-size: 18px; gap: 8px; }.nav-logo img { 
             inset: 6% 0 2%;
             border-radius: 70px;
             background:
-                radial-gradient(circle at 50% 22%, rgba(0,123,255,0.16), transparent 42%),
-                radial-gradient(circle at 72% 72%, rgba(241,196,15,0.14), transparent 36%);
+                radial-gradient(circle at 50% 22%, rgba(255,255,255,0.20), transparent 42%),
+                radial-gradient(circle at 72% 72%, rgba(255,255,255,0.12), transparent 36%);
             filter: blur(30px);
             pointer-events: none;
         }.tappie-day-phone {
@@ -10945,8 +10999,78 @@ body nav.tappie-site-header .nav-logo span {
 
 
     <script>
+// 02a-ordered-image-preload.js
+// Preloads below-the-fold images in DOM order after first paint, so fast scrolling does not reveal unloaded images.
+(() => {
+        const EXCLUDED_SELECTOR = '.tappie-scroll-hero img, .tappie-scroll-hero video';
+        const MAX_PARALLEL = window.matchMedia('(max-width: 760px)').matches ? 2 : 3;
+
+        function normalizeUrl(src) {
+            try { return new URL(src, window.location.href).href; }
+            catch (_) { return ''; }
+        }
+
+        function collectImageUrls() {
+            const urls = [];
+            const seen = new Set();
+
+            document.querySelectorAll('img[src]').forEach((img) => {
+                if (img.matches(EXCLUDED_SELECTOR)) return;
+                const url = normalizeUrl(img.currentSrc || img.getAttribute('src'));
+                if (!url || seen.has(url)) return;
+                seen.add(url);
+                urls.push(url);
+            });
+
+            return urls;
+        }
+
+        function preloadQueue(urls) {
+            let cursor = 0;
+            let active = 0;
+
+            function next() {
+                while (active < MAX_PARALLEL && cursor < urls.length) {
+                    const url = urls[cursor++];
+                    active += 1;
+                    const img = new Image();
+                    img.decoding = 'async';
+                    img.onload = img.onerror = () => {
+                        active -= 1;
+                        next();
+                    };
+                    img.src = url;
+                }
+            }
+
+            next();
+        }
+
+        function start() {
+            const urls = collectImageUrls();
+            if (!urls.length) return;
+            const runner = () => preloadQueue(urls);
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(runner, { timeout: 1400 });
+            } else {
+                window.setTimeout(runner, 450);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', start, { once: true });
+        } else {
+            start();
+        }
+    })();
+
+</script>
+
+
+    <script>
 // 02-day-loop.js
 // Extracted from index_19_solution_showcase_v3_clean_text.html
+// Integrated update: the same active step now also drives the day-to-night background variables.
 (() => {
         const section = document.getElementById('tappie-day-loop');
         if (!section) return;
@@ -10956,9 +11080,38 @@ body nav.tappie-site-header .nav-logo span {
         const dots = Array.from(section.querySelectorAll('.tappie-day-dot'));
         const progress = section.querySelector('#tappieDayProgress');
         const total = steps.length;
+        const skyStates = [
+            { top: '#73c8f3', mid: '#c7f1ff', bottom: '#f8fcff', haze: 'rgba(255,255,255,0.50)', sunX: '74%', sunY: '30%', sunSize: '26%', sunOpacity: '0.52', moonOpacity: '0', starOpacity: '0', cloudOpacity: '0.44', text: '#f8fbff', muted: 'rgba(248,251,255,0.74)', accent: '#d8efff', shadow: 'rgba(15,23,42,0.34)' },
+            { top: '#78cdef', mid: '#caeff9', bottom: '#fbfbef', haze: 'rgba(255,255,255,0.45)', sunX: '72%', sunY: '36%', sunSize: '27%', sunOpacity: '0.48', moonOpacity: '0', starOpacity: '0', cloudOpacity: '0.34', text: '#f9fbff', muted: 'rgba(249,251,255,0.74)', accent: '#d9f0ff', shadow: 'rgba(15,23,42,0.34)' },
+            { top: '#91d5e8', mid: '#d8f0ec', bottom: '#fff2df', haze: 'rgba(255,248,232,0.38)', sunX: '69%', sunY: '43%', sunSize: '30%', sunOpacity: '0.44', moonOpacity: '0', starOpacity: '0', cloudOpacity: '0.24', text: '#fffaf3', muted: 'rgba(255,250,243,0.72)', accent: '#ffe3aa', shadow: 'rgba(49,31,18,0.38)' },
+            { top: '#d97980', mid: '#eeb084', bottom: '#e6d8c4', haze: 'rgba(255,222,197,0.30)', sunX: '66%', sunY: '50%', sunSize: '34%', sunOpacity: '0.36', moonOpacity: '0', starOpacity: '0', cloudOpacity: '0.18', text: '#fff6ee', muted: 'rgba(255,246,238,0.72)', accent: '#ffd28a', shadow: 'rgba(52,24,29,0.42)' },
+            { top: '#b8697c', mid: '#c89191', bottom: '#c4b4ba', haze: 'rgba(255,220,222,0.24)', sunX: '64%', sunY: '55%', sunSize: '36%', sunOpacity: '0.24', moonOpacity: '0.08', starOpacity: '0.02', cloudOpacity: '0.10', text: '#fff4fb', muted: 'rgba(255,244,251,0.72)', accent: '#ffd0a6', shadow: 'rgba(45,24,43,0.46)' },
+            { top: '#20264f', mid: '#465887', bottom: '#767f9d', haze: 'rgba(176,190,220,0.16)', sunX: '64%', sunY: '58%', sunSize: '38%', sunOpacity: '0.04', moonOpacity: '0.36', starOpacity: '0.18', cloudOpacity: '0.06', text: '#f7f9ff', muted: 'rgba(247,249,255,0.72)', accent: '#d9e4ff', shadow: 'rgba(2,6,23,0.42)' },
+            { top: '#071124', mid: '#1a2b43', bottom: '#4c5a6b', haze: 'rgba(126,144,166,0.12)', sunX: '64%', sunY: '58%', sunSize: '38%', sunOpacity: '0', moonOpacity: '0.54', starOpacity: '0.34', cloudOpacity: '0.04', text: '#ffffff', muted: 'rgba(255,255,255,0.74)', accent: '#e3ecff', shadow: 'rgba(0,0,0,0.50)' }
+        ];
         let activeIndex = -1;
         let rafId = null;
         let manualUntil = 0;
+
+        function applySky(index) {
+            const state = skyStates[index] || skyStates[0];
+            section.style.setProperty('--day-sky-top', state.top);
+            section.style.setProperty('--day-sky-mid', state.mid);
+            section.style.setProperty('--day-sky-bottom', state.bottom);
+            section.style.setProperty('--day-haze', state.haze);
+            section.style.setProperty('--day-sun-x', state.sunX);
+            section.style.setProperty('--day-sun-y', state.sunY);
+            section.style.setProperty('--day-sun-size', state.sunSize);
+            section.style.setProperty('--day-sun-opacity', state.sunOpacity);
+            section.style.setProperty('--day-moon-opacity', state.moonOpacity);
+            section.style.setProperty('--day-star-opacity', state.starOpacity);
+            section.style.setProperty('--day-cloud-opacity', state.cloudOpacity);
+            section.style.setProperty('--day-text', state.text);
+            section.style.setProperty('--day-text-muted', state.muted);
+            section.style.setProperty('--day-accent', state.accent);
+            section.style.setProperty('--day-shadow', state.shadow);
+            section.dataset.dayPhase = String(index + 1);
+        }
 
         function setActive(index) {
             index = Math.max(0, Math.min(total - 1, index));
@@ -10968,6 +11121,7 @@ body nav.tappie-site-header .nav-logo span {
             steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
             screens.forEach((el, i) => el.classList.toggle('is-active', i === index));
             dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
+            applySky(index);
 
             if (progress) progress.style.width = `${((index + 1) / total) * 100}%`;
         }
