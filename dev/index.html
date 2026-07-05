@@ -8735,43 +8735,38 @@ body nav.tappie-site-header .nav-logo span {
 
 
 
-/* TAPPIE_PROBLEM_MASK_REVEAL_V15
-   Second-screen prototype: image-to-typography mask reveal inspired by Apple's large type sections.
-   Scoped to .problem-mask-v15 so the rest of the page remains untouched.
+
+/* TAPPIE_PROBLEM_MASK_REVEAL_STABLE_V16
+   Stable second-screen trial. Keeps an image layer visible at all scroll positions,
+   so the section never falls into an empty black frame on mobile Safari.
 */
-.tappie-problem-photo.problem-mask-v15 {
-    height: 250vh !important;
-    min-height: 250vh !important;
-    padding: 0 !important;
+.tappie-problem-photo.problem-mask-v16 {
+    position: relative;
+    height: 205vh;
+    min-height: 205vh;
     margin-top: -1px;
-    background: #050507 !important;
+    padding: 0;
     color: #f5f5f7;
-    overflow: visible !important;
+    background: #050507;
+    overflow: visible;
     isolation: isolate;
-    --pm-progress: 0;
-    --pm-photo-opacity: 1;
-    --pm-photo-scale: 1.06;
-    --pm-photo-y: 0px;
-    --pm-photo-clip: 0%;
-    --pm-shade-opacity: .62;
-    --pm-initial-opacity: 1;
-    --pm-initial-y: 0px;
-    --pm-mask-opacity: 0;
-    --pm-mask-scale: 2.35;
-    --pm-mask-y: 22px;
-    --pm-final-opacity: 0;
-    --pm-final-y: 32px;
+    --pm16-p: 0;
+    --pm16-intro-opacity: 1;
+    --pm16-intro-y: 0px;
+    --pm16-base-opacity: .72;
+    --pm16-base-scale: 1.06;
+    --pm16-base-y: 0px;
+    --pm16-window-opacity: .98;
+    --pm16-window-scale: 1;
+    --pm16-window-inset: 0%;
+    --pm16-window-radius: 0px;
+    --pm16-mask-opacity: 0;
+    --pm16-mask-scale: 1.26;
+    --pm16-mask-y: 28px;
+    --pm16-final-opacity: 0;
+    --pm16-final-y: 34px;
 }
-.tappie-problem-photo.problem-mask-v15::after {
-    content: "";
-    position: absolute;
-    inset: auto 0 0;
-    height: 18vh;
-    background: linear-gradient(180deg, rgba(5,5,7,0) 0%, #fff 92%);
-    pointer-events: none;
-    z-index: 3;
-}
-.problem-mask-v15__sticky {
+.problem-mask-v16__sticky {
     position: sticky;
     top: 75px;
     height: calc(100svh - 75px);
@@ -8782,40 +8777,59 @@ body nav.tappie-site-header .nav-logo span {
     transform: translateZ(0);
     backface-visibility: hidden;
 }
-.problem-mask-v15__photo {
+.problem-mask-v16__base-photo,
+.problem-mask-v16__photo-window,
+.problem-mask-v16__shade {
     position: absolute;
     inset: 0;
+    pointer-events: none;
+}
+.problem-mask-v16__base-photo {
     z-index: 0;
-    background-image: url("/assets/official/tappie-scenario-afterschool.PNG");
+    background-image:
+        linear-gradient(180deg, rgba(5,5,7,.26) 0%, rgba(5,5,7,.04) 46%, rgba(5,5,7,.58) 100%),
+        url("/assets/official/tappie-scenario-afterschool.PNG");
     background-size: cover;
     background-position: 56% center;
-    opacity: var(--pm-photo-opacity);
-    transform: translate3d(0, var(--pm-photo-y), 0) scale(var(--pm-photo-scale));
-    clip-path: inset(var(--pm-photo-clip) round clamp(0px, calc(var(--pm-progress) * 34px), 34px));
-    will-change: transform, opacity, clip-path;
+    opacity: var(--pm16-base-opacity);
+    transform: translate3d(0, var(--pm16-base-y), 0) scale(var(--pm16-base-scale));
+    filter: saturate(.96) contrast(1.04) brightness(.74);
+    will-change: opacity, transform;
 }
-.problem-mask-v15__shade {
-    position: absolute;
-    inset: 0;
+.problem-mask-v16__photo-window {
     z-index: 1;
-    pointer-events: none;
-    opacity: var(--pm-shade-opacity);
-    background:
-        radial-gradient(circle at 76% 18%, rgba(255,255,255,.20), rgba(255,255,255,0) 30%),
-        linear-gradient(90deg, rgba(2,4,10,.86) 0%, rgba(2,4,10,.60) 38%, rgba(2,4,10,.20) 72%, rgba(2,4,10,.10) 100%),
-        linear-gradient(180deg, rgba(2,4,10,.20) 0%, rgba(2,4,10,.12) 42%, rgba(2,4,10,.78) 100%);
+    inset: var(--pm16-window-inset);
+    border-radius: var(--pm16-window-radius);
+    background-image:
+        linear-gradient(90deg, rgba(3,8,18,.74) 0%, rgba(3,8,18,.26) 54%, rgba(3,8,18,.08) 100%),
+        linear-gradient(180deg, rgba(3,8,18,.30) 0%, rgba(3,8,18,.08) 42%, rgba(3,8,18,.58) 100%),
+        url("/assets/official/tappie-scenario-afterschool.PNG");
+    background-size: cover;
+    background-position: 56% center;
+    opacity: var(--pm16-window-opacity);
+    transform: scale(var(--pm16-window-scale));
+    box-shadow: 0 46px 120px rgba(0,0,0,.32);
+    will-change: opacity, transform, inset, border-radius;
 }
-.problem-mask-v15__initial {
-    position: absolute;
+.problem-mask-v16__shade {
     z-index: 2;
+    background:
+        radial-gradient(circle at 74% 18%, rgba(255,255,255,.22), rgba(255,255,255,0) 31%),
+        linear-gradient(90deg, rgba(2,4,10,.62) 0%, rgba(2,4,10,.36) 42%, rgba(2,4,10,.10) 100%),
+        linear-gradient(180deg, rgba(2,4,10,.18) 0%, rgba(2,4,10,.08) 52%, rgba(2,4,10,.72) 100%);
+    opacity: .82;
+}
+.problem-mask-v16__initial {
+    position: absolute;
+    z-index: 4;
     left: clamp(26px, 7vw, 92px);
     top: clamp(116px, 14vh, 180px);
     width: min(760px, calc(100vw - 52px));
-    opacity: var(--pm-initial-opacity);
-    transform: translate3d(0, var(--pm-initial-y), 0);
+    opacity: var(--pm16-intro-opacity);
+    transform: translate3d(0, var(--pm16-intro-y), 0);
     will-change: opacity, transform;
 }
-.problem-mask-v15__initial h2 {
+.problem-mask-v16__initial h2 {
     margin: 0;
     max-width: 900px;
     color: #fff;
@@ -8824,27 +8838,27 @@ body nav.tappie-site-header .nav-logo span {
     letter-spacing: -.075em;
     font-weight: 950;
     text-wrap: balance;
-    text-shadow: 0 28px 80px rgba(0,0,0,.32);
+    text-shadow: 0 28px 80px rgba(0,0,0,.42);
 }
-.problem-mask-v15__initial p {
+.problem-mask-v16__initial p {
     margin: clamp(22px, 3vw, 34px) 0 0;
     max-width: 650px;
-    color: rgba(255,255,255,.78);
+    color: rgba(255,255,255,.80);
     font-size: clamp(1.02rem, 1.72vw, 1.28rem);
     line-height: 1.68;
     font-weight: 760;
     letter-spacing: -.015em;
 }
-.problem-mask-v15 .tappie-problem-photo__kicker {
-    color: rgba(255,255,255,.80);
+.problem-mask-v16 .tappie-problem-photo__kicker {
+    color: rgba(255,255,255,.82);
 }
-.problem-mask-v15 .tappie-problem-photo__tags {
+.problem-mask-v16 .tappie-problem-photo__tags {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-top: clamp(30px, 4.4vw, 54px);
 }
-.problem-mask-v15 .tappie-problem-photo__tags span {
+.problem-mask-v16 .tappie-problem-photo__tags span {
     min-height: 42px;
     display: inline-flex;
     align-items: center;
@@ -8852,118 +8866,121 @@ body nav.tappie-site-header .nav-logo span {
     border-radius: 999px;
     background: rgba(255,255,255,.13);
     border: 1px solid rgba(255,255,255,.18);
-    color: rgba(255,255,255,.82);
+    color: rgba(255,255,255,.84);
     font-size: .98rem;
     font-weight: 850;
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
 }
-.problem-mask-v15__mask-title {
+.problem-mask-v16__mask-title {
     position: absolute;
-    z-index: 2;
+    z-index: 5;
     inset: 0;
     display: grid;
     place-items: center;
     text-align: center;
-    opacity: var(--pm-mask-opacity);
-    transform: translate3d(0, var(--pm-mask-y), 0) scale(var(--pm-mask-scale));
-    will-change: opacity, transform;
+    opacity: var(--pm16-mask-opacity);
+    transform: translate3d(0, var(--pm16-mask-y), 0) scale(var(--pm16-mask-scale));
     pointer-events: none;
+    will-change: opacity, transform;
 }
-.problem-mask-v15__mask-title span {
+.problem-mask-v16__mask-title span {
     display: block;
-    max-width: 11ch;
-    font-size: clamp(7.2rem, 20vw, 16.5rem);
+    max-width: 9.2ch;
+    color: rgba(245,247,255,.92);
+    font-size: clamp(5.8rem, 17.4vw, 15rem);
     line-height: .84;
     letter-spacing: -.095em;
     font-weight: 950;
-    background-image:
-        linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,0) 38%),
-        url("/assets/official/tappie-scenario-afterschool.PNG");
-    background-size: 160% auto, cover;
-    background-position: center top, 56% center;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-    filter: saturate(1.06) contrast(1.04);
-    text-shadow: none;
+    text-shadow:
+        0 20px 90px rgba(0,0,0,.66),
+        0 0 1px rgba(255,255,255,.42);
+    opacity: .96;
 }
-.problem-mask-v15__final {
+.problem-mask-v16__final {
     position: absolute;
-    z-index: 3;
+    z-index: 6;
     inset: 0;
     display: grid;
     place-content: center;
     padding: 0 clamp(28px, 6vw, 76px);
     text-align: center;
-    opacity: var(--pm-final-opacity);
-    transform: translate3d(0, var(--pm-final-y), 0);
+    opacity: var(--pm16-final-opacity);
+    transform: translate3d(0, var(--pm16-final-y), 0);
     pointer-events: none;
     will-change: opacity, transform;
 }
-.problem-mask-v15__final span,
-.problem-mask-v15__final strong {
+.problem-mask-v16__final span,
+.problem-mask-v16__final strong {
     display: block;
     font-size: clamp(2.45rem, 7vw, 6.3rem);
     line-height: .98;
     letter-spacing: -.07em;
     font-weight: 920;
     color: #f5f5f7;
-    text-shadow: 0 24px 80px rgba(0,0,0,.48);
+    text-shadow: 0 24px 80px rgba(0,0,0,.60);
 }
-.problem-mask-v15__final strong {
+.problem-mask-v16__final strong {
     margin-top: .12em;
-    background: linear-gradient(90deg, #f5f5f7 0%, #a7d3ff 54%, #f2d28b 100%);
+    background: linear-gradient(90deg, #f5f5f7 0%, #9fc9ff 52%, #f2d28b 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
 }
+.tappie-problem-photo.problem-mask-v16::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 20vh;
+    pointer-events: none;
+    z-index: 3;
+    background: linear-gradient(180deg, rgba(5,5,7,0) 0%, #fff 96%);
+}
 @media (max-width: 860px) {
-    .tappie-problem-photo.problem-mask-v15 {
-        height: 250vh !important;
-        min-height: 250vh !important;
-        padding: 0 !important;
+    .tappie-problem-photo.problem-mask-v16 {
+        height: 195vh;
+        min-height: 195vh;
     }
-    .problem-mask-v15__sticky {
+    .problem-mask-v16__sticky {
         top: 75px;
         height: calc(100svh - 75px);
         min-height: 560px;
     }
-    .problem-mask-v15__photo {
+    .problem-mask-v16__base-photo,
+    .problem-mask-v16__photo-window {
         background-position: 57% center;
     }
-    .problem-mask-v15__shade {
+    .problem-mask-v16__shade {
         background:
             radial-gradient(circle at 82% 16%, rgba(255,255,255,.16), rgba(255,255,255,0) 36%),
-            linear-gradient(90deg, rgba(2,4,10,.76) 0%, rgba(2,4,10,.40) 48%, rgba(2,4,10,.12) 100%),
-            linear-gradient(180deg, rgba(2,4,10,.22) 0%, rgba(2,4,10,.12) 42%, rgba(2,4,10,.78) 100%);
+            linear-gradient(90deg, rgba(2,4,10,.68) 0%, rgba(2,4,10,.38) 48%, rgba(2,4,10,.12) 100%),
+            linear-gradient(180deg, rgba(2,4,10,.20) 0%, rgba(2,4,10,.08) 42%, rgba(2,4,10,.70) 100%);
     }
-    .problem-mask-v15__initial {
+    .problem-mask-v16__initial {
         left: 26px;
         right: 26px;
         top: 78px;
         width: auto;
     }
-    .problem-mask-v15__initial h2 {
+    .problem-mask-v16__initial h2 {
         font-size: clamp(3rem, 13vw, 5.2rem);
         line-height: 1.02;
     }
-    .problem-mask-v15__initial p {
+    .problem-mask-v16__initial p {
         max-width: 32ch;
         margin-top: 18px;
     }
-    .problem-mask-v15 .tappie-problem-photo__tags {
+    .problem-mask-v16 .tappie-problem-photo__tags {
         margin-top: 22px;
     }
-    .problem-mask-v15__mask-title span {
-        font-size: clamp(5.2rem, 22vw, 9.2rem);
-        max-width: 8.6ch;
+    .problem-mask-v16__mask-title span {
+        font-size: clamp(4.9rem, 21vw, 8.8rem);
+        max-width: 8.2ch;
     }
-    .problem-mask-v15__final span,
-    .problem-mask-v15__final strong {
-        font-size: clamp(2.45rem, 12vw, 4.8rem);
+    .problem-mask-v16__final span,
+    .problem-mask-v16__final strong {
+        font-size: clamp(2.28rem, 11vw, 4.55rem);
         line-height: 1.02;
     }
 }
@@ -9069,12 +9086,14 @@ body nav.tappie-site-header .nav-logo span {
         </div>
     </section>
 
-    <section class="tappie-problem-photo problem-mask-v15" id="tappie-problem-photo" aria-label="Tappie 口說練習痛點" data-problem-mask-v15>
-        <div class="problem-mask-v15__sticky">
-            <div class="problem-mask-v15__photo" aria-hidden="true"></div>
-            <div class="problem-mask-v15__shade" aria-hidden="true"></div>
+    
+<section class="tappie-problem-photo problem-mask-v16" id="tappie-problem-photo" aria-label="Tappie 口說練習痛點" data-problem-mask-v16>
+        <div class="problem-mask-v16__sticky">
+            <div class="problem-mask-v16__base-photo" aria-hidden="true"></div>
+            <div class="problem-mask-v16__photo-window" aria-hidden="true"></div>
+            <div class="problem-mask-v16__shade" aria-hidden="true"></div>
 
-            <div class="problem-mask-v15__initial">
+            <div class="problem-mask-v16__initial">
                 <div class="tappie-problem-photo__kicker">痛點</div>
                 <h2>語言練習，<br>常常斷在<br>教室外。</h2>
                 <p>練習難開始，成果難看見。</p>
@@ -9086,21 +9105,18 @@ body nav.tappie-site-header .nav-logo span {
                 </div>
             </div>
 
-            <div class="problem-mask-v15__mask-title" aria-hidden="true">
+            <div class="problem-mask-v16__mask-title" aria-hidden="true">
                 <span>語言練習<br>常常斷在<br>教室外</span>
             </div>
 
-            <div class="problem-mask-v15__final">
+            <div class="problem-mask-v16__final">
                 <span>問題不是學生不練習，</span>
                 <strong>是入口不在身邊。</strong>
             </div>
         </div>
     </section>
 
-
-    
-
-    <section class="tappie-solution-showcase" id="tappie-solution-showcase" aria-label="Tappie 接住教室外的學習流程">
+<section class="tappie-solution-showcase" id="tappie-solution-showcase" aria-label="Tappie 接住教室外的學習流程">
         <div class="tappie-solution-showcase__inner">
             <div class="tappie-solution-showcase__header">
                 <div class="tappie-solution-showcase__kicker">Tappie 解法</div>
@@ -12615,10 +12631,11 @@ body nav.tappie-site-header .nav-logo span {
 })();
 </script>
 
+
 <script>
-// TAPPIE_PROBLEM_MASK_REVEAL_V15
+// TAPPIE_PROBLEM_MASK_REVEAL_STABLE_V16
 (() => {
-    const section = document.querySelector('[data-problem-mask-v15]');
+    const section = document.querySelector('[data-problem-mask-v16]');
     if (!section) return;
 
     const clamp = (v, min = 0, max = 1) => Math.min(max, Math.max(min, v));
@@ -12636,25 +12653,28 @@ body nav.tappie-site-header .nav-logo span {
         const max = Math.max(section.offsetHeight - window.innerHeight, 1);
         const p = clamp(-rect.top / max);
 
-        const introOut = range(p, 0.12, 0.42);
-        const maskIn = range(p, 0.20, 0.52);
-        const maskOut = range(p, 0.66, 0.86);
-        const finalIn = range(p, 0.72, 0.92);
-        const photoTighten = range(p, 0.18, 0.62);
+        const introOut = range(p, 0.10, 0.32);
+        const maskIn = range(p, 0.24, 0.48);
+        const maskOut = range(p, 0.68, 0.86);
+        const finalIn = range(p, 0.66, 0.88);
+        const windowTighten = range(p, 0.20, 0.58);
+        const darken = range(p, 0.44, 0.82);
 
-        set('--pm-progress', p.toFixed(3));
-        set('--pm-photo-opacity', (1 - range(p, 0.48, 0.76) * .95).toFixed(3));
-        set('--pm-photo-scale', (1.06 - photoTighten * .36).toFixed(3));
-        set('--pm-photo-y', `${(-30 * p).toFixed(1)}px`);
-        set('--pm-photo-clip', `${(photoTighten * 24).toFixed(2)}%`);
-        set('--pm-shade-opacity', (.62 + p * .30).toFixed(3));
-        set('--pm-initial-opacity', (1 - introOut).toFixed(3));
-        set('--pm-initial-y', `${(-28 * introOut).toFixed(1)}px`);
-        set('--pm-mask-opacity', (maskIn * (1 - maskOut * .86)).toFixed(3));
-        set('--pm-mask-scale', (2.35 - maskIn * 1.42 + finalIn * .06).toFixed(3));
-        set('--pm-mask-y', `${(22 - maskIn * 22 - finalIn * 28).toFixed(1)}px`);
-        set('--pm-final-opacity', finalIn.toFixed(3));
-        set('--pm-final-y', `${(32 - finalIn * 32).toFixed(1)}px`);
+        set('--pm16-p', p.toFixed(3));
+        set('--pm16-intro-opacity', (1 - introOut).toFixed(3));
+        set('--pm16-intro-y', `${(-26 * introOut).toFixed(1)}px`);
+        set('--pm16-base-opacity', (.72 - darken * .36).toFixed(3));
+        set('--pm16-base-scale', (1.06 - windowTighten * .12).toFixed(3));
+        set('--pm16-base-y', `${(-24 * p).toFixed(1)}px`);
+        set('--pm16-window-opacity', (.98 - darken * .74).toFixed(3));
+        set('--pm16-window-scale', (1 - windowTighten * .12).toFixed(3));
+        set('--pm16-window-inset', `${(windowTighten * 18).toFixed(2)}%`);
+        set('--pm16-window-radius', `${(windowTighten * 34).toFixed(1)}px`);
+        set('--pm16-mask-opacity', (maskIn * (1 - maskOut * .72)).toFixed(3));
+        set('--pm16-mask-scale', (1.26 - maskIn * .48 + finalIn * .08).toFixed(3));
+        set('--pm16-mask-y', `${(28 - maskIn * 30 - finalIn * 22).toFixed(1)}px`);
+        set('--pm16-final-opacity', finalIn.toFixed(3));
+        set('--pm16-final-y', `${(34 - finalIn * 34).toFixed(1)}px`);
     }
     function requestUpdate() {
         if (!raf) raf = requestAnimationFrame(update);
