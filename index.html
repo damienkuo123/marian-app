@@ -725,99 +725,217 @@ img[data-tappie-stable-media] {
 
 
 
-/* 02-problem-solution-dayloop.css
-   Source: index_19_solution_showcase_v3_clean_text.html lines 497-1238
-   Scope: problem photo, new solution section, day-loop base
-*/
-.tappie-problem-photo {
+
+/* 02-problem-cinema.css
+   --------------------------------------------------------------------------
+   Problem cinema rebuild v30:
+   1) the photo only appears inside the oversized 「教室外」 cutout
+   2) that same word scales down and travels into its final headline position
+   3) the photo stays visible early; black field ramps in only after the word reaches its final position
+   4) final headline / body reveal on pure black
+---------------------------------------------------------------------------- */
+        .tappie-problem-cinema {
             position: relative;
-            min-height: 105svh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: clamp(116px, 14vh, 180px) clamp(26px, 7vw, 92px) clamp(70px, 9vh, 120px);
+            height: 340vh;
+            background: #000;
             color: #fff;
-            margin-top: -1px;
-            isolation: isolate;
             overflow: clip;
-            background:
-                linear-gradient(90deg,
-                    rgba(3, 8, 18, 0.82) 0%,
-                    rgba(3, 8, 18, 0.66) 35%,
-                    rgba(3, 8, 18, 0.20) 68%,
-                    rgba(3, 8, 18, 0.06) 100%),
-                linear-gradient(180deg,
-                    rgba(3, 8, 18, 0.64) 0%,
-                    rgba(3, 8, 18, 0.10) 46%,
-                    rgba(3, 8, 18, 0.70) 100%),
-                url("/assets/official/tappie-scenario-afterschool.PNG");
-            background-size: cover;
-            background-position: center;
-        }.tappie-problem-photo::after {
-            content: "";
+            --pc-photo-scale: 1.04;
+            --pc-mask-opacity: 0;
+            --pc-scrim-opacity: 0;
+            --pc-headline-opacity: 0;
+            --pc-subline-opacity: 0;
+            --pc-subline-y: 14px;
+            --pc-body-opacity: 0;
+            --pc-body-y: 18px;
+        }
+
+        .tappie-problem-cinema__sticky {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            height: 100svh;
+            overflow: clip;
+            background: #000;
+        }
+
+        .tappie-problem-cinema__stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: clip;
+            background: #000;
+        }
+
+        .tappie-problem-cinema__photo-stage {
             position: absolute;
-            inset: auto 0 0;
-            
-            
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(180deg, rgba(0,0,0,.06) 0%, rgba(0,0,0,.02) 22%, rgba(0,0,0,.10) 74%, rgba(0,0,0,.18) 100%),
+                url('/assets/official/tappie-scenario-afterschool.jpg?v=29');
+            background-size: cover;
+            background-position: 56% 51%;
+            background-repeat: no-repeat;
+            transform: scale(var(--pc-photo-scale));
+            opacity: 1;
+            will-change: transform;
+        }
+
+        .tappie-problem-cinema__scrim {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
             pointer-events: none;
-            
-        }.tappie-problem-photo__content {
-            width: min(760px, 100%);
-            margin-top: clamp(18px, 5vh, 54px);
-        }.tappie-problem-photo__kicker,
-        .tappie-day-loop__kicker {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: clamp(18px, 2.6vw, 30px);
-            font-size: 12px;
-            font-weight: 950;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }.tappie-problem-photo__kicker { color: rgba(255,255,255,0.78); }.tappie-day-loop__kicker { color: var(--primary-blue); }.tappie-problem-photo__kicker::before,
-        .tappie-day-loop__kicker::before {
-            content: "";
-            width: 8px;
-            height: 8px;
-            border-radius: 999px;
-            background: currentColor;
-            box-shadow: 0 0 20px currentColor;
-        }.tappie-problem-photo h2 {
+            background: #000;
+            opacity: var(--pc-scrim-opacity);
+            will-change: opacity;
+        }
+
+        .tappie-problem-cinema__mask-wrap {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            opacity: var(--pc-mask-opacity);
+            will-change: opacity;
+        }
+
+        .tappie-problem-cinema__mask-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .tappie-problem-cinema__content {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            z-index: 3;
+            width: min(860px, calc(100vw - 40px));
+            display: grid;
+            gap: clamp(16px, 2.2vw, 20px);
+            justify-items: center;
+            transform: translate3d(-50%, -50%, 0);
+        }
+
+        .tappie-problem-cinema__headline-pair {
+            display: grid;
+            gap: clamp(6px, 1vw, 10px);
+            width: max-content;
+            max-width: 100%;
+            justify-items: start;
+        }
+
+        .tappie-problem-cinema__headline-line,
+        .tappie-problem-cinema__word-metrics {
             margin: 0;
-            
-            
-            line-height: 0.94;
-            letter-spacing: -0.075em;
-            font-weight: 950;
-            text-wrap: balance;
-        }.tappie-problem-photo p {
-            margin: clamp(22px, 3vw, 34px) 0 0;
-            max-width: 650px;
-            color: rgba(255,255,255,0.78);
-            font-size: clamp(1.02rem, 1.72vw, 1.28rem);
-            line-height: 1.68;
-            font-weight: 760;
-            letter-spacing: -0.015em;
-        }.tappie-problem-photo__tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: clamp(30px, 4.4vw, 54px);
-        }.tappie-problem-photo__tags span {
-            min-height: 42px;
-            display: inline-flex;
-            align-items: center;
-            padding: 0 17px;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.13);
-            border: 1px solid rgba(255,255,255,0.18);
-            color: rgba(255,255,255,0.82);
-            font-size: 0.98rem;
-            font-weight: 850;
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-        
-}.tappie-solution-showcase {
+            font-family: var(--tappie-font-stack);
+            font-size: clamp(72px, 9.6vw, 124px);
+            font-weight: 860;
+            line-height: .94;
+            letter-spacing: -.09em;
+            white-space: nowrap;
+        }
+
+        .tappie-problem-cinema__headline-line {
+            background-image: linear-gradient(135deg, #f4f7ff 0%, #dde6ff 24%, #a8bfff 56%, #6b8dff 84%, #4a72ff 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tappie-problem-cinema__headline-line--anchor {
+            opacity: var(--pc-headline-opacity);
+            will-change: opacity;
+        }
+
+        .tappie-problem-cinema__headline-line--subline {
+            opacity: var(--pc-subline-opacity);
+            transform: translate3d(0, var(--pc-subline-y), 0);
+            will-change: opacity, transform;
+        }
+
+        .tappie-problem-cinema__word-metrics {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .tappie-problem-cinema__body {
+            margin: 0;
+            max-width: min(760px, calc(100vw - 48px));
+            text-align: center;
+            font-size: clamp(18px, 1.72vw, 23px);
+            line-height: 1.7;
+            color: rgba(255,255,255,.80);
+            text-wrap: pretty;
+            opacity: var(--pc-body-opacity);
+            transform: translate3d(0, var(--pc-body-y), 0);
+            will-change: transform, opacity;
+        }
+
+        .tappie-problem-cinema::after {
+            content: none;
+        }
+
+        @media (max-width: 900px) {
+            .tappie-problem-cinema {
+                height: 328vh;
+            }
+
+            .tappie-problem-cinema__content {
+                width: calc(100vw - 34px);
+            }
+
+            .tappie-problem-cinema__headline-line,
+            .tappie-problem-cinema__word-metrics {
+                font-size: clamp(64px, 10.8vw, 108px);
+            }
+
+            .tappie-problem-cinema__body {
+                max-width: calc(100vw - 42px);
+                font-size: 16px;
+                line-height: 1.66;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .tappie-problem-cinema {
+                height: 316vh;
+            }
+
+            .tappie-problem-cinema__photo-stage {
+                background-position: 57% 50%;
+            }
+
+            .tappie-problem-cinema__content {
+                width: calc(100vw - 28px);
+                gap: 14px;
+            }
+
+            .tappie-problem-cinema__headline-line,
+            .tappie-problem-cinema__word-metrics {
+                font-size: clamp(52px, 12.4vw, 78px);
+            }
+
+            .tappie-problem-cinema__headline-pair {
+                gap: 6px;
+            }
+
+            .tappie-problem-cinema__body {
+                max-width: calc(100vw - 28px);
+                font-size: 15px;
+                line-height: 1.62;
+            }
+        }
+
+
+.tappie-solution-showcase {
             position: relative;
             margin-top: -1px;
             padding: clamp(104px, 10vw, 150px) 0 clamp(84px, 9vw, 126px);
@@ -1727,7 +1845,7 @@ img[data-tappie-stable-media] {
             rgba(3, 8, 18, 0.64) 0%,
             rgba(3, 8, 18, 0.10) 46%,
             rgba(3, 8, 18, 0.70) 100%),
-        url("/assets/official/tappie-scenario-afterschool.PNG") !important;
+        url("/assets/official/tappie-scenario-afterschool.jpg?v=23") !important;
     background-size: cover !important;
     background-position: center center !important;
 }
@@ -8834,24 +8952,32 @@ body nav.tappie-site-header .nav-logo span {
         </div>
     </section>
 
-    <section class="tappie-problem-photo" id="tappie-problem-photo" aria-label="Tappie 口說練習痛點">
-        <div class="tappie-problem-photo__content">
-            <div class="tappie-problem-photo__kicker">痛點</div>
-            <h2>語言練習，<br>常常斷在<br>教室外。</h2>
-            <p>練習難開始，成果難看見。</p>
-            <div class="tappie-problem-photo__tags" aria-label="口說練習常見斷點">
-                <span>看不到</span>
-                <span>難登入</span>
-                <span>不練</span>
-                <span>不主動</span>
-            </div>
-        </div>
-    </section>
-
-
     
 
-    <section class="tappie-solution-showcase" id="tappie-solution-showcase" aria-label="Tappie 接住教室外的學習流程">
+<section class="tappie-problem-cinema" id="tappie-problem-photo" aria-label="Tappie 口說練習痛點">
+    <div class="tappie-problem-cinema__sticky">
+        <div class="tappie-problem-cinema__stage">
+            <div class="tappie-problem-cinema__photo-stage" aria-hidden="true"></div>
+
+            <div class="tappie-problem-cinema__mask-wrap" aria-hidden="true">
+                <canvas class="tappie-problem-cinema__mask-canvas"></canvas>
+            </div>
+
+            <div class="tappie-problem-cinema__content">
+                <div class="tappie-problem-cinema__headline-pair">
+                    <div class="tappie-problem-cinema__headline-line tappie-problem-cinema__headline-line--anchor" aria-label="教室外">教室外</div>
+                    <div class="tappie-problem-cinema__headline-line tappie-problem-cinema__headline-line--subline">練習難開始。</div>
+                    <div class="tappie-problem-cinema__word-metrics" aria-hidden="true">教室外</div>
+                </div>
+                <p class="tappie-problem-cinema__body">練習難開始，成果難看見。離開教室後，傳統系統登入繁瑣，學生缺少一個自然又持續的練習方式。</p>
+            </div>
+
+            <div class="tappie-problem-cinema__scrim" aria-hidden="true"></div>
+        </div>
+    </div>
+</section>
+
+<section class="tappie-solution-showcase" id="tappie-solution-showcase" aria-label="Tappie 接住教室外的學習流程">
         <div class="tappie-solution-showcase__inner">
             <div class="tappie-solution-showcase__header">
                 <div class="tappie-solution-showcase__kicker">Tappie 解法</div>
@@ -11240,7 +11366,272 @@ body nav.tappie-site-header .nav-logo span {
 </script>
 
 
+    
+    
     <script>
+// 02-problem-cinema.js
+
+// Rebuilt second screen v33:
+// deterministic scroll mapping for the 「教室外」 mask.
+// The animation no longer depends on live mobile browser chrome height, CSS transitions,
+// or frame-to-frame smoothing, so fast and slow scrolling resolve to the same position.
+(() => {
+        const section = document.querySelector('.tappie-problem-cinema');
+        if (!section) return;
+
+        const sticky = section.querySelector('.tappie-problem-cinema__sticky');
+        const stage = section.querySelector('.tappie-problem-cinema__stage');
+        const anchorLine = section.querySelector('.tappie-problem-cinema__headline-line--anchor');
+        const canvas = section.querySelector('.tappie-problem-cinema__mask-canvas');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const lerp = (start, end, t) => start + (end - start) * t;
+        const range = (value, start, end) => {
+            if (end === start) return value >= end ? 1 : 0;
+            return clamp((value - start) / (end - start), 0, 1);
+        };
+        const smooth = (t) => {
+            t = clamp(t, 0, 1);
+            return t * t * (3 - 2 * t);
+        };
+        const easeOut = (t) => {
+            t = clamp(t, 0, 1);
+            return 1 - Math.pow(1 - t, 2.18);
+        };
+
+        let rafId = null;
+        let layoutRafId = null;
+        let dpr = Math.max(window.devicePixelRatio || 1, 1);
+
+        const geometry = {
+            sectionTop: 0,
+            maxScroll: 1,
+            width: 1,
+            height: 1,
+            anchorOffsetX: 0,
+            anchorOffsetY: 0,
+            baseFontSize: 120,
+            fontFamily: 'sans-serif',
+            fontWeight: '860',
+            maskText: '教室外',
+            charLayouts: []
+        };
+
+        const drawState = {
+            opacity: 0,
+            scale: 1,
+            x: 0,
+            y: 0
+        };
+
+        function getStableViewportHeight() {
+            return Math.max(
+                Math.round(sticky?.clientHeight || 0),
+                Math.round(stage?.clientHeight || 0),
+                1
+            );
+        }
+
+        function syncCanvasSize() {
+            if (!canvas || !ctx) return;
+            const width = Math.max(Math.round(stage?.clientWidth || section.clientWidth || window.innerWidth), 1);
+            const height = getStableViewportHeight();
+            dpr = Math.max(window.devicePixelRatio || 1, 1);
+
+            geometry.width = width;
+            geometry.height = height;
+
+            const pixelWidth = Math.round(width * dpr);
+            const pixelHeight = Math.round(height * dpr);
+            if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+            if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function measureTextGeometry() {
+            if (!anchorLine) return;
+
+            const stickyRect = sticky?.getBoundingClientRect();
+            const anchorRect = anchorLine.getBoundingClientRect();
+            const centerX = stickyRect ? stickyRect.left + stickyRect.width / 2 : window.innerWidth / 2;
+            const centerY = stickyRect ? stickyRect.top + stickyRect.height / 2 : window.innerHeight / 2;
+            const anchorCx = anchorRect.left + anchorRect.width / 2;
+            const anchorCy = anchorRect.top + anchorRect.height / 2;
+
+            geometry.anchorOffsetX = anchorCx - centerX;
+            geometry.anchorOffsetY = anchorCy - centerY;
+
+            const computed = window.getComputedStyle(anchorLine);
+            geometry.baseFontSize = parseFloat(computed.fontSize) || 120;
+            geometry.fontFamily = computed.fontFamily || 'sans-serif';
+            geometry.fontWeight = computed.fontWeight || '860';
+            geometry.maskText = (anchorLine.textContent || '教室外').trim() || '教室外';
+
+            const layouts = [];
+            const textNode = Array.from(anchorLine.childNodes).find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+            if (textNode && document.createRange) {
+                const rangeNode = document.createRange();
+                for (let i = 0; i < textNode.textContent.length; i += 1) {
+                    const glyph = textNode.textContent[i];
+                    if (!glyph.trim()) continue;
+                    rangeNode.setStart(textNode, i);
+                    rangeNode.setEnd(textNode, i + 1);
+                    const rect = rangeNode.getBoundingClientRect();
+                    if (!rect.width && !rect.height) continue;
+                    layouts.push({
+                        text: glyph,
+                        x: (rect.left + rect.width / 2) - anchorCx,
+                        y: (rect.top + rect.height / 2) - anchorCy
+                    });
+                }
+                rangeNode.detach?.();
+            }
+
+            geometry.charLayouts = layouts.length ? layouts : [{ text: geometry.maskText, x: 0, y: 0 }];
+        }
+
+        function refreshLayout() {
+            syncCanvasSize();
+            measureTextGeometry();
+
+            geometry.sectionTop = window.scrollY + section.getBoundingClientRect().top;
+            geometry.maxScroll = Math.max(section.offsetHeight - geometry.height, 1);
+            requestUpdate();
+        }
+
+        function scheduleLayoutRefresh() {
+            if (layoutRafId) return;
+            layoutRafId = requestAnimationFrame(() => {
+                layoutRafId = null;
+                const nextWidth = Math.max(Math.round(stage?.clientWidth || section.clientWidth || window.innerWidth), 1);
+                const nextHeight = getStableViewportHeight();
+
+                // iOS Safari can fire resize events when the browser chrome collapses.
+                // Refresh only when the actual sticky canvas size changes; otherwise the
+                // scroll position remains mapped to the same deterministic baseline.
+                if (Math.abs(nextWidth - geometry.width) > 1 || Math.abs(nextHeight - geometry.height) > 1) {
+                    refreshLayout();
+                } else {
+                    requestUpdate();
+                }
+            });
+        }
+
+        function drawMask() {
+            if (!canvas || !ctx) return;
+            const width = geometry.width;
+            const height = geometry.height;
+            ctx.clearRect(0, 0, width, height);
+
+            if (drawState.opacity <= 0.001) return;
+
+            ctx.save();
+            ctx.globalAlpha = drawState.opacity;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.translate(width / 2 + drawState.x, height / 2 + drawState.y);
+            ctx.scale(drawState.scale, drawState.scale);
+            ctx.font = `${geometry.fontWeight} ${geometry.baseFontSize}px ${geometry.fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#000';
+
+            geometry.charLayouts.forEach((glyph) => {
+                ctx.fillText(glyph.text, glyph.x, glyph.y);
+            });
+            ctx.restore();
+        }
+
+        function apply(progress) {
+            const introPhase = range(progress, 0.00, 0.22);
+            const maskInPhase = range(progress, 0.055, 0.145);
+            const travelPhase = range(progress, 0.055, 0.62);
+            const headlinePhase = range(progress, 0.68, 0.78);
+            const scrimPhase = range(progress, 0.60, 0.74);
+            const maskOutPhase = range(progress, 0.76, 0.86);
+            const sublinePhase = range(progress, 0.79, 0.91);
+            const bodyPhase = range(progress, 0.88, 0.98);
+
+            const easedIntro = smooth(introPhase);
+            const easedMaskIn = smooth(maskInPhase);
+            const easedTravel = easeOut(travelPhase);
+            const easedHeadline = smooth(headlinePhase);
+            const easedScrim = smooth(scrimPhase);
+            const easedMaskOut = smooth(maskOutPhase);
+            const easedSubline = smooth(sublinePhase);
+            const easedBody = smooth(bodyPhase);
+
+            const w = geometry.width;
+            const isMobile = w <= 560;
+            const isTablet = w <= 900 && w > 560;
+
+            const startScale = isMobile ? 12.6 : isTablet ? 10.2 : 8.8;
+            const maskScale = lerp(startScale, 1, easedTravel);
+            const maskX = lerp(0, geometry.anchorOffsetX, easedTravel);
+            const maskY = lerp(0, geometry.anchorOffsetY, easedTravel);
+
+            const photoScale = lerp(isMobile ? 1.08 : 1.06, 1.02, easedIntro);
+            const maskOpacity = easedMaskIn * (1 - easedMaskOut);
+            const sublineY = lerp(10, 0, easedSubline);
+            const bodyY = lerp(16, 0, easedBody);
+
+            section.style.setProperty('--pc-photo-scale', photoScale.toFixed(3));
+            section.style.setProperty('--pc-mask-opacity', maskOpacity.toFixed(3));
+            section.style.setProperty('--pc-scrim-opacity', easedScrim.toFixed(3));
+            section.style.setProperty('--pc-headline-opacity', easedHeadline.toFixed(3));
+            section.style.setProperty('--pc-subline-opacity', easedSubline.toFixed(3));
+            section.style.setProperty('--pc-subline-y', `${sublineY.toFixed(2)}px`);
+            section.style.setProperty('--pc-body-opacity', easedBody.toFixed(3));
+            section.style.setProperty('--pc-body-y', `${bodyY.toFixed(2)}px`);
+
+            drawState.opacity = maskOpacity;
+            drawState.scale = maskScale;
+            drawState.x = maskX;
+            drawState.y = maskY;
+            drawMask();
+        }
+
+        function update() {
+            rafId = null;
+            const scrollY = window.scrollY || window.pageYOffset || 0;
+            const progress = clamp((scrollY - geometry.sectionTop) / geometry.maxScroll, 0, 1);
+            apply(progress);
+        }
+
+        function requestUpdate() {
+            if (!rafId) rafId = requestAnimationFrame(update);
+        }
+
+        refreshLayout();
+        apply(0);
+
+        window.addEventListener('scroll', requestUpdate, { passive: true });
+        window.addEventListener('resize', scheduleLayoutRefresh, { passive: true });
+        window.addEventListener('orientationchange', () => setTimeout(refreshLayout, 180), { passive: true });
+        window.addEventListener('load', refreshLayout, { once: true });
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(refreshLayout).catch(() => {});
+        }
+
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(scheduleLayoutRefresh);
+            ro.observe(section);
+            if (sticky) ro.observe(sticky);
+        }
+
+        requestUpdate();
+    })();
+</script>
+
+
+
+<script>
 // 02-day-loop.js
 // Black stage day-loop cleanup: full-bleed black base + stable celestial light arc.
 (() => {
