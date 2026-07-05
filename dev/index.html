@@ -729,42 +729,82 @@ img[data-tappie-stable-media] {
    Source: index_19_solution_showcase_v3_clean_text.html lines 497-1238
    Scope: problem photo, new solution section, day-loop base
 */
-.tappie-problem-photo {
+
+.tappie-problem-mask {
             position: relative;
-            min-height: 105svh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: clamp(116px, 14vh, 180px) clamp(26px, 7vw, 92px) clamp(70px, 9vh, 120px);
-            color: #fff;
+            height: 240vh;
+            min-height: 1500px;
             margin-top: -1px;
             isolation: isolate;
             overflow: clip;
-            background:
-                linear-gradient(90deg,
-                    rgba(3, 8, 18, 0.82) 0%,
-                    rgba(3, 8, 18, 0.66) 35%,
-                    rgba(3, 8, 18, 0.20) 68%,
-                    rgba(3, 8, 18, 0.06) 100%),
-                linear-gradient(180deg,
-                    rgba(3, 8, 18, 0.64) 0%,
-                    rgba(3, 8, 18, 0.10) 46%,
-                    rgba(3, 8, 18, 0.70) 100%),
-                url("/assets/official/tappie-scenario-afterschool.PNG");
-            background-size: cover;
-            background-position: center;
-        }.tappie-problem-photo::after {
-            content: "";
+            background: #000;
+            color: #f5f5f7;
+            --pm-photo-opacity: 1;
+            --pm-photo-scale: 1.08;
+            --pm-photo-y: 0px;
+            --pm-veil-opacity: .48;
+            --pm-intro-opacity: 1;
+            --pm-intro-y: 0px;
+            --pm-mask-opacity: 0;
+            --pm-mask-scale: 1.42;
+            --pm-mask-y: 0px;
+            --pm-final-opacity: 0;
+            --pm-final-y: 42px;
+            --pm-exit-opacity: 0;
+        }
+        .tappie-problem-mask__sticky {
+            position: sticky;
+            top: 0;
+            height: 100svh;
+            min-height: 680px;
+            overflow: hidden;
+            background: #000;
+            display: grid;
+            place-items: center;
+        }
+        .tappie-problem-mask__media {
             position: absolute;
-            inset: auto 0 0;
-            
-            
+            inset: 0;
+            z-index: 0;
+            opacity: var(--pm-photo-opacity);
+            transform: translate3d(0, var(--pm-photo-y), 0) scale(var(--pm-photo-scale));
+            transform-origin: center center;
+            will-change: transform, opacity;
+        }
+        .tappie-problem-mask__media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            display: block;
+        }
+        .tappie-problem-mask__shade {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
             pointer-events: none;
-            
-        }.tappie-problem-photo__content {
-            width: min(760px, 100%);
-            margin-top: clamp(18px, 5vh, 54px);
-        }.tappie-problem-photo__kicker,
+            background:
+                radial-gradient(ellipse at 50% 42%, rgba(0,0,0,.08) 0%, rgba(0,0,0,.44) 58%, rgba(0,0,0,.86) 100%),
+                linear-gradient(180deg, rgba(0,0,0,.48) 0%, rgba(0,0,0,.34) 42%, rgba(0,0,0,.86) 100%);
+            opacity: var(--pm-veil-opacity);
+            transition: opacity .12s linear;
+        }
+        .tappie-problem-mask__intro,
+        .tappie-problem-mask__mask-title,
+        .tappie-problem-mask__final {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .tappie-problem-mask__intro {
+            left: clamp(28px, 7vw, 96px);
+            right: clamp(24px, 7vw, 96px);
+            bottom: clamp(84px, 13vh, 148px);
+            opacity: var(--pm-intro-opacity);
+            transform: translate3d(0, var(--pm-intro-y), 0);
+            will-change: opacity, transform;
+        }
+        .tappie-problem-mask__kicker,
         .tappie-day-loop__kicker {
             display: inline-flex;
             align-items: center;
@@ -774,7 +814,14 @@ img[data-tappie-stable-media] {
             font-weight: 950;
             letter-spacing: 0.16em;
             text-transform: uppercase;
-        }.tappie-problem-photo__kicker { color: rgba(255,255,255,0.78); }.tappie-day-loop__kicker { color: var(--primary-blue); }.tappie-problem-photo__kicker::before,
+        }
+        .tappie-problem-mask__kicker {
+            color: rgba(255,255,255,.78);
+        }
+        .tappie-day-loop__kicker {
+            color: var(--primary-blue);
+        }
+        .tappie-problem-mask__kicker::before,
         .tappie-day-loop__kicker::before {
             content: "";
             width: 8px;
@@ -782,42 +829,160 @@ img[data-tappie-stable-media] {
             border-radius: 999px;
             background: currentColor;
             box-shadow: 0 0 20px currentColor;
-        }.tappie-problem-photo h2 {
+        }
+        .tappie-problem-mask__intro h2 {
             margin: 0;
-            
-            
-            line-height: 0.94;
-            letter-spacing: -0.075em;
+            max-width: 9.4ch;
+            font-size: clamp(4.2rem, 9.4vw, 9.2rem);
+            line-height: .93;
+            letter-spacing: -0.078em;
             font-weight: 950;
             text-wrap: balance;
-        }.tappie-problem-photo p {
+            text-shadow: 0 26px 90px rgba(0,0,0,.36);
+        }
+        .tappie-problem-mask__intro p {
             margin: clamp(22px, 3vw, 34px) 0 0;
-            max-width: 650px;
-            color: rgba(255,255,255,0.78);
+            max-width: 680px;
+            color: rgba(255,255,255,.74);
             font-size: clamp(1.02rem, 1.72vw, 1.28rem);
             line-height: 1.68;
             font-weight: 760;
             letter-spacing: -0.015em;
-        }.tappie-problem-photo__tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: clamp(30px, 4.4vw, 54px);
-        }.tappie-problem-photo__tags span {
-            min-height: 42px;
-            display: inline-flex;
-            align-items: center;
-            padding: 0 17px;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.13);
-            border: 1px solid rgba(255,255,255,0.18);
-            color: rgba(255,255,255,0.82);
-            font-size: 0.98rem;
-            font-weight: 850;
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-        
-}.tappie-solution-showcase {
+        }
+        .tappie-problem-mask__mask-title {
+            left: 50%;
+            top: 50%;
+            width: min(1240px, 112vw);
+            text-align: center;
+            opacity: var(--pm-mask-opacity);
+            transform: translate3d(-50%, calc(-50% + var(--pm-mask-y)), 0) scale(var(--pm-mask-scale));
+            transform-origin: center center;
+            will-change: opacity, transform;
+            font-size: clamp(6.4rem, 18vw, 18rem);
+            line-height: .80;
+            letter-spacing: -0.105em;
+            font-weight: 950;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.15), rgba(255,255,255,0) 38%),
+                url("/assets/official/tappie-scenario-afterschool.PNG") center center / cover no-repeat;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            filter: saturate(1.12) contrast(1.04);
+        }
+        .tappie-problem-mask__mask-title span {
+            display: block;
+            white-space: nowrap;
+        }
+        .tappie-problem-mask__final {
+            left: 50%;
+            top: 50%;
+            width: min(980px, calc(100vw - 48px));
+            text-align: center;
+            opacity: var(--pm-final-opacity);
+            transform: translate3d(-50%, calc(-50% + var(--pm-final-y)), 0);
+            will-change: opacity, transform;
+        }
+        .tappie-problem-mask__final-kicker {
+            display: block;
+            margin-bottom: clamp(22px, 3.5vw, 34px);
+            color: rgba(255,255,255,.66);
+            font-size: clamp(.82rem, 1.15vw, 1.05rem);
+            font-weight: 860;
+            letter-spacing: .15em;
+        }
+        .tappie-problem-mask__final h2 {
+            margin: 0;
+            font-size: clamp(3.2rem, 7.4vw, 8rem);
+            line-height: .98;
+            letter-spacing: -0.07em;
+            font-weight: 950;
+            text-wrap: balance;
+            background: linear-gradient(112deg, #f5f7ff 0%, #cfe9ff 36%, #3e6ef3 78%, #2f63e8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+        }
+        .tappie-problem-mask__final p {
+            margin: clamp(22px, 3vw, 34px) auto 0;
+            max-width: 700px;
+            color: rgba(245,245,247,.70);
+            font-size: clamp(1.02rem, 1.55vw, 1.28rem);
+            line-height: 1.72;
+            font-weight: 760;
+            letter-spacing: -0.015em;
+        }
+        .tappie-problem-mask__exit {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 4;
+            height: 28vh;
+            min-height: 180px;
+            pointer-events: none;
+            opacity: var(--pm-exit-opacity);
+            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(245,245,247,.72) 62%, #f5f5f7 100%);
+        }
+        @media (max-width: 860px) {
+            .tappie-problem-mask {
+                height: 230vh;
+                min-height: 1350px;
+            }
+            .tappie-problem-mask__sticky {
+                min-height: 620px;
+            }
+            .tappie-problem-mask__media img {
+                object-position: 54% center;
+            }
+            .tappie-problem-mask__intro {
+                left: 26px;
+                right: 26px;
+                bottom: clamp(82px, 15vh, 136px);
+            }
+            .tappie-problem-mask__intro h2 {
+                max-width: 8.3ch;
+                font-size: clamp(3.2rem, 16.2vw, 5.7rem);
+                line-height: .95;
+                letter-spacing: -0.07em;
+            }
+            .tappie-problem-mask__intro p {
+                max-width: 31ch;
+                margin-top: 18px;
+                font-size: 1rem;
+            }
+            .tappie-problem-mask__mask-title {
+                width: 128vw;
+                font-size: clamp(6.8rem, 32vw, 13.5rem);
+                line-height: .78;
+                letter-spacing: -0.11em;
+            }
+            .tappie-problem-mask__final {
+                width: calc(100vw - 44px);
+            }
+            .tappie-problem-mask__final-kicker {
+                margin-bottom: 18px;
+                font-size: .78rem;
+            }
+            .tappie-problem-mask__final h2 {
+                font-size: clamp(2.85rem, 13.2vw, 5.4rem);
+                line-height: 1.02;
+                letter-spacing: -0.066em;
+            }
+            .tappie-problem-mask__final p {
+                max-width: 32ch;
+                margin-top: 18px;
+                font-size: 1rem;
+            }
+            .tappie-problem-mask__exit {
+                height: 22vh;
+                min-height: 150px;
+            }
+        }
+
+.tappie-solution-showcase {
             position: relative;
             margin-top: -1px;
             padding: clamp(104px, 10vw, 150px) 0 clamp(84px, 9vw, 126px);
@@ -8733,258 +8898,6 @@ body nav.tappie-site-header .nav-logo span {
     }
 }
 
-
-
-
-/* TAPPIE_PROBLEM_MASK_REVEAL_STABLE_V16
-   Stable second-screen trial. Keeps an image layer visible at all scroll positions,
-   so the section never falls into an empty black frame on mobile Safari.
-*/
-.tappie-problem-photo.problem-mask-v16 {
-    position: relative;
-    height: 205vh;
-    min-height: 205vh;
-    margin-top: -1px;
-    padding: 0;
-    color: #f5f5f7;
-    background: #050507;
-    overflow: visible;
-    isolation: isolate;
-    --pm16-p: 0;
-    --pm16-intro-opacity: 1;
-    --pm16-intro-y: 0px;
-    --pm16-base-opacity: .72;
-    --pm16-base-scale: 1.06;
-    --pm16-base-y: 0px;
-    --pm16-window-opacity: .98;
-    --pm16-window-scale: 1;
-    --pm16-window-inset: 0%;
-    --pm16-window-radius: 0px;
-    --pm16-mask-opacity: 0;
-    --pm16-mask-scale: 1.26;
-    --pm16-mask-y: 28px;
-    --pm16-final-opacity: 0;
-    --pm16-final-y: 34px;
-}
-.problem-mask-v16__sticky {
-    position: sticky;
-    top: 75px;
-    height: calc(100svh - 75px);
-    min-height: 620px;
-    overflow: hidden;
-    background: #050507;
-    z-index: 1;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-}
-.problem-mask-v16__base-photo,
-.problem-mask-v16__photo-window,
-.problem-mask-v16__shade {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
-.problem-mask-v16__base-photo {
-    z-index: 0;
-    background-image:
-        linear-gradient(180deg, rgba(5,5,7,.26) 0%, rgba(5,5,7,.04) 46%, rgba(5,5,7,.58) 100%),
-        url("/assets/official/tappie-scenario-afterschool.PNG");
-    background-size: cover;
-    background-position: 56% center;
-    opacity: var(--pm16-base-opacity);
-    transform: translate3d(0, var(--pm16-base-y), 0) scale(var(--pm16-base-scale));
-    filter: saturate(.96) contrast(1.04) brightness(.74);
-    will-change: opacity, transform;
-}
-.problem-mask-v16__photo-window {
-    z-index: 1;
-    inset: var(--pm16-window-inset);
-    border-radius: var(--pm16-window-radius);
-    background-image:
-        linear-gradient(90deg, rgba(3,8,18,.74) 0%, rgba(3,8,18,.26) 54%, rgba(3,8,18,.08) 100%),
-        linear-gradient(180deg, rgba(3,8,18,.30) 0%, rgba(3,8,18,.08) 42%, rgba(3,8,18,.58) 100%),
-        url("/assets/official/tappie-scenario-afterschool.PNG");
-    background-size: cover;
-    background-position: 56% center;
-    opacity: var(--pm16-window-opacity);
-    transform: scale(var(--pm16-window-scale));
-    box-shadow: 0 46px 120px rgba(0,0,0,.32);
-    will-change: opacity, transform, inset, border-radius;
-}
-.problem-mask-v16__shade {
-    z-index: 2;
-    background:
-        radial-gradient(circle at 74% 18%, rgba(255,255,255,.22), rgba(255,255,255,0) 31%),
-        linear-gradient(90deg, rgba(2,4,10,.62) 0%, rgba(2,4,10,.36) 42%, rgba(2,4,10,.10) 100%),
-        linear-gradient(180deg, rgba(2,4,10,.18) 0%, rgba(2,4,10,.08) 52%, rgba(2,4,10,.72) 100%);
-    opacity: .82;
-}
-.problem-mask-v16__initial {
-    position: absolute;
-    z-index: 4;
-    left: clamp(26px, 7vw, 92px);
-    top: clamp(116px, 14vh, 180px);
-    width: min(760px, calc(100vw - 52px));
-    opacity: var(--pm16-intro-opacity);
-    transform: translate3d(0, var(--pm16-intro-y), 0);
-    will-change: opacity, transform;
-}
-.problem-mask-v16__initial h2 {
-    margin: 0;
-    max-width: 900px;
-    color: #fff;
-    font-size: clamp(3.15rem, 7.45vw, 7.05rem);
-    line-height: .94;
-    letter-spacing: -.075em;
-    font-weight: 950;
-    text-wrap: balance;
-    text-shadow: 0 28px 80px rgba(0,0,0,.42);
-}
-.problem-mask-v16__initial p {
-    margin: clamp(22px, 3vw, 34px) 0 0;
-    max-width: 650px;
-    color: rgba(255,255,255,.80);
-    font-size: clamp(1.02rem, 1.72vw, 1.28rem);
-    line-height: 1.68;
-    font-weight: 760;
-    letter-spacing: -.015em;
-}
-.problem-mask-v16 .tappie-problem-photo__kicker {
-    color: rgba(255,255,255,.82);
-}
-.problem-mask-v16 .tappie-problem-photo__tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: clamp(30px, 4.4vw, 54px);
-}
-.problem-mask-v16 .tappie-problem-photo__tags span {
-    min-height: 42px;
-    display: inline-flex;
-    align-items: center;
-    padding: 0 17px;
-    border-radius: 999px;
-    background: rgba(255,255,255,.13);
-    border: 1px solid rgba(255,255,255,.18);
-    color: rgba(255,255,255,.84);
-    font-size: .98rem;
-    font-weight: 850;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-}
-.problem-mask-v16__mask-title {
-    position: absolute;
-    z-index: 5;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    opacity: var(--pm16-mask-opacity);
-    transform: translate3d(0, var(--pm16-mask-y), 0) scale(var(--pm16-mask-scale));
-    pointer-events: none;
-    will-change: opacity, transform;
-}
-.problem-mask-v16__mask-title span {
-    display: block;
-    max-width: 9.2ch;
-    color: rgba(245,247,255,.92);
-    font-size: clamp(5.8rem, 17.4vw, 15rem);
-    line-height: .84;
-    letter-spacing: -.095em;
-    font-weight: 950;
-    text-shadow:
-        0 20px 90px rgba(0,0,0,.66),
-        0 0 1px rgba(255,255,255,.42);
-    opacity: .96;
-}
-.problem-mask-v16__final {
-    position: absolute;
-    z-index: 6;
-    inset: 0;
-    display: grid;
-    place-content: center;
-    padding: 0 clamp(28px, 6vw, 76px);
-    text-align: center;
-    opacity: var(--pm16-final-opacity);
-    transform: translate3d(0, var(--pm16-final-y), 0);
-    pointer-events: none;
-    will-change: opacity, transform;
-}
-.problem-mask-v16__final span,
-.problem-mask-v16__final strong {
-    display: block;
-    font-size: clamp(2.45rem, 7vw, 6.3rem);
-    line-height: .98;
-    letter-spacing: -.07em;
-    font-weight: 920;
-    color: #f5f5f7;
-    text-shadow: 0 24px 80px rgba(0,0,0,.60);
-}
-.problem-mask-v16__final strong {
-    margin-top: .12em;
-    background: linear-gradient(90deg, #f5f5f7 0%, #9fc9ff 52%, #f2d28b 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-}
-.tappie-problem-photo.problem-mask-v16::after {
-    content: "";
-    position: absolute;
-    inset: auto 0 0;
-    height: 20vh;
-    pointer-events: none;
-    z-index: 3;
-    background: linear-gradient(180deg, rgba(5,5,7,0) 0%, #fff 96%);
-}
-@media (max-width: 860px) {
-    .tappie-problem-photo.problem-mask-v16 {
-        height: 195vh;
-        min-height: 195vh;
-    }
-    .problem-mask-v16__sticky {
-        top: 75px;
-        height: calc(100svh - 75px);
-        min-height: 560px;
-    }
-    .problem-mask-v16__base-photo,
-    .problem-mask-v16__photo-window {
-        background-position: 57% center;
-    }
-    .problem-mask-v16__shade {
-        background:
-            radial-gradient(circle at 82% 16%, rgba(255,255,255,.16), rgba(255,255,255,0) 36%),
-            linear-gradient(90deg, rgba(2,4,10,.68) 0%, rgba(2,4,10,.38) 48%, rgba(2,4,10,.12) 100%),
-            linear-gradient(180deg, rgba(2,4,10,.20) 0%, rgba(2,4,10,.08) 42%, rgba(2,4,10,.70) 100%);
-    }
-    .problem-mask-v16__initial {
-        left: 26px;
-        right: 26px;
-        top: 78px;
-        width: auto;
-    }
-    .problem-mask-v16__initial h2 {
-        font-size: clamp(3rem, 13vw, 5.2rem);
-        line-height: 1.02;
-    }
-    .problem-mask-v16__initial p {
-        max-width: 32ch;
-        margin-top: 18px;
-    }
-    .problem-mask-v16 .tappie-problem-photo__tags {
-        margin-top: 22px;
-    }
-    .problem-mask-v16__mask-title span {
-        font-size: clamp(4.9rem, 21vw, 8.8rem);
-        max-width: 8.2ch;
-    }
-    .problem-mask-v16__final span,
-    .problem-mask-v16__final strong {
-        font-size: clamp(2.28rem, 11vw, 4.55rem);
-        line-height: 1.02;
-    }
-}
-
 </style>
 </head>
 <body>
@@ -9086,33 +8999,31 @@ body nav.tappie-site-header .nav-logo span {
         </div>
     </section>
 
-    
-<section class="tappie-problem-photo problem-mask-v16" id="tappie-problem-photo" aria-label="Tappie 口說練習痛點" data-problem-mask-v16>
-        <div class="problem-mask-v16__sticky">
-            <div class="problem-mask-v16__base-photo" aria-hidden="true"></div>
-            <div class="problem-mask-v16__photo-window" aria-hidden="true"></div>
-            <div class="problem-mask-v16__shade" aria-hidden="true"></div>
+    <section class="tappie-problem-mask" id="tappie-problem-photo" aria-label="Tappie 口說練習痛點">
+        <div class="tappie-problem-mask__sticky">
+            <div class="tappie-problem-mask__media" aria-hidden="true">
+                <img src="/assets/official/tappie-scenario-afterschool.PNG" alt="" loading="eager" decoding="async">
+            </div>
+            <div class="tappie-problem-mask__shade" aria-hidden="true"></div>
 
-            <div class="problem-mask-v16__initial">
-                <div class="tappie-problem-photo__kicker">痛點</div>
+            <div class="tappie-problem-mask__intro">
+                <div class="tappie-problem-mask__kicker">痛點</div>
                 <h2>語言練習，<br>常常斷在<br>教室外。</h2>
                 <p>練習難開始，成果難看見。</p>
-                <div class="tappie-problem-photo__tags" aria-label="口說練習常見斷點">
-                    <span>看不到</span>
-                    <span>難登入</span>
-                    <span>不練</span>
-                    <span>不主動</span>
-                </div>
             </div>
 
-            <div class="problem-mask-v16__mask-title" aria-hidden="true">
-                <span>語言練習<br>常常斷在<br>教室外</span>
+            <div class="tappie-problem-mask__mask-title" aria-hidden="true">
+                <span>語言練習</span>
+                <span>斷在教室外</span>
             </div>
 
-            <div class="problem-mask-v16__final">
-                <span>問題不是學生不練習，</span>
-                <strong>是入口不在身邊。</strong>
+            <div class="tappie-problem-mask__final">
+                <span class="tappie-problem-mask__final-kicker">TAPPIE 解法</span>
+                <h2>離開教室，<br>練習也不斷線。</h2>
+                <p>一張每天會戴的名牌，接住學生開口、家長回饋與現場流程。</p>
             </div>
+
+            <div class="tappie-problem-mask__exit" aria-hidden="true"></div>
         </div>
     </section>
 
@@ -11505,7 +11416,84 @@ body nav.tappie-site-header .nav-logo span {
 </script>
 
 
+    
     <script>
+// 02-problem-mask.js
+// Clean replacement for the second screen: image-to-text-mask scroll reveal.
+(() => {
+        const section = document.querySelector('.tappie-problem-mask');
+        if (!section) return;
+
+        let rafId = null;
+        const clamp = (n, min = 0, max = 1) => Math.min(max, Math.max(min, n));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const smooth = (t) => {
+            t = clamp(t, 0, 1);
+            return t * t * (3 - 2 * t);
+        };
+        const range = (p, start, end) => smooth((p - start) / Math.max(end - start, 0.001));
+
+        function setVars(p) {
+            p = clamp(p, 0, 1);
+
+            const introOut = range(p, .16, .42);
+            const maskIn = range(p, .22, .45);
+            const maskOut = range(p, .66, .83);
+            const finalIn = range(p, .72, .90);
+            const photoOut = range(p, .35, .78);
+
+            const photoOpacity = lerp(1, .10, photoOut);
+            const photoScale = lerp(1.08, .92, range(p, .05, .62));
+            const photoY = lerp(0, -24, range(p, .12, .68));
+            const veilOpacity = lerp(.48, .92, range(p, .22, .78));
+
+            const introOpacity = 1 - introOut;
+            const introY = lerp(0, -26, introOut);
+
+            const maskOpacity = maskIn * (1 - maskOut);
+            const maskScale = lerp(1.46, .56, range(p, .22, .78));
+            const maskY = lerp(44, -10, range(p, .20, .78));
+
+            const finalOpacity = finalIn;
+            const finalY = lerp(46, 0, finalIn);
+            const exitOpacity = range(p, .88, .98);
+
+            section.style.setProperty('--pm-photo-opacity', photoOpacity.toFixed(3));
+            section.style.setProperty('--pm-photo-scale', photoScale.toFixed(3));
+            section.style.setProperty('--pm-photo-y', `${photoY.toFixed(1)}px`);
+            section.style.setProperty('--pm-veil-opacity', veilOpacity.toFixed(3));
+            section.style.setProperty('--pm-intro-opacity', introOpacity.toFixed(3));
+            section.style.setProperty('--pm-intro-y', `${introY.toFixed(1)}px`);
+            section.style.setProperty('--pm-mask-opacity', maskOpacity.toFixed(3));
+            section.style.setProperty('--pm-mask-scale', maskScale.toFixed(3));
+            section.style.setProperty('--pm-mask-y', `${maskY.toFixed(1)}px`);
+            section.style.setProperty('--pm-final-opacity', finalOpacity.toFixed(3));
+            section.style.setProperty('--pm-final-y', `${finalY.toFixed(1)}px`);
+            section.style.setProperty('--pm-exit-opacity', exitOpacity.toFixed(3));
+        }
+
+        function update() {
+            rafId = null;
+            const rect = section.getBoundingClientRect();
+            const maxScroll = Math.max(section.offsetHeight - window.innerHeight, 1);
+            const progress = clamp(-rect.top / maxScroll, 0, 1);
+            setVars(progress);
+        }
+
+        function requestUpdate() {
+            if (!rafId) rafId = requestAnimationFrame(update);
+        }
+
+        setVars(0);
+        window.addEventListener('scroll', requestUpdate, { passive: true });
+        window.addEventListener('resize', requestUpdate);
+        requestUpdate();
+    })();
+
+</script>
+
+
+<script>
 // 02-day-loop.js
 // Black stage day-loop cleanup: full-bleed black base + stable celestial light arc.
 (() => {
@@ -12630,60 +12618,5 @@ body nav.tappie-site-header .nav-logo span {
     }
 })();
 </script>
-
-
-<script>
-// TAPPIE_PROBLEM_MASK_REVEAL_STABLE_V16
-(() => {
-    const section = document.querySelector('[data-problem-mask-v16]');
-    if (!section) return;
-
-    const clamp = (v, min = 0, max = 1) => Math.min(max, Math.max(min, v));
-    const smooth = (t) => {
-        t = clamp(t);
-        return t * t * (3 - 2 * t);
-    };
-    const range = (p, a, b) => smooth((p - a) / (b - a));
-    const set = (name, value) => section.style.setProperty(name, value);
-
-    let raf = 0;
-    function update() {
-        raf = 0;
-        const rect = section.getBoundingClientRect();
-        const max = Math.max(section.offsetHeight - window.innerHeight, 1);
-        const p = clamp(-rect.top / max);
-
-        const introOut = range(p, 0.10, 0.32);
-        const maskIn = range(p, 0.24, 0.48);
-        const maskOut = range(p, 0.68, 0.86);
-        const finalIn = range(p, 0.66, 0.88);
-        const windowTighten = range(p, 0.20, 0.58);
-        const darken = range(p, 0.44, 0.82);
-
-        set('--pm16-p', p.toFixed(3));
-        set('--pm16-intro-opacity', (1 - introOut).toFixed(3));
-        set('--pm16-intro-y', `${(-26 * introOut).toFixed(1)}px`);
-        set('--pm16-base-opacity', (.72 - darken * .36).toFixed(3));
-        set('--pm16-base-scale', (1.06 - windowTighten * .12).toFixed(3));
-        set('--pm16-base-y', `${(-24 * p).toFixed(1)}px`);
-        set('--pm16-window-opacity', (.98 - darken * .74).toFixed(3));
-        set('--pm16-window-scale', (1 - windowTighten * .12).toFixed(3));
-        set('--pm16-window-inset', `${(windowTighten * 18).toFixed(2)}%`);
-        set('--pm16-window-radius', `${(windowTighten * 34).toFixed(1)}px`);
-        set('--pm16-mask-opacity', (maskIn * (1 - maskOut * .72)).toFixed(3));
-        set('--pm16-mask-scale', (1.26 - maskIn * .48 + finalIn * .08).toFixed(3));
-        set('--pm16-mask-y', `${(28 - maskIn * 30 - finalIn * 22).toFixed(1)}px`);
-        set('--pm16-final-opacity', finalIn.toFixed(3));
-        set('--pm16-final-y', `${(34 - finalIn * 34).toFixed(1)}px`);
-    }
-    function requestUpdate() {
-        if (!raf) raf = requestAnimationFrame(update);
-    }
-    window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', requestUpdate);
-    update();
-})();
-</script>
-
 </body>
 </html>
