@@ -11405,6 +11405,7 @@ body nav.tappie-site-header .nav-logo span {
         if (!section) return;
 
         const metrics = section.querySelector('.tappie-problem-cinema__word-metrics');
+        const metricChars = Array.from(section.querySelectorAll('.tappie-problem-cinema__word-metrics span'));
         const focusChar = section.querySelector('.tappie-problem-cinema__char--focus');
         const anchorLine = section.querySelector('.tappie-problem-cinema__headline-line--anchor');
         const canvas = section.querySelector('.tappie-problem-cinema__mask-canvas');
@@ -11427,6 +11428,8 @@ body nav.tappie-site-header .nav-logo span {
         let baseFontSize = 120;
         let fontFamily = 'sans-serif';
         let fontWeight = '860';
+        let maskText = '教室外';
+        let charLayouts = [];
         let dpr = Math.max(window.devicePixelRatio || 1, 1);
         const drawState = {
             opacity: 0,
@@ -11471,6 +11474,17 @@ body nav.tappie-site-header .nav-logo span {
             baseFontSize = parseFloat(computed.fontSize) || 120;
             fontFamily = computed.fontFamily || 'sans-serif';
             fontWeight = computed.fontWeight || '860';
+
+            charLayouts = metricChars.map((charEl) => {
+                const rect = charEl.getBoundingClientRect();
+                return {
+                    text: (charEl.textContent || '').trim(),
+                    x: (rect.left + rect.width / 2) - wordCx,
+                    y: (rect.top + rect.height / 2) - wordCy
+                };
+            }).filter((item) => item.text);
+
+            maskText = charLayouts.map((item) => item.text).join('') || (metrics.textContent || '教室外').trim() || '教室外';
         }
 
         function drawMask() {
@@ -11493,26 +11507,35 @@ body nav.tappie-site-header .nav-logo span {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#000';
-            ctx.fillText('教室外', 0, 0);
+
+            const glyphs = charLayouts.length
+                ? charLayouts
+                : [{ text: maskText || '教室外', x: 0, y: 0 }];
+
+            glyphs.forEach((glyph) => {
+                ctx.fillText(glyph.text, glyph.x, glyph.y);
+            });
             ctx.restore();
         }
 
         function apply(progress) {
             const photoOnlyPhase = range(progress, 0.00, 0.18);
             const maskIn = range(progress, 0.16, 0.30);
-            const travelPhase = range(progress, 0.22, 0.58);
-            const settlePhase = range(progress, 0.58, 0.74);
-            const handoffPhase = range(progress, 0.72, 0.82);
-            const sublinePhase = range(progress, 0.80, 0.88);
-            const bodyPhase = range(progress, 0.86, 0.96);
-            const photoFadePhase = range(progress, 0.76, 0.92);
-            const scrimPhase = range(progress, 0.18, 0.54);
+            const travelPhase = range(progress, 0.22, 0.56);
+            const settlePhase = range(progress, 0.56, 0.72);
+            const anchorPhase = range(progress, 0.64, 0.76);
+            const maskOutPhase = range(progress, 0.70, 0.84);
+            const sublinePhase = range(progress, 0.76, 0.86);
+            const bodyPhase = range(progress, 0.84, 0.95);
+            const photoFadePhase = range(progress, 0.84, 0.96);
+            const scrimPhase = range(progress, 0.18, 0.60);
 
             const easedPhotoOnly = smooth(photoOnlyPhase);
             const easedMaskIn = smooth(maskIn);
             const easedTravel = easeOut(travelPhase);
             const easedSettle = smooth(settlePhase);
-            const easedHandoff = smooth(handoffPhase);
+            const easedAnchor = smooth(anchorPhase);
+            const easedMaskOut = smooth(maskOutPhase);
             const easedSubline = smooth(sublinePhase);
             const easedBody = smooth(bodyPhase);
             const easedPhotoFade = smooth(photoFadePhase);
@@ -11542,14 +11565,14 @@ body nav.tappie-site-header .nav-logo span {
             if (settlePhase > 0) maskY = lerp(midY, endY, easedSettle);
 
             const photoScale = lerp(isMobile ? 1.06 : 1.04, 1.01, easedPhotoOnly);
-            const photoOpacity = 1 - easedPhotoFade;
-            const maskOpacity = easedMaskIn * (1 - easedHandoff);
-            const headlineOpacity = easedHandoff;
+            const photoOpacity = lerp(1, 0.72, easedPhotoFade);
+            const maskOpacity = easedMaskIn * (1 - easedMaskOut);
+            const headlineOpacity = easedAnchor;
             const sublineOpacity = easedSubline;
             const bodyOpacity = easedBody;
             const sublineY = lerp(14, 0, easedSubline);
             const bodyY = lerp(18, 0, easedBody);
-            const scrimOpacity = lerp(0, 0.34, easedScrim) * (1 - easedHandoff * 0.82);
+            const scrimOpacity = lerp(0, 0.38, easedScrim) * (1 - easedAnchor * 0.36);
             const maskDarkness = lerp(0.95, 0.995, Math.max(easedMaskIn, easedSettle));
 
             section.style.setProperty('--pc-photo-scale', photoScale.toFixed(3));
