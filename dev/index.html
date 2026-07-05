@@ -728,28 +728,35 @@ img[data-tappie-stable-media] {
 /* 02-problem-cinema.css
    --------------------------------------------------------------------------
    Scope: rebuilt second screen only.
-   Fresh standalone cinematic section.
-   Start inside the word 「室」, then pull back to reveal:
+   Phase A: pure photo hero.
+   Phase B: oversized black headline scales over a still photo.
+   Phase C: hand off into photo-filled 「教室外」, then reveal:
    教室外
    練習難開始。
 ---------------------------------------------------------------------------- */
         .tappie-problem-cinema {
             position: relative;
-            height: 300vh;
+            height: 352vh;
             background: #000;
             color: #fff;
             overflow: clip;
+            --pc-base-photo-opacity: 1;
+            --pc-base-photo-scale: 1.02;
+            --pc-prelude-opacity: 0;
+            --pc-prelude-scale: 1;
+            --pc-prelude-y: 0px;
             --pc-group-y: 0px;
             --pc-word-scale: 12.6;
             --pc-word-x: 0px;
             --pc-word-y: 0px;
+            --pc-main-opacity: 0;
             --pc-photo-opacity: 1;
             --pc-grad-opacity: 0;
             --pc-sub-opacity: 0;
-            --pc-sub-y: 16px;
+            --pc-sub-y: 14px;
             --pc-body-opacity: 0;
-            --pc-body-y: 20px;
-            --pc-scrim-opacity: .02;
+            --pc-body-y: 18px;
+            --pc-scrim-opacity: 0;
         }
 
         .tappie-problem-cinema__sticky {
@@ -768,20 +775,59 @@ img[data-tappie-stable-media] {
             background: #000;
         }
 
+        .tappie-problem-cinema__photo-stage {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(180deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.04) 22%, rgba(0,0,0,.16) 74%, rgba(0,0,0,.42) 100%),
+                url('/assets/official/tappie-scenario-afterschool.jpg?v=24');
+            background-size: cover;
+            background-position: 56% 52%;
+            background-repeat: no-repeat;
+            transform: scale(var(--pc-base-photo-scale));
+            opacity: var(--pc-base-photo-opacity);
+            will-change: transform, opacity;
+        }
+
+        .tappie-problem-cinema__prelude-wrap,
         .tappie-problem-cinema__headline-wrap {
             position: absolute;
             inset: 0;
             display: grid;
             place-items: center;
-            z-index: 1;
             pointer-events: none;
             padding: clamp(18px, 3vw, 30px);
+        }
+
+        .tappie-problem-cinema__prelude-wrap {
+            z-index: 1;
+        }
+
+        .tappie-problem-cinema__prelude-word {
+            font-family: var(--tappie-font-stack);
+            font-size: clamp(72px, 10vw, 136px);
+            font-weight: 860;
+            line-height: .9;
+            letter-spacing: -.095em;
+            white-space: nowrap;
+            color: #000;
+            opacity: var(--pc-prelude-opacity);
+            transform: translate3d(0, var(--pc-prelude-y), 0) scale(var(--pc-prelude-scale));
+            transform-origin: center center;
+            will-change: transform, opacity;
+        }
+
+        .tappie-problem-cinema__headline-wrap {
+            z-index: 2;
         }
 
         .tappie-problem-cinema__headline {
             position: relative;
             width: min(980px, calc(100vw - 28px));
             height: min(64vh, 520px);
+            display: grid;
+            place-items: center;
             transform: translate3d(0, var(--pc-group-y), 0);
             will-change: transform;
         }
@@ -797,7 +843,8 @@ img[data-tappie-stable-media] {
         .tappie-problem-cinema__mainline-scale {
             transform: scale(var(--pc-word-scale));
             transform-origin: center center;
-            will-change: transform;
+            will-change: transform, opacity;
+            opacity: var(--pc-main-opacity);
         }
 
         .tappie-problem-cinema__word-stack {
@@ -810,7 +857,7 @@ img[data-tappie-stable-media] {
         .tappie-problem-cinema__word-metrics,
         .tappie-problem-cinema__subline {
             font-family: var(--tappie-font-stack);
-            font-size: clamp(68px, 10vw, 128px);
+            font-size: clamp(72px, 10vw, 128px);
             font-weight: 860;
             line-height: .9;
             letter-spacing: -.095em;
@@ -828,12 +875,12 @@ img[data-tappie-stable-media] {
         }
 
         .tappie-problem-cinema__word--photo {
-            background-image: url('/assets/official/tappie-scenario-afterschool.jpg?v=23');
-            background-size: 112% auto;
-            background-position: center 50%;
+            background-image: url('/assets/official/tappie-scenario-afterschool.jpg?v=24');
+            background-size: 148% auto;
+            background-position: 56% 52%;
             background-repeat: no-repeat;
             opacity: var(--pc-photo-opacity);
-            filter: saturate(1.03) contrast(1.02);
+            filter: saturate(1.02) contrast(1.02);
             -webkit-text-stroke: 1px rgba(255,255,255,.03);
         }
 
@@ -861,10 +908,10 @@ img[data-tappie-stable-media] {
         .tappie-problem-cinema__copy {
             position: absolute;
             left: 50%;
-            top: calc(50% + clamp(54px, 6.5vw, 74px));
+            top: calc(50% + clamp(58px, 7vw, 80px));
             width: min(760px, calc(100vw - 36px));
             display: grid;
-            gap: clamp(8px, 1vw, 12px);
+            gap: clamp(12px, 1.4vw, 14px);
             justify-items: center;
             text-align: center;
             transform: translateX(-50%);
@@ -882,7 +929,7 @@ img[data-tappie-stable-media] {
             max-width: min(760px, calc(100vw - 36px));
             font-size: clamp(18px, 1.9vw, 24px);
             line-height: 1.7;
-            color: rgba(255,255,255,.76);
+            color: rgba(255,255,255,.78);
             text-wrap: pretty;
             opacity: var(--pc-body-opacity);
             transform: translate3d(0, var(--pc-body-y), 0);
@@ -892,11 +939,11 @@ img[data-tappie-stable-media] {
         .tappie-problem-cinema__scrim {
             position: absolute;
             inset: 0;
-            z-index: 2;
+            z-index: 3;
             pointer-events: none;
             background:
-                radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,.06) 24%, rgba(0,0,0,.28) 60%, rgba(0,0,0,.84) 100%),
-                linear-gradient(180deg, rgba(0,0,0,.02) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,.12) 58%, rgba(0,0,0,.78) 100%);
+                radial-gradient(circle at 50% 48%, rgba(0,0,0,0) 0%, rgba(0,0,0,.06) 22%, rgba(0,0,0,.22) 58%, rgba(0,0,0,.78) 100%),
+                linear-gradient(180deg, rgba(0,0,0,.00) 0%, rgba(0,0,0,.00) 18%, rgba(0,0,0,.12) 62%, rgba(0,0,0,.72) 100%);
             opacity: var(--pc-scrim-opacity);
         }
 
@@ -906,24 +953,24 @@ img[data-tappie-stable-media] {
             left: 0;
             right: 0;
             bottom: 0;
-            height: 18vh;
+            height: 20vh;
             pointer-events: none;
             z-index: 4;
             background: linear-gradient(
                 180deg,
                 rgba(0,0,0,0) 0%,
-                rgba(0,0,0,.06) 20%,
-                rgba(0,0,0,.14) 42%,
-                rgba(0,0,0,.28) 62%,
-                rgba(255,255,255,.10) 84%,
-                rgba(247,247,248,.94) 98%,
+                rgba(0,0,0,.04) 14%,
+                rgba(0,0,0,.14) 36%,
+                rgba(0,0,0,.30) 56%,
+                rgba(255,255,255,.08) 82%,
+                rgba(247,247,248,.92) 97%,
                 #f7f7f8 100%
             );
         }
 
         @media (max-width: 900px) {
             .tappie-problem-cinema {
-                height: 290vh;
+                height: 338vh;
             }
 
             .tappie-problem-cinema__headline {
@@ -931,10 +978,11 @@ img[data-tappie-stable-media] {
                 height: min(64vh, 500px);
             }
 
+            .tappie-problem-cinema__prelude-word,
             .tappie-problem-cinema__word,
             .tappie-problem-cinema__word-metrics,
             .tappie-problem-cinema__subline {
-                font-size: clamp(62px, 11.4vw, 108px);
+                font-size: clamp(64px, 11.3vw, 110px);
             }
 
             .tappie-problem-cinema__copy {
@@ -944,35 +992,40 @@ img[data-tappie-stable-media] {
             .tappie-problem-cinema__body {
                 max-width: calc(100vw - 34px);
                 font-size: 16px;
-                line-height: 1.65;
+                line-height: 1.66;
             }
         }
 
         @media (max-width: 560px) {
             .tappie-problem-cinema {
-                height: 280vh;
+                height: 326vh;
+            }
+
+            .tappie-problem-cinema__photo-stage {
+                background-position: 57% 50%;
             }
 
             .tappie-problem-cinema__headline {
-                width: calc(100vw - 24px);
+                width: calc(100vw - 22px);
                 height: min(62vh, 460px);
             }
 
+            .tappie-problem-cinema__prelude-word,
             .tappie-problem-cinema__word,
             .tappie-problem-cinema__word-metrics,
             .tappie-problem-cinema__subline {
-                font-size: clamp(56px, 12.6vw, 82px);
+                font-size: clamp(56px, 12.8vw, 84px);
             }
 
             .tappie-problem-cinema__word--photo {
-                background-size: 124% auto;
-                background-position: center 50%;
+                background-size: 162% auto;
+                background-position: 57% 50%;
             }
 
             .tappie-problem-cinema__copy {
                 width: calc(100vw - 28px);
-                top: calc(50% + 46px);
-                gap: 8px;
+                top: calc(50% + 58px);
+                gap: 10px;
             }
 
             .tappie-problem-cinema__body {
@@ -982,7 +1035,7 @@ img[data-tappie-stable-media] {
             }
 
             .tappie-problem-cinema::after {
-                height: 17vh;
+                height: 18vh;
             }
         }
 
@@ -9006,6 +9059,10 @@ body nav.tappie-site-header .nav-logo span {
     <section class="tappie-problem-cinema" id="tappie-problem-photo" aria-label="Tappie 口說練習痛點">
         <div class="tappie-problem-cinema__sticky">
             <div class="tappie-problem-cinema__stage">
+                <div class="tappie-problem-cinema__photo-stage" aria-hidden="true"></div>
+                <div class="tappie-problem-cinema__prelude-wrap" aria-hidden="true">
+                    <div class="tappie-problem-cinema__prelude-word">教室外</div>
+                </div>
                 <div class="tappie-problem-cinema__headline-wrap" aria-hidden="true">
                     <div class="tappie-problem-cinema__headline">
                         <div class="tappie-problem-cinema__mainline-anchor">
@@ -11422,8 +11479,8 @@ body nav.tappie-site-header .nav-logo span {
     
     <script>
 // 02-problem-cinema.js
-// Rebuilt second screen: start inside 「室」, then pull back and reveal:
-// 「教室外」 + 「練習難開始。」
+// Rebuilt second screen v24:
+// pure photo -> black headline over still photo -> masked-photo reveal.
 (() => {
         const section = document.querySelector('.tappie-problem-cinema');
         if (!section) return;
@@ -11475,13 +11532,19 @@ body nav.tappie-site-header .nav-logo span {
         }
 
         function apply(progress) {
-            const revealPhase = range(progress, 0.0, 0.42);
-            const settlePhase = range(progress, 0.34, 0.68);
-            const colorPhase = range(progress, 0.56, 0.82);
-            const subPhase = range(progress, 0.54, 0.76);
-            const bodyPhase = range(progress, 0.72, 0.96);
+            const preludeReveal = range(progress, 0.06, 0.16);
+            const preludeScalePhase = range(progress, 0.10, 0.28);
+            const preludeExit = range(progress, 0.24, 0.40);
+            const maskPhase = range(progress, 0.22, 0.46);
+            const settlePhase = range(progress, 0.42, 0.68);
+            const colorPhase = range(progress, 0.60, 0.84);
+            const subPhase = range(progress, 0.64, 0.82);
+            const bodyPhase = range(progress, 0.76, 0.98);
 
-            const easedReveal = easeOut(revealPhase);
+            const easedPreludeReveal = smooth(preludeReveal);
+            const easedPreludeScale = easeOut(preludeScalePhase);
+            const easedPreludeExit = smooth(preludeExit);
+            const easedMask = easeOut(maskPhase);
             const easedSettle = smooth(settlePhase);
             const easedColor = smooth(colorPhase);
             const easedSub = smooth(subPhase);
@@ -11491,40 +11554,56 @@ body nav.tappie-site-header .nav-logo span {
             const isMobile = w <= 560;
             const isTablet = w <= 900 && w > 560;
 
-            const startScale = isMobile ? 19.5 : isTablet ? 15.4 : 12.6;
-            const midScale = isMobile ? 3.25 : isTablet ? 2.55 : 2.0;
+            const basePhotoOpacity = 1 - smooth(range(progress, 0.22, 0.44));
+            const basePhotoScale = lerp(isMobile ? 1.05 : 1.02, 1, smooth(range(progress, 0.12, 0.44)));
+
+            const preludeOpacity = easedPreludeReveal * (1 - easedPreludeExit);
+            const preludeScaleStart = isMobile ? 0.94 : 0.98;
+            const preludeScaleEnd = isMobile ? 4.8 : isTablet ? 4.2 : 3.8;
+            const preludeScale = lerp(preludeScaleStart, preludeScaleEnd, easedPreludeScale);
+            const preludeY = lerp(0, isMobile ? -8 : -4, easedPreludeExit);
+
+            const startScale = isMobile ? 22.5 : isTablet ? 17.0 : 14.2;
+            const midScale = isMobile ? 3.6 : isTablet ? 2.8 : 2.15;
             const endScale = 1.0;
 
-            let wordScale = lerp(startScale, midScale, easedReveal);
+            let wordScale = lerp(startScale, midScale, easedMask);
             if (settlePhase > 0) wordScale = lerp(midScale, endScale, easedSettle);
 
             const startX = -focusOffsetX * startScale;
             const midX = -focusOffsetX * midScale;
             const endX = 0;
-            let wordX = lerp(startX, midX, easedReveal);
+            let wordX = lerp(startX, midX, easedMask);
             if (settlePhase > 0) wordX = lerp(midX, endX, easedSettle);
 
             const startY = -focusOffsetY * startScale;
             const midY = -focusOffsetY * midScale;
             const endY = 0;
-            let wordY = lerp(startY, midY, easedReveal);
+            let wordY = lerp(startY, midY, easedMask);
             if (settlePhase > 0) wordY = lerp(midY, endY, easedSettle);
 
-            const groupEndY = isMobile ? -70 : isTablet ? -62 : -56;
+            const groupEndY = isMobile ? -68 : isTablet ? -62 : -56;
             const groupY = lerp(0, groupEndY, easedSettle);
 
-            const photoOpacity = lerp(1, 0.05, easedColor);
-            const gradOpacity = lerp(0, 1, easedColor);
+            const mainOpacity = easedMask;
+            const photoOpacity = mainOpacity * lerp(1, 0.04, easedColor);
+            const gradOpacity = mainOpacity * easedColor;
             const subOpacity = easedSub;
-            const subY = lerp(16, 0, easedSub);
+            const subY = lerp(14, 0, easedSub);
             const bodyOpacity = easedBody;
-            const bodyY = lerp(20, 0, easedBody);
-            const scrimOpacity = lerp(0.02, 0.70, Math.max(easedSettle, easedBody * 0.88));
+            const bodyY = lerp(18, 0, easedBody);
+            const scrimOpacity = lerp(0, 0.68, Math.max(easedSettle, easedBody * 0.9));
 
+            section.style.setProperty('--pc-base-photo-opacity', basePhotoOpacity.toFixed(3));
+            section.style.setProperty('--pc-base-photo-scale', basePhotoScale.toFixed(3));
+            section.style.setProperty('--pc-prelude-opacity', preludeOpacity.toFixed(3));
+            section.style.setProperty('--pc-prelude-scale', preludeScale.toFixed(3));
+            section.style.setProperty('--pc-prelude-y', `${preludeY.toFixed(2)}px`);
             section.style.setProperty('--pc-group-y', `${groupY.toFixed(2)}px`);
             section.style.setProperty('--pc-word-scale', wordScale.toFixed(3));
             section.style.setProperty('--pc-word-x', `${wordX.toFixed(2)}px`);
             section.style.setProperty('--pc-word-y', `${wordY.toFixed(2)}px`);
+            section.style.setProperty('--pc-main-opacity', mainOpacity.toFixed(3));
             section.style.setProperty('--pc-photo-opacity', photoOpacity.toFixed(3));
             section.style.setProperty('--pc-grad-opacity', gradOpacity.toFixed(3));
             section.style.setProperty('--pc-sub-opacity', subOpacity.toFixed(3));
