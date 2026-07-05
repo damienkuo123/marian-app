@@ -747,8 +747,11 @@ img[data-tappie-stable-media] {
             --pc-mask-x: 0px;
             --pc-mask-y: 0px;
             --pc-mask-darkness: .98;
-            --pc-content-opacity: 0;
-            --pc-content-y: 18px;
+            --pc-content-opacity: 1;
+            --pc-headline-opacity: 0;
+            --pc-headline-y: 0px;
+            --pc-subline-opacity: 0;
+            --pc-subline-y: 14px;
             --pc-body-opacity: 0;
             --pc-body-y: 18px;
             --pc-scrim-opacity: 0;
@@ -809,9 +812,9 @@ img[data-tappie-stable-media] {
             display: grid;
             gap: clamp(16px, 2.2vw, 20px);
             justify-items: center;
-            transform: translate3d(-50%, calc(-50% + var(--pc-content-y)), 0);
+            transform: translate3d(-50%, -50%, 0);
             opacity: var(--pc-content-opacity);
-            will-change: transform, opacity;
+            will-change: opacity;
         }
 
         .tappie-problem-cinema__headline-pair {
@@ -836,6 +839,18 @@ img[data-tappie-stable-media] {
             -webkit-background-clip: text;
             color: transparent;
             -webkit-text-fill-color: transparent;
+        }
+
+        .tappie-problem-cinema__headline-line--anchor {
+            opacity: var(--pc-headline-opacity);
+            transform: translate3d(0, var(--pc-headline-y), 0);
+            will-change: opacity, transform;
+        }
+
+        .tappie-problem-cinema__headline-line--subline {
+            opacity: var(--pc-subline-opacity);
+            transform: translate3d(0, var(--pc-subline-y), 0);
+            will-change: opacity, transform;
         }
 
         .tappie-problem-cinema__word-metrics {
@@ -8977,8 +8992,8 @@ body nav.tappie-site-header .nav-logo span {
 
             <div class="tappie-problem-cinema__content">
                 <div class="tappie-problem-cinema__headline-pair">
-                    <div class="tappie-problem-cinema__headline-line">教室外</div>
-                    <div class="tappie-problem-cinema__headline-line">練習難開始。</div>
+                    <div class="tappie-problem-cinema__headline-line tappie-problem-cinema__headline-line--anchor">教室外</div>
+                    <div class="tappie-problem-cinema__headline-line tappie-problem-cinema__headline-line--subline">練習難開始。</div>
                     <div class="tappie-problem-cinema__word-metrics" aria-hidden="true"><span>教</span><span class="tappie-problem-cinema__char--focus">室</span><span>外</span></div>
                 </div>
                 <p class="tappie-problem-cinema__body">練習難開始，成果難看見。離開教室後，傳統系統登入繁瑣，學生缺少一個自然又持續的練習方式。</p>
@@ -11384,13 +11399,14 @@ body nav.tappie-site-header .nav-logo span {
 // 02-problem-cinema.js
 
 // Rebuilt second screen v26:
-// full photo -> oversized word cutout on black field -> final centered headline.
+// full photo -> oversized word cutout on black field -> final anchored headline handoff.
 (() => {
         const section = document.querySelector('.tappie-problem-cinema');
         if (!section) return;
 
         const metrics = section.querySelector('.tappie-problem-cinema__word-metrics');
         const focusChar = section.querySelector('.tappie-problem-cinema__char--focus');
+        const anchorLine = section.querySelector('.tappie-problem-cinema__headline-line--anchor');
         const canvas = section.querySelector('.tappie-problem-cinema__mask-canvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
 
@@ -11406,6 +11422,8 @@ body nav.tappie-site-header .nav-logo span {
         let rafId = null;
         let focusOffsetX = 0;
         let focusOffsetY = 0;
+        let anchorOffsetX = 0;
+        let anchorOffsetY = 0;
         let baseFontSize = 120;
         let fontFamily = 'sans-serif';
         let fontWeight = '860';
@@ -11431,8 +11449,9 @@ body nav.tappie-site-header .nav-logo span {
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        function measureFocusOffset() {
-            if (!metrics || !focusChar) return;
+        function measureOffsets() {
+            if (!metrics || !focusChar || !anchorLine) return;
+
             const wordRect = metrics.getBoundingClientRect();
             const charRect = focusChar.getBoundingClientRect();
             const wordCx = wordRect.left + wordRect.width / 2;
@@ -11441,6 +11460,12 @@ body nav.tappie-site-header .nav-logo span {
             const charCy = charRect.top + charRect.height / 2;
             focusOffsetX = charCx - wordCx;
             focusOffsetY = charCy - wordCy;
+
+            const anchorRect = anchorLine.getBoundingClientRect();
+            const anchorCx = anchorRect.left + anchorRect.width / 2;
+            const anchorCy = anchorRect.top + anchorRect.height / 2;
+            anchorOffsetX = anchorCx - (window.innerWidth / 2);
+            anchorOffsetY = anchorCy - (window.innerHeight / 2);
 
             const computed = window.getComputedStyle(metrics);
             baseFontSize = parseFloat(computed.fontSize) || 120;
@@ -11473,20 +11498,22 @@ body nav.tappie-site-header .nav-logo span {
         }
 
         function apply(progress) {
-            const photoOnlyPhase = range(progress, 0.00, 0.20);
-            const maskIn = range(progress, 0.18, 0.32);
-            const travelPhase = range(progress, 0.24, 0.58);
+            const photoOnlyPhase = range(progress, 0.00, 0.18);
+            const maskIn = range(progress, 0.16, 0.30);
+            const travelPhase = range(progress, 0.22, 0.58);
             const settlePhase = range(progress, 0.58, 0.74);
-            const handoffPhase = range(progress, 0.70, 0.82);
-            const bodyPhase = range(progress, 0.78, 0.92);
-            const photoFadePhase = range(progress, 0.74, 0.88);
-            const scrimPhase = range(progress, 0.20, 0.52);
+            const handoffPhase = range(progress, 0.72, 0.82);
+            const sublinePhase = range(progress, 0.80, 0.88);
+            const bodyPhase = range(progress, 0.86, 0.96);
+            const photoFadePhase = range(progress, 0.76, 0.92);
+            const scrimPhase = range(progress, 0.18, 0.54);
 
             const easedPhotoOnly = smooth(photoOnlyPhase);
             const easedMaskIn = smooth(maskIn);
             const easedTravel = easeOut(travelPhase);
             const easedSettle = smooth(settlePhase);
             const easedHandoff = smooth(handoffPhase);
+            const easedSubline = smooth(sublinePhase);
             const easedBody = smooth(bodyPhase);
             const easedPhotoFade = smooth(photoFadePhase);
             const easedScrim = smooth(scrimPhase);
@@ -11496,7 +11523,7 @@ body nav.tappie-site-header .nav-logo span {
             const isTablet = w <= 900 && w > 560;
 
             const startScale = isMobile ? 15.4 : isTablet ? 12.6 : 10.8;
-            const midScale = isMobile ? 6.0 : isTablet ? 4.9 : 4.1;
+            const midScale = isMobile ? 6.1 : isTablet ? 4.95 : 4.1;
             const endScale = 1.0;
 
             let maskScale = lerp(startScale, midScale, easedTravel);
@@ -11504,31 +11531,33 @@ body nav.tappie-site-header .nav-logo span {
 
             const startX = -focusOffsetX * startScale;
             const midX = -focusOffsetX * midScale;
-            const endX = 0;
+            const endX = anchorOffsetX;
             let maskX = lerp(startX, midX, easedTravel);
             if (settlePhase > 0) maskX = lerp(midX, endX, easedSettle);
 
             const startY = -focusOffsetY * startScale;
             const midY = -focusOffsetY * midScale;
-            const endY = 0;
+            const endY = anchorOffsetY;
             let maskY = lerp(startY, midY, easedTravel);
             if (settlePhase > 0) maskY = lerp(midY, endY, easedSettle);
 
             const photoScale = lerp(isMobile ? 1.06 : 1.04, 1.01, easedPhotoOnly);
             const photoOpacity = 1 - easedPhotoFade;
             const maskOpacity = easedMaskIn * (1 - easedHandoff);
-            const contentOpacity = easedHandoff;
-            const contentY = lerp(16, 0, easedHandoff);
+            const headlineOpacity = easedHandoff;
+            const sublineOpacity = easedSubline;
             const bodyOpacity = easedBody;
+            const sublineY = lerp(14, 0, easedSubline);
             const bodyY = lerp(18, 0, easedBody);
-            const scrimOpacity = lerp(0, 0.34, easedScrim) * (1 - easedHandoff * 0.8);
+            const scrimOpacity = lerp(0, 0.34, easedScrim) * (1 - easedHandoff * 0.82);
             const maskDarkness = lerp(0.95, 0.995, Math.max(easedMaskIn, easedSettle));
 
             section.style.setProperty('--pc-photo-scale', photoScale.toFixed(3));
             section.style.setProperty('--pc-photo-opacity', photoOpacity.toFixed(3));
             section.style.setProperty('--pc-mask-opacity', maskOpacity.toFixed(3));
-            section.style.setProperty('--pc-content-opacity', contentOpacity.toFixed(3));
-            section.style.setProperty('--pc-content-y', `${contentY.toFixed(2)}px`);
+            section.style.setProperty('--pc-headline-opacity', headlineOpacity.toFixed(3));
+            section.style.setProperty('--pc-subline-opacity', sublineOpacity.toFixed(3));
+            section.style.setProperty('--pc-subline-y', `${sublineY.toFixed(2)}px`);
             section.style.setProperty('--pc-body-opacity', bodyOpacity.toFixed(3));
             section.style.setProperty('--pc-body-y', `${bodyY.toFixed(2)}px`);
             section.style.setProperty('--pc-scrim-opacity', scrimOpacity.toFixed(3));
@@ -11556,12 +11585,12 @@ body nav.tappie-site-header .nav-logo span {
 
         function handleResize() {
             resizeCanvas();
-            measureFocusOffset();
+            measureOffsets();
             requestUpdate();
         }
 
         resizeCanvas();
-        measureFocusOffset();
+        measureOffsets();
         apply(0);
         window.addEventListener('scroll', requestUpdate, { passive: true });
         window.addEventListener('resize', handleResize);
