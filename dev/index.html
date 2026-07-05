@@ -8967,7 +8967,7 @@ body nav.tappie-site-header .nav-logo span {
                 <div class="tappie-problem-cinema__headline-pair">
                     <div class="tappie-problem-cinema__headline-line tappie-problem-cinema__headline-line--anchor" aria-label="教室外">教室外</div>
                     <div class="tappie-problem-cinema__headline-line tappie-problem-cinema__headline-line--subline">練習難開始。</div>
-                    <div class="tappie-problem-cinema__word-metrics" aria-hidden="true"><span>教</span><span>室</span><span>外</span></div>
+                    <div class="tappie-problem-cinema__word-metrics" aria-hidden="true">教室外</div>
                 </div>
                 <p class="tappie-problem-cinema__body">練習難開始，成果難看見。離開教室後，傳統系統登入繁瑣，學生缺少一個自然又持續的練習方式。</p>
             </div>
@@ -11371,14 +11371,13 @@ body nav.tappie-site-header .nav-logo span {
     <script>
 // 02-problem-cinema.js
 
-// Rebuilt second screen v30:
-// one continuous 「教室外」 cutout scales into place; only after it arrives does the black field become fully opaque.
+// Rebuilt second screen v32:
+// one continuous 「教室外」 cutout: the black mask scales while it appears, then hands off using the same measured glyph geometry.
 (() => {
         const section = document.querySelector('.tappie-problem-cinema');
         if (!section) return;
 
         const metrics = section.querySelector('.tappie-problem-cinema__word-metrics');
-        const metricChars = Array.from(section.querySelectorAll('.tappie-problem-cinema__word-metrics span'));
         const anchorLine = section.querySelector('.tappie-problem-cinema__headline-line--anchor');
         const canvas = section.querySelector('.tappie-problem-cinema__mask-canvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
@@ -11423,11 +11422,7 @@ body nav.tappie-site-header .nav-logo span {
         }
 
         function measureOffsets() {
-            if (!metrics || !anchorLine) return;
-
-            const wordRect = metrics.getBoundingClientRect();
-            const wordCx = wordRect.left + wordRect.width / 2;
-            const wordCy = wordRect.top + wordRect.height / 2;
+            if (!anchorLine) return;
 
             const anchorRect = anchorLine.getBoundingClientRect();
             const anchorCx = anchorRect.left + anchorRect.width / 2;
@@ -11435,21 +11430,35 @@ body nav.tappie-site-header .nav-logo span {
             anchorOffsetX = anchorCx - (window.innerWidth / 2);
             anchorOffsetY = anchorCy - (window.innerHeight / 2);
 
-            const computed = window.getComputedStyle(metrics);
+            const computed = window.getComputedStyle(anchorLine);
             baseFontSize = parseFloat(computed.fontSize) || 120;
             fontFamily = computed.fontFamily || 'sans-serif';
             fontWeight = computed.fontWeight || '860';
+            maskText = (anchorLine.textContent || metrics?.textContent || '教室外').trim() || '教室外';
 
-            charLayouts = metricChars.map((charEl) => {
-                const rect = charEl.getBoundingClientRect();
-                return {
-                    text: (charEl.textContent || '').trim(),
-                    x: (rect.left + rect.width / 2) - wordCx,
-                    y: (rect.top + rect.height / 2) - wordCy
-                };
-            }).filter((item) => item.text);
+            charLayouts = [];
+            const textNode = Array.from(anchorLine.childNodes).find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+            if (textNode && document.createRange) {
+                const range = document.createRange();
+                for (let i = 0; i < textNode.textContent.length; i += 1) {
+                    const text = textNode.textContent[i];
+                    if (!text.trim()) continue;
+                    range.setStart(textNode, i);
+                    range.setEnd(textNode, i + 1);
+                    const rect = range.getBoundingClientRect();
+                    if (!rect.width && !rect.height) continue;
+                    charLayouts.push({
+                        text,
+                        x: (rect.left + rect.width / 2) - anchorCx,
+                        y: (rect.top + rect.height / 2) - anchorCy
+                    });
+                }
+                range.detach?.();
+            }
 
-            maskText = charLayouts.map((item) => item.text).join('') || (metrics.textContent || '教室外').trim() || '教室外';
+            if (!charLayouts.length) {
+                charLayouts = [{ text: maskText, x: 0, y: 0 }];
+            }
         }
 
         function drawMask() {
@@ -11485,12 +11494,12 @@ body nav.tappie-site-header .nav-logo span {
 
         function apply(progress) {
             const introPhase = range(progress, 0.00, 0.22);
-            const maskInPhase = range(progress, 0.06, 0.16);
-            const travelPhase = range(progress, 0.18, 0.62);
-            const headlinePhase = range(progress, 0.62, 0.76);
-            const scrimPhase = range(progress, 0.62, 0.78);
-            const maskOutPhase = range(progress, 0.70, 0.84);
-            const sublinePhase = range(progress, 0.78, 0.90);
+            const maskInPhase = range(progress, 0.055, 0.145);
+            const travelPhase = range(progress, 0.055, 0.62);
+            const headlinePhase = range(progress, 0.68, 0.78);
+            const scrimPhase = range(progress, 0.60, 0.74);
+            const maskOutPhase = range(progress, 0.76, 0.86);
+            const sublinePhase = range(progress, 0.79, 0.91);
             const bodyPhase = range(progress, 0.88, 0.98);
 
             const easedIntro = smooth(introPhase);
