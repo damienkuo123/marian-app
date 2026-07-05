@@ -731,8 +731,8 @@ img[data-tappie-stable-media] {
    Problem cinema rebuild v30:
    1) the photo only appears inside the oversized 「教室外」 cutout
    2) that same word scales down and travels into its final headline position
-   3) the black field stays fully opaque throughout
-   4) once the word locks into place, the final headline / body reveal on pure black
+   3) the photo stays visible early; black field ramps in only after the word reaches its final position
+   4) final headline / body reveal on pure black
 ---------------------------------------------------------------------------- */
         .tappie-problem-cinema {
             position: relative;
@@ -742,6 +742,7 @@ img[data-tappie-stable-media] {
             overflow: clip;
             --pc-photo-scale: 1.04;
             --pc-mask-opacity: 0;
+            --pc-scrim-opacity: 0;
             --pc-headline-opacity: 0;
             --pc-subline-opacity: 0;
             --pc-subline-y: 14px;
@@ -787,7 +788,8 @@ img[data-tappie-stable-media] {
             z-index: 1;
             pointer-events: none;
             background: #000;
-            opacity: 1;
+            opacity: var(--pc-scrim-opacity);
+            will-change: opacity;
         }
 
         .tappie-problem-cinema__mask-wrap {
@@ -11370,7 +11372,7 @@ body nav.tappie-site-header .nav-logo span {
 // 02-problem-cinema.js
 
 // Rebuilt second screen v30:
-// one continuous 「教室外」 cutout scales into place, then the final copy appears on pure black.
+// one continuous 「教室外」 cutout scales into place; only after it arrives does the black field become fully opaque.
 (() => {
         const section = document.querySelector('.tappie-problem-cinema');
         if (!section) return;
@@ -11486,14 +11488,16 @@ body nav.tappie-site-header .nav-logo span {
             const maskInPhase = range(progress, 0.06, 0.16);
             const travelPhase = range(progress, 0.18, 0.62);
             const headlinePhase = range(progress, 0.62, 0.76);
-            const maskOutPhase = range(progress, 0.64, 0.76);
-            const sublinePhase = range(progress, 0.76, 0.88);
-            const bodyPhase = range(progress, 0.86, 0.98);
+            const scrimPhase = range(progress, 0.62, 0.78);
+            const maskOutPhase = range(progress, 0.70, 0.84);
+            const sublinePhase = range(progress, 0.78, 0.90);
+            const bodyPhase = range(progress, 0.88, 0.98);
 
             const easedIntro = smooth(introPhase);
             const easedMaskIn = smooth(maskInPhase);
             const easedTravel = easeOut(travelPhase);
             const easedHeadline = smooth(headlinePhase);
+            const easedScrim = smooth(scrimPhase);
             const easedMaskOut = smooth(maskOutPhase);
             const easedSubline = smooth(sublinePhase);
             const easedBody = smooth(bodyPhase);
@@ -11510,6 +11514,7 @@ body nav.tappie-site-header .nav-logo span {
 
             const photoScale = lerp(isMobile ? 1.08 : 1.06, 1.02, easedIntro);
             const maskOpacity = easedMaskIn * (1 - easedMaskOut);
+            const scrimOpacity = easedScrim;
             const headlineOpacity = easedHeadline;
             const sublineOpacity = easedSubline;
             const bodyOpacity = easedBody;
@@ -11518,6 +11523,7 @@ body nav.tappie-site-header .nav-logo span {
 
             section.style.setProperty('--pc-photo-scale', photoScale.toFixed(3));
             section.style.setProperty('--pc-mask-opacity', maskOpacity.toFixed(3));
+            section.style.setProperty('--pc-scrim-opacity', scrimOpacity.toFixed(3));
             section.style.setProperty('--pc-headline-opacity', headlineOpacity.toFixed(3));
             section.style.setProperty('--pc-subline-opacity', sublineOpacity.toFixed(3));
             section.style.setProperty('--pc-subline-y', `${sublineY.toFixed(2)}px`);
