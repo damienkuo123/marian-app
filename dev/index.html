@@ -11371,13 +11371,16 @@ body nav.tappie-site-header .nav-logo span {
     <script>
 // 02-problem-cinema.js
 
-// Rebuilt second screen v32:
-// one continuous 「教室外」 cutout: the black mask scales while it appears, then hands off using the same measured glyph geometry.
+// Rebuilt second screen v33:
+// deterministic scroll mapping for the 「教室外」 mask.
+// The animation no longer depends on live mobile browser chrome height, CSS transitions,
+// or frame-to-frame smoothing, so fast and slow scrolling resolve to the same position.
 (() => {
         const section = document.querySelector('.tappie-problem-cinema');
         if (!section) return;
 
-        const metrics = section.querySelector('.tappie-problem-cinema__word-metrics');
+        const sticky = section.querySelector('.tappie-problem-cinema__sticky');
+        const stage = section.querySelector('.tappie-problem-cinema__stage');
         const anchorLine = section.querySelector('.tappie-problem-cinema__headline-line--anchor');
         const canvas = section.querySelector('.tappie-problem-cinema__mask-canvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
@@ -11388,18 +11391,32 @@ body nav.tappie-site-header .nav-logo span {
             if (end === start) return value >= end ? 1 : 0;
             return clamp((value - start) / (end - start), 0, 1);
         };
-        const smooth = (t) => t * t * (3 - 2 * t);
-        const easeOut = (t) => 1 - Math.pow(1 - t, 2.2);
+        const smooth = (t) => {
+            t = clamp(t, 0, 1);
+            return t * t * (3 - 2 * t);
+        };
+        const easeOut = (t) => {
+            t = clamp(t, 0, 1);
+            return 1 - Math.pow(1 - t, 2.18);
+        };
 
         let rafId = null;
-        let anchorOffsetX = 0;
-        let anchorOffsetY = 0;
-        let baseFontSize = 120;
-        let fontFamily = 'sans-serif';
-        let fontWeight = '860';
-        let maskText = '教室外';
-        let charLayouts = [];
+        let layoutRafId = null;
         let dpr = Math.max(window.devicePixelRatio || 1, 1);
+
+        const geometry = {
+            sectionTop: 0,
+            maxScroll: 1,
+            width: 1,
+            height: 1,
+            anchorOffsetX: 0,
+            anchorOffsetY: 0,
+            baseFontSize: 120,
+            fontFamily: 'sans-serif',
+            fontWeight: '860',
+            maskText: '教室外',
+            charLayouts: []
+        };
 
         const drawState = {
             opacity: 0,
@@ -11408,63 +11425,105 @@ body nav.tappie-site-header .nav-logo span {
             y: 0
         };
 
-        function resizeCanvas() {
+        function getStableViewportHeight() {
+            return Math.max(
+                Math.round(sticky?.clientHeight || 0),
+                Math.round(stage?.clientHeight || 0),
+                1
+            );
+        }
+
+        function syncCanvasSize() {
             if (!canvas || !ctx) return;
-            const rect = section.getBoundingClientRect();
-            const width = Math.max(Math.round(rect.width), 1);
-            const height = Math.max(Math.round(window.innerHeight), 1);
+            const width = Math.max(Math.round(stage?.clientWidth || section.clientWidth || window.innerWidth), 1);
+            const height = getStableViewportHeight();
             dpr = Math.max(window.devicePixelRatio || 1, 1);
-            canvas.width = Math.round(width * dpr);
-            canvas.height = Math.round(height * dpr);
+
+            geometry.width = width;
+            geometry.height = height;
+
+            const pixelWidth = Math.round(width * dpr);
+            const pixelHeight = Math.round(height * dpr);
+            if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+            if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
             canvas.style.width = width + 'px';
             canvas.style.height = height + 'px';
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        function measureOffsets() {
+        function measureTextGeometry() {
             if (!anchorLine) return;
 
+            const stickyRect = sticky?.getBoundingClientRect();
             const anchorRect = anchorLine.getBoundingClientRect();
+            const centerX = stickyRect ? stickyRect.left + stickyRect.width / 2 : window.innerWidth / 2;
+            const centerY = stickyRect ? stickyRect.top + stickyRect.height / 2 : window.innerHeight / 2;
             const anchorCx = anchorRect.left + anchorRect.width / 2;
             const anchorCy = anchorRect.top + anchorRect.height / 2;
-            anchorOffsetX = anchorCx - (window.innerWidth / 2);
-            anchorOffsetY = anchorCy - (window.innerHeight / 2);
+
+            geometry.anchorOffsetX = anchorCx - centerX;
+            geometry.anchorOffsetY = anchorCy - centerY;
 
             const computed = window.getComputedStyle(anchorLine);
-            baseFontSize = parseFloat(computed.fontSize) || 120;
-            fontFamily = computed.fontFamily || 'sans-serif';
-            fontWeight = computed.fontWeight || '860';
-            maskText = (anchorLine.textContent || metrics?.textContent || '教室外').trim() || '教室外';
+            geometry.baseFontSize = parseFloat(computed.fontSize) || 120;
+            geometry.fontFamily = computed.fontFamily || 'sans-serif';
+            geometry.fontWeight = computed.fontWeight || '860';
+            geometry.maskText = (anchorLine.textContent || '教室外').trim() || '教室外';
 
-            charLayouts = [];
+            const layouts = [];
             const textNode = Array.from(anchorLine.childNodes).find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
             if (textNode && document.createRange) {
-                const range = document.createRange();
+                const rangeNode = document.createRange();
                 for (let i = 0; i < textNode.textContent.length; i += 1) {
-                    const text = textNode.textContent[i];
-                    if (!text.trim()) continue;
-                    range.setStart(textNode, i);
-                    range.setEnd(textNode, i + 1);
-                    const rect = range.getBoundingClientRect();
+                    const glyph = textNode.textContent[i];
+                    if (!glyph.trim()) continue;
+                    rangeNode.setStart(textNode, i);
+                    rangeNode.setEnd(textNode, i + 1);
+                    const rect = rangeNode.getBoundingClientRect();
                     if (!rect.width && !rect.height) continue;
-                    charLayouts.push({
-                        text,
+                    layouts.push({
+                        text: glyph,
                         x: (rect.left + rect.width / 2) - anchorCx,
                         y: (rect.top + rect.height / 2) - anchorCy
                     });
                 }
-                range.detach?.();
+                rangeNode.detach?.();
             }
 
-            if (!charLayouts.length) {
-                charLayouts = [{ text: maskText, x: 0, y: 0 }];
-            }
+            geometry.charLayouts = layouts.length ? layouts : [{ text: geometry.maskText, x: 0, y: 0 }];
+        }
+
+        function refreshLayout() {
+            syncCanvasSize();
+            measureTextGeometry();
+
+            geometry.sectionTop = window.scrollY + section.getBoundingClientRect().top;
+            geometry.maxScroll = Math.max(section.offsetHeight - geometry.height, 1);
+            requestUpdate();
+        }
+
+        function scheduleLayoutRefresh() {
+            if (layoutRafId) return;
+            layoutRafId = requestAnimationFrame(() => {
+                layoutRafId = null;
+                const nextWidth = Math.max(Math.round(stage?.clientWidth || section.clientWidth || window.innerWidth), 1);
+                const nextHeight = getStableViewportHeight();
+
+                // iOS Safari can fire resize events when the browser chrome collapses.
+                // Refresh only when the actual sticky canvas size changes; otherwise the
+                // scroll position remains mapped to the same deterministic baseline.
+                if (Math.abs(nextWidth - geometry.width) > 1 || Math.abs(nextHeight - geometry.height) > 1) {
+                    refreshLayout();
+                } else {
+                    requestUpdate();
+                }
+            });
         }
 
         function drawMask() {
             if (!canvas || !ctx) return;
-            const width = canvas.width / dpr;
-            const height = canvas.height / dpr;
+            const width = geometry.width;
+            const height = geometry.height;
             ctx.clearRect(0, 0, width, height);
 
             if (drawState.opacity <= 0.001) return;
@@ -11477,16 +11536,12 @@ body nav.tappie-site-header .nav-logo span {
             ctx.globalCompositeOperation = 'destination-out';
             ctx.translate(width / 2 + drawState.x, height / 2 + drawState.y);
             ctx.scale(drawState.scale, drawState.scale);
-            ctx.font = `${fontWeight} ${baseFontSize}px ${fontFamily}`;
+            ctx.font = `${geometry.fontWeight} ${geometry.baseFontSize}px ${geometry.fontFamily}`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#000';
 
-            const glyphs = charLayouts.length
-                ? charLayouts
-                : [{ text: maskText || '教室外', x: 0, y: 0 }];
-
-            glyphs.forEach((glyph) => {
+            geometry.charLayouts.forEach((glyph) => {
                 ctx.fillText(glyph.text, glyph.x, glyph.y);
             });
             ctx.restore();
@@ -11511,32 +11566,27 @@ body nav.tappie-site-header .nav-logo span {
             const easedSubline = smooth(sublinePhase);
             const easedBody = smooth(bodyPhase);
 
-            const w = window.innerWidth;
+            const w = geometry.width;
             const isMobile = w <= 560;
             const isTablet = w <= 900 && w > 560;
 
             const startScale = isMobile ? 12.6 : isTablet ? 10.2 : 8.8;
-            const endScale = 1.0;
-            const maskScale = lerp(startScale, endScale, easedTravel);
-            const maskX = lerp(0, anchorOffsetX, easedTravel);
-            const maskY = lerp(0, anchorOffsetY, easedTravel);
+            const maskScale = lerp(startScale, 1, easedTravel);
+            const maskX = lerp(0, geometry.anchorOffsetX, easedTravel);
+            const maskY = lerp(0, geometry.anchorOffsetY, easedTravel);
 
             const photoScale = lerp(isMobile ? 1.08 : 1.06, 1.02, easedIntro);
             const maskOpacity = easedMaskIn * (1 - easedMaskOut);
-            const scrimOpacity = easedScrim;
-            const headlineOpacity = easedHeadline;
-            const sublineOpacity = easedSubline;
-            const bodyOpacity = easedBody;
             const sublineY = lerp(10, 0, easedSubline);
             const bodyY = lerp(16, 0, easedBody);
 
             section.style.setProperty('--pc-photo-scale', photoScale.toFixed(3));
             section.style.setProperty('--pc-mask-opacity', maskOpacity.toFixed(3));
-            section.style.setProperty('--pc-scrim-opacity', scrimOpacity.toFixed(3));
-            section.style.setProperty('--pc-headline-opacity', headlineOpacity.toFixed(3));
-            section.style.setProperty('--pc-subline-opacity', sublineOpacity.toFixed(3));
+            section.style.setProperty('--pc-scrim-opacity', easedScrim.toFixed(3));
+            section.style.setProperty('--pc-headline-opacity', easedHeadline.toFixed(3));
+            section.style.setProperty('--pc-subline-opacity', easedSubline.toFixed(3));
             section.style.setProperty('--pc-subline-y', `${sublineY.toFixed(2)}px`);
-            section.style.setProperty('--pc-body-opacity', bodyOpacity.toFixed(3));
+            section.style.setProperty('--pc-body-opacity', easedBody.toFixed(3));
             section.style.setProperty('--pc-body-y', `${bodyY.toFixed(2)}px`);
 
             drawState.opacity = maskOpacity;
@@ -11548,10 +11598,8 @@ body nav.tappie-site-header .nav-logo span {
 
         function update() {
             rafId = null;
-            const rect = section.getBoundingClientRect();
-            const maxScroll = Math.max(section.offsetHeight - window.innerHeight, 1);
-            const scrolled = clamp(-rect.top, 0, maxScroll);
-            const progress = clamp(scrolled / maxScroll, 0, 1);
+            const scrollY = window.scrollY || window.pageYOffset || 0;
+            const progress = clamp((scrollY - geometry.sectionTop) / geometry.maxScroll, 0, 1);
             apply(progress);
         }
 
@@ -11559,17 +11607,24 @@ body nav.tappie-site-header .nav-logo span {
             if (!rafId) rafId = requestAnimationFrame(update);
         }
 
-        function handleResize() {
-            resizeCanvas();
-            measureOffsets();
-            requestUpdate();
+        refreshLayout();
+        apply(0);
+
+        window.addEventListener('scroll', requestUpdate, { passive: true });
+        window.addEventListener('resize', scheduleLayoutRefresh, { passive: true });
+        window.addEventListener('orientationchange', () => setTimeout(refreshLayout, 180), { passive: true });
+        window.addEventListener('load', refreshLayout, { once: true });
+
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(refreshLayout).catch(() => {});
         }
 
-        resizeCanvas();
-        measureOffsets();
-        apply(0);
-        window.addEventListener('scroll', requestUpdate, { passive: true });
-        window.addEventListener('resize', handleResize);
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(scheduleLayoutRefresh);
+            ro.observe(section);
+            if (sticky) ro.observe(sticky);
+        }
+
         requestUpdate();
     })();
 </script>
