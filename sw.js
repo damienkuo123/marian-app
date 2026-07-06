@@ -12,11 +12,19 @@ self.addEventListener('activate', (e) => {
 // Chrome 嚴格規定：必須有 fetch 監聽器才算合格的 PWA
 // 管理頁與入口頁必須永遠優先抓最新版，避免 adminCard / 權限切換被舊 HTML 或舊 API layer 卡住。
 const TAPPIE_NO_CACHE_PATHS = [
+    '/index.html',
+    '/dashboard.html',
+    '/lobby.html',
+    '/battle.html',
+    '/arena.html',
     '/admin.html',
     '/tap.html',
+    '/student-app.html',
     '/console.html',
     '/station.html',
-    '/tappie-api.js'
+    '/manifest.json',
+    '/tappie-api.js',
+    '/tappie-student-session.js'
 ];
 
 function shouldBypassRuntimeCache(requestUrl) {

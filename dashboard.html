@@ -21,6 +21,7 @@
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
   <script src="./tappie-api.js?v=20260522-micro-polish-v2"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
 
   <style>
     :root { 
@@ -922,73 +923,42 @@
     }
 
     function installPWA() {
-        toggleSettingsModal(false); // 先關閉設定視窗
-        
+        toggleSettingsModal(false);
+
         const ua = navigator.userAgent || navigator.vendor || window.opera;
         const isLineOrFB = /Line|FBAN|FBAV|Instagram/i.test(ua);
-        const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-        const isIOSChrome = isIOS && /CriOS/i.test(ua);
 
-        // 🛡️ 狀況 A：社群軟體內建瀏覽器
         if (isLineOrFB) {
-            alert("⚠️ 目前在 LINE/FB 內部瀏覽器中。\n\n請點擊右上角「...」或「⋮」，選擇『以預設瀏覽器開啟』(Safari/Chrome) 後，才能將 Tappie 安裝到桌面喔！");
+            alert("⚠️ 目前在 LINE/FB 內部瀏覽器中。\n\n請點擊右上角「...」或「⋮」，選擇『以預設瀏覽器開啟』(Safari/Chrome) 後，再建立 Tappie 主畫面捷徑。");
             return;
         }
 
-        const pwaOverlay = document.getElementById('ios-pwa-overlay');
-        const pwaText = pwaOverlay.querySelector('p');
-        const pwaArrow = pwaOverlay.querySelector('.arrow-down');
-
-        // 🍏 狀況 B：iOS 設備
-        if (isIOS) {
-            if (window.navigator.standalone === true) {
-                alert("✅ Tappie 已經在您的主畫面囉！");
-            } else {
-                if (isIOSChrome) {
-                    pwaText.innerHTML = "1. 點擊右上角網址列的 <b style='font-size: 18px;'>📤 分享</b> 圖示<br>2. 向下滑動，選擇 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>➕ 加入主畫面</b>";
-                    if(pwaArrow) pwaArrow.style.animation = "bounce-up 1s infinite";
-                    pwaOverlay.style.alignItems = "center"; 
-                } else {
-                    pwaText.innerHTML = "1. 點擊 Safari 工具列的 <b style='font-size: 18px;'>📤 分享</b> 圖示<br>2. 向下滑動，選擇 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>➕ 加入主畫面</b>";
-                    if(pwaArrow) pwaArrow.style.animation = "bounce 1s infinite";
-                    pwaOverlay.style.alignItems = "flex-end"; 
-                }
-                pwaOverlay.classList.add('show');
-            }
+        if (typeof isTappieStandaloneMode === "function" && isTappieStandaloneMode()) {
+            alert("✅ Tappie 已經在您的主畫面囉！");
             return;
         }
 
-        // 🤖 狀況 C：Android 設備 (Chrome / Samsung Internet 等)
-        if (deferredPrompt) {
-            // ✅ API 存活：直接觸發原生的完美安裝跳窗！
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                deferredPrompt = null; // 只能用一次
-            });
-        } else {
-            // ❌ API 死亡 (被瀏覽器限制、未達標、或已安裝)：
-            // 啟動終極防護網！動態將教學視窗改成 Android Chrome 版本
-            
-            // 判斷是否為全螢幕模式 (Android 判斷已安裝的方法之一)
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                alert("✅ Tappie 已經在您的主畫面囉！");
-                return;
-            }
+        const activeUid = STUDENT_ID || (
+          window.TappieStudentSession && typeof TappieStudentSession.getActiveUid === "function"
+            ? TappieStudentSession.getActiveUid({ touch: false })
+            : ""
+        );
 
-            // 彈出 Android 手動安裝教學
-            pwaOverlay.querySelector('h3').innerHTML = "🤖 安裝 Tappie (Android)";
-            pwaText.innerHTML = "系統無法自動安裝，請手動加入：<br><br>1. 點擊右上角的 <b style='font-size: 18px;'>⋮ (三個點)</b> 選單<br>2. 選擇 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>📱 加到主畫面</b> 或 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>安裝應用程式</b>";
-            
-            // 箭頭朝上彈跳 (指向右上角的選單)
-            if(pwaArrow) pwaArrow.style.animation = "bounce-up 1s infinite";
-            pwaOverlay.style.alignItems = "center"; // 視窗置中
-            
-            pwaOverlay.classList.add('show');
+        if (!activeUid) {
+            alert("找不到學生資料，請重新感應卡片或回到官網登入。");
+            return;
         }
+
+        window.location.href = `student-app.html?uid=${encodeURIComponent(activeUid)}`;
     }
-    
+
     const params = new URLSearchParams(window.location.search);
-    const STUDENT_ID = params.get('id');
+    const STUDENT_ID = window.TappieStudentSession
+      ? TappieStudentSession.getUidFromUrlOrSession({
+          source: 'dashboard',
+          preserveParams: ['view']
+        })
+      : params.get('id');
     let currentParentEmail = ""; 
     let weeklyReportAvailable = false;
     const TAPPIE_VAPID_PUBLIC_KEY = window.TAPPIE_VAPID_PUBLIC_KEY || "BMv4zZ4lFP0InS2c5BQJTtVUZ7WedDUf3Rqz9v3bDZe3mlpuROiwTwbP1FGHYyJ6cbH6D0gNX5aQvUhjqE5qNhw";
@@ -1679,7 +1649,12 @@
     }
 
     window.onload = () => {
-      if (!STUDENT_ID) { alert("找不到學生 ID，請重新刷卡！"); logoutToPortal(); return; }
+      if (!STUDENT_ID) {
+        alert("找不到學生資料，請重新感應卡片或回到官網登入。");
+        if (window.TappieStudentSession) TappieStudentSession.clearActive('missing-student-id');
+        window.location.replace(getStationAwareHomeUrl());
+        return;
+      }
 
       TappieAPI.getDashboard(STUDENT_ID)
         .then(async rawData => {
@@ -1867,7 +1842,7 @@
       const manifestJSON = {
           "name": `Tappie - ${data.studentName}`,
           "short_name": data.studentName,
-          "start_url": window.location.href, // 🚀 殺手級功能：點開直接免刷卡登入！
+          "start_url": `/student-app.html?uid=${encodeURIComponent(STUDENT_ID)}`, // 固定學生主畫面入口
           "display": "standalone",
           "background_color": "#eaeff2",
           "theme_color": "#0066cc",
@@ -2023,7 +1998,7 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
         
       } else {
@@ -2039,7 +2014,7 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
       }
 
@@ -2154,7 +2129,7 @@
         reviewGrid.innerHTML = reviewUnits.map(u => {
           const unitName = (typeof u === 'string') ? u : (u.unitName || u.name || '未命名單元');
           const wordCount = (typeof u === 'object' && u.wordCount) ? ` <span style="font-size:11px;color:var(--text-sub);">(${u.wordCount})</span>` : "";
-          const targetUrl = `./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=review&unit=${encodeURIComponent(unitName)}`;
+          const targetUrl = `./arena.html?mode=review&unit=${encodeURIComponent(unitName)}`;
           return `<button type="button" onclick="checkVoiceLimitAndGo('${targetUrl}', this, '今日練習已達上限')" class="btn-review">📖 ${escapeHtml(unitName)}${wordCount}</button>`;
         }).join('');
       } else {
@@ -2209,11 +2184,12 @@
         alert("🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。");
         return;
       }
-      window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+      window.location.href = './lobby.html';
     }
     function logoutToPortal() {
       if (confirm("確定要登出，並回到Tappie官網嗎？")) {
-        window.location.href = getStationAwareHomeUrl(); 
+        if (window.TappieStudentSession) TappieStudentSession.clearActive('logout');
+        window.location.replace(getStationAwareHomeUrl());
       }
     }
 
@@ -2628,7 +2604,14 @@
 
     // 🚀 補回這兩行：靜置自動登出
     let idleTimer;
-    const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = getStationAwareHomeUrl(); }, 180000); };
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      if (window.TappieStudentSession) TappieStudentSession.touch();
+      idleTimer = setTimeout(() => {
+        if (window.TappieStudentSession) TappieStudentSession.clearActive('idle-timeout');
+        window.location.replace(getStationAwareHomeUrl());
+      }, 180000);
+    };
     document.addEventListener('touchstart', resetIdleTimer); 
     document.addEventListener('mousedown', resetIdleTimer); 
     resetIdleTimer();
@@ -2673,7 +2656,10 @@
 
           if (extractedUid) {
               if (adminAuth) window.location.replace(`admin.html?id=${extractedUid}`);
-              else window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
+              else {
+                if (window.TappieStudentSession) TappieStudentSession.setActive(extractedUid, 'dashboard-scan');
+                window.location.replace('./dashboard.html');
+              }
           } else {
               const loader = document.createElement('div');
               loader.style = "position:fixed;inset:0; width:100vw; height:100dvh;background:radial-gradient(circle at center, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); font-family:sans-serif; transition:opacity 0.3s;";
@@ -2692,7 +2678,10 @@
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) window.location.replace(`admin.html?id=${data.uid}`);
-                      else window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                      else {
+                        if (window.TappieStudentSession) TappieStudentSession.setActive(data.uid, 'dashboard-card-scan');
+                        window.location.replace('./dashboard.html');
+                      }
                   } else { 
                       alert("❌ 查無此卡！請確認是否拿錯卡片。"); 
                       document.body.removeChild(loader); 

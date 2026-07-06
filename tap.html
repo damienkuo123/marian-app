@@ -34,6 +34,7 @@
   </div>
 
   <script src="./tappie-api.js?v=admin-card-f3d"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const uid = urlParams.get('uid') || urlParams.get('id');
@@ -58,7 +59,12 @@
       if (hasAdminAuth()) {
         window.location.replace(`/admin.html?id=${encodeURIComponent(uidValue)}&v=${encodeURIComponent(ADMIN_REDIRECT_VERSION)}`);
       } else {
-        window.location.replace(`/dashboard.html?id=${encodeURIComponent(uidValue)}`);
+        if (window.TappieStudentSession && typeof TappieStudentSession.setActive === "function") {
+          TappieStudentSession.setActive(uidValue, "tap");
+          window.location.replace("/dashboard.html");
+        } else {
+          window.location.replace(`/dashboard.html?id=${encodeURIComponent(uidValue)}`);
+        }
       }
     }
 
