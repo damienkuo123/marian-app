@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tappie學美語">
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
-  <link rel="manifest" href="/manifest.json">
   <title>Tappie 學生捷徑</title>
   <style>
     :root {
@@ -126,13 +125,8 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const rawUid = String(params.get("uid") || params.get("id") || "").trim();
+    const isInstallSetup = String(window.location.hash || "").toLowerCase() === "#install";
     const card = document.getElementById("card");
-
-    function isStandaloneMode() {
-      return window.navigator.standalone === true ||
-        window.matchMedia("(display-mode: standalone)").matches ||
-        window.matchMedia("(display-mode: fullscreen)").matches;
-    }
 
     function renderError(message) {
       card.innerHTML = `
@@ -148,7 +142,7 @@
       const title = studentName ? `建立「${studentName}」的 Tappie 捷徑` : "建立 Tappie 學生捷徑";
       const steps = isIOS
         ? `1. 點選 Safari 下方或上方的 <strong>分享</strong> 圖示<br>2. 向下滑動並選擇 <strong>加入主畫面</strong><br>3. 按下 <strong>加入</strong>`
-        : `1. 點選瀏覽器右上角 <strong>⋮</strong> 選單<br>2. 選擇 <strong>加到主畫面</strong> 或 <strong>安裝應用程式</strong><br>3. 完成後從主畫面開啟 Tappie`;
+        : `1. 點選瀏覽器右上角 <strong>⋮</strong> 選單<br>2. 選擇 <strong>加到主畫面</strong><br>3. 完成後從主畫面開啟 Tappie`;
 
       card.innerHTML = `
         <div class="icon">📱</div>
@@ -160,10 +154,14 @@
       `;
     }
 
-    function openOnce() {
-      if (!rawUid) return renderError("缺少學生代碼，請重新感應卡片。");
-      TappieStudentSession.setActive(rawUid, "student-app-open-once");
+    function openStudentDashboard(uid, source) {
+      if (!uid) return renderError("缺少學生代碼，請重新感應卡片。");
+      TappieStudentSession.setActive(uid, source || "student-app");
       window.location.replace("/dashboard.html");
+    }
+
+    function openOnce() {
+      openStudentDashboard(rawUid, "student-app-open-once");
     }
 
     async function init() {
@@ -177,13 +175,22 @@
         const uid = result.uid || rawUid;
         const studentName = result.studentName || result.name || result.student?.name || "";
 
-        if (isStandaloneMode()) {
-          TappieStudentSession.setActive(uid, "student-app");
-          window.location.replace("/dashboard.html");
+        // Dashboard 的「加入主畫面」按鈕會使用 #install 進入本頁。
+        // 進入後立刻把 hash 從網址移除，讓使用者真正加入主畫面的 URL 是：
+        // /student-app.html?uid=TP01-xxxx，而不是 /student-app.html?uid=TP01-xxxx#install。
+        if (isInstallSetup) {
+          try {
+            const cleanUrl = `${window.location.pathname}?uid=${encodeURIComponent(uid)}`;
+            window.history.replaceState(null, document.title, cleanUrl);
+          } catch (_) {}
+          renderInstallGuide(studentName);
           return;
         }
 
-        renderInstallGuide(studentName);
+        // 沒有 #install 時，一律視為「啟動學生捷徑」。
+        // 這樣即使某些手機把主畫面捷徑開成普通瀏覽器模式，而不是 standalone，
+        // 也能正確建立 active student session 並進入 dashboard。
+        openStudentDashboard(uid, "student-app");
       } catch (err) {
         console.error(err);
         renderError(err.message || "找不到此學生，請重新感應卡片或洽詢老師。");
