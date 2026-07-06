@@ -728,11 +728,11 @@ img[data-tappie-stable-media] {
 
 /* 02-problem-cinema.css
    --------------------------------------------------------------------------
-   Problem cinema rebuild v30:
-   1) the photo only appears inside the oversized 「教室外」 cutout
-   2) that same word scales down and travels into its final headline position
-   3) the photo stays visible early; black field ramps in only after the word reaches its final position
-   4) final headline / body reveal on pure black
+   Problem cinema rebuild v34:
+   Single-render 「教室外」 system.
+   The oversized photo cutout and the final gradient word are drawn by the same
+   canvas glyph geometry, so there is no second visible 「教室外」 layer to drift,
+   misalign, or look like a separate card during fast / slow mobile scrolling.
 ---------------------------------------------------------------------------- */
         .tappie-problem-cinema {
             position: relative;
@@ -741,9 +741,6 @@ img[data-tappie-stable-media] {
             color: #fff;
             overflow: clip;
             --pc-photo-scale: 1.04;
-            --pc-mask-opacity: 0;
-            --pc-scrim-opacity: 0;
-            --pc-headline-opacity: 0;
             --pc-subline-opacity: 0;
             --pc-subline-y: 14px;
             --pc-body-opacity: 0;
@@ -773,7 +770,7 @@ img[data-tappie-stable-media] {
             z-index: 0;
             background-image:
                 linear-gradient(180deg, rgba(0,0,0,.06) 0%, rgba(0,0,0,.02) 22%, rgba(0,0,0,.10) 74%, rgba(0,0,0,.18) 100%),
-                url('/assets/official/tappie-scenario-afterschool.jpg?v=29');
+                url('/assets/official/tappie-scenario-afterschool.jpg?v=34');
             background-size: cover;
             background-position: 56% 51%;
             background-repeat: no-repeat;
@@ -783,13 +780,7 @@ img[data-tappie-stable-media] {
         }
 
         .tappie-problem-cinema__scrim {
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-            pointer-events: none;
-            background: #000;
-            opacity: var(--pc-scrim-opacity);
-            will-change: opacity;
+            display: none;
         }
 
         .tappie-problem-cinema__mask-wrap {
@@ -797,8 +788,6 @@ img[data-tappie-stable-media] {
             inset: 0;
             z-index: 2;
             pointer-events: none;
-            opacity: var(--pc-mask-opacity);
-            will-change: opacity;
         }
 
         .tappie-problem-cinema__mask-canvas {
@@ -817,9 +806,11 @@ img[data-tappie-stable-media] {
             gap: clamp(16px, 2.2vw, 20px);
             justify-items: center;
             transform: translate3d(-50%, -50%, 0);
+            pointer-events: none;
         }
 
         .tappie-problem-cinema__headline-pair {
+            position: relative;
             display: grid;
             gap: clamp(6px, 1vw, 10px);
             width: max-content;
@@ -847,8 +838,7 @@ img[data-tappie-stable-media] {
         }
 
         .tappie-problem-cinema__headline-line--anchor {
-            opacity: var(--pc-headline-opacity);
-            will-change: opacity;
+            opacity: 0;
         }
 
         .tappie-problem-cinema__headline-line--subline {
@@ -11371,10 +11361,9 @@ body nav.tappie-site-header .nav-logo span {
     <script>
 // 02-problem-cinema.js
 
-// Rebuilt second screen v33:
-// deterministic scroll mapping for the 「教室外」 mask.
-// The animation no longer depends on live mobile browser chrome height, CSS transitions,
-// or frame-to-frame smoothing, so fast and slow scrolling resolve to the same position.
+// Rebuilt second screen v34:
+// One visual 「教室外」 renderer. The cutout word and final gradient word are drawn
+// by the same canvas glyph positions, eliminating double-layer drift on iOS.
 (() => {
         const section = document.querySelector('.tappie-problem-cinema');
         if (!section) return;
@@ -11409,8 +11398,11 @@ body nav.tappie-site-header .nav-logo span {
             maxScroll: 1,
             width: 1,
             height: 1,
+            lockedHeight: 0,
             anchorOffsetX: 0,
             anchorOffsetY: 0,
+            anchorWidth: 1,
+            anchorHeight: 1,
             baseFontSize: 120,
             fontFamily: 'sans-serif',
             fontWeight: '860',
@@ -11419,18 +11411,29 @@ body nav.tappie-site-header .nav-logo span {
         };
 
         const drawState = {
-            opacity: 0,
+            blackAlpha: 0,
+            holeAlpha: 0,
+            gradientAlpha: 0,
             scale: 1,
             x: 0,
             y: 0
         };
 
-        function getStableViewportHeight() {
+        function readViewportHeight() {
             return Math.max(
                 Math.round(sticky?.clientHeight || 0),
                 Math.round(stage?.clientHeight || 0),
                 1
             );
+        }
+
+        function unlockHeight() {
+            geometry.lockedHeight = 0;
+        }
+
+        function getStableViewportHeight() {
+            if (!geometry.lockedHeight) geometry.lockedHeight = readViewportHeight();
+            return geometry.lockedHeight;
         }
 
         function syncCanvasSize() {
@@ -11457,12 +11460,14 @@ body nav.tappie-site-header .nav-logo span {
             const stickyRect = sticky?.getBoundingClientRect();
             const anchorRect = anchorLine.getBoundingClientRect();
             const centerX = stickyRect ? stickyRect.left + stickyRect.width / 2 : window.innerWidth / 2;
-            const centerY = stickyRect ? stickyRect.top + stickyRect.height / 2 : window.innerHeight / 2;
+            const centerY = stickyRect ? stickyRect.top + geometry.height / 2 : geometry.height / 2;
             const anchorCx = anchorRect.left + anchorRect.width / 2;
             const anchorCy = anchorRect.top + anchorRect.height / 2;
 
             geometry.anchorOffsetX = anchorCx - centerX;
             geometry.anchorOffsetY = anchorCy - centerY;
+            geometry.anchorWidth = Math.max(anchorRect.width, 1);
+            geometry.anchorHeight = Math.max(anchorRect.height, 1);
 
             const computed = window.getComputedStyle(anchorLine);
             geometry.baseFontSize = parseFloat(computed.fontSize) || 120;
@@ -11502,21 +11507,70 @@ body nav.tappie-site-header .nav-logo span {
             requestUpdate();
         }
 
-        function scheduleLayoutRefresh() {
+        function scheduleLayoutRefresh({ force = false } = {}) {
             if (layoutRafId) return;
             layoutRafId = requestAnimationFrame(() => {
                 layoutRafId = null;
                 const nextWidth = Math.max(Math.round(stage?.clientWidth || section.clientWidth || window.innerWidth), 1);
-                const nextHeight = getStableViewportHeight();
 
-                // iOS Safari can fire resize events when the browser chrome collapses.
-                // Refresh only when the actual sticky canvas size changes; otherwise the
-                // scroll position remains mapped to the same deterministic baseline.
-                if (Math.abs(nextWidth - geometry.width) > 1 || Math.abs(nextHeight - geometry.height) > 1) {
+                // Mobile Safari can change visible height while the toolbar collapses. Width is
+                // the stable signal; height-only changes are ignored so fast and slow scrolling
+                // map to the same word position.
+                if (force || Math.abs(nextWidth - geometry.width) > 1) {
+                    if (force) unlockHeight();
                     refreshLayout();
                 } else {
                     requestUpdate();
                 }
+            });
+        }
+
+        function withWordTransform(callback) {
+            const width = geometry.width;
+            const height = geometry.height;
+            ctx.save();
+            ctx.translate(width / 2 + drawState.x, height / 2 + drawState.y);
+            ctx.scale(drawState.scale, drawState.scale);
+            ctx.font = `${geometry.fontWeight} ${geometry.baseFontSize}px ${geometry.fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            callback();
+            ctx.restore();
+        }
+
+        function drawWordCutout() {
+            if (drawState.holeAlpha <= 0.001) return;
+            withWordTransform(() => {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.globalAlpha = drawState.holeAlpha;
+                ctx.fillStyle = '#000';
+                geometry.charLayouts.forEach((glyph) => {
+                    ctx.fillText(glyph.text, glyph.x, glyph.y);
+                });
+            });
+        }
+
+        function drawWordGradient() {
+            if (drawState.gradientAlpha <= 0.001) return;
+            withWordTransform(() => {
+                const gradient = ctx.createLinearGradient(
+                    -geometry.anchorWidth * 0.58,
+                    -geometry.anchorHeight * 0.46,
+                    geometry.anchorWidth * 0.62,
+                    geometry.anchorHeight * 0.52
+                );
+                gradient.addColorStop(0.00, '#f7f9ff');
+                gradient.addColorStop(0.28, '#dde7ff');
+                gradient.addColorStop(0.58, '#aebfff');
+                gradient.addColorStop(0.86, '#7895ff');
+                gradient.addColorStop(1.00, '#587dff');
+
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = drawState.gradientAlpha;
+                ctx.fillStyle = gradient;
+                geometry.charLayouts.forEach((glyph) => {
+                    ctx.fillText(glyph.text, glyph.x, glyph.y);
+                });
             });
         }
 
@@ -11526,43 +11580,33 @@ body nav.tappie-site-header .nav-logo span {
             const height = geometry.height;
             ctx.clearRect(0, 0, width, height);
 
-            if (drawState.opacity <= 0.001) return;
+            if (drawState.blackAlpha <= 0.001 && drawState.gradientAlpha <= 0.001) return;
 
-            ctx.save();
-            ctx.globalAlpha = drawState.opacity;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
+            if (drawState.blackAlpha > 0.001) {
+                ctx.save();
+                ctx.globalAlpha = drawState.blackAlpha;
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+                ctx.restore();
+            }
 
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.translate(width / 2 + drawState.x, height / 2 + drawState.y);
-            ctx.scale(drawState.scale, drawState.scale);
-            ctx.font = `${geometry.fontWeight} ${geometry.baseFontSize}px ${geometry.fontFamily}`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#000';
-
-            geometry.charLayouts.forEach((glyph) => {
-                ctx.fillText(glyph.text, glyph.x, glyph.y);
-            });
-            ctx.restore();
+            drawWordCutout();
+            drawWordGradient();
         }
 
         function apply(progress) {
             const introPhase = range(progress, 0.00, 0.22);
-            const maskInPhase = range(progress, 0.055, 0.145);
-            const travelPhase = range(progress, 0.055, 0.62);
-            const headlinePhase = range(progress, 0.68, 0.78);
-            const scrimPhase = range(progress, 0.60, 0.74);
-            const maskOutPhase = range(progress, 0.76, 0.86);
-            const sublinePhase = range(progress, 0.79, 0.91);
+            const blackInPhase = range(progress, 0.045, 0.165);
+            const travelPhase = range(progress, 0.045, 0.62);
+            const gradientPhase = range(progress, 0.69, 0.81);
+            const sublinePhase = range(progress, 0.80, 0.91);
             const bodyPhase = range(progress, 0.88, 0.98);
 
             const easedIntro = smooth(introPhase);
-            const easedMaskIn = smooth(maskInPhase);
+            const easedBlackIn = smooth(blackInPhase);
             const easedTravel = easeOut(travelPhase);
-            const easedHeadline = smooth(headlinePhase);
-            const easedScrim = smooth(scrimPhase);
-            const easedMaskOut = smooth(maskOutPhase);
+            const easedGradient = smooth(gradientPhase);
             const easedSubline = smooth(sublinePhase);
             const easedBody = smooth(bodyPhase);
 
@@ -11571,28 +11615,26 @@ body nav.tappie-site-header .nav-logo span {
             const isTablet = w <= 900 && w > 560;
 
             const startScale = isMobile ? 12.6 : isTablet ? 10.2 : 8.8;
-            const maskScale = lerp(startScale, 1, easedTravel);
-            const maskX = lerp(0, geometry.anchorOffsetX, easedTravel);
-            const maskY = lerp(0, geometry.anchorOffsetY, easedTravel);
+            const wordScale = lerp(startScale, 1, easedTravel);
+            const wordX = lerp(-geometry.anchorOffsetX, 0, easedTravel);
+            const wordY = lerp(-geometry.anchorOffsetY, 0, easedTravel);
 
             const photoScale = lerp(isMobile ? 1.08 : 1.06, 1.02, easedIntro);
-            const maskOpacity = easedMaskIn * (1 - easedMaskOut);
             const sublineY = lerp(10, 0, easedSubline);
             const bodyY = lerp(16, 0, easedBody);
 
             section.style.setProperty('--pc-photo-scale', photoScale.toFixed(3));
-            section.style.setProperty('--pc-mask-opacity', maskOpacity.toFixed(3));
-            section.style.setProperty('--pc-scrim-opacity', easedScrim.toFixed(3));
-            section.style.setProperty('--pc-headline-opacity', easedHeadline.toFixed(3));
             section.style.setProperty('--pc-subline-opacity', easedSubline.toFixed(3));
             section.style.setProperty('--pc-subline-y', `${sublineY.toFixed(2)}px`);
             section.style.setProperty('--pc-body-opacity', easedBody.toFixed(3));
             section.style.setProperty('--pc-body-y', `${bodyY.toFixed(2)}px`);
 
-            drawState.opacity = maskOpacity;
-            drawState.scale = maskScale;
-            drawState.x = maskX;
-            drawState.y = maskY;
+            drawState.blackAlpha = easedBlackIn;
+            drawState.holeAlpha = 1 - easedGradient;
+            drawState.gradientAlpha = easedGradient;
+            drawState.scale = wordScale;
+            drawState.x = wordX;
+            drawState.y = wordY;
             drawMask();
         }
 
@@ -11611,16 +11653,16 @@ body nav.tappie-site-header .nav-logo span {
         apply(0);
 
         window.addEventListener('scroll', requestUpdate, { passive: true });
-        window.addEventListener('resize', scheduleLayoutRefresh, { passive: true });
-        window.addEventListener('orientationchange', () => setTimeout(refreshLayout, 180), { passive: true });
-        window.addEventListener('load', refreshLayout, { once: true });
+        window.addEventListener('resize', () => scheduleLayoutRefresh(), { passive: true });
+        window.addEventListener('orientationchange', () => setTimeout(() => scheduleLayoutRefresh({ force: true }), 180), { passive: true });
+        window.addEventListener('load', () => scheduleLayoutRefresh({ force: true }), { once: true });
 
         if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(refreshLayout).catch(() => {});
+            document.fonts.ready.then(() => scheduleLayoutRefresh({ force: true })).catch(() => {});
         }
 
         if ('ResizeObserver' in window) {
-            const ro = new ResizeObserver(scheduleLayoutRefresh);
+            const ro = new ResizeObserver(() => scheduleLayoutRefresh());
             ro.observe(section);
             if (sticky) ro.observe(sticky);
         }
