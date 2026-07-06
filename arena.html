@@ -2348,22 +2348,30 @@
       if (quizData.length === 0) { alert("題目為空"); return; }
       ACTIVE_UNIT_NAME = data.unit?.unitName || TARGET_UNIT || "";
 
-      // ✅ 精修：今日挑戰門檻與給點階梯，優先讀 Supabase school_settings.Gamification_Config
+      // ✅ 今日挑戰門檻與給點階梯：優先讀該學生所屬校區的 Supabase school_settings.Gamification_Config
+      // 這裡不要只依賴 getPracticeData 回傳，因為 console 的校區設定可能由 overlay / setting value 形式回傳。
       const freshGami = await fetchStudentGamiConfig(STUDENT_ID);
-      const effectiveGami = freshGami || normalizeTappieGamiConfig(data.gamification || {});
+      const effectiveGami = freshGami || normalizeTappieGamiConfig(data.gamification || data.gamificationConfig || data.Gamification_Config || {});
       window.gamiConfig = effectiveGami;
-      // ✅ 今日挑戰通關門檻：以「最低階獎勵門檻」為準。
-      // 例：tiers = 90 / 60 / 10，平均 15 分應可通關並領取最低階獎勵。
-      // 注意：只調整今日挑戰通關判斷，不影響對戰、抽卡、錄音或其他流程。
+
       systemRewardTiers = (effectiveGami?.dailyChallenge?.tiers || data.rewardTiers || [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}])
-        .map(t => ({ min: Number(t.min ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
+        .map(t => ({ min: Number(t.min ?? t.score ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
         .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts))
         .sort((a, b) => b.min - a.min);
+
+      // ✅ 今日挑戰送出門檻：以 console「最低通過」那一階為準。
+      // 若最低通過設成 10，就應該 10 分可送出；設成 0 也要尊重 0，不可 fallback 回 60。
       const lowestRewardTierMin = systemRewardTiers.length ? Number(systemRewardTiers[systemRewardTiers.length - 1].min) : NaN;
       const explicitPassScore = Number(effectiveGami?.dailyChallenge?.passScore ?? data.systemPassScore ?? NaN);
-      systemPassScore = (Number.isFinite(lowestRewardTierMin) && lowestRewardTierMin > 0)
+      systemPassScore = Number.isFinite(lowestRewardTierMin)
         ? lowestRewardTierMin
         : (Number.isFinite(explicitPassScore) ? explicitPassScore : 60);
+
+      console.log('[Arena Gami] dailyChallenge config applied', {
+        uid: STUDENT_ID,
+        passScore: systemPassScore,
+        tiers: systemRewardTiers
+      });
 
       scores = new Array(quizData.length).fill(null);
       document.getElementById('total-display').innerText = quizData.length;
@@ -2411,10 +2419,64 @@
   // =======================================================
   // 🎮 Supabase Gamification Config Helper
   // - 讀 school_settings.key = Gamification_Config
+  // - 相容 console / edge function 可能回傳的多種 payload 形狀
   // - 相容 pts / points、中文 battle key
   // =======================================================
+  function parseMaybeJsonConfig(value) {
+    if (!value) return null;
+    if (typeof value === 'object') return value;
+    if (typeof value === 'string') {
+      try { return JSON.parse(value); } catch (_) { return null; }
+    }
+    return null;
+  }
+
+  function looksLikeGamificationConfig(value) {
+    const cfg = parseMaybeJsonConfig(value);
+    if (!cfg || typeof cfg !== 'object') return false;
+    return !!(
+      cfg.dailyChallenge ||
+      cfg.mission ||
+      cfg.gachaPicks ||
+      cfg.gachaItems ||
+      cfg.leaderboard
+    );
+  }
+
+  function extractGamificationConfigPayload(payload) {
+    const root = parseMaybeJsonConfig(payload);
+    if (!root || typeof root !== 'object') return null;
+
+    const candidates = [
+      root.config,
+      root.gamification,
+      root.gamificationConfig,
+      root.Gamification_Config,
+      root.value,
+      root.setting?.value,
+      root.setting?.config,
+      root.settings?.Gamification_Config,
+      root.settings?.gamification,
+      root.data?.config,
+      root.data?.gamification,
+      root.data?.gamificationConfig,
+      root.data?.Gamification_Config,
+      root.data?.value,
+      root.data?.setting?.value,
+      root.data?.setting?.config,
+      root.data?.settings?.Gamification_Config,
+      root
+    ];
+
+    for (const item of candidates) {
+      const cfg = parseMaybeJsonConfig(item);
+      if (looksLikeGamificationConfig(cfg)) return cfg;
+    }
+    return null;
+  }
+
   function normalizeTappieGamiConfig(raw) {
-    const cfg = raw || {};
+    const cfg = extractGamificationConfigPayload(raw) || {};
     const daily = cfg.dailyChallenge || {};
     const tiers = Array.isArray(daily.tiers) ? daily.tiers : [];
     const normalizedTiers = tiers
@@ -2443,23 +2505,42 @@
         "玩家對戰": Number(cfg.gachaPicks?.["玩家對戰"] ?? cfg.gachaPicks?.pvp ?? 3),
         "活動Boss": Number(cfg.gachaPicks?.["活動Boss"] ?? cfg.gachaPicks?.eventBoss ?? 1)
       },
-      leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30]
+      leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30],
+      gachaItems: Array.isArray(cfg.gachaItems) ? cfg.gachaItems : []
     };
   }
 
   async function fetchStudentGamiConfig(uid) {
-    try {
-      const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
-        ? TappieAPI.supabaseBaseUrl
-        : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
-      const res = await fetch(`${base}/get-student-gamification?uid=${encodeURIComponent(uid)}&t=${Date.now()}`);
-      const data = await res.json();
-      if (!data || !data.success) throw new Error(data?.message || data?.error || 'get-student-gamification failed');
-      return normalizeTappieGamiConfig(data.config || data.gamification || {});
-    } catch (err) {
-      console.warn('Gamification config 載入失敗，沿用頁面既有設定：', err);
-      return null;
+    const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+      ? TappieAPI.supabaseBaseUrl.replace(/\/$/, '')
+      : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+
+    const endpoints = [
+      { name: 'get-student-gamification', url: `${base}/get-student-gamification?uid=${encodeURIComponent(uid)}&t=${Date.now()}` },
+      { name: 'get-dashboard-gami-overlay', url: `${base}/get-dashboard-gami-overlay?uid=${encodeURIComponent(uid)}&t=${Date.now()}` }
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint.url);
+        const data = await res.json();
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || `${endpoint.name} failed`);
+
+        const rawConfig = extractGamificationConfigPayload(data);
+        if (rawConfig) {
+          const normalized = normalizeTappieGamiConfig(rawConfig);
+          console.log(`[Arena Gami] loaded from ${endpoint.name}`, normalized.dailyChallenge);
+          return normalized;
+        }
+
+        console.warn(`[Arena Gami] ${endpoint.name} succeeded but no recognizable Gamification_Config payload found`, data);
+      } catch (err) {
+        console.warn(`[Arena Gami] ${endpoint.name} 載入失敗，嘗試下一個來源：`, err);
+      }
     }
+
+    console.warn('[Arena Gami] 校區 Gamification_Config 載入失敗，沿用題目 API 或預設設定。');
+    return null;
   }
 
   window.onload = async () => {
