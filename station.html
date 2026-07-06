@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="Tappie現場站" />
   <link rel="apple-touch-icon" href="/assets/app-icon.png" />
   <script src="./tappie-api.js?v=station-step7d"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <style>
     :root {
       --primary-blue: #0066cc;
@@ -1901,6 +1902,7 @@
     }
 
     function logoutStation() {
+      if (window.TappieStudentSession) TappieStudentSession.clearActive('station-logout');
       localStorage.removeItem(STATION_SESSION_KEY);
       localStorage.removeItem(STATION_LAST_VIEW_KEY);
       localStorage.removeItem(STATION_CHECKIN_MODE_KEY);
@@ -1953,7 +1955,9 @@
         const data = await TappieAPI.resolveStudentByUid(combinedUid);
         if (!data || !data.success) throw new Error(data?.message || data?.msg || '查無此帳號');
         renderStudentCard('student-result', data, '正在進入學生中心...');
-        setTimeout(() => { window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid || combinedUid)}`; }, 420);
+        const finalUid = data.uid || combinedUid;
+        TappieStudentSession.setActive(finalUid, 'station-manual-student');
+        setTimeout(() => { window.location.replace('dashboard.html'); }, 420);
       } catch (err) {
         alert(err.message || String(err));
       } finally {
@@ -2173,7 +2177,8 @@
       const log = document.getElementById('student-log');
       if (log) log.innerText = `${data.student?.name || '學生'} 已辨識，準備進入 Dashboard。`;
       const uid = data.uid || data.student?.uid;
-      setTimeout(() => { window.location.href = `dashboard.html?id=${encodeURIComponent(uid)}`; }, 520);
+      TappieStudentSession.setActive(uid, 'station-scan-student');
+      setTimeout(() => { window.location.replace('dashboard.html'); }, 520);
     }
 
     async function handleCheckinStudent(data) {

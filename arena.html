@@ -17,6 +17,7 @@
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
   <script src="./tappie-api.js?v=20260522-precision-v1"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1659,7 +1660,12 @@
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
   const params = new URLSearchParams(window.location.search);
-  const STUDENT_ID = params.get('id') || "S001";
+  const STUDENT_ID = TappieStudentSession.getUidFromUrlOrSession({
+    source: 'arena',
+    redirectTo: 'index.html',
+    preserveParams: ['roomId','mode','unit','isEvent','eventAvatar']
+  });
+  window.STUDENT_ID = STUDENT_ID;
 
   // Feature Gate F5｜頁面初始化 Guard：優先讀 Dashboard sessionStorage，沒有快取才 fallback get-dashboard
   const DEFAULT_PAGE_FEATURES = {
@@ -1726,7 +1732,7 @@
   }
 
   function getFeatureDisabledDashboardUrl(uid) {
-    return `./dashboard.html?id=${encodeURIComponent(uid || '')}`;
+    return './dashboard.html';
   }
 
   async function guardPageFeature(featureKey, message) {
@@ -2194,7 +2200,7 @@
         clearInterval(azureTokenInterval); // 停止輪詢
         if (window.GlobalAudio) window.GlobalAudio.play('popupClose'); // 警告音
         alert("⏱️ 你在練習區停留太久囉！\n請重新挑戰吧！");
-        window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`; // 踢回大廳
+        window.location.href = `./dashboard.html`; // 踢回大廳
         return;
     }
 
@@ -2251,7 +2257,7 @@
             alert("⚠️ 系統偵測到重新整理或異常離開！\n\n對戰中離開視同放棄比賽，系統已判定您敗北！");
             // 發送投降電報給 GAS，讓對手獲勝
             fetch(`${GAS_URL}?action=surrender_battle&id=${STUDENT_ID}&roomId=${ROOM_ID}`);
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; // 踢回大廳
+            window.location.href = `./lobby.html`; // 踢回大廳
             return; // 終止後續載入
         }
 
@@ -2267,7 +2273,7 @@
                 } else {
                     alert("⚠️ 由於您剛剛網路不穩或離開戰場，對手已取得上一場的勝利囉！");
                 }
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
                 return; 
             }
             
@@ -3131,7 +3137,7 @@
     if (MODE === 'review') {
       console.log('Supabase review details already saved:', detailArr);
       alert("👍 練習辛苦了！");
-      window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+      window.location.href = `./dashboard.html`;
       return;
     }
 
@@ -3159,7 +3165,7 @@
       } else {
         alert(`🎉 今日挑戰完成！本次已記錄，但沒有新增點數。`);
       }
-      window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+      window.location.href = `./dashboard.html`;
     } catch (err) {
       console.error('今日挑戰送出失敗:', err);
       alert('⚠️ 今日挑戰送出失敗：' + String(err.message || err));
@@ -3188,7 +3194,7 @@
         if(data.status === "NotFound") { 
             alert("房間失效"); 
             // 🚀 房間失效時，也送回大廳
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; 
+            window.location.href = `./lobby.html`; 
             return; 
         }
         battleQuizArr = data.quiz; 
@@ -3675,7 +3681,7 @@
             showImpactOverlay(0, 5, true, null, null); 
             
             setTimeout(() => {
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
             }, 4500); // 讓他看完敗北動畫再踢回大廳
             return;
         }
@@ -3758,7 +3764,7 @@
        setTimeout(() => { 
            showImpactOverlay(myTotalWins, opTotalWins, true); 
            setTimeout(() => {
-               window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+               window.location.href = `./lobby.html`;
            }, 5000); 
        }, 1000);
        return; 
@@ -4070,7 +4076,7 @@
                       } else {
                           // 我方敗北... 延遲一下再回大廳，讓玩家看清楚結果
                           setTimeout(() => {
-                              window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                              window.location.href = `./lobby.html`;
                           }, 4500);
                       }
                   } 
@@ -4218,7 +4224,8 @@
               if (adminAuth) {
                   window.location.replace(`admin.html?id=${extractedUid}`);
               } else {
-                  window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
+                  TappieStudentSession.setActive(extractedUid, 'arena-scan');
+                  window.location.replace('./dashboard.html');
               }
           } else {
               // 🌟 狀況 B：這是舊版純數字卡，顯示戰鬥強制中斷動畫，並去問 GAS
@@ -4244,7 +4251,8 @@
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                          TappieStudentSession.setActive(data.uid, 'arena-card-scan');
+                          window.location.replace('./dashboard.html');
                       }
                   } 
                   else { 
@@ -4877,9 +4885,9 @@
         
         // 成功發送獎勵後，跳轉回對戰大廳
         fetch(finalUrl, { mode: 'no-cors' }).then(() => {
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+            window.location.href = `./lobby.html`;
         }).catch(() => {
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+            window.location.href = `./lobby.html`;
         });
     };
   }

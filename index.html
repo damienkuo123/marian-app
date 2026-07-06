@@ -10394,6 +10394,7 @@ body nav.tappie-site-header .nav-logo span {
 
 
     <script src="./tappie-api.js"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
     <script>
 // 00-audience-login.js
 // Extracted from index_19_solution_showcase_v3_clean_text.html
@@ -10650,7 +10651,9 @@ body nav.tappie-site-header .nav-logo span {
                     if (data.success) {
                         btn.innerText = "✅ 驗證成功，傳送中...";
                         btn.style.background = "linear-gradient(135deg, #2ecc71, #27ae60)";
-                        setTimeout(() => { window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid || combinedUid)}`; }, 500);
+                        const finalUid = data.uid || combinedUid;
+                        TappieStudentSession.setActive(finalUid, 'manual-login');
+                        setTimeout(() => { window.location.replace('dashboard.html'); }, 500);
                     } else {
                         alert(data.message || data.msg || "查無此帳號");
                         btn.innerText = originalText;
@@ -10725,7 +10728,8 @@ body nav.tappie-site-header .nav-logo span {
                     statusDot.style.background = "var(--marian-green)";
                     statusDot.style.boxShadow = "0 0 10px var(--marian-green)";
                     setTimeout(() => {
-                        window.location.href = `dashboard.html?id=${extractedUid}`;
+                        TappieStudentSession.setActive(extractedUid, 'index-scan-url');
+                        window.location.replace('dashboard.html');
                     }, 300);
                 } else {
                     TappieAPI.resolveStudentByCard(inputStr)
@@ -10736,7 +10740,8 @@ body nav.tappie-site-header .nav-logo span {
                                 statusDot.style.background = "var(--marian-green)";
                                 statusDot.style.boxShadow = "0 0 10px var(--marian-green)";
                                 setTimeout(() => {
-                                    window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                                    TappieStudentSession.setActive(data.uid, 'index-scan-card');
+                                    window.location.replace('dashboard.html');
                                 }, 300);
                             } else {
                                 showError();

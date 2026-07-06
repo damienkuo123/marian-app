@@ -15,6 +15,7 @@
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
   <script src="./tappie-api.js?v=20260522-boss-ui-fix1"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1976,7 +1977,12 @@
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
   const params = new URLSearchParams(window.location.search);
-  const STUDENT_ID = params.get('id') || "S001";
+  const STUDENT_ID = TappieStudentSession.getUidFromUrlOrSession({
+    source: 'battle',
+    redirectTo: 'index.html',
+    preserveParams: ['roomCode','roomId','code','mode','aiLevel','isEvent','eventAvatar','unit','v']
+  });
+  window.STUDENT_ID = STUDENT_ID;
 
   // Feature Gate F5｜頁面初始化 Guard：優先讀 Dashboard sessionStorage，沒有快取才 fallback get-dashboard
   const DEFAULT_PAGE_FEATURES = {
@@ -2043,7 +2049,7 @@
   }
 
   function getFeatureDisabledDashboardUrl(uid) {
-    return `./dashboard.html?id=${encodeURIComponent(uid || '')}`;
+    return './dashboard.html';
   }
 
   async function guardPageFeature(featureKey, message) {
@@ -2875,7 +2881,7 @@ const payload = isUuidLike(room)
         clearInterval(azureTokenInterval); // 停止輪詢
         if (window.GlobalAudio) window.GlobalAudio.play('popupClose'); // 警告音
         alert("⏱️ 你在練習區停留太久囉！\n請重新挑戰吧！");
-        window.location.href = `/dashboard.html?id=${STUDENT_ID}`; // 踢回大廳
+        window.location.href = `/dashboard.html`; // 踢回大廳
         return;
     }
 
@@ -2932,7 +2938,7 @@ const payload = isUuidLike(room)
             alert("⚠️ 系統偵測到重新整理或異常離開！\n\n對戰中離開視同放棄比賽，系統已判定您敗北！");
             // 發送投降電報給 GAS，讓對手獲勝
             fetch(`${GAS_URL}?action=surrender_battle&id=${STUDENT_ID}&roomId=${ROOM_ID}`);
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; // 踢回大廳
+            window.location.href = `./lobby.html`; // 踢回大廳
             return; // 終止後續載入
         }
 
@@ -2948,7 +2954,7 @@ const payload = isUuidLike(room)
                 } else {
                     alert("⚠️ 由於您剛剛網路不穩或離開戰場，對手已取得上一場的勝利囉！");
                 }
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
                 return; 
             }
             
@@ -3194,7 +3200,7 @@ const payload = isUuidLike(room)
             console.warn('portal entry timeout resolve failed', e);
           }
           alert('因為你未進入戰場，故對戰取消。');
-          window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+          window.location.href = `./lobby.html`;
       }
     }, 1000);
 
@@ -3687,7 +3693,7 @@ const payload = isUuidLike(room)
     // 這裡只負責結束流程並返回大廳，避免重複加點或重複寫入。
     console.log('Supabase practice details already saved:', detailArr);
     alert(MODE === 'review' ? "👍 練習辛苦了！" : "🎉 挑戰完成！");
-    window.location.href = `/dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    window.location.href = `/dashboard.html`;
   }
   
   function reRead(i) { 
@@ -3709,7 +3715,7 @@ const payload = isUuidLike(room)
         if(data.status === "NotFound") { 
             alert("房間失效"); 
             // 🚀 房間失效時，也送回大廳
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; 
+            window.location.href = `./lobby.html`; 
             return; 
         }
         battleQuizArr = data.quiz; 
@@ -4209,7 +4215,7 @@ const payload = isUuidLike(room)
             showImpactOverlay(0, 5, true, null, null); 
             
             setTimeout(() => {
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
             }, 6500); // 讓他看完敗北動畫再踢回大廳
             return;
         }
@@ -4292,7 +4298,7 @@ const payload = isUuidLike(room)
        setTimeout(() => { 
            showImpactOverlay(myTotalWins, opTotalWins, true); 
            setTimeout(() => {
-               window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+               window.location.href = `./lobby.html`;
            }, 5000); 
        }, 1000);
        return; 
@@ -4604,7 +4610,7 @@ const payload = isUuidLike(room)
                       } else {
                           // 我方敗北... 延遲一下再回大廳，讓玩家看清楚結果
                           setTimeout(() => {
-                              window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                              window.location.href = `./lobby.html`;
                           }, 6500);
                       }
                   } 
@@ -4752,7 +4758,8 @@ const payload = isUuidLike(room)
               if (adminAuth) {
                   window.location.replace(`admin.html?id=${extractedUid}`);
               } else {
-                  window.location.href = `dashboard.html?id=${extractedUid}`;
+                  TappieStudentSession.setActive(extractedUid, 'battle-scan');
+                  window.location.replace('dashboard.html');
               }
           } else {
               // 🌟 狀況 B：這是舊版純數字卡，顯示戰鬥強制中斷動畫，並去問 GAS
@@ -4778,7 +4785,8 @@ const payload = isUuidLike(room)
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                          TappieStudentSession.setActive(data.uid, 'battle-card-scan');
+                          window.location.replace('dashboard.html');
                       }
                   } 
                   else { 
@@ -5703,7 +5711,7 @@ const payload = isUuidLike(room)
         claimBtn.innerText = "已領取，返回大廳";
         claimBtn.style.pointerEvents = "auto";
         claimBtn.onclick = () => {
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+            window.location.href = `./lobby.html`;
         };
         return;
     }
@@ -5771,7 +5779,7 @@ const payload = isUuidLike(room)
             claimBtn.innerText = "返回大廳";
             claimBtn.style.pointerEvents = "auto";
             claimBtn.onclick = () => {
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
             };
 
         } catch (err) {
@@ -5784,7 +5792,7 @@ const payload = isUuidLike(room)
             claimBtn.innerText = "返回大廳";
             claimBtn.style.pointerEvents = "auto";
             claimBtn.onclick = () => {
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
             };
         }
     };
@@ -6208,7 +6216,7 @@ const payload = isUuidLike(room)
         showImpactOverlay(myScore, opScore, true, myImg, opImg);
       }
       if (won) showGachaEntrance(finalImpactAlreadyShown ? 400 : 6500);
-      else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, finalImpactAlreadyShown ? 600 : 7000);
+      else setTimeout(() => { window.location.href = `./lobby.html`; }, finalImpactAlreadyShown ? 600 : 7000);
     }
 
     function renderScoreDots(statusData) {
@@ -6449,7 +6457,7 @@ const payload = isUuidLike(room)
   <script>
   (function installSupabaseAiBattleRuntimePatch(){
     const params = new URLSearchParams(window.location.search);
-    const STUDENT_ID_FOR_AI = params.get('id') || window.STUDENT_ID || '';
+    const STUDENT_ID_FOR_AI = window.STUDENT_ID || TappieStudentSession.getActiveUid({ touch: false }) || '';
     const ROOM_CODE_FOR_AI = params.get('roomCode') || params.get('roomId') || params.get('code') || '';
     const AI_LEVEL_FROM_URL = params.get('aiLevel') || '';
     const AI_IMG_MAP = {
@@ -6913,7 +6921,7 @@ const payload = isUuidLike(room)
     const reason = fresh?.room?.finishReason || fresh?.room?.lastEvent?.finishReason || reasonHint || 'normal';
     if (reason !== 'normal') console.log('Battle finished reason:', reason);
     if (won) showGachaEntranceV4(finalImpactAlreadyShown ? 400 : 6500);
-    else setTimeout(() => { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }, finalImpactAlreadyShown ? 600 : 7000);
+    else setTimeout(() => { window.location.href = `./lobby.html`; }, finalImpactAlreadyShown ? 600 : 7000);
   }
 
   async function handleBattleCancelledV4(status, fallback = {}) {
@@ -6931,7 +6939,7 @@ const payload = isUuidLike(room)
       msg = offenderRole === role ? '因為你中離，所以對戰取消。' : '因為對方中離，所以對戰取消。';
     }
     alert(msg);
-    window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    window.location.href = `./lobby.html`;
   }
 
   function buildResultFromStatusRoundV4(status, roundNo) {
@@ -7489,7 +7497,7 @@ const payload = isUuidLike(room)
        ======================================================= -->
   <script>
   (function installBossUiFixV1(){
-    const cleanLobbyUrl = () => `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+    const cleanLobbyUrl = () => `./lobby.html`;
     window.TappieCleanLobbyUrl = cleanLobbyUrl;
     window.TappieReturnLobbyClean = function(){ window.location.href = cleanLobbyUrl(); };
 

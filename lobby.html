@@ -16,6 +16,7 @@
   <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
   <script src="global-audio.js"></script>
   <script src="./tappie-api.js?v=20260522-micro-polish-v2"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
 
   <style>
     /* =======================================================
@@ -792,7 +793,7 @@
     <div class="action-zone">
       <button id="equip-btn" class="btn-equip" onclick="equipCurrentCharacter()">裝備此角色</button>
       <div class="nav-buttons">
-        <button class="btn-nav btn-back" onclick="window.location.href='./dashboard.html?id=' + encodeURIComponent(STUDENT_ID)">🔙 返回主頁</button>
+        <button class="btn-nav btn-back" onclick="window.location.href='./dashboard.html'">🔙 返回主頁</button>
         <button class="btn-nav btn-battle" onclick="goToBattleRoom()">⚔️ 選擇戰場</button>
       </div>
     </div>
@@ -937,7 +938,10 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
     
     const params = new URLSearchParams(window.location.search);
-    const STUDENT_ID = params.get('id') || "S001";
+    const STUDENT_ID = TappieStudentSession.getUidFromUrlOrSession({
+      source: 'lobby',
+      redirectTo: 'index.html'
+    });
 
   // Feature Gate F5｜頁面初始化 Guard：優先讀 Dashboard sessionStorage，沒有快取才 fallback get-dashboard
   const DEFAULT_PAGE_FEATURES = {
@@ -1004,7 +1008,7 @@
   }
 
   function getFeatureDisabledDashboardUrl(uid) {
-    return `./dashboard.html?id=${encodeURIComponent(uid || '')}`;
+    return './dashboard.html';
   }
 
   async function guardPageFeature(featureKey, message) {
@@ -1891,7 +1895,7 @@
     }
 
     function jumpToBattle(roomId) {
-      const targetUrl = `./battle.html?id=${encodeURIComponent(STUDENT_ID)}&roomCode=${encodeURIComponent(roomId)}&v=bav2`;
+      const targetUrl = `./battle.html?roomCode=${encodeURIComponent(roomId)}&v=bav2`;
       window.location.href = targetUrl;
     }
     
@@ -2262,7 +2266,7 @@
             .then(res => res.json())
             .then(data => {
               if (data.roomId) {
-                window.location.href = `arena.html?roomId=${data.roomId}&id=${STUDENT_ID}&isEvent=true&eventAvatar=${eventAvatarId}`;
+                window.location.href = `arena.html?roomId=${encodeURIComponent(data.roomId)}&isEvent=true&eventAvatar=${encodeURIComponent(eventAvatarId)}`;
               } else {
                 alert("活動載入失敗，請稍後再試！");
                 cancelAiChallenge(); 
@@ -2613,7 +2617,7 @@
       };
 
       window.jumpToBattle = function jumpToBattleSupabase(roomCode) {
-        const targetUrl = `./battle.html?id=${encodeURIComponent(STUDENT_ID)}&roomCode=${encodeURIComponent(roomCode)}&v=bav2`;
+        const targetUrl = `./battle.html?roomCode=${encodeURIComponent(roomCode)}&v=bav2`;
         window.location.href = targetUrl;
       };
 
@@ -2704,7 +2708,8 @@
               if (adminAuth) {
                   window.location.replace(`admin.html?id=${extractedUid}`);
               } else {
-                  window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
+                  TappieStudentSession.setActive(extractedUid, 'lobby-scan');
+                  window.location.replace('./dashboard.html');
               }
           } else {
               // 🌟 狀況 B：這是舊版純數字卡，需要連線去問 GAS 大腦
@@ -2736,7 +2741,8 @@
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                          TappieStudentSession.setActive(data.uid, 'lobby-card-scan');
+                          window.location.replace('./dashboard.html');
                       }
                   } 
                   else { 
@@ -2774,7 +2780,6 @@
 
       function jumpToAiBattle(roomCode, level, extraQuery=''){
         const qs = new URLSearchParams({
-          id: STUDENT_ID,
           roomCode: roomCode,
           mode: 'ai',
           aiLevel: level,
