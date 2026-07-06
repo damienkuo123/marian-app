@@ -126,6 +126,9 @@
     const params = new URLSearchParams(window.location.search);
     const rawUid = String(params.get("uid") || params.get("id") || "").trim();
     const isInstallSetup = String(window.location.hash || "").toLowerCase() === "#install";
+    const isStandalone =
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      window.navigator.standalone === true;
     const card = document.getElementById("card");
 
     function renderError(message) {
@@ -175,21 +178,22 @@
         const uid = result.uid || rawUid;
         const studentName = result.studentName || result.name || result.student?.name || "";
 
-        // Dashboard 的「加入主畫面」按鈕會使用 #install 進入本頁。
-        // 進入後立刻把 hash 從網址移除，讓使用者真正加入主畫面的 URL 是：
-        // /student-app.html?uid=TP01-xxxx，而不是 /student-app.html?uid=TP01-xxxx#install。
+        // 主畫面 App 模式：不管網址是否帶 #install，都直接進入學生主頁。
+        // 這樣即使使用者把 /student-app.html?uid=TP01-xxxx#install 加到主畫面，
+        // 從主畫面開啟時也不會卡在教學頁。
+        if (isStandalone) {
+          openStudentDashboard(uid, "student-app");
+          return;
+        }
+
+        // 瀏覽器安裝模式：Dashboard 的「加入主畫面」按鈕會使用 #install 進入本頁。
+        // 這裡不要清掉 #install，避免使用者在安裝教學頁重新整理後被誤導到 dashboard。
         if (isInstallSetup) {
-          try {
-            const cleanUrl = `${window.location.pathname}?uid=${encodeURIComponent(uid)}`;
-            window.history.replaceState(null, document.title, cleanUrl);
-          } catch (_) {}
           renderInstallGuide(studentName);
           return;
         }
 
-        // 沒有 #install 時，一律視為「啟動學生捷徑」。
-        // 這樣即使某些手機把主畫面捷徑開成普通瀏覽器模式，而不是 standalone，
-        // 也能正確建立 active student session 並進入 dashboard。
+        // 普通瀏覽器直接打開 student-app.html?uid=... 時，視為一次性開啟學生主頁。
         openStudentDashboard(uid, "student-app");
       } catch (err) {
         console.error(err);
