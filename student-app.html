@@ -11,6 +11,28 @@
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
   <link rel="icon" href="/assets/app-icon.png">
   <title>Tappie 學生捷徑</title>
+  <script>
+    // Standalone / PWA 開啟時，越早隱藏 router loading，避免主畫面捷徑啟動時看到引導頁或 loading。
+    (function () {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const hasUid = String(params.get("uid") || params.get("id") || "").trim();
+        const isInstallSetup = String(window.location.hash || "").toLowerCase() === "#install";
+        const isDisplayMode = function (mode) {
+          return window.matchMedia && window.matchMedia("(display-mode: " + mode + ")").matches;
+        };
+        const isStandaloneLike =
+          window.navigator.standalone === true ||
+          isDisplayMode("standalone") ||
+          isDisplayMode("fullscreen") ||
+          isDisplayMode("minimal-ui");
+
+        if (hasUid && isStandaloneLike && !isInstallSetup) {
+          document.documentElement.classList.add("standalone-fast-route");
+        }
+      } catch (_) {}
+    })();
+  </script>
   <style>
     :root { 
       --primary-blue: #0066cc; 
@@ -32,6 +54,15 @@
     * { box-sizing: border-box; }
 
     html, body { min-height: 100%; margin: 0; padding: 0; width: 100%; background-color: #f0f4f8; }
+
+    html.standalone-fast-route body {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    html.standalone-fast-route .shell {
+      display: none;
+    }
 
     body {
       min-height: 100vh;
@@ -526,15 +557,26 @@
     </section>
   </main>
 
-  <script src="./tappie-api.js?v=student-app-ui-v3"></script>
+  <script src="./tappie-api.js?v=student-app-ui-v4"></script>
   <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const rawUid = String(params.get("uid") || params.get("id") || "").trim();
     const isInstallSetup = String(window.location.hash || "").toLowerCase() === "#install";
-    const isStandalone =
-      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
-      window.navigator.standalone === true;
+
+    function isDisplayMode(mode) {
+      return window.matchMedia && window.matchMedia(`(display-mode: ${mode})`).matches;
+    }
+
+    function isStandaloneMode() {
+      return window.navigator.standalone === true ||
+        isDisplayMode("standalone") ||
+        isDisplayMode("fullscreen") ||
+        isDisplayMode("minimal-ui");
+    }
+
+    const isStandalone = isStandaloneMode();
+    const shouldFastRouteStandalone = !!rawUid && isStandalone && !isInstallSetup;
     const DEFAULT_ICON_URL = "/assets/app-icon.png";
     const card = document.getElementById("card");
 
@@ -831,9 +873,19 @@
 
     async function init() {
       if (!rawUid) {
+        document.documentElement.classList.remove("standalone-fast-route");
         renderError("缺少學生代碼，請重新感應卡片或回到官網登入。");
         return;
       }
+
+      // 主畫面 App / standalone 模式：student-app.html 只當超快 router。
+      // 不等 resolve-student / get-dashboard，不顯示 loading，不重新處理 icon；資料驗證交給 dashboard。
+      if (shouldFastRouteStandalone) {
+        openStudentDashboard(rawUid, "student-app-standalone-fast");
+        return;
+      }
+
+      document.documentElement.classList.remove("standalone-fast-route");
 
       try {
         const result = await TappieAPI.resolveStudentByUid(rawUid);
@@ -872,8 +924,8 @@
           iconUrl: resolvedIconUrl
         });
 
-        // 主畫面 App 模式：即使 start_url 是 /student-app.html?uid=...，開啟後也直接進 dashboard。
-        if (isStandalone) {
+        // 保險 fallback：若早期 fast path 未命中，但後續判定為 standalone，仍直接進 dashboard。
+        if (isStandalone && !isInstallSetup) {
           openStudentDashboard(resolvedUid, "student-app-standalone");
           return;
         }
