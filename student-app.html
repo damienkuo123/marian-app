@@ -4,123 +4,458 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0066cc">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Tappie學美語">
   <link rel="apple-touch-icon" href="/assets/app-icon.png">
+  <link rel="icon" href="/assets/app-icon.png">
   <title>Tappie 學生捷徑</title>
   <style>
     :root {
       --blue: #0066cc;
+      --blue-2: #4ba3ff;
       --gold: #f1c40f;
+      --green: #15b79f;
+      --ink: #111827;
       --text: #172033;
       --muted: #667085;
-      --bg: #f5f7fb;
-      --card: rgba(255,255,255,.86);
+      --soft: #eef5ff;
+      --line: rgba(15, 23, 42, .08);
+      --card: rgba(255,255,255,.88);
+      --shadow: 0 28px 80px rgba(15, 23, 42, .16);
     }
+
     * { box-sizing: border-box; }
+
+    html { background: #f5f8ff; }
+
     body {
       margin: 0;
       min-height: 100vh;
       min-height: 100svh;
       display: grid;
       place-items: center;
-      padding: max(22px, env(safe-area-inset-top)) 22px max(22px, env(safe-area-inset-bottom));
+      padding: max(22px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
       background:
-        radial-gradient(circle at 20% 8%, rgba(0,102,204,.18), transparent 34%),
-        radial-gradient(circle at 92% 88%, rgba(241,196,15,.22), transparent 34%),
-        var(--bg);
+        radial-gradient(circle at 14% 6%, rgba(0, 102, 204, .18), transparent 32%),
+        radial-gradient(circle at 90% 16%, rgba(21, 183, 159, .13), transparent 30%),
+        radial-gradient(circle at 86% 92%, rgba(241, 196, 15, .24), transparent 34%),
+        linear-gradient(180deg, #f9fbff 0%, #eef5ff 100%);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
+
+    button,
+    input,
+    textarea,
+    select { font: inherit; }
+
+    .shell {
+      width: min(460px, 100%);
+      position: relative;
+    }
+
+    .shell::before {
+      content: "";
+      position: absolute;
+      inset: 12px 18px auto;
+      height: 120px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(0,102,204,.18), rgba(21,183,159,.14));
+      filter: blur(28px);
+      pointer-events: none;
+    }
+
     .card {
-      width: min(440px, 100%);
-      border-radius: 32px;
-      padding: 30px 24px;
+      position: relative;
+      width: 100%;
+      border-radius: 34px;
+      padding: 22px;
       background: var(--card);
-      border: 1px solid rgba(255,255,255,.9);
-      box-shadow: 0 24px 72px rgba(15,23,42,.14);
-      text-align: center;
-      backdrop-filter: blur(22px);
-      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid rgba(255,255,255,.92);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      overflow: hidden;
     }
-    .icon {
-      width: 76px;
-      height: 76px;
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.76), transparent 34%);
+      pointer-events: none;
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    .hero {
+      min-height: 190px;
+      border-radius: 28px;
+      padding: 22px 18px 20px;
+      color: #fff;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.24), transparent 28%),
+        radial-gradient(circle at 92% 82%, rgba(241,196,15,.28), transparent 30%),
+        linear-gradient(135deg, #0459bf 0%, #0077e6 52%, #35b6ff 100%);
+      box-shadow: 0 18px 46px rgba(0, 102, 204, .24);
+      text-align: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      filter: blur(.2px);
+    }
+
+    .hero::before {
+      width: 180px;
+      height: 180px;
+      right: -88px;
+      top: -96px;
+    }
+
+    .hero::after {
+      width: 90px;
+      height: 90px;
+      left: -28px;
+      bottom: -36px;
+    }
+
+    .app-icon-wrap {
+      width: 84px;
+      height: 84px;
+      margin: 0 auto 14px;
+      border-radius: 26px;
+      padding: 7px;
+      background: rgba(255,255,255,.28);
+      box-shadow: 0 18px 38px rgba(0,0,0,.18);
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-icon {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 21px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #0066cc, #62b5ff);
+    }
+
+    .fallback-icon {
+      width: 100%;
+      height: 100%;
       display: grid;
       place-items: center;
-      margin: 0 auto 18px;
-      border-radius: 24px;
-      background: linear-gradient(135deg, var(--blue), #5aa7ff);
-      color: #fff;
+      border-radius: 21px;
+      background: linear-gradient(135deg, #0066cc, #62b5ff);
       font-size: 34px;
-      box-shadow: 0 16px 32px rgba(0,102,204,.28);
     }
-    h1 {
-      margin: 0 0 10px;
-      font-size: 28px;
-      letter-spacing: -.06em;
-      line-height: 1.12;
-    }
-    .student-name {
-      margin: 0 0 18px;
-      color: var(--blue);
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      margin-bottom: 9px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      color: rgba(255,255,255,.92);
+      font-size: 12px;
       font-weight: 900;
-      font-size: 18px;
+      letter-spacing: .03em;
+      position: relative;
+      z-index: 1;
     }
-    p {
+
+    h1 {
+      margin: 0;
+      font-size: clamp(27px, 8vw, 34px);
+      line-height: 1.05;
+      letter-spacing: -.07em;
+      font-weight: 950;
+      position: relative;
+      z-index: 1;
+    }
+
+    .subtitle {
+      max-width: 330px;
+      margin: 12px auto 0;
+      color: rgba(255,255,255,.88);
+      font-size: 14px;
+      font-weight: 750;
+      line-height: 1.62;
+      position: relative;
+      z-index: 1;
+    }
+
+    .student-name {
+      color: #fff;
+      text-shadow: 0 1px 18px rgba(0,0,0,.18);
+    }
+
+    .benefits {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .benefit {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255,255,255,.72);
+      text-align: left;
+    }
+
+    .benefit-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: var(--soft);
+      font-size: 20px;
+    }
+
+    .benefit-title {
+      margin: 0 0 3px;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 950;
+      letter-spacing: -.02em;
+    }
+
+    .benefit-copy {
       margin: 0;
       color: var(--muted);
-      line-height: 1.72;
-      font-weight: 650;
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 700;
     }
-    .steps {
-      margin-top: 22px;
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(255,255,255,.68);
+
+    .guide {
+      padding: 16px;
+      border-radius: 24px;
+      background: #fff;
+      border: 1px solid rgba(15,23,42,.06);
+      box-shadow: 0 14px 36px rgba(15,23,42,.07);
       text-align: left;
-      color: #344054;
-      font-weight: 750;
-      line-height: 1.7;
     }
-    .steps strong { color: var(--text); }
+
+    .guide-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .guide-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 950;
+      letter-spacing: -.03em;
+    }
+
+    .device-pill {
+      flex: 0 0 auto;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #f2f6ff;
+      color: #0066cc;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .steps {
+      display: grid;
+      gap: 9px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: #344054;
+      font-size: 14px;
+      font-weight: 760;
+      line-height: 1.58;
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #eef5ff;
+      color: #0066cc;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .step strong { color: var(--ink); font-weight: 950; }
+
+    .notice {
+      margin: 12px 0 0;
+      padding: 12px 13px;
+      border-radius: 18px;
+      background: #f8fbff;
+      color: #667085;
+      font-size: 12px;
+      line-height: 1.55;
+      font-weight: 760;
+      text-align: left;
+    }
+
+    .actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
     .button {
+      width: 100%;
+      min-height: 54px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 100%;
-      min-height: 54px;
-      margin-top: 18px;
+      gap: 8px;
       border: 0;
       border-radius: 18px;
-      background: var(--blue);
-      color: #fff;
       font-size: 16px;
-      font-weight: 900;
+      font-weight: 950;
       cursor: pointer;
-      box-shadow: 0 14px 26px rgba(0,102,204,.22);
+      transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+      -webkit-tap-highlight-color: transparent;
     }
+
+    .button:active { transform: scale(.985); }
+
+    .button.primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--blue-2));
+      box-shadow: 0 16px 30px rgba(0,102,204,.22);
+    }
+
     .button.secondary {
-      background: rgba(16,24,40,.08);
       color: #344054;
+      background: rgba(16,24,40,.07);
       box-shadow: none;
     }
-    .small {
-      margin-top: 14px;
-      font-size: 13px;
+
+    .button.hidden { display: none; }
+
+    .footer-note {
+      margin: 13px 4px 0;
       color: #98a2b3;
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 720;
+      text-align: center;
+    }
+
+    .loading {
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .loading-mark {
+      width: 74px;
+      height: 74px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 16px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, var(--blue), var(--blue-2));
+      color: #fff;
+      font-size: 30px;
+      box-shadow: 0 18px 38px rgba(0,102,204,.24);
+    }
+
+    .loading h1,
+    .error h1 {
+      color: var(--ink);
+      font-size: 25px;
+      line-height: 1.14;
+      letter-spacing: -.06em;
+    }
+
+    .loading p,
+    .error p {
+      max-width: 310px;
+      margin: 12px auto 0;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 720;
+      line-height: 1.65;
+    }
+
+    .spinner {
+      width: 23px;
+      height: 23px;
+      margin: 18px auto 0;
+      border-radius: 50%;
+      border: 3px solid rgba(0,102,204,.14);
+      border-top-color: var(--blue);
+      animation: spin .82s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (min-width: 430px) {
+      .benefits { grid-template-columns: 1fr 1fr; }
+      .benefit { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+      }
     }
   </style>
 </head>
 <body>
-  <main class="card" id="card">
-    <div class="icon">🪄</div>
-    <h1>正在準備 Tappie 學生捷徑</h1>
-    <p>請稍候...</p>
+  <main class="shell">
+    <section class="card" id="card">
+      <div class="content loading">
+        <div>
+          <div class="loading-mark">🪄</div>
+          <h1>正在準備 Tappie 學生捷徑</h1>
+          <p>正在確認學生資料與校區 App 圖示。</p>
+          <div class="spinner" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="./tappie-api.js?v=student-app-v1"></script>
+  <script src="./tappie-api.js?v=student-app-ui-v2"></script>
   <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
@@ -129,42 +464,298 @@
     const isStandalone =
       (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
       window.navigator.standalone === true;
+    const DEFAULT_ICON_URL = "/assets/app-icon.png";
     const card = document.getElementById("card");
+
+    let resolvedUid = rawUid;
+    let resolvedStudentName = "";
+    let resolvedSchoolName = "";
+    let resolvedIconUrl = DEFAULT_ICON_URL;
+    let deferredPrompt = null;
+    let manifestObjectUrl = "";
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      updateNativeInstallButtonVisibility();
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch((err) => console.log("SW 註冊失敗", err));
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function detectInstallEnvironment() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera || "";
+      const isIPadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+      const isIOS = /iPad|iPhone|iPod/i.test(ua) || isIPadOS;
+      const isAndroid = /Android/i.test(ua);
+      const isLineOrSocial = /Line|FBAN|FBAV|Instagram/i.test(ua);
+      const isCriOS = /CriOS/i.test(ua);
+      const isChrome = /Chrome|CriOS/i.test(ua) && !/Edg\//i.test(ua);
+      const isEdge = /Edg\//i.test(ua);
+      const isSamsung = /SamsungBrowser/i.test(ua);
+      const isFirefox = /Firefox|FxiOS/i.test(ua);
+      const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|FxiOS|Edg\//i.test(ua) && !/Android/i.test(ua);
+      const isDesktop = !isIOS && !isAndroid;
+
+      let label = "手機瀏覽器";
+      if (isLineOrSocial) label = "內建瀏覽器";
+      else if (isIOS && isSafari) label = "iOS Safari";
+      else if (isIOS) label = "iPhone / iPad";
+      else if (isAndroid && isSamsung) label = "Android Samsung";
+      else if (isAndroid && isEdge) label = "Android Edge";
+      else if (isAndroid && isChrome) label = "Android Chrome";
+      else if (isAndroid) label = "Android";
+      else if (isDesktop) label = "電腦瀏覽器";
+
+      return { ua, isIOS, isAndroid, isSafari, isChrome, isSamsung, isEdge, isFirefox, isLineOrSocial, isDesktop, label };
+    }
+
+    function getInstallSteps(env) {
+      if (env.isLineOrSocial) {
+        return {
+          title: "請先用正式瀏覽器開啟",
+          note: "LINE、Facebook、Instagram 內建瀏覽器通常不能完整加入主畫面或啟用通知。請先用 Safari 或 Chrome 開啟後再操作。",
+          steps: [
+            "點右上角的 <strong>⋯</strong> 或 <strong>分享</strong> 選單。",
+            "選擇 <strong>以 Safari 開啟</strong> 或 <strong>以 Chrome 開啟</strong>。",
+            "回到本頁後，再依照加入主畫面的提示完成設定。"
+          ]
+        };
+      }
+
+      if (env.isIOS) {
+        return {
+          title: env.isSafari ? "iPhone / iPad 加入方式" : "建議改用 Safari 加入",
+          note: env.isSafari
+            ? "iOS 需要透過 Safari 的分享選單加入主畫面。完成後，主畫面會出現學生專屬 Tappie 圖示。"
+            : "iPhone / iPad 建議使用 Safari 加入主畫面，圖示與全螢幕 App 體驗會比較穩定。",
+          steps: [
+            "點選 Safari 下方或上方的 <strong>分享</strong> 圖示。",
+            "向下滑動，選擇 <strong>加入主畫面</strong>。",
+            "確認名稱與圖示後，按下 <strong>加入</strong>。"
+          ]
+        };
+      }
+
+      if (env.isAndroid) {
+        return {
+          title: "Android 加入方式",
+          note: "不同 Android 瀏覽器的字樣可能不同，常見名稱包含「安裝應用程式」、「加到主畫面」、「新增到主畫面」或「加入桌面」。",
+          steps: [
+            "點選瀏覽器右上角的 <strong>⋮</strong> 選單。",
+            "選擇 <strong>安裝應用程式</strong>、<strong>加到主畫面</strong> 或類似選項。",
+            "完成後，從手機主畫面的 Tappie 圖示開啟。"
+          ]
+        };
+      }
+
+      return {
+        title: "電腦瀏覽器提示",
+        note: "這個捷徑主要設計給手機和平板使用。若瀏覽器網址列出現安裝圖示，也可以安裝成桌面 App。",
+        steps: [
+          "檢查網址列右側是否出現 <strong>安裝</strong> 或 <strong>下載</strong> 圖示。",
+          "依照瀏覽器提示完成安裝。",
+          "學生平常仍建議使用手機主畫面捷徑開啟。"
+        ]
+      };
+    }
+
+    function getFirstDefined(...values) {
+      for (const value of values) {
+        if (value !== undefined && value !== null && String(value).trim()) return value;
+      }
+      return "";
+    }
+
+    async function getDashboardBranding(uid) {
+      try {
+        if (!window.TappieAPI || !uid) return null;
+        if (typeof TappieAPI._get === "function" && TappieAPI.endpoints?.getDashboard) {
+          return await TappieAPI._get(`${TappieAPI.endpoints.getDashboard}?uid=${encodeURIComponent(uid)}`);
+        }
+        if (typeof TappieAPI.getDashboard === "function") {
+          return await TappieAPI.getDashboard(uid);
+        }
+      } catch (err) {
+        console.warn("student-app getDashboard branding failed", err);
+      }
+      return null;
+    }
+
+    function setOrCreateLink(rel, href) {
+      let link = document.querySelector(`link[rel="${rel}"]`);
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = href;
+      return link;
+    }
+
+    function updateInstallAssets({ uid, studentName, schoolName, iconUrl }) {
+      const finalUid = uid || rawUid || "";
+      const finalStudentName = String(studentName || "Tappie").trim();
+      const finalSchoolName = String(schoolName || "").trim();
+      const finalIconUrl = String(iconUrl || DEFAULT_ICON_URL).trim() || DEFAULT_ICON_URL;
+      const appTitle = finalStudentName && finalStudentName !== "Tappie"
+        ? `${finalStudentName}｜Tappie`
+        : "Tappie 學美語";
+
+      document.title = `${appTitle} 學生捷徑`;
+
+      const appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (appleTitle) appleTitle.setAttribute("content", finalStudentName && finalStudentName !== "Tappie" ? finalStudentName : "Tappie學美語");
+
+      setOrCreateLink("apple-touch-icon", finalIconUrl);
+      setOrCreateLink("icon", finalIconUrl);
+
+      const manifestJSON = {
+        name: finalStudentName && finalStudentName !== "Tappie" ? `Tappie - ${finalStudentName}` : "Tappie 學美語",
+        short_name: finalStudentName && finalStudentName.length <= 12 ? finalStudentName : "Tappie",
+        description: finalSchoolName ? `${finalSchoolName} Tappie 學生主頁` : "Tappie 學生主頁",
+        start_url: `/student-app.html?uid=${encodeURIComponent(finalUid)}`,
+        scope: "/",
+        display: "standalone",
+        background_color: "#eef5ff",
+        theme_color: "#0066cc",
+        icons: [
+          {
+            src: finalIconUrl,
+            sizes: "192x192 512x512",
+            type: "image/png",
+            purpose: "any maskable"
+          }
+        ]
+      };
+
+      const blob = new Blob([JSON.stringify(manifestJSON)], { type: "application/manifest+json" });
+      const manifestUrl = URL.createObjectURL(blob);
+      setOrCreateLink("manifest", manifestUrl);
+
+      if (manifestObjectUrl) {
+        setTimeout(() => URL.revokeObjectURL(manifestObjectUrl), 30000);
+      }
+      manifestObjectUrl = manifestUrl;
+    }
+
+    function updateNativeInstallButtonVisibility() {
+      const btn = document.getElementById("native-install-btn");
+      if (!btn) return;
+      btn.classList.toggle("hidden", !deferredPrompt);
+    }
+
+    async function requestNativeInstall() {
+      if (!deferredPrompt) return;
+      const promptEvent = deferredPrompt;
+      deferredPrompt = null;
+      updateNativeInstallButtonVisibility();
+
+      try {
+        promptEvent.prompt();
+        await promptEvent.userChoice;
+      } catch (err) {
+        console.warn("PWA install prompt failed", err);
+      }
+    }
 
     function renderError(message) {
       card.innerHTML = `
-        <div class="icon">⚠️</div>
-        <h1>無法建立捷徑</h1>
-        <p>${message}</p>
-        <button class="button secondary" onclick="location.replace('/index.html')">回到 Tappie</button>
+        <div class="content error">
+          <div class="loading-mark">⚠️</div>
+          <h1>無法建立學生捷徑</h1>
+          <p>${escapeHtml(message || "請重新感應卡片，或洽詢老師確認學生資料。")}</p>
+          <div class="actions">
+            <button class="button secondary" onclick="location.replace('/index.html')">返回主頁</button>
+          </div>
+        </div>
       `;
     }
 
-    function renderInstallGuide(studentName) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || "") && !window.MSStream;
-      const title = studentName ? `建立「${studentName}」的 Tappie 捷徑` : "建立 Tappie 學生捷徑";
-      const steps = isIOS
-        ? `1. 點選 Safari 下方或上方的 <strong>分享</strong> 圖示<br>2. 向下滑動並選擇 <strong>加入主畫面</strong><br>3. 按下 <strong>加入</strong>`
-        : `1. 點選瀏覽器右上角 <strong>⋮</strong> 選單<br>2. 選擇 <strong>加到主畫面</strong><br>3. 完成後從主畫面開啟 Tappie`;
+    function renderInstallGuide() {
+      const env = detectInstallEnvironment();
+      const guide = getInstallSteps(env);
+      const safeStudentName = escapeHtml(resolvedStudentName || "學生");
+      const safeSchoolName = escapeHtml(resolvedSchoolName || "Tappie");
+      const safeIconUrl = escapeHtml(resolvedIconUrl || DEFAULT_ICON_URL);
+      const stepsHtml = guide.steps.map((step, index) => `
+        <li class="step">
+          <span class="step-num">${index + 1}</span>
+          <span>${step}</span>
+        </li>
+      `).join("");
 
       card.innerHTML = `
-        <div class="icon">📱</div>
-        <h1>${title}</h1>
-        <p>請在這個頁面加入主畫面。完成後，下次從主畫面開啟，就會直接進入這位學生的 Tappie。</p>
-        <div class="steps">${steps}</div>
-        <button class="button secondary" onclick="openOnce()">先直接開啟學生主頁</button>
-        <p class="small">這個頁面是學生專屬捷徑入口，請不要轉傳給他人。</p>
+        <div class="content">
+          <section class="hero">
+            <div class="app-icon-wrap">
+              <img class="app-icon" src="${safeIconUrl}" alt="Tappie App icon" onerror="this.outerHTML='<div class=&quot;fallback-icon&quot;>T</div>'">
+            </div>
+            <div class="eyebrow">${safeSchoolName}｜學生專屬捷徑</div>
+            <h1>把 <span class="student-name">${safeStudentName}</span> 的 Tappie 加到主畫面</h1>
+            <p class="subtitle">完成後，這台手機會出現學生專屬 Tappie App 圖示。</p>
+          </section>
+
+          <section class="benefits" aria-label="加入主畫面的好處">
+            <article class="benefit">
+              <div class="benefit-icon">⚡</div>
+              <div>
+                <h2 class="benefit-title">下次無需嗶卡</h2>
+                <p class="benefit-copy">點擊 App 直接登入學生主頁，練習、點數與任務更快開始。</p>
+              </div>
+            </article>
+            <article class="benefit">
+              <div class="benefit-icon">🔔</div>
+              <div>
+                <h2 class="benefit-title">接收學生的上放學通知</h2>
+                <p class="benefit-copy">在學生主頁開啟通知後，可接收到校、離校等即時提醒。</p>
+              </div>
+            </article>
+          </section>
+
+          <section class="guide" aria-label="加入主畫面教學">
+            <div class="guide-top">
+              <h2 class="guide-title">${escapeHtml(guide.title)}</h2>
+              <span class="device-pill">${escapeHtml(env.label)}</span>
+            </div>
+            <ol class="steps">${stepsHtml}</ol>
+            <p class="notice">${escapeHtml(guide.note)}</p>
+          </section>
+
+          <div class="actions">
+            <button id="native-install-btn" class="button primary hidden" onclick="requestNativeInstall()">開啟安裝提示</button>
+            <button class="button secondary" onclick="openStudentDashboard(resolvedUid, 'student-app-return-home')">返回主頁</button>
+          </div>
+          <p class="footer-note">這是學生專屬捷徑入口，請不要轉傳給他人。</p>
+        </div>
       `;
+
+      updateNativeInstallButtonVisibility();
     }
 
     function openStudentDashboard(uid, source) {
-      if (!uid) return renderError("缺少學生代碼，請重新感應卡片。");
-      TappieStudentSession.setActive(uid, source || "student-app");
-      window.location.replace("/dashboard.html");
-    }
+      const finalUid = String(uid || resolvedUid || rawUid || "").trim();
+      if (!finalUid) {
+        renderError("缺少學生代碼，請重新感應卡片。");
+        return;
+      }
 
-    function openOnce() {
-      openStudentDashboard(rawUid, "student-app-open-once");
+      if (window.TappieStudentSession && typeof TappieStudentSession.setActive === "function") {
+        TappieStudentSession.setActive(finalUid, source || "student-app");
+      }
+      window.location.replace("/dashboard.html");
     }
 
     async function init() {
@@ -175,26 +766,55 @@
 
       try {
         const result = await TappieAPI.resolveStudentByUid(rawUid);
-        const uid = result.uid || rawUid;
-        const studentName = result.studentName || result.name || result.student?.name || "";
+        if (!result || result.success === false) {
+          throw new Error(result?.message || "找不到此學生，請重新感應卡片或洽詢老師。");
+        }
 
-        // 主畫面 App 模式：不管網址是否帶 #install，都直接進入學生主頁。
-        // 這樣即使使用者把 /student-app.html?uid=TP01-xxxx#install 加到主畫面，
-        // 從主畫面開啟時也不會卡在教學頁。
+        resolvedUid = String(result.uid || result.student?.uid || rawUid).trim();
+        resolvedStudentName = String(getFirstDefined(result.studentName, result.name, result.student?.name)).trim();
+        resolvedSchoolName = String(getFirstDefined(result.school?.name, result.school?.schoolName, result.school?.schoolCode)).trim();
+
+        const dashboardData = await getDashboardBranding(resolvedUid);
+        if (dashboardData && dashboardData.success !== false) {
+          resolvedStudentName = String(getFirstDefined(
+            dashboardData.studentName,
+            dashboardData.student?.name,
+            resolvedStudentName
+          )).trim();
+          resolvedSchoolName = String(getFirstDefined(
+            dashboardData.school?.name,
+            dashboardData.schoolName,
+            resolvedSchoolName
+          )).trim();
+          resolvedIconUrl = String(getFirstDefined(
+            dashboardData.iconUrl,
+            dashboardData.school?.iconUrl,
+            dashboardData.branding?.iconUrl,
+            DEFAULT_ICON_URL
+          )).trim();
+        }
+
+        updateInstallAssets({
+          uid: resolvedUid,
+          studentName: resolvedStudentName,
+          schoolName: resolvedSchoolName,
+          iconUrl: resolvedIconUrl
+        });
+
+        // 主畫面 App 模式：即使 start_url 是 /student-app.html?uid=...，開啟後也直接進 dashboard。
         if (isStandalone) {
-          openStudentDashboard(uid, "student-app");
+          openStudentDashboard(resolvedUid, "student-app-standalone");
           return;
         }
 
-        // 瀏覽器安裝模式：Dashboard 的「加入主畫面」按鈕會使用 #install 進入本頁。
-        // 這裡不要清掉 #install，避免使用者在安裝教學頁重新整理後被誤導到 dashboard。
+        // Dashboard 的「加入主畫面」會導到 #install；這裡保留引導頁，不自動跳走。
         if (isInstallSetup) {
-          renderInstallGuide(studentName);
+          renderInstallGuide();
           return;
         }
 
-        // 普通瀏覽器直接打開 student-app.html?uid=... 時，視為一次性開啟學生主頁。
-        openStudentDashboard(uid, "student-app");
+        // 一般瀏覽器直接開 student-app.html?uid=... 時，視為一次性進入主頁。
+        openStudentDashboard(resolvedUid, "student-app-direct");
       } catch (err) {
         console.error(err);
         renderError(err.message || "找不到此學生，請重新感應卡片或洽詢老師。");
