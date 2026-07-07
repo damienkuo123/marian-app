@@ -381,6 +381,127 @@
       box-shadow: 0 8px 18px rgba(0,102,204,0.22);
     }
 
+    /* =======================================================
+       🔔 主畫面 App 上放學通知引導彈窗
+       - 只在 standalone / PWA 模式自動顯示
+       - 系統授權仍需家長點擊「開啟通知」後才觸發
+       ======================================================= */
+    .attendance-push-nudge-content {
+      padding: 30px 28px 28px;
+      text-align: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .attendance-push-nudge-content::before {
+      content: '';
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      border-radius: 999px;
+      background: rgba(0,102,204,0.12);
+      filter: blur(36px);
+      top: -72px;
+      right: -66px;
+      pointer-events: none;
+    }
+    .attendance-push-nudge-icon {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(255,255,255,1), rgba(255,255,255,0.58));
+      box-shadow: 0 16px 34px rgba(0,102,204,0.14), inset 0 1px 0 rgba(255,255,255,1);
+      border: 1px solid rgba(255,255,255,0.86);
+      font-size: 34px;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      color: var(--primary-blue);
+      background: rgba(0,102,204,0.08);
+      border: 1px solid rgba(0,102,204,0.08);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-title {
+      margin: 0;
+      color: var(--text-main);
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      line-height: 1.22;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-copy {
+      margin: 12px auto 0;
+      max-width: 330px;
+      color: var(--text-main);
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.75;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-subcopy {
+      margin: 10px auto 0;
+      max-width: 320px;
+      color: var(--text-sub);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.65;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-benefits {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0 0;
+      text-align: left;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-benefit {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 13px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(255,255,255,0.85);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+    .attendance-push-nudge-benefit span:first-child {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(0,102,204,0.08);
+      font-size: 16px;
+    }
+    .attendance-push-nudge-actions {
+      position: relative;
+      z-index: 1;
+      margin-top: 20px;
+    }
+
     .push-device-summary {
       margin-top: 14px;
       padding: 14px 14px 12px;
@@ -890,6 +1011,24 @@
     </div>
   </div>
 
+  <div id="attendance-push-nudge-overlay" class="modal-overlay" onclick="dismissAttendancePushNudge()">
+    <div class="modal-content attendance-push-nudge-content" onclick="event.stopPropagation()">
+      <div class="attendance-push-nudge-icon">🔔</div>
+      <div class="attendance-push-nudge-eyebrow">主畫面 App 已就緒</div>
+      <h3 class="attendance-push-nudge-title">開啟上放學通知</h3>
+      <p class="attendance-push-nudge-copy">開啟後，老師完成到校或離校登記時，這台手機就能收到提醒。</p>
+      <div class="attendance-push-nudge-benefits" aria-label="開啟上放學通知的好處">
+        <div class="attendance-push-nudge-benefit"><span>🏫</span><span>即時知道孩子到校、離校狀態。</span></div>
+        <div class="attendance-push-nudge-benefit"><span>📱</span><span>只綁定這台手機，方便家長辨識裝置。</span></div>
+      </div>
+      <p class="attendance-push-nudge-subcopy">系統通知授權會在你點選「開啟通知」後才出現。</p>
+      <div class="pwa-required-actions attendance-push-nudge-actions">
+        <button class="pwa-required-btn cancel" onclick="dismissAttendancePushNudge()">稍後再說</button>
+        <button class="pwa-required-btn primary" onclick="acceptAttendancePushNudge()">開啟通知</button>
+      </div>
+    </div>
+  </div>
+
   <div id="logModal" class="modal-overlay" onclick="toggleLogs(false)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 style="text-align:center; color:var(--text-main); margin-top:0; font-weight:900; letter-spacing:2px;">📝 最近點數紀錄</h3>
@@ -964,8 +1103,13 @@
     const TAPPIE_VAPID_PUBLIC_KEY = window.TAPPIE_VAPID_PUBLIC_KEY || "BMv4zZ4lFP0InS2c5BQJTtVUZ7WedDUf3Rqz9v3bDZe3mlpuROiwTwbP1FGHYyJ6cbH6D0gNX5aQvUhjqE5qNhw";
 
     const TAPPIE_PUSH_DEVICE_LIMIT = 3;
+    const TAPPIE_PUSH_NUDGE_SNOOZE_MS = 24 * 60 * 60 * 1000;
     let cachedPushDevices = [];
     let pendingPushSubscription = null;
+    let lastAttendancePushStatusSnapshot = null;
+    let dashboardContentVisible = false;
+    let attendancePushNudgeShownThisLoad = false;
+    let attendancePushNudgeTimer = null;
 
     // Feature Gate F4｜Dashboard 入口閥門（預設全開，只有明確 false 才關閉）
     const DEFAULT_DASHBOARD_FEATURES = {
@@ -1133,7 +1277,100 @@
     }
 
     function isTappieStandaloneMode() {
-      return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+      const matchDisplayMode = mode => window.matchMedia && window.matchMedia(`(display-mode: ${mode})`).matches;
+      return window.navigator.standalone === true ||
+             matchDisplayMode('standalone') ||
+             matchDisplayMode('fullscreen') ||
+             matchDisplayMode('minimal-ui');
+    }
+
+    function setLastAttendancePushSnapshot(snapshot) {
+      lastAttendancePushStatusSnapshot = snapshot || null;
+      return lastAttendancePushStatusSnapshot;
+    }
+
+    function getAttendancePushNudgeStorageKey() {
+      return `tappie_attendance_push_nudge_snoozed_until_${STUDENT_ID || 'unknown'}`;
+    }
+
+    function getAttendancePushNudgeSnoozedUntil() {
+      try {
+        return Number(localStorage.getItem(getAttendancePushNudgeStorageKey()) || 0) || 0;
+      } catch (_) {
+        return 0;
+      }
+    }
+
+    function isAttendancePushNudgeSnoozed() {
+      const until = getAttendancePushNudgeSnoozedUntil();
+      return until && until > Date.now();
+    }
+
+    function snoozeAttendancePushNudge(durationMs = TAPPIE_PUSH_NUDGE_SNOOZE_MS) {
+      try {
+        localStorage.setItem(getAttendancePushNudgeStorageKey(), String(Date.now() + durationMs));
+      } catch (_) {}
+    }
+
+    function clearAttendancePushNudgeSnooze() {
+      try {
+        localStorage.removeItem(getAttendancePushNudgeStorageKey());
+      } catch (_) {}
+    }
+
+    function toggleAttendancePushNudgeModal(show) {
+      const modal = document.getElementById('attendance-push-nudge-overlay');
+      if (!modal) return;
+      if (show) {
+        if (window.GlobalAudio) GlobalAudio.play('popupOpen');
+        modal.classList.add('show');
+      } else {
+        if (window.GlobalAudio) GlobalAudio.play('popupClose');
+        modal.classList.remove('show');
+      }
+    }
+
+    function dismissAttendancePushNudge() {
+      attendancePushNudgeShownThisLoad = true;
+      snoozeAttendancePushNudge();
+      toggleAttendancePushNudgeModal(false);
+    }
+
+    async function acceptAttendancePushNudge() {
+      attendancePushNudgeShownThisLoad = true;
+      toggleAttendancePushNudgeModal(false);
+      await handleAttendancePushSubscribeClick({ source: 'standalone-nudge' });
+    }
+
+    function shouldShowAttendancePushNudge(snapshot = lastAttendancePushStatusSnapshot) {
+      if (attendancePushNudgeShownThisLoad) return false;
+      if (!dashboardContentVisible) return false;
+      if (!isDashboardFeatureEnabled('attendance_enabled')) return false;
+      if (!isTappieStandaloneMode()) return false;
+      if (isAttendancePushNudgeSnoozed()) return false;
+      if (!snapshot || snapshot.error) return false;
+      if (!snapshot.standalone || !snapshot.supported) return false;
+      if (!isValidVapidPublicKey()) return false;
+      if (snapshot.permission === 'denied') return false;
+      if (snapshot.hasCurrentDevice) return false;
+      if (!snapshot.hasSubscription && snapshot.deviceCount >= snapshot.maxDevices) return false;
+      return snapshot.permission === 'default' || snapshot.permission === 'granted';
+    }
+
+    function maybeShowAttendancePushNudge(snapshot = lastAttendancePushStatusSnapshot) {
+      if (!shouldShowAttendancePushNudge(snapshot)) return false;
+      attendancePushNudgeShownThisLoad = true;
+      toggleAttendancePushNudgeModal(true);
+      return true;
+    }
+
+    function queueAttendancePushNudgeCheck(delay = 380) {
+      clearTimeout(attendancePushNudgeTimer);
+      attendancePushNudgeTimer = setTimeout(async () => {
+        if (!dashboardContentVisible || !isDashboardFeatureEnabled('attendance_enabled') || !isTappieStandaloneMode()) return;
+        const snapshot = lastAttendancePushStatusSnapshot || await refreshAttendancePushStatus();
+        maybeShowAttendancePushNudge(snapshot);
+      }, delay);
     }
 
     function togglePwaRequiredModal(show) {
@@ -1380,23 +1617,49 @@
     async function refreshAttendancePushStatus() {
       try {
         // 家長在瀏覽器中看到的第一訊息，應該是「加入主畫面」而不是「不支援」。
-        // 真正的 Web Push 支援檢查，等從主畫面開啟後再做。
+        // 真正的 Web Push 支援檢查，等從主畫面 App 開啟後再做。
         if (!isTappieStandaloneMode()) {
           setAttendancePushStatus("加入主畫面獲得通知", "warn");
           renderPushDeviceList([], TAPPIE_PUSH_DEVICE_LIMIT);
-          return;
+          return setLastAttendancePushSnapshot({
+            standalone: false,
+            supported: false,
+            permission: 'browser',
+            hasSubscription: false,
+            hasCurrentDevice: false,
+            deviceCount: 0,
+            maxDevices: TAPPIE_PUSH_DEVICE_LIMIT
+          });
         }
 
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        const hasPushSupport = ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
+        if (!hasPushSupport) {
           setAttendancePushStatus("此裝置暫不支援通知", "warn");
           await refreshPushDeviceList("");
-          return;
+          return setLastAttendancePushSnapshot({
+            standalone: true,
+            supported: false,
+            permission: 'unsupported',
+            hasSubscription: false,
+            hasCurrentDevice: false,
+            deviceCount: 0,
+            maxDevices: TAPPIE_PUSH_DEVICE_LIMIT
+          });
         }
 
         if (Notification.permission === "denied") {
           setAttendancePushStatus("通知尚未開啟，可至設定允許", "warn");
-          await refreshPushDeviceList("");
-          return;
+          const deniedList = await refreshPushDeviceList("");
+          const deniedDevices = normalizePushDevices(deniedList?.devices || []);
+          return setLastAttendancePushSnapshot({
+            standalone: true,
+            supported: true,
+            permission: 'denied',
+            hasSubscription: false,
+            hasCurrentDevice: false,
+            deviceCount: deniedDevices.length,
+            maxDevices: deniedList?.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT
+          });
         }
 
         const reg = await navigator.serviceWorker.ready;
@@ -1405,6 +1668,7 @@
         const listResult = await refreshPushDeviceList(currentEndpoint);
         const devices = normalizePushDevices(listResult?.devices || []);
         const hasCurrentDevice = devices.some(device => device.isCurrent);
+        const maxDevices = listResult?.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT;
 
         if (sub && hasCurrentDevice) {
           setAttendancePushStatus("已啟用上放學通知", "ok");
@@ -1415,13 +1679,34 @@
         } else {
           setAttendancePushStatus("尚未訂閱上放學通知", "");
         }
+
+        return setLastAttendancePushSnapshot({
+          standalone: true,
+          supported: true,
+          permission: Notification.permission,
+          hasSubscription: Boolean(sub),
+          hasCurrentDevice,
+          deviceCount: devices.length,
+          maxDevices,
+          currentEndpoint
+        });
       } catch (err) {
         console.warn("push status check failed", err);
         setAttendancePushStatus("通知狀態檢查失敗", "warn");
+        return setLastAttendancePushSnapshot({
+          standalone: isTappieStandaloneMode(),
+          supported: false,
+          permission: ('Notification' in window) ? Notification.permission : 'unsupported',
+          hasSubscription: false,
+          hasCurrentDevice: false,
+          deviceCount: 0,
+          maxDevices: TAPPIE_PUSH_DEVICE_LIMIT,
+          error: true
+        });
       }
     }
 
-    async function handleAttendancePushSubscribeClick() {
+    async function handleAttendancePushSubscribeClick(options = {}) {
       if (window.GlobalAudio) GlobalAudio.play('click');
 
       // 瀏覽器模式一律先引導加入主畫面，不先顯示「不支援」，避免家長卻步。
@@ -1468,9 +1753,11 @@
 
         if (permission !== "granted") {
           setAttendancePushStatus("尚未啟用，之後可再按一次訂閱", "warn");
+          snoozeAttendancePushNudge();
           return;
         }
 
+        clearAttendancePushNudgeSnooze();
         const subscription = existing || await createPushSubscription(reg);
 
         // 新增或更新時，都讓家長確認裝置名稱，避免之後不知道是哪一台。
@@ -1697,6 +1984,8 @@
           setTimeout(() => {
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('content-viewport').classList.add('show');
+            dashboardContentVisible = true;
+            queueAttendancePushNudgeCheck();
           }, 600);
         })
         .catch(err => { alert("連線失敗，請檢查網路狀態！"); console.error(err); });
@@ -1890,7 +2179,11 @@
           document.getElementById('email-submit-btn').innerText = "訂閱";
       }
       refreshWeeklyHomeStatus();
-      if (isDashboardFeatureEnabled('attendance_enabled')) refreshAttendancePushStatus();
+      if (isDashboardFeatureEnabled('attendance_enabled')) {
+        refreshAttendancePushStatus().then(snapshot => {
+          if (dashboardContentVisible) maybeShowAttendancePushNudge(snapshot);
+        });
+      }
       
       const badge = document.getElementById('honor-title');
       if (badge) {
