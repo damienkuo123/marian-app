@@ -27,7 +27,7 @@
           isDisplayMode("fullscreen") ||
           isDisplayMode("minimal-ui");
 
-        if (hasUid && isStandaloneLike && !isInstallSetup) {
+        if (hasUid && isStandaloneLike) {
           document.documentElement.classList.add("standalone-fast-route");
         }
       } catch (_) {}
@@ -557,7 +557,7 @@
     </section>
   </main>
 
-  <script src="./tappie-api.js?v=student-app-ui-v4"></script>
+  <script src="./tappie-api.js?v=student-app-ui-v4-standalone-hash-fix"></script>
   <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
@@ -576,7 +576,7 @@
     }
 
     const isStandalone = isStandaloneMode();
-    const shouldFastRouteStandalone = !!rawUid && isStandalone && !isInstallSetup;
+    const shouldFastRouteStandalone = !!rawUid && isStandalone;
     const DEFAULT_ICON_URL = "/assets/app-icon.png";
     const card = document.getElementById("card");
 
@@ -879,6 +879,7 @@
       }
 
       // 主畫面 App / standalone 模式：student-app.html 只當超快 router。
+      // iOS 加到主畫面時常會保留 #install；只要已經是 standalone，就仍然要直接進 dashboard。
       // 不等 resolve-student / get-dashboard，不顯示 loading，不重新處理 icon；資料驗證交給 dashboard。
       if (shouldFastRouteStandalone) {
         openStudentDashboard(rawUid, "student-app-standalone-fast");
@@ -925,7 +926,7 @@
         });
 
         // 保險 fallback：若早期 fast path 未命中，但後續判定為 standalone，仍直接進 dashboard。
-        if (isStandalone && !isInstallSetup) {
+        if (isStandalone) {
           openStudentDashboard(resolvedUid, "student-app-standalone");
           return;
         }
