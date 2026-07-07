@@ -1206,7 +1206,7 @@
       const weeklyEnabled = isDashboardFeatureEnabled('weekly_report_enabled');
 
       document.getElementById('attendance-push-btn')?.classList.toggle('hidden', !attendanceEnabled);
-      document.getElementById('push-device-summary')?.classList.toggle('hidden', !attendanceEnabled);
+      setPushDeviceSummaryVisible(attendanceEnabled && isTappieStandaloneMode());
       document.getElementById('weekly-home-btn')?.classList.toggle('hidden', !weeklyEnabled);
 
       if (!weeklyEnabled) {
@@ -1282,6 +1282,14 @@
              matchDisplayMode('standalone') ||
              matchDisplayMode('fullscreen') ||
              matchDisplayMode('minimal-ui');
+    }
+
+    function setPushDeviceSummaryVisible(visible) {
+      document.getElementById('push-device-summary')?.classList.toggle('hidden', !visible);
+    }
+
+    function shouldRenderPushDeviceSummary() {
+      return isDashboardFeatureEnabled('attendance_enabled') && isTappieStandaloneMode();
     }
 
     function setLastAttendancePushSnapshot(snapshot) {
@@ -1484,10 +1492,12 @@
 
       const normalized = normalizePushDevices(devices);
       cachedPushDevices = normalized;
+      const shouldShowSummary = shouldRenderPushDeviceSummary();
+      setPushDeviceSummaryVisible(shouldShowSummary);
       count.innerText = `${normalized.length} / ${maxDevices || TAPPIE_PUSH_DEVICE_LIMIT}`;
 
-      if (!isTappieStandaloneMode()) {
-        list.innerHTML = `<div class="push-device-empty">從主畫面開啟後，即可查看與新增通知裝置。</div>`;
+      if (!shouldShowSummary) {
+        list.innerHTML = '';
         return;
       }
 
@@ -1620,7 +1630,8 @@
         // 真正的 Web Push 支援檢查，等從主畫面 App 開啟後再做。
         if (!isTappieStandaloneMode()) {
           setAttendancePushStatus("加入主畫面獲得通知", "warn");
-          renderPushDeviceList([], TAPPIE_PUSH_DEVICE_LIMIT);
+          cachedPushDevices = [];
+          setPushDeviceSummaryVisible(false);
           return setLastAttendancePushSnapshot({
             standalone: false,
             supported: false,
