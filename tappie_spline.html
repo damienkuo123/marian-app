@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#02040a" />
+  <title>Tappie 第三屏 Spline Prototype</title>
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.98/build/spline-viewer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <style>
+    :root {
+      --bg: #02040a;
+      --bg-soft: #06111f;
+      --blue: #2d8cff;
+      --cyan: #19c6ff;
+      --gold: #f6c64f;
+      --text: #f7fbff;
+      --muted: rgba(247, 251, 255, 0.68);
+      --line: rgba(255, 255, 255, 0.13);
+      --glass: rgba(255, 255, 255, 0.08);
+      --glass-strong: rgba(255, 255, 255, 0.13);
+      --shadow-blue: rgba(0, 102, 255, 0.38);
+      --font: 'PingFang TC', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #fff;
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    body { overflow-x: hidden; }
+
+    .prelude,
+    .after {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 72px 22px;
+      color: #16202b;
+      background: #f2f6fb;
+      text-align: center;
+    }
+
+    .prelude-inner,
+    .after-inner {
+      width: min(680px, 100%);
+    }
+
+    .prelude-kicker,
+    .after-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      color: #0066cc;
+      background: rgba(0, 102, 204, 0.09);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      font-size: 12px;
+      margin-bottom: 18px;
+    }
+
+    .prelude h1,
+    .after h2 {
+      margin: 0;
+      font-size: clamp(38px, 8vw, 78px);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+      font-weight: 950;
+    }
+
+    .prelude p,
+    .after p {
+      margin: 18px auto 0;
+      max-width: 520px;
+      color: rgba(22, 32, 43, 0.62);
+      font-size: clamp(16px, 2.4vw, 20px);
+      line-height: 1.7;
+      font-weight: 700;
+    }
+
+    .tappie-third-demo {
+      position: relative;
+      min-height: 430vh;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(0, 102, 204, 0.24), transparent 34%),
+        radial-gradient(circle at 16% 70%, rgba(25, 198, 255, 0.14), transparent 30%),
+        linear-gradient(180deg, #02040a 0%, #030712 44%, #051328 72%, #02040a 100%);
+      overflow: clip;
+    }
+
+    .third-sticky {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      min-height: 100svh;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .third-bg-grid {
+      position: absolute;
+      inset: -10%;
+      z-index: 0;
+      opacity: 0.42;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px);
+      background-size: 72px 72px;
+      transform: perspective(900px) rotateX(64deg) translateY(14%);
+      transform-origin: center bottom;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 52%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 52%, transparent 100%);
+    }
+
+    .third-orb {
+      position: absolute;
+      width: 46vw;
+      height: 46vw;
+      min-width: 340px;
+      min-height: 340px;
+      border-radius: 999px;
+      filter: blur(80px);
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .third-orb.one {
+      top: 0%;
+      left: -18%;
+      background: rgba(0, 102, 204, 0.42);
+    }
+
+    .third-orb.two {
+      right: -20%;
+      bottom: 8%;
+      background: rgba(25, 198, 255, 0.26);
+    }
+
+    .third-spline-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      transform-origin: 50% 50%;
+      will-change: transform, opacity, filter;
+    }
+
+    .third-spline-wrap {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(1020px, 138vw);
+      height: min(780px, 118vh);
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      will-change: transform, opacity, filter;
+    }
+
+    spline-viewer {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border: 0;
+      outline: 0;
+      background: transparent;
+    }
+
+    .third-copy {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .third-copy.front {
+      z-index: 6;
+    }
+
+    .copy-panel {
+      position: absolute;
+      left: max(24px, calc((100vw - 1120px) / 2));
+      right: max(24px, calc((100vw - 1120px) / 2));
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      will-change: opacity, transform, filter;
+    }
+
+    .copy-panel.align-right {
+      text-align: right;
+      left: auto;
+      max-width: min(520px, calc(100vw - 48px));
+    }
+
+    .copy-panel.align-left {
+      max-width: min(560px, calc(100vw - 48px));
+    }
+
+    .copy-panel.center {
+      text-align: center;
+      max-width: min(780px, calc(100vw - 48px));
+      left: 50%;
+      right: auto;
+      transform: translate(-50%, -50%);
+    }
+
+    .copy-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 16px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .copy-kicker::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--cyan);
+      box-shadow: 0 0 18px rgba(25, 198, 255, 0.86);
+    }
+
+    .copy-panel h2,
+    .copy-panel h3 {
+      margin: 0;
+      color: #fff;
+      font-weight: 950;
+      letter-spacing: -0.075em;
+      line-height: 0.92;
+      text-wrap: balance;
+      text-shadow: 0 16px 55px rgba(0, 0, 0, 0.42);
+    }
+
+    .copy-panel h2 {
+      font-size: clamp(50px, 11vw, 132px);
+    }
+
+    .copy-panel h3 {
+      font-size: clamp(44px, 8.8vw, 108px);
+    }
+
+    .copy-panel p {
+      max-width: 520px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: clamp(16px, 2.2vw, 22px);
+      font-weight: 800;
+      line-height: 1.68;
+      letter-spacing: -0.02em;
+    }
+
+    .copy-panel.align-right p { margin-left: auto; }
+    .copy-panel.center p { margin-left: auto; margin-right: auto; }
+
+    .flow-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      width: min(760px, calc(100vw - 48px));
+      margin: 32px auto 0;
+    }
+
+    .flow-item {
+      min-height: 116px;
+      padding: 20px 18px;
+      border-radius: 28px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06));
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 18px 56px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.14);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      opacity: 0;
+      transform: translateY(18px);
+      will-change: transform, opacity;
+    }
+
+    .flow-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      margin: 0 auto 13px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      font-size: 22px;
+      font-weight: 950;
+      box-shadow: 0 12px 30px rgba(0, 102, 255, 0.32);
+    }
+
+    .flow-item strong {
+      display: block;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .flow-item span {
+      display: block;
+      margin-top: 7px;
+      color: rgba(255,255,255,0.62);
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 800;
+    }
+
+    .third-progress {
+      position: absolute;
+      left: max(22px, env(safe-area-inset-left));
+      bottom: max(20px, env(safe-area-inset-bottom));
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255,255,255,0.54);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      pointer-events: none;
+    }
+
+    .progress-track {
+      width: 92px;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      box-shadow: 0 0 16px rgba(25,198,255,0.7);
+    }
+
+    .load-badge {
+      position: absolute;
+      right: max(22px, env(safe-area-inset-right));
+      bottom: max(20px, env(safe-area-inset-bottom));
+      z-index: 12;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.62);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      font-size: 12px;
+      font-weight: 900;
+      pointer-events: none;
+    }
+
+    .spline-fallback {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      place-items: center;
+      padding: 30px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .spline-fallback-card {
+      width: min(520px, 84vw);
+      aspect-ratio: 86 / 54;
+      border-radius: clamp(18px, 4vw, 34px);
+      background:
+        linear-gradient(135deg, rgba(0, 102, 204, 0.9), rgba(25, 198, 255, 0.82)),
+        radial-gradient(circle at 25% 25%, rgba(255,255,255,0.3), transparent 26%);
+      box-shadow: 0 45px 110px rgba(0,0,0,0.55), 0 0 80px rgba(0,102,255,0.25);
+      transform: rotate(-13deg) perspective(1000px) rotateY(-16deg);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: clamp(34px, 8vw, 76px);
+      font-weight: 950;
+      letter-spacing: -0.08em;
+    }
+
+    .is-spline-failed .spline-fallback { display: grid; }
+    .is-spline-failed .third-spline-layer { display: none; }
+
+    @media (max-width: 720px) {
+      .tappie-third-demo { min-height: 460vh; }
+
+      .third-spline-wrap {
+        width: 150vw;
+        height: 92vh;
+        top: 46%;
+      }
+
+      .copy-panel {
+        left: 22px;
+        right: 22px;
+        top: 63%;
+      }
+
+      .copy-panel.align-right,
+      .copy-panel.align-left,
+      .copy-panel.center {
+        left: 22px;
+        right: 22px;
+        top: 64%;
+        max-width: none;
+        text-align: left;
+        transform: translateY(-50%);
+      }
+
+      .copy-panel.center { text-align: center; left: 50%; right: auto; width: calc(100vw - 44px); transform: translate(-50%, -50%); }
+
+      .copy-panel h2 { font-size: clamp(50px, 15vw, 76px); }
+      .copy-panel h3 { font-size: clamp(42px, 13vw, 66px); }
+      .copy-panel p { max-width: 330px; font-size: 15px; line-height: 1.7; }
+      .copy-panel.align-right p { margin-left: 0; }
+      .copy-panel.center p { margin-left: auto; margin-right: auto; }
+
+      .flow-strip {
+        grid-template-columns: 1fr;
+        width: min(340px, calc(100vw - 44px));
+        gap: 9px;
+        margin-top: 22px;
+      }
+
+      .flow-item {
+        min-height: auto;
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        column-gap: 12px;
+        align-items: center;
+        text-align: left;
+        padding: 14px;
+        border-radius: 22px;
+      }
+
+      .flow-icon { margin: 0; }
+      .flow-item span { margin-top: 2px; }
+      .load-badge { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tappie-third-demo { min-height: 160vh; }
+      .third-sticky { position: relative; min-height: 100vh; }
+      .copy-panel { opacity: 1 !important; transform: translateY(-50%) !important; }
+      .copy-panel:not(.panel-1) { display: none; }
+      .third-spline-layer { transform: none !important; filter: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <section class="prelude" aria-label="Prototype intro">
+    <div class="prelude-inner">
+      <div class="prelude-kicker">Prototype Section</div>
+      <h1>第三屏獨立測試頁</h1>
+      <p>往下滑，測試 Spline 名牌卡片與黑底 sticky 文案節奏。確認後再搬進正式 index。</p>
+    </div>
+  </section>
+
+  <section class="tappie-third-demo" id="tappie-third-demo" aria-label="Tappie 第三屏 Spline prototype">
+    <div class="third-sticky">
+      <div class="third-bg-grid" aria-hidden="true"></div>
+      <div class="third-orb one" aria-hidden="true"></div>
+      <div class="third-orb two" aria-hidden="true"></div>
+
+      <div class="third-copy back" aria-hidden="true">
+        <article class="copy-panel panel-ghost center">
+          <h2>練習也不斷線</h2>
+        </article>
+      </div>
+
+      <div class="third-spline-layer" id="third-spline-layer">
+        <div class="third-spline-wrap" id="third-spline-wrap">
+          <spline-viewer id="tappie-spline" url="https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode"></spline-viewer>
+        </div>
+      </div>
+
+      <div class="spline-fallback" aria-hidden="true">
+        <div class="spline-fallback-card">Tappie</div>
+      </div>
+
+      <div class="third-copy front">
+        <article class="copy-panel panel-1 align-left">
+          <div class="copy-kicker">After Class</div>
+          <h2>離開教室，<br>練習也不斷線。</h2>
+          <p>學生回到家，不需要重新找網址、不需要再次嗶卡；點開主畫面 App，就能接續今日任務。</p>
+        </article>
+
+        <article class="copy-panel panel-2 align-right">
+          <div class="copy-kicker">Student App</div>
+          <h3>下次打開，<br>直接進入學生主頁。</h3>
+          <p>名牌感應是入口，主畫面捷徑是延伸。把口說練習從教室帶回家裡。</p>
+        </article>
+
+        <article class="copy-panel panel-3 center">
+          <div class="copy-kicker">One Flow</div>
+          <h3>現場流程<br>更少步驟。</h3>
+          <p>打卡、加點、練習，同一套流程。</p>
+          <div class="flow-strip" aria-label="Tappie 現場流程">
+            <div class="flow-item flow-1">
+              <div class="flow-icon">✓</div>
+              <div><strong>打卡</strong><span>老師感應名牌，完成到校 / 離校紀錄。</span></div>
+            </div>
+            <div class="flow-item flow-2">
+              <div class="flow-icon">＋</div>
+              <div><strong>加點</strong><span>課堂表現與獎勵，即時進入點數紀錄。</span></div>
+            </div>
+            <div class="flow-item flow-3">
+              <div class="flow-icon">▶</div>
+              <div><strong>練習</strong><span>回家點開 App，接續口說任務。</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="third-progress" aria-hidden="true">
+        <span>SCROLL</span>
+        <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+      </div>
+      <div class="load-badge" id="load-badge">載入 Spline 場景中</div>
+    </div>
+  </section>
+
+  <section class="after" aria-label="Prototype outro">
+    <div class="after-inner">
+      <div class="after-kicker">Next Section</div>
+      <h2>接回正式網站下一段</h2>
+      <p>這裡只是佔位。確認第三屏節奏後，就能把這段搬進正式 index 的對應區塊。</p>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      const root = document.getElementById('tappie-third-demo');
+      const spline = document.getElementById('tappie-spline');
+      const loadBadge = document.getElementById('load-badge');
+      const progressBar = document.getElementById('progress-bar');
+
+      let splineLoaded = false;
+      let failTimer = window.setTimeout(function () {
+        if (!splineLoaded) {
+          root.classList.add('is-spline-failed');
+          if (loadBadge) loadBadge.textContent = 'Spline 載入逾時，顯示 fallback';
+        }
+      }, 9000);
+
+      if (spline) {
+        spline.addEventListener('load', function () {
+          splineLoaded = true;
+          window.clearTimeout(failTimer);
+          if (loadBadge) loadBadge.textContent = 'Spline 場景已載入';
+          window.setTimeout(function () {
+            if (loadBadge) loadBadge.style.opacity = '0';
+          }, 1200);
+        });
+
+        spline.addEventListener('error', function () {
+          root.classList.add('is-spline-failed');
+          if (loadBadge) loadBadge.textContent = 'Spline 載入失敗，顯示 fallback';
+        });
+      }
+
+      if (!window.gsap || !window.ScrollTrigger) {
+        document.querySelectorAll('.copy-panel').forEach(function (panel) {
+          panel.style.opacity = '1';
+        });
+        return;
+      }
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const mm = gsap.matchMedia();
+
+      mm.add({
+        isDesktop: '(min-width: 721px)',
+        isMobile: '(max-width: 720px)',
+        reduceMotion: '(prefers-reduced-motion: reduce)'
+      }, function (context) {
+        const isMobile = context.conditions.isMobile;
+        const reduceMotion = context.conditions.reduceMotion;
+
+        if (reduceMotion) return;
+
+        gsap.set('.panel-1', { opacity: 0, y: 42, filter: 'blur(12px)' });
+        gsap.set('.panel-2', { opacity: 0, y: 42, filter: 'blur(12px)' });
+        gsap.set('.panel-3', { opacity: 0, y: 42, filter: 'blur(12px)' });
+        gsap.set('.panel-ghost', { opacity: 0, scale: 0.96, filter: 'blur(10px)' });
+        gsap.set('.flow-item', { opacity: 0, y: 18 });
+
+        gsap.set('#third-spline-layer', {
+          opacity: 0,
+          scale: isMobile ? 1.05 : 0.88,
+          xPercent: isMobile ? 0 : 8,
+          yPercent: isMobile ? -16 : 0,
+          filter: 'blur(14px) brightness(0.65)'
+        });
+
+        gsap.set('#third-spline-wrap', {
+          rotate: isMobile ? -4 : -2,
+          scale: isMobile ? 1.1 : 1
+        });
+
+        const tl = gsap.timeline({
+          defaults: { ease: 'none' },
+          scrollTrigger: {
+            trigger: root,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 0.75,
+            onUpdate: function (self) {
+              if (progressBar) progressBar.style.width = (self.progress * 100).toFixed(1) + '%';
+            }
+          }
+        });
+
+        tl.to('#third-spline-layer', {
+          opacity: 1,
+          scale: isMobile ? 1 : 1.08,
+          xPercent: isMobile ? 0 : -4,
+          yPercent: isMobile ? -20 : -3,
+          filter: 'blur(0px) brightness(1)'
+        }, 0.02)
+        .to('.panel-1', { opacity: 1, y: 0, filter: 'blur(0px)' }, 0.10)
+        .to('.panel-ghost', { opacity: 0.13, scale: 1, filter: 'blur(0px)' }, 0.14)
+        .to('#third-spline-wrap', {
+          rotate: isMobile ? 3 : 2,
+          scale: isMobile ? 1.2 : 1.08
+        }, 0.14)
+        .to('.panel-1', { opacity: 0, y: -40, filter: 'blur(10px)' }, 0.31)
+        .to('.panel-ghost', { opacity: 0.05, scale: 1.05 }, 0.32)
+        .to('#third-spline-layer', {
+          xPercent: isMobile ? -12 : -16,
+          yPercent: isMobile ? -27 : -2,
+          scale: isMobile ? 1.18 : 1.22,
+          filter: 'brightness(1.08)'
+        }, 0.32)
+        .to('.panel-2', { opacity: 1, y: 0, filter: 'blur(0px)' }, 0.38)
+        .to('#third-spline-wrap', {
+          rotate: isMobile ? -7 : -8,
+          scale: isMobile ? 1.28 : 1.2
+        }, 0.46)
+        .to('.panel-2', { opacity: 0, y: -38, filter: 'blur(10px)' }, 0.59)
+        .to('#third-spline-layer', {
+          xPercent: isMobile ? 0 : 0,
+          yPercent: isMobile ? -37 : -10,
+          scale: isMobile ? 0.92 : 0.96,
+          opacity: 0.86,
+          filter: 'brightness(0.82)'
+        }, 0.62)
+        .to('.panel-ghost', { opacity: 0, scale: 1.12, filter: 'blur(18px)' }, 0.62)
+        .to('.panel-3', { opacity: 1, y: 0, filter: 'blur(0px)' }, 0.70)
+        .to('.flow-1', { opacity: 1, y: 0 }, 0.76)
+        .to('.flow-2', { opacity: 1, y: 0 }, 0.80)
+        .to('.flow-3', { opacity: 1, y: 0 }, 0.84)
+        .to('#third-spline-layer', {
+          xPercent: isMobile ? 10 : 14,
+          yPercent: isMobile ? -44 : -13,
+          scale: isMobile ? 0.78 : 0.88,
+          opacity: isMobile ? 0.58 : 0.72,
+          filter: 'brightness(0.68) blur(1px)'
+        }, 0.86)
+        .to('.panel-3', { opacity: 1 }, 0.98);
+      });
+    })();
+  </script>
+</body>
+</html>
