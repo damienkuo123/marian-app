@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>Tappie 第三屏 Spline Runtime Prototype v5</title>
+  <title>Tappie 第三屏 Spline Runtime Prototype v6 - Big Linear Scroll</title>
   <style>
     :root{
       --bg0:#020713;
@@ -19,7 +19,7 @@
     html,body{margin:0;min-height:100%;background:#030813;color:var(--text);font-family:'PingFang TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
     body{overflow-x:hidden;}
     .pre,.post{height:72vh;display:grid;place-items:center;background:#030813;color:rgba(255,255,255,.55);font-weight:900;letter-spacing:.12em;text-transform:uppercase}
-    .stage{height:470vh;position:relative;background:radial-gradient(circle at 18% 18%, rgba(0,114,255,.22), transparent 30%),radial-gradient(circle at 86% 45%, rgba(20,185,255,.15), transparent 38%),linear-gradient(180deg,#020713 0%, #061b35 50%, #020713 100%);}
+    .stage{height:760vh;position:relative;background:radial-gradient(circle at 18% 18%, rgba(0,114,255,.22), transparent 30%),radial-gradient(circle at 86% 45%, rgba(20,185,255,.15), transparent 38%),linear-gradient(180deg,#020713 0%, #061b35 50%, #020713 100%);}
     .pin{position:sticky;top:0;width:100%;height:100svh;overflow:hidden;isolation:isolate;}
     .grid{position:absolute;inset:auto -15% -22% -15%;height:42%;background-image:linear-gradient(rgba(70,155,255,.14) 1px, transparent 1px),linear-gradient(90deg, rgba(70,155,255,.12) 1px, transparent 1px);background-size:42px 42px;transform:perspective(700px) rotateX(62deg);opacity:.28;filter:blur(.15px);z-index:0;}
     .orb{position:absolute;border-radius:999px;filter:blur(70px);opacity:.65;pointer-events:none;z-index:0}.orb.one{width:420px;height:420px;background:rgba(0,102,204,.38);left:-120px;top:8vh}.orb.two{width:390px;height:390px;background:rgba(0,210,255,.20);right:-150px;top:38vh}
@@ -41,7 +41,7 @@
     .flow-card h3{margin:0 0 8px;font-size:20px;font-weight:1000;letter-spacing:.03em}.flow-card p{margin:0;color:rgba(255,255,255,.66);font-size:13px;line-height:1.55;font-weight:800}
     .progress{position:fixed;left:24px;bottom:18px;display:flex;align-items:center;gap:14px;z-index:20;color:rgba(255,255,255,.72);font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase}.bar{width:112px;height:3px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}.bar span{display:block;width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#26b8ff,#61d9ff)}
     .status{position:fixed;right:18px;bottom:18px;z-index:30;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:rgba(255,255,255,.72);font-size:12px;font-weight:900;backdrop-filter:blur(12px)}
-    @media(max-width:680px){.stage{height:500vh}.copy.left{top:15vh;left:28px;width:86vw}.lead{font-size:14px}.front-title{width:92vw}.front-title h2{font-size:clamp(58px,17vw,82px)}.front-title p{font-size:13px;max-width:330px}.flow-cards{grid-template-columns:1fr;bottom:8vh;width:min(330px,82vw);gap:10px}.flow-card{min-height:82px;display:grid;grid-template-columns:48px 1fr;align-items:center;text-align:left;padding:14px 16px;border-radius:22px}.flow-icon{margin:0;width:42px;height:42px;border-radius:14px}.flow-card h3{font-size:17px;margin:0 0 4px}.flow-card p{font-size:11px}.progress{left:18px;bottom:16px}.bar{width:90px}.status{display:none}}
+    @media(max-width:680px){.stage{height:680vh}.copy.left{top:15vh;left:28px;width:86vw}.lead{font-size:14px}.front-title{width:92vw}.front-title h2{font-size:clamp(58px,17vw,82px)}.front-title p{font-size:13px;max-width:330px}.flow-cards{grid-template-columns:1fr;bottom:8vh;width:min(330px,82vw);gap:10px}.flow-card{min-height:82px;display:grid;grid-template-columns:48px 1fr;align-items:center;text-align:left;padding:14px 16px;border-radius:22px}.flow-icon{margin:0;width:42px;height:42px;border-radius:14px}.flow-card h3{font-size:17px;margin:0 0 4px}.flow-card p{font-size:11px}.progress{left:18px;bottom:16px}.bar{width:90px}.status{display:none}}
   </style>
 </head>
 <body>
@@ -62,7 +62,7 @@
   </section>
   <section class="post">End prototype</section>
   <div class="progress"><span>Scroll</span><div class="bar"><span id="progressBar"></span></div></div>
-  <div class="status" id="status">載入 Spline Runtime...</div>
+  <div class="status" id="status">載入 Spline Runtime v6...</div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script type="module">
@@ -76,27 +76,39 @@
     let target = null;
     let base = null;
     let desired = 0;
-    let smooth = 0;
-    let rafActive = true;
 
+    // v6：Flowcard-like big scroll choreography.
+    // 重要：不再用每段 power2 easing，也不再用 RAF 追蹤 smoothing。
+    // 讓卡片位置 / 旋轉與 scroll progress 直接線性對應，避免忽快忽慢。
+    const isMobile = window.matchMedia('(max-width: 680px)').matches;
+    const SCALE_BOOST = isMobile ? 1.42 : 1.72;
     const keyframes = [
-      { p:0.00, x:-160, y:160, z:0,    rx:-0.05, ry:-0.10, rz:-0.26, s:1.02 },
-      { p:0.18, x:-60,  y:60,  z:0,    rx: 0.10, ry: 0.38, rz:-0.14, s:1.05 },
-      { p:0.34, x:10,   y:-10, z:0,    rx: 0.18, ry: 1.55, rz: 0.18, s:1.18 },
-      { p:0.52, x:80,   y:20,  z:0,    rx:-0.06, ry: 3.10, rz:-0.08, s:1.06 },
-      { p:0.68, x:0,    y:20,  z:0,    rx: 0.20, ry: 4.35, rz: 0.08, s:0.96 },
-      { p:0.86, x:0,    y:95,  z:-30,  rx:-0.02, ry: 5.70, rz: 0.00, s:0.82 },
-      { p:1.00, x:0,    y:95,  z:-30,  rx:-0.02, ry: 6.28, rz: 0.00, s:0.82 }
+      // large hero entrance：先用大尺寸壓出震撼感
+      { p:0.00, x:-210, y:170, z: 30, rx:-0.10, ry:-0.22, rz:-0.22, s:1.36*SCALE_BOOST },
+      // forward sweep：卡片穿過第一段文字前方
+      { p:0.14, x:-90,  y:65,  z: 70, rx: 0.05, ry: 0.70, rz:-0.10, s:1.58*SCALE_BOOST },
+      // edge moment：側面展示，不要太快翻完
+      { p:0.30, x:-10,  y:25,  z: 90, rx: 0.08, ry: 1.50, rz: 0.04, s:1.72*SCALE_BOOST },
+      // back reveal：背面 / 反面慢慢過場
+      { p:0.48, x:70,   y:10,  z: 55, rx:-0.04, ry: 3.10, rz:-0.10, s:1.55*SCALE_BOOST },
+      // second headline crossing：大字前方掃過
+      { p:0.64, x:20,   y:45,  z: 80, rx: 0.08, ry: 4.55, rz: 0.08, s:1.48*SCALE_BOOST },
+      // settle to product position：縮小但不消失
+      { p:0.82, x:0,    y:82,  z: 15, rx: 0.03, ry: 5.55, rz:-0.02, s:1.24*SCALE_BOOST },
+      // final lockup：停在流程卡後方
+      { p:1.00, x:0,    y:95,  z: 0,  rx: 0.00, ry: 6.25, rz: 0.00, s:1.16*SCALE_BOOST }
     ];
     const clamp = gsap.utils.clamp(0,1);
     const lerp = (a,b,t)=>a+(b-a)*t;
     function sample(p){
       p = clamp(p);
       let a=keyframes[0], b=keyframes[keyframes.length-1];
-      for(let i=0;i<keyframes.length-1;i++){ if(p>=keyframes[i].p && p<=keyframes[i+1].p){ a=keyframes[i]; b=keyframes[i+1]; break; } }
+      for(let i=0;i<keyframes.length-1;i++){
+        if(p>=keyframes[i].p && p<=keyframes[i+1].p){ a=keyframes[i]; b=keyframes[i+1]; break; }
+      }
       const t = a.p===b.p ? 0 : (p-a.p)/(b.p-a.p);
-      const e = gsap.parseEase('power2.inOut')(t);
-      return { x:lerp(a.x,b.x,e), y:lerp(a.y,b.y,e), z:lerp(a.z,b.z,e), rx:lerp(a.rx,b.rx,e), ry:lerp(a.ry,b.ry,e), rz:lerp(a.rz,b.rz,e), s:lerp(a.s,b.s,e) };
+      // Linear interpolation: scroll distance = motion distance.
+      return { x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t), z:lerp(a.z,b.z,t), rx:lerp(a.rx,b.rx,t), ry:lerp(a.ry,b.ry,t), rz:lerp(a.rz,b.rz,t), s:lerp(a.s,b.s,t) };
     }
     function renderSplineProgress(p){
       if(!target || !base) return;
@@ -113,12 +125,6 @@
       app.requestRender?.();
       app.render?.();
     }
-    function tick(){
-      smooth += (desired - smooth) * 0.105;
-      if(Math.abs(desired-smooth) < 0.0008) smooth = desired;
-      renderSplineProgress(smooth);
-      if(rafActive) requestAnimationFrame(tick);
-    }
     app.load(sceneUrl).then(()=>{
       target = app.findObjectByName('hero_card_stage') || app.findObjectByName('tappie_card_group') || app.findObjectByName('card_movement') || app.findObjectByName('card_rotation');
       if(target){
@@ -129,18 +135,16 @@
       }else{
         statusEl.textContent = '找不到 hero_card_stage / tappie_card_group，請確認 Spline 物件命名';
       }
-      requestAnimationFrame(tick);
     }).catch((err)=>{ console.error(err); statusEl.textContent='Spline Runtime 載入失敗，請檢查 scene URL'; });
 
     gsap.set(['#copy2','#copy3','#flowCards'], {opacity:0, y:38, filter:'blur(8px)'});
     gsap.set('#copy1',{opacity:1,y:0,filter:'blur(0px)'});
-    const tl = gsap.timeline({ scrollTrigger:{ trigger:'#stage', start:'top top', end:'bottom bottom', scrub:0.45, onUpdate:self=>{ desired = self.progress; progressBar.style.width = `${Math.round(self.progress*100)}%`; } }});
-    tl.to('#copy1',{opacity:.16, y:-45, filter:'blur(10px)', duration:.20},0.10)
-      .to('#copy2',{opacity:1, y:0, filter:'blur(0px)', duration:.20},0.23)
-      .to('#copy2',{opacity:.10, y:-35, filter:'blur(11px)', duration:.18},0.50)
-      .to('#copy3',{opacity:1, y:0, filter:'blur(0px)', duration:.18},0.62)
-      .to('#flowCards',{opacity:1, y:0, filter:'blur(0px)', duration:.16},0.72);
-    window.addEventListener('beforeunload',()=>{rafActive=false});
+    const tl = gsap.timeline({ scrollTrigger:{ trigger:'#stage', start:'top top', end:'bottom bottom', scrub:true, onUpdate:self=>{ desired = self.progress; renderSplineProgress(desired); progressBar.style.width = `${Math.round(self.progress*100)}%`; } }});
+    tl.to('#copy1',{opacity:.18, y:-38, filter:'blur(7px)', duration:.18},0.16)
+      .to('#copy2',{opacity:1, y:0, filter:'blur(0px)', duration:.20},0.30)
+      .to('#copy2',{opacity:.14, y:-30, filter:'blur(8px)', duration:.18},0.56)
+      .to('#copy3',{opacity:1, y:0, filter:'blur(0px)', duration:.20},0.68)
+      .to('#flowCards',{opacity:1, y:0, filter:'blur(0px)', duration:.18},0.78);
   </script>
 </body>
 </html>
