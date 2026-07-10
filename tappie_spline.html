@@ -4,115 +4,468 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>Tappie 第三屏 Spline Runtime Prototype v6 - Big Linear Scroll</title>
+  <title>Tappie 第三屏 Spline Runtime Prototype v7 - Premium Scrub</title>
   <style>
     :root{
-      --bg0:#020713;
-      --bg1:#071b35;
-      --cyan:#28b8ff;
+      --bg0:#010611;
+      --bg1:#04152a;
+      --bg2:#062546;
+      --cyan:#2cc3ff;
       --text:#f8fbff;
-      --muted:rgba(248,251,255,.72);
-      --card:rgba(255,255,255,.10);
-      --line:rgba(255,255,255,.20);
+      --muted:rgba(248,251,255,.70);
+      --line:rgba(255,255,255,.18);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%;background:#030813;color:var(--text);font-family:'PingFang TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;}
-    body{overflow-x:hidden;}
-    .pre,.post{height:72vh;display:grid;place-items:center;background:#030813;color:rgba(255,255,255,.55);font-weight:900;letter-spacing:.12em;text-transform:uppercase}
-    .stage{height:760vh;position:relative;background:radial-gradient(circle at 18% 18%, rgba(0,114,255,.22), transparent 30%),radial-gradient(circle at 86% 45%, rgba(20,185,255,.15), transparent 38%),linear-gradient(180deg,#020713 0%, #061b35 50%, #020713 100%);}
-    .pin{position:sticky;top:0;width:100%;height:100svh;overflow:hidden;isolation:isolate;}
-    .grid{position:absolute;inset:auto -15% -22% -15%;height:42%;background-image:linear-gradient(rgba(70,155,255,.14) 1px, transparent 1px),linear-gradient(90deg, rgba(70,155,255,.12) 1px, transparent 1px);background-size:42px 42px;transform:perspective(700px) rotateX(62deg);opacity:.28;filter:blur(.15px);z-index:0;}
-    .orb{position:absolute;border-radius:999px;filter:blur(70px);opacity:.65;pointer-events:none;z-index:0}.orb.one{width:420px;height:420px;background:rgba(0,102,204,.38);left:-120px;top:8vh}.orb.two{width:390px;height:390px;background:rgba(0,210,255,.20);right:-150px;top:38vh}
-    .text-layer{position:absolute;inset:0;z-index:1;display:grid;place-items:center;pointer-events:none;padding:22px;}
-    .copy{position:absolute;width:min(980px,92vw);text-align:center;will-change:opacity,transform,filter;}
-    .copy.left{text-align:left;left:max(5vw,26px);top:19vh;width:min(780px,86vw)}
-    .eyebrow{display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid var(--line);color:rgba(255,255,255,.72);font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;box-shadow:0 12px 32px rgba(0,0,0,.25);}.eyebrow::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 18px var(--cyan)}
-    h1{margin:18px 0 0;font-size:clamp(48px,10vw,122px);line-height:.92;letter-spacing:-.07em;font-weight:1000;text-wrap:balance;text-shadow:0 10px 45px rgba(0,0,0,.36)}
-    .lead{margin:22px auto 0;max-width:720px;font-size:clamp(15px,2.8vw,24px);line-height:1.7;color:var(--muted);font-weight:900;letter-spacing:.04em}.left .lead{margin-left:0;max-width:560px}
-    .spline-layer{position:absolute;inset:0;z-index:2;pointer-events:none;will-change:opacity;}
-    #canvas3d{width:100%;height:100%;display:block;pointer-events:none;}
-    .front-layer{position:absolute;inset:0;z-index:4;pointer-events:none;display:grid;place-items:center;padding:22px;}
-    .front-title{position:absolute;width:min(920px,94vw);text-align:center;will-change:opacity,transform;}
-    .front-title h2{font-size:clamp(50px,11vw,126px);line-height:.9;letter-spacing:-.075em;margin:0;font-weight:1000;text-shadow:0 14px 44px rgba(0,0,0,.38)}
-    .front-title p{margin:18px auto 0;max-width:720px;color:rgba(255,255,255,.73);font-size:clamp(14px,2.5vw,22px);line-height:1.65;font-weight:900;letter-spacing:.06em}
-    .flow-cards{position:absolute;left:50%;bottom:11vh;transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:14px;width:min(980px,86vw);z-index:5;will-change:opacity,transform;}
-    .flow-card{min-height:132px;border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.07));border:1px solid rgba(255,255,255,.24);box-shadow:0 22px 56px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.20);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:20px 18px;text-align:center;}
-    .flow-icon{width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,#0f8fff,#43c3ff);display:grid;place-items:center;margin:0 auto 14px;font-size:24px;font-weight:1000;box-shadow:0 16px 34px rgba(0,144,255,.35)}
-    .flow-card h3{margin:0 0 8px;font-size:20px;font-weight:1000;letter-spacing:.03em}.flow-card p{margin:0;color:rgba(255,255,255,.66);font-size:13px;line-height:1.55;font-weight:800}
-    .progress{position:fixed;left:24px;bottom:18px;display:flex;align-items:center;gap:14px;z-index:20;color:rgba(255,255,255,.72);font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase}.bar{width:112px;height:3px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}.bar span{display:block;width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#26b8ff,#61d9ff)}
-    .status{position:fixed;right:18px;bottom:18px;z-index:30;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:rgba(255,255,255,.72);font-size:12px;font-weight:900;backdrop-filter:blur(12px)}
-    @media(max-width:680px){.stage{height:680vh}.copy.left{top:15vh;left:28px;width:86vw}.lead{font-size:14px}.front-title{width:92vw}.front-title h2{font-size:clamp(58px,17vw,82px)}.front-title p{font-size:13px;max-width:330px}.flow-cards{grid-template-columns:1fr;bottom:8vh;width:min(330px,82vw);gap:10px}.flow-card{min-height:82px;display:grid;grid-template-columns:48px 1fr;align-items:center;text-align:left;padding:14px 16px;border-radius:22px}.flow-icon{margin:0;width:42px;height:42px;border-radius:14px}.flow-card h3{font-size:17px;margin:0 0 4px}.flow-card p{font-size:11px}.progress{left:18px;bottom:16px}.bar{width:90px}.status{display:none}}
+    html,body{
+      margin:0;
+      min-height:100%;
+      background:#030813;
+      color:var(--text);
+      font-family:'PingFang TC','Noto Sans TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+    }
+    body{overflow-x:hidden;overscroll-behavior-x:none}
+    .pre,.post{
+      height:72vh;
+      display:grid;
+      place-items:center;
+      background:#030813;
+      color:rgba(255,255,255,.48);
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+    .stage{
+      height:820vh;
+      position:relative;
+      background:
+        radial-gradient(circle at 18% 15%, rgba(0,110,255,.18), transparent 32%),
+        radial-gradient(circle at 86% 48%, rgba(16,193,255,.11), transparent 38%),
+        linear-gradient(180deg,var(--bg0) 0%,var(--bg1) 42%,var(--bg2) 68%,var(--bg0) 100%);
+    }
+    .pin{
+      position:sticky;
+      top:0;
+      width:100%;
+      height:100svh;
+      overflow:hidden;
+      isolation:isolate;
+      contain:paint;
+      touch-action:pan-y;
+    }
+    .vignette,.grain,.light-field,.grid{pointer-events:none}
+    .vignette{
+      position:absolute;
+      inset:0;
+      z-index:7;
+      background:
+        linear-gradient(180deg,rgba(0,0,0,.30),transparent 18%,transparent 78%,rgba(0,0,0,.28)),
+        radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.32) 100%);
+      mix-blend-mode:multiply;
+    }
+    .grain{
+      position:absolute;
+      inset:-40%;
+      z-index:6;
+      opacity:.032;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+      transform:translateZ(0);
+    }
+    .light-field{
+      position:absolute;
+      inset:-12%;
+      z-index:0;
+      background:
+        radial-gradient(circle at 50% 42%,rgba(38,170,255,.12),transparent 30%),
+        linear-gradient(112deg,transparent 34%,rgba(255,255,255,.035) 49%,transparent 61%);
+      filter:blur(12px);
+    }
+    .grid{
+      position:absolute;
+      inset:auto -16% -24% -16%;
+      height:41%;
+      z-index:0;
+      background-image:
+        linear-gradient(rgba(70,155,255,.10) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(70,155,255,.09) 1px,transparent 1px);
+      background-size:46px 46px;
+      transform:perspective(760px) rotateX(63deg);
+      opacity:.20;
+    }
+    .orb{
+      position:absolute;
+      z-index:0;
+      border-radius:999px;
+      filter:blur(92px);
+      opacity:.46;
+      pointer-events:none;
+    }
+    .orb.one{width:440px;height:440px;background:rgba(0,94,204,.34);left:-150px;top:7vh}
+    .orb.two{width:420px;height:420px;background:rgba(0,190,255,.16);right:-170px;top:38vh}
+
+    .copy-layer{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      padding:22px;
+    }
+    .copy-layer.back{z-index:1}
+    .copy-layer.mid{z-index:2}
+    .copy{
+      position:absolute;
+      width:min(980px,92vw);
+      text-align:center;
+      will-change:opacity,transform,filter;
+      transform:translate3d(0,0,0);
+    }
+    .copy.left{
+      text-align:left;
+      left:max(5vw,26px);
+      top:18vh;
+      width:min(780px,86vw);
+    }
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 16px;
+      border-radius:999px;
+      background:rgba(255,255,255,.085);
+      border:1px solid var(--line);
+      color:rgba(255,255,255,.72);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      box-shadow:0 14px 38px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.11);
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+    }
+    .eyebrow::before{
+      content:'';
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:var(--cyan);
+      box-shadow:0 0 18px var(--cyan);
+    }
+    h1{
+      margin:18px 0 0;
+      font-size:clamp(46px,9.4vw,116px);
+      line-height:.94;
+      letter-spacing:-.068em;
+      font-weight:900;
+      text-wrap:balance;
+      text-shadow:0 14px 48px rgba(0,0,0,.34);
+    }
+    .lead{
+      margin:22px auto 0;
+      max-width:720px;
+      font-size:clamp(15px,2.6vw,23px);
+      line-height:1.7;
+      color:var(--muted);
+      font-weight:750;
+      letter-spacing:.035em;
+    }
+    .left .lead{margin-left:0;max-width:560px}
+
+    .spline-layer{
+      position:absolute;
+      inset:0;
+      z-index:3;
+      pointer-events:none;
+      will-change:opacity,transform;
+      transform:translateZ(0);
+      filter:saturate(1.05) contrast(1.045) brightness(.99);
+    }
+    #canvas3d{
+      width:100%;
+      height:100%;
+      display:block;
+      pointer-events:none;
+      transform:translateZ(0);
+      backface-visibility:hidden;
+    }
+
+    .front-layer{
+      position:absolute;
+      inset:0;
+      z-index:4;
+      pointer-events:none;
+      display:grid;
+      place-items:center;
+      padding:22px;
+    }
+    .front-title{
+      position:absolute;
+      width:min(920px,94vw);
+      text-align:center;
+      will-change:opacity,transform,filter;
+      transform:translate3d(0,0,0);
+    }
+    .front-title h2{
+      margin:0;
+      font-size:clamp(50px,10.5vw,120px);
+      line-height:.91;
+      letter-spacing:-.072em;
+      font-weight:900;
+      text-shadow:0 16px 52px rgba(0,0,0,.38);
+    }
+    .front-title p{
+      margin:18px auto 0;
+      max-width:720px;
+      color:rgba(255,255,255,.72);
+      font-size:clamp(14px,2.4vw,21px);
+      line-height:1.65;
+      font-weight:750;
+      letter-spacing:.055em;
+    }
+    .flow-cards{
+      position:absolute;
+      left:50%;
+      bottom:10vh;
+      transform:translate3d(-50%,0,0);
+      display:grid;
+      grid-template-columns:repeat(3,minmax(180px,1fr));
+      gap:14px;
+      width:min(980px,86vw);
+      z-index:5;
+      will-change:opacity,transform,filter;
+    }
+    .flow-card{
+      min-height:132px;
+      border-radius:26px;
+      background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.055));
+      border:1px solid rgba(255,255,255,.20);
+      box-shadow:0 24px 62px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.19);
+      backdrop-filter:blur(22px);
+      -webkit-backdrop-filter:blur(22px);
+      padding:20px 18px;
+      text-align:center;
+    }
+    .flow-icon{
+      width:46px;
+      height:46px;
+      border-radius:16px;
+      background:linear-gradient(135deg,#0f8fff,#43c3ff);
+      display:grid;
+      place-items:center;
+      margin:0 auto 14px;
+      font-size:24px;
+      font-weight:900;
+      box-shadow:0 16px 34px rgba(0,144,255,.31),inset 0 1px 0 rgba(255,255,255,.25);
+    }
+    .flow-card h3{margin:0 0 8px;font-size:20px;font-weight:900;letter-spacing:.03em}
+    .flow-card p{margin:0;color:rgba(255,255,255,.65);font-size:13px;line-height:1.55;font-weight:700}
+
+    .progress{
+      position:fixed;
+      left:24px;
+      bottom:18px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      z-index:20;
+      color:rgba(255,255,255,.70);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.22em;
+      text-transform:uppercase;
+    }
+    .bar{width:112px;height:3px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}
+    .bar span{display:block;width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#26b8ff,#61d9ff);will-change:width}
+    .status{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      z-index:30;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.09);
+      border:1px solid rgba(255,255,255,.18);
+      color:rgba(255,255,255,.72);
+      font-size:12px;
+      font-weight:800;
+      backdrop-filter:blur(12px);
+      transition:opacity .45s ease;
+    }
+
+    @media(max-width:680px){
+      .stage{height:760vh}
+      .copy-layer{padding:18px}
+      .copy.left{top:14.5vh;left:24px;width:86vw}
+      h1{font-size:clamp(45px,13.2vw,72px);line-height:.95}
+      .lead{font-size:14px;line-height:1.65;max-width:335px}
+      .front-title{width:92vw;top:54%;transform:translate3d(0,-50%,0)}
+      .front-title h2{font-size:clamp(54px,15.5vw,78px)}
+      .front-title p{font-size:13px;max-width:330px}
+      .flow-cards{grid-template-columns:1fr;bottom:7vh;width:min(330px,82vw);gap:10px}
+      .flow-card{min-height:82px;display:grid;grid-template-columns:48px 1fr;align-items:center;text-align:left;padding:14px 16px;border-radius:22px}
+      .flow-icon{margin:0;width:42px;height:42px;border-radius:14px}
+      .flow-card h3{font-size:17px;margin:0 0 4px}
+      .flow-card p{font-size:11px}
+      .progress{left:18px;bottom:16px}
+      .bar{width:90px}
+      .status{display:none}
+      .grain{opacity:.022}
+      .grid{opacity:.14}
+      .orb{opacity:.35}
+      .spline-layer{filter:saturate(1.04) contrast(1.035) brightness(1)}
+    }
+
+    @media(prefers-reduced-motion:reduce){
+      .stage{height:140vh}
+      .progress{display:none}
+    }
   </style>
 </head>
 <body>
   <section class="pre">Scroll into prototype</section>
+
   <section class="stage" id="stage">
     <div class="pin">
-      <div class="orb one"></div><div class="orb two"></div><div class="grid"></div>
-      <div class="text-layer">
-        <article class="copy left" id="copy1"><span class="eyebrow">Student App</span><h1>離開教室，<br>練習也不斷線。</h1><p class="lead">名牌感應是入口，主畫面捷徑是延伸，把口說練習從教室帶回家裡。</p></article>
-        <article class="copy" id="copy2"><span class="eyebrow">No Card Needed</span><h1>下次打開，<br>直接進入學生主頁。</h1><p class="lead">不必重新嗶卡，不必重新找連結，點一下 App 就能接續今日任務。</p></article>
+      <div class="light-field"></div>
+      <div class="orb one"></div>
+      <div class="orb two"></div>
+      <div class="grid"></div>
+
+      <div class="copy-layer back">
+        <article class="copy left" id="copy1">
+          <span class="eyebrow">Student App</span>
+          <h1>離開教室，<br>練習也不斷線。</h1>
+          <p class="lead">名牌感應是入口，主畫面捷徑是延伸，把口說練習從教室帶回家裡。</p>
+        </article>
       </div>
-      <div class="spline-layer"><canvas id="canvas3d" aria-label="Tappie 3D card"></canvas></div>
+
+      <div class="copy-layer mid">
+        <article class="copy" id="copy2">
+          <span class="eyebrow">No Card Needed</span>
+          <h1>下次打開，<br>直接進入學生主頁。</h1>
+          <p class="lead">不必重新嗶卡，不必重新找連結，點一下 App 就能接續今日任務。</p>
+        </article>
+      </div>
+
+      <div class="spline-layer" id="splineLayer">
+        <canvas id="canvas3d" aria-label="Tappie 3D card"></canvas>
+      </div>
+
       <div class="front-layer">
-        <article class="front-title" id="copy3"><span class="eyebrow">One Flow</span><h2>現場流程<br>更少步驟。</h2><p>打卡、加點、練習，同一套流程。</p></article>
-        <div class="flow-cards" id="flowCards"><div class="flow-card"><div class="flow-icon">✓</div><div><h3>打卡</h3><p>老師感應名牌，完成到校 / 離校紀錄。</p></div></div><div class="flow-card"><div class="flow-icon">＋</div><div><h3>加點</h3><p>課堂表現與獎勵，即時進入學生點數紀錄。</p></div></div><div class="flow-card"><div class="flow-icon">▶</div><div><h3>練習</h3><p>回家點開 App，接續口說任務。</p></div></div></div>
+        <article class="front-title" id="copy3">
+          <span class="eyebrow">One Flow</span>
+          <h2>現場流程<br>更少步驟。</h2>
+          <p>打卡、加點、練習，同一套流程。</p>
+        </article>
+
+        <div class="flow-cards" id="flowCards">
+          <div class="flow-card">
+            <div class="flow-icon">✓</div>
+            <div><h3>打卡</h3><p>老師感應名牌，完成到校 / 離校紀錄。</p></div>
+          </div>
+          <div class="flow-card">
+            <div class="flow-icon">＋</div>
+            <div><h3>加點</h3><p>課堂表現與獎勵，即時進入學生點數紀錄。</p></div>
+          </div>
+          <div class="flow-card">
+            <div class="flow-icon">▶</div>
+            <div><h3>練習</h3><p>回家點開 App，接續口說任務。</p></div>
+          </div>
+        </div>
       </div>
+
+      <div class="grain"></div>
+      <div class="vignette"></div>
     </div>
   </section>
+
   <section class="post">End prototype</section>
   <div class="progress"><span>Scroll</span><div class="bar"><span id="progressBar"></span></div></div>
-  <div class="status" id="status">載入 Spline Runtime v6...</div>
+  <div class="status" id="status">載入 Spline Runtime v7...</div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script type="module">
-    import { Application } from 'https://unpkg.com/@splinetool/runtime@latest/build/runtime.js';
+    import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js';
+
     gsap.registerPlugin(ScrollTrigger);
+    gsap.ticker.lagSmoothing(500, 33);
+    ScrollTrigger.config({ ignoreMobileResize: true });
+
     const sceneUrl = 'https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode';
     const canvas = document.getElementById('canvas3d');
     const statusEl = document.getElementById('status');
     const progressBar = document.getElementById('progressBar');
+    const copy1 = document.getElementById('copy1');
+    const copy2 = document.getElementById('copy2');
+    const copy3 = document.getElementById('copy3');
+    const flowCards = document.getElementById('flowCards');
+
     const app = new Application(canvas);
+    const clamp01 = gsap.utils.clamp(0, 1);
+    const isMobile = window.matchMedia('(max-width: 680px)').matches;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     let target = null;
     let base = null;
-    let desired = 0;
+    let targetProgress = 0;
+    let renderedProgress = 0;
+    let lastRenderedProgress = -1;
 
-    // v6：Flowcard-like big scroll choreography.
-    // 重要：不再用每段 power2 easing，也不再用 RAF 追蹤 smoothing。
-    // 讓卡片位置 / 旋轉與 scroll progress 直接線性對應，避免忽快忽慢。
-    const isMobile = window.matchMedia('(max-width: 680px)').matches;
-    const SCALE_BOOST = isMobile ? 1.42 : 1.72;
-    const keyframes = [
-      // large hero entrance：先用大尺寸壓出震撼感
-      { p:0.00, x:-210, y:170, z: 30, rx:-0.10, ry:-0.22, rz:-0.22, s:1.36*SCALE_BOOST },
-      // forward sweep：卡片穿過第一段文字前方
-      { p:0.14, x:-90,  y:65,  z: 70, rx: 0.05, ry: 0.70, rz:-0.10, s:1.58*SCALE_BOOST },
-      // edge moment：側面展示，不要太快翻完
-      { p:0.30, x:-10,  y:25,  z: 90, rx: 0.08, ry: 1.50, rz: 0.04, s:1.72*SCALE_BOOST },
-      // back reveal：背面 / 反面慢慢過場
-      { p:0.48, x:70,   y:10,  z: 55, rx:-0.04, ry: 3.10, rz:-0.10, s:1.55*SCALE_BOOST },
-      // second headline crossing：大字前方掃過
-      { p:0.64, x:20,   y:45,  z: 80, rx: 0.08, ry: 4.55, rz: 0.08, s:1.48*SCALE_BOOST },
-      // settle to product position：縮小但不消失
-      { p:0.82, x:0,    y:82,  z: 15, rx: 0.03, ry: 5.55, rz:-0.02, s:1.24*SCALE_BOOST },
-      // final lockup：停在流程卡後方
-      { p:1.00, x:0,    y:95,  z: 0,  rx: 0.00, ry: 6.25, rz: 0.00, s:1.16*SCALE_BOOST }
+    // 兩套獨立姿態：手機不再沿用桌機的大幅位移與放大倍率。
+    // 每一段都先建立可觀看的產品姿態，再進入下一個翻面動作。
+    const desktopFrames = [
+      {p:0.00,x:-150,y:138,z:18,rx:-0.08,ry:-0.16,rz:-0.20,s:1.82},
+      {p:0.11,x:-92, y:78, z:34,rx:-0.02,ry: 0.10,rz:-0.14,s:2.00},
+      {p:0.24,x:-32, y:34, z:52,rx: 0.05,ry: 0.76,rz:-0.06,s:2.15},
+      {p:0.36,x: 8,  y:18, z:62,rx: 0.07,ry: 1.48,rz: 0.03,s:2.11},
+      {p:0.49,x: 58, y:12, z:50,rx:-0.03,ry: 3.06,rz:-0.08,s:1.98},
+      {p:0.62,x: 22, y:28, z:58,rx: 0.05,ry: 3.92,rz: 0.06,s:1.88},
+      {p:0.74,x:-12, y:42, z:42,rx: 0.05,ry: 4.72,rz: 0.05,s:1.72},
+      {p:0.86,x: 0,  y:66, z:16,rx: 0.02,ry: 5.56,rz:-0.02,s:1.52},
+      {p:1.00,x: 0,  y:82, z: 0,rx: 0.00,ry: 6.27,rz: 0.00,s:1.38}
     ];
-    const clamp = gsap.utils.clamp(0,1);
-    const lerp = (a,b,t)=>a+(b-a)*t;
-    function sample(p){
-      p = clamp(p);
-      let a=keyframes[0], b=keyframes[keyframes.length-1];
-      for(let i=0;i<keyframes.length-1;i++){
-        if(p>=keyframes[i].p && p<=keyframes[i+1].p){ a=keyframes[i]; b=keyframes[i+1]; break; }
+
+    const mobileFrames = [
+      {p:0.00,x:-52,y:112,z: 4,rx:-0.06,ry:-0.14,rz:-0.14,s:1.55},
+      {p:0.12,x:-20,y:66, z:10,rx:-0.01,ry: 0.12,rz:-0.10,s:1.66},
+      {p:0.25,x:-2, y:22, z:16,rx: 0.04,ry: 0.74,rz:-0.04,s:1.72},
+      {p:0.37,x: 8, y:10, z:18,rx: 0.05,ry: 1.44,rz: 0.02,s:1.66},
+      {p:0.50,x: 28,y: 8, z:14,rx:-0.02,ry: 3.04,rz:-0.06,s:1.53},
+      {p:0.63,x: 12,y:26, z:18,rx: 0.04,ry: 3.90,rz: 0.05,s:1.46},
+      {p:0.75,x:-8, y:44, z:12,rx: 0.04,ry: 4.72,rz: 0.04,s:1.38},
+      {p:0.87,x: 0, y:74, z: 4,rx: 0.02,ry: 5.58,rz:-0.02,s:1.28},
+      {p:1.00,x: 0, y:92, z: 0,rx: 0.00,ry: 6.27,rz: 0.00,s:1.20}
+    ];
+
+    const frames = isMobile ? mobileFrames : desktopFrames;
+    const lerp = (a,b,t) => a + (b-a) * t;
+    const cinematicEase = t => 0.5 - 0.5 * Math.cos(Math.PI * t);
+
+    function sampleFrames(progress){
+      const p = clamp01(progress);
+      let a = frames[0];
+      let b = frames[frames.length - 1];
+
+      for(let i=0;i<frames.length-1;i++){
+        if(p >= frames[i].p && p <= frames[i+1].p){
+          a = frames[i];
+          b = frames[i+1];
+          break;
+        }
       }
-      const t = a.p===b.p ? 0 : (p-a.p)/(b.p-a.p);
-      // Linear interpolation: scroll distance = motion distance.
-      return { x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t), z:lerp(a.z,b.z,t), rx:lerp(a.rx,b.rx,t), ry:lerp(a.ry,b.ry,t), rz:lerp(a.rz,b.rz,t), s:lerp(a.s,b.s,t) };
+
+      const rawT = a.p === b.p ? 0 : (p - a.p) / (b.p - a.p);
+      const t = cinematicEase(rawT);
+      return {
+        x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t), z:lerp(a.z,b.z,t),
+        rx:lerp(a.rx,b.rx,t), ry:lerp(a.ry,b.ry,t), rz:lerp(a.rz,b.rz,t),
+        s:lerp(a.s,b.s,t)
+      };
     }
-    function renderSplineProgress(p){
+
+    function renderSpline(progress){
       if(!target || !base) return;
-      const k = sample(p);
+      const k = sampleFrames(progress);
       target.position.x = base.px + k.x;
       target.position.y = base.py + k.y;
       target.position.z = base.pz + k.z;
@@ -122,29 +475,112 @@
       target.scale.x = base.sx * k.s;
       target.scale.y = base.sy * k.s;
       target.scale.z = base.sz * k.s;
-      app.requestRender?.();
-      app.render?.();
-    }
-    app.load(sceneUrl).then(()=>{
-      target = app.findObjectByName('hero_card_stage') || app.findObjectByName('tappie_card_group') || app.findObjectByName('card_movement') || app.findObjectByName('card_rotation');
-      if(target){
-        base = { px:target.position.x, py:target.position.y, pz:target.position.z, rx:target.rotation.x, ry:target.rotation.y, rz:target.rotation.z, sx:target.scale.x, sy:target.scale.y, sz:target.scale.z };
-        statusEl.textContent = `控制物件：${target.name}`;
-        setTimeout(()=>statusEl.style.opacity='0',1800);
-        renderSplineProgress(0);
-      }else{
-        statusEl.textContent = '找不到 hero_card_stage / tappie_card_group，請確認 Spline 物件命名';
-      }
-    }).catch((err)=>{ console.error(err); statusEl.textContent='Spline Runtime 載入失敗，請檢查 scene URL'; });
 
-    gsap.set(['#copy2','#copy3','#flowCards'], {opacity:0, y:38, filter:'blur(8px)'});
-    gsap.set('#copy1',{opacity:1,y:0,filter:'blur(0px)'});
-    const tl = gsap.timeline({ scrollTrigger:{ trigger:'#stage', start:'top top', end:'bottom bottom', scrub:true, onUpdate:self=>{ desired = self.progress; renderSplineProgress(desired); progressBar.style.width = `${Math.round(self.progress*100)}%`; } }});
-    tl.to('#copy1',{opacity:.18, y:-38, filter:'blur(7px)', duration:.18},0.16)
-      .to('#copy2',{opacity:1, y:0, filter:'blur(0px)', duration:.20},0.30)
-      .to('#copy2',{opacity:.14, y:-30, filter:'blur(8px)', duration:.18},0.56)
-      .to('#copy3',{opacity:1, y:0, filter:'blur(0px)', duration:.20},0.68)
-      .to('#flowCards',{opacity:1, y:0, filter:'blur(0px)', duration:.18},0.78);
+      if(typeof app.requestRender === 'function') app.requestRender();
+      else if(typeof app.render === 'function') app.render();
+    }
+
+    const invLerp = (a,b,v) => clamp01((v-a)/(b-a));
+    const easeOut = t => 1 - Math.pow(1-t,3);
+
+    function setVisual(el, opacity, y, blur, scale=1){
+      el.style.opacity = opacity.toFixed(4);
+      el.style.transform = `translate3d(0,${y.toFixed(2)}px,0) scale(${scale.toFixed(4)})`;
+      el.style.filter = `blur(${blur.toFixed(2)}px)`;
+    }
+
+    function renderCopy(progress){
+      // copy 1：先完整停留，再被卡片穿越帶走。
+      const c1Out = easeOut(invLerp(0.12,0.27,progress));
+      setVisual(copy1, lerp(1,0.10,c1Out), lerp(0,-34,c1Out), lerp(0,7,c1Out), lerp(1,.985,c1Out));
+
+      // copy 2：卡片在文字前方翻面，文字只在中段保持清晰。
+      const c2In = easeOut(invLerp(0.25,0.35,progress));
+      const c2Out = easeOut(invLerp(0.53,0.66,progress));
+      const c2Opacity = c2In * (1 - 0.88*c2Out);
+      setVisual(copy2, c2Opacity, lerp(30,0,c2In) - 26*c2Out, lerp(8,0,c2In) + 8*c2Out, lerp(.985,1,c2In));
+
+      // copy 3：最後才浮到卡片前方，建立正式 lockup。
+      const c3In = easeOut(invLerp(0.66,0.78,progress));
+      setVisual(copy3, c3In, lerp(34,0,c3In), lerp(9,0,c3In), lerp(.98,1,c3In));
+
+      const cardsIn = easeOut(invLerp(0.80,0.93,progress));
+      flowCards.style.opacity = cardsIn.toFixed(4);
+      flowCards.style.transform = `translate3d(-50%,${lerp(28,0,cardsIn).toFixed(2)}px,0) scale(${lerp(.985,1,cardsIn).toFixed(4)})`;
+      flowCards.style.filter = `blur(${lerp(8,0,cardsIn).toFixed(2)}px)`;
+    }
+
+    function renderProgress(progress){
+      const value = clamp01(progress);
+      renderSpline(value);
+      renderCopy(value);
+      progressBar.style.width = `${(value*100).toFixed(2)}%`;
+    }
+
+    // 使用低延遲、依幀率自動調整的阻尼。
+    // 它只消除手機觸控與瀏覽器 scroll event 的抖動，不會產生明顯延遲。
+    gsap.ticker.add(() => {
+      if(prefersReducedMotion){
+        renderedProgress = targetProgress;
+      }else{
+        const dt = Math.min(2, gsap.ticker.deltaRatio(60));
+        const damping = 1 - Math.exp(-0.22 * dt);
+        renderedProgress += (targetProgress - renderedProgress) * damping;
+      }
+
+      if(Math.abs(renderedProgress - lastRenderedProgress) > 0.00008){
+        lastRenderedProgress = renderedProgress;
+        renderProgress(renderedProgress);
+      }
+    });
+
+    app.load(sceneUrl).then(() => {
+      target =
+        app.findObjectByName('hero_card_stage') ||
+        app.findObjectByName('tappie_card_group') ||
+        app.findObjectByName('card_movement') ||
+        app.findObjectByName('card_rotation');
+
+      if(!target){
+        statusEl.textContent = '找不到 hero_card_stage / tappie_card_group，請確認 Spline 物件命名';
+        return;
+      }
+
+      base = {
+        px:target.position.x, py:target.position.y, pz:target.position.z,
+        rx:target.rotation.x, ry:target.rotation.y, rz:target.rotation.z,
+        sx:target.scale.x, sy:target.scale.y, sz:target.scale.z
+      };
+
+      statusEl.textContent = `控制物件：${target.name}`;
+      renderProgress(0);
+      setTimeout(() => statusEl.style.opacity = '0', 1600);
+      requestAnimationFrame(() => ScrollTrigger.refresh());
+    }).catch((error) => {
+      console.error(error);
+      statusEl.textContent = 'Spline Runtime 載入失敗，請檢查 scene URL';
+    });
+
+    ScrollTrigger.create({
+      trigger:'#stage',
+      start:'top top',
+      end:'bottom bottom',
+      invalidateOnRefresh:true,
+      onUpdate:self => {
+        targetProgress = self.progress;
+      }
+    });
+
+    if(prefersReducedMotion){
+      targetProgress = 0.82;
+      renderedProgress = 0.82;
+      renderCopy(0.82);
+    }else{
+      setVisual(copy1,1,0,0,1);
+      setVisual(copy2,0,30,8,.985);
+      setVisual(copy3,0,34,9,.98);
+      flowCards.style.opacity = '0';
+    }
   </script>
 </body>
 </html>
