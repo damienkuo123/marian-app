@@ -1,667 +1,1979 @@
-<!doctype html>
-<html lang="zh-TW">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="robots" content="noindex,nofollow" />
-  <title>Tappie 第三屏 Spline Runtime Prototype v8 - Motion Director</title>
-  <style>
-    :root{
-      --bg0:#010611;
-      --bg1:#04152a;
-      --bg2:#062546;
-      --cyan:#2cc3ff;
-      --text:#f8fbff;
-      --muted:rgba(248,251,255,.70);
-      --line:rgba(255,255,255,.18);
-    }
-    *{box-sizing:border-box}
-    html,body{
-      margin:0;
-      min-height:100%;
-      background:#030813;
-      color:var(--text);
-      font-family:'PingFang TC','Noto Sans TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-      -webkit-font-smoothing:antialiased;
-      text-rendering:optimizeLegibility;
-    }
-    body{overflow-x:hidden;overscroll-behavior-x:none}
-    .pre,.post{
-      height:72vh;
-      display:grid;
-      place-items:center;
-      background:#030813;
-      color:rgba(255,255,255,.48);
-      font-weight:800;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-    }
-    .stage{
-      height:700vh;
-      position:relative;
-      background:
-        radial-gradient(circle at 18% 15%, rgba(0,110,255,.18), transparent 32%),
-        radial-gradient(circle at 86% 48%, rgba(16,193,255,.11), transparent 38%),
-        linear-gradient(180deg,var(--bg0) 0%,var(--bg1) 42%,var(--bg2) 68%,var(--bg0) 100%);
-    }
-    .pin{
-      position:sticky;
-      top:0;
-      width:100%;
-      height:100svh;
-      overflow:hidden;
-      isolation:isolate;
-      contain:paint;
-      touch-action:pan-y;
-    }
-    .vignette,.grain,.light-field,.grid{pointer-events:none}
-    .light-field,.orb,.grid{will-change:transform,opacity}
-    .vignette{
-      position:absolute;
-      inset:0;
-      z-index:7;
-      background:
-        linear-gradient(180deg,rgba(0,0,0,.30),transparent 18%,transparent 78%,rgba(0,0,0,.28)),
-        radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.32) 100%);
-      mix-blend-mode:multiply;
-    }
-    .grain{
-      position:absolute;
-      inset:-40%;
-      z-index:6;
-      opacity:.032;
-      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
-      transform:translateZ(0);
-    }
-    .light-field{
-      position:absolute;
-      inset:-12%;
-      z-index:0;
-      background:
-        radial-gradient(circle at 50% 42%,rgba(38,170,255,.12),transparent 30%),
-        linear-gradient(112deg,transparent 34%,rgba(255,255,255,.035) 49%,transparent 61%);
-      filter:blur(12px);
-    }
-    .grid{
-      position:absolute;
-      inset:auto -16% -24% -16%;
-      height:41%;
-      z-index:0;
-      background-image:
-        linear-gradient(rgba(70,155,255,.10) 1px,transparent 1px),
-        linear-gradient(90deg,rgba(70,155,255,.09) 1px,transparent 1px);
-      background-size:46px 46px;
-      transform:perspective(760px) rotateX(63deg);
-      opacity:.20;
-    }
-    .orb{
-      position:absolute;
-      z-index:0;
-      border-radius:999px;
-      filter:blur(92px);
-      opacity:.46;
-      pointer-events:none;
-    }
-    .orb.one{width:440px;height:440px;background:rgba(0,94,204,.34);left:-150px;top:7vh}
-    .orb.two{width:420px;height:420px;background:rgba(0,190,255,.16);right:-170px;top:38vh}
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>Tappie Story Lab v9 — Card to Day Loop</title><style>
+:root{
+  --primary-blue:#007bff;
+  --marian-gold:#f1c40f;
+  --marian-green:#2ecc71;
+  --marian-red:#e74c3c;
+  --ink:#f5f5f7;
+  --ink-soft:rgba(232,236,244,.72);
+  --cyan:#2cc3ff;
+  --stage:#020306;
+  --display-xl:clamp(64px,6vw,108px);
+  --display-l:clamp(48px,4.4vw,78px);
+  --body-l:clamp(18px,1.35vw,24px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#020306;color:var(--ink);font-family:'PingFang TC','Noto Sans TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{overflow-x:hidden;overscroll-behavior-x:none}
+.story-lab{position:relative;height:520vh;background:#020306;color:var(--ink);isolation:isolate;overflow:visible}
+.story-sticky{position:sticky;top:0;height:100svh;min-height:640px;overflow:hidden;isolation:isolate;background:
+  radial-gradient(circle at 74% 36%,rgba(27,145,255,.12),transparent 29%),
+  radial-gradient(circle at 14% 78%,rgba(41,193,255,.055),transparent 34%),
+  linear-gradient(180deg,#020306 0%,#031022 58%,#020306 100%)}
+.story-sticky::after{content:'';position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at center,transparent 48%,rgba(0,0,0,.42) 100%)}
+.story-grid{position:absolute;left:50%;bottom:-27%;width:120%;height:45%;z-index:0;transform:translateX(-50%) perspective(760px) rotateX(65deg);transform-origin:center bottom;background-image:linear-gradient(rgba(79,142,220,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,220,.05) 1px,transparent 1px);background-size:56px 56px;mask-image:linear-gradient(180deg,transparent,#000 42%,#000);opacity:.55;pointer-events:none}
+.story-copy-zone{position:absolute;inset:0;z-index:2;pointer-events:none}
+.story-scene{position:absolute;left:clamp(34px,7.2vw,132px);top:50%;width:min(520px,39vw);transform:translateY(-50%);opacity:0;will-change:opacity,transform}
+.story-scene.is-intro{opacity:1}
+.story-kicker{margin:0 0 18px;color:rgba(255,255,255,.68);font-size:13px;line-height:1.1;font-weight:760;letter-spacing:.16em;text-transform:uppercase}
+.story-scene h2{margin:0;color:#fff;font-size:var(--display-l);line-height:.98;letter-spacing:-.064em;font-weight:900;text-wrap:balance;text-shadow:0 24px 70px rgba(0,0,0,.42)}
+.story-scene h2 .accent{color:#50c8ff}
+.story-lead{max-width:28ch;margin:24px 0 0;color:var(--ink-soft);font-size:var(--body-l);line-height:1.62;letter-spacing:-.012em;font-weight:600}
+.story-feature-index{display:flex;align-items:center;gap:10px;margin-bottom:18px;color:rgba(255,255,255,.52);font-size:12px;font-weight:760;letter-spacing:.14em;text-transform:uppercase}
+.story-feature-index::before{content:'';width:24px;height:1px;background:rgba(80,200,255,.72)}
+.story-feature-note{display:block;margin-top:18px;color:rgba(255,255,255,.62);font-size:15px;line-height:1.55;font-weight:620}
+.story-spline{position:absolute;inset:0;z-index:3;pointer-events:none;will-change:opacity}
+#canvas3d{width:100%;height:100%;display:block;pointer-events:none}
+.story-handoff-stage{position:absolute!important;inset:0!important;z-index:5!important;display:grid!important;place-items:center!important;opacity:0;transform:translate3d(6vw,34px,0) scale(.90);will-change:opacity,transform;pointer-events:none}
+.story-handoff-stage .tappie-day-phone{width:min(360px,25vw)!important;aspect-ratio:9/19.5!important}
+.story-handoff-copy{position:absolute;left:50%;bottom:clamp(42px,7vh,86px);z-index:6;transform:translateX(-50%);width:min(720px,86vw);text-align:center;opacity:0;color:rgba(255,255,255,.7);font-size:clamp(15px,1.4vw,20px);line-height:1.5;font-weight:650;letter-spacing:-.015em}
+.story-progress{position:absolute;left:clamp(26px,4vw,64px);bottom:clamp(22px,4vh,42px);z-index:9;display:flex;align-items:center;gap:14px;color:rgba(255,255,255,.54);font-size:11px;font-weight:760;letter-spacing:.18em;text-transform:uppercase}
+.story-progress-track{width:110px;height:2px;border-radius:999px;background:rgba(255,255,255,.13);overflow:hidden}
+.story-progress-fill{display:block;width:0;height:100%;background:#45c9ff;border-radius:inherit}
+.story-debug{position:fixed;top:12px;left:12px;z-index:99;display:none;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.72);color:#fff;font:12px/1.3 ui-monospace,monospace}.story-debug.show{display:block}
+.prototype-end{height:70vh;display:grid;place-items:center;background:#f5f5f7;color:#667085;font-weight:700;letter-spacing:.08em}
 
-    .copy-layer{
-      position:absolute;
-      inset:0;
-      pointer-events:none;
-      padding:22px;
+/* Seamless handoff: this standalone lab has no fixed nav. */
+.tappie-day-loop{margin-top:-1px!important;background:#020306!important}
+.tappie-day-loop__sticky{top:0!important;height:100svh!important;min-height:640px!important}
+.story-handoff-stage .tappie-day-nav{display:none!important}
+
+@media(max-width:860px){
+  .story-lab{height:470vh}
+  .story-sticky{min-height:0}
+  .story-scene{left:24px;right:24px;top:12.5svh;width:auto;transform:none;text-align:left}
+  .story-kicker{margin-bottom:13px;font-size:11px}
+  .story-scene h2{font-size:clamp(42px,11.2vw,62px);line-height:1.01;letter-spacing:-.058em}
+  .story-lead{max-width:31ch;margin-top:16px;font-size:15px;line-height:1.55}
+  .story-feature-index{margin-bottom:12px;font-size:10px}
+  .story-feature-note{margin-top:12px;font-size:13px}
+  .story-handoff-stage{transform:translate3d(0,46px,0) scale(.92)}
+  .story-handoff-stage .tappie-day-phone{width:min(72vw,330px)!important}
+  .story-handoff-copy{bottom:calc(env(safe-area-inset-bottom,0px) + 62px);font-size:14px}
+  .story-progress{left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
+  .story-progress-track{width:92px}
+  .story-grid{bottom:-18%;height:34%;opacity:.36}
+  .tappie-day-loop__sticky{top:0!important;height:100svh!important;min-height:0!important;padding-top:24px!important}
+}
+
+@media  (max-width: 860px) {body > section:not(.tappie-scroll-hero):not(.tappie-day-loop) {
+        max-width: 100%;
+        overflow-x: clip;
     }
-    .copy-layer.back{z-index:1}
-    .copy-layer.mid{z-index:2}
-    .copy{
-      position:absolute;
-      width:min(980px,92vw);
-      text-align:center;
-      will-change:opacity,transform,filter;
-      transform:translate3d(0,0,0);
-    }
-    .copy.left{
-      text-align:left;
-      left:max(5vw,26px);
-      top:18vh;
-      width:min(780px,86vw);
-    }
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:8px 16px;
-      border-radius:999px;
-      background:rgba(255,255,255,.085);
-      border:1px solid var(--line);
-      color:rgba(255,255,255,.72);
-      font-size:12px;
-      font-weight:800;
-      letter-spacing:.22em;
-      text-transform:uppercase;
-      box-shadow:0 14px 38px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.11);
-      backdrop-filter:blur(16px);
-      -webkit-backdrop-filter:blur(16px);
-    }
-    .eyebrow::before{
-      content:'';
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:var(--cyan);
-      box-shadow:0 0 18px var(--cyan);
-    }
-    h1{
-      margin:18px 0 0;
-      font-size:clamp(46px,9.4vw,116px);
-      line-height:.94;
-      letter-spacing:-.068em;
-      font-weight:900;
-      text-wrap:balance;
-      text-shadow:0 14px 48px rgba(0,0,0,.34);
-    }
-    .lead{
-      margin:22px auto 0;
-      max-width:720px;
-      font-size:clamp(15px,2.6vw,23px);
-      line-height:1.7;
-      color:var(--muted);
-      font-weight:750;
-      letter-spacing:.035em;
-    }
-    .left .lead{margin-left:0;max-width:560px}
-
-    .spline-layer{
-      position:absolute;
-      inset:0;
-      z-index:3;
-      pointer-events:none;
-      will-change:opacity,transform;
-      transform:translateZ(0);
-      filter:saturate(1.05) contrast(1.045) brightness(.99);
-    }
-    #canvas3d{
-      width:100%;
-      height:100%;
-      display:block;
-      pointer-events:none;
-      transform:translateZ(0);
-      backface-visibility:hidden;
-    }
-
-    .front-layer{
-      position:absolute;
-      inset:0;
-      z-index:4;
-      pointer-events:none;
-      display:grid;
-      place-items:center;
-      padding:22px;
-    }
-    .front-title{
-      position:absolute;
-      width:min(920px,94vw);
-      text-align:center;
-      will-change:opacity,transform,filter;
-      transform:translate3d(0,0,0);
-    }
-    .front-title h2{
-      margin:0;
-      font-size:clamp(50px,10.5vw,120px);
-      line-height:.91;
-      letter-spacing:-.072em;
-      font-weight:900;
-      text-shadow:0 16px 52px rgba(0,0,0,.38);
-    }
-    .front-title p{
-      margin:18px auto 0;
-      max-width:720px;
-      color:rgba(255,255,255,.72);
-      font-size:clamp(14px,2.4vw,21px);
-      line-height:1.65;
-      font-weight:750;
-      letter-spacing:.055em;
-    }
-    .flow-cards{
-      position:absolute;
-      left:50%;
-      bottom:10vh;
-      transform:translate3d(-50%,0,0);
-      display:grid;
-      grid-template-columns:repeat(3,minmax(180px,1fr));
-      gap:14px;
-      width:min(980px,86vw);
-      z-index:5;
-      will-change:opacity,transform,filter;
-    }
-    .flow-card{
-      min-height:132px;
-      border-radius:26px;
-      background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.055));
-      border:1px solid rgba(255,255,255,.20);
-      box-shadow:0 24px 62px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.19);
-      backdrop-filter:blur(22px);
-      -webkit-backdrop-filter:blur(22px);
-      padding:20px 18px;
-      text-align:center;
-    }
-    .flow-icon{
-      width:46px;
-      height:46px;
-      border-radius:16px;
-      background:linear-gradient(135deg,#0f8fff,#43c3ff);
-      display:grid;
-      place-items:center;
-      margin:0 auto 14px;
-      font-size:24px;
-      font-weight:900;
-      box-shadow:0 16px 34px rgba(0,144,255,.31),inset 0 1px 0 rgba(255,255,255,.25);
-    }
-    .flow-card h3{margin:0 0 8px;font-size:20px;font-weight:900;letter-spacing:.03em}
-    .flow-card p{margin:0;color:rgba(255,255,255,.65);font-size:13px;line-height:1.55;font-weight:700}
-
-    .progress{
-      position:fixed;
-      left:24px;
-      bottom:18px;
-      display:flex;
-      align-items:center;
-      gap:14px;
-      z-index:20;
-      color:rgba(255,255,255,.70);
-      font-size:12px;
-      font-weight:800;
-      letter-spacing:.22em;
-      text-transform:uppercase;
-    }
-    .bar{width:112px;height:3px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}
-    .bar span{display:block;width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#26b8ff,#61d9ff);will-change:width}
-    .motion-debug{
-      position:fixed;
-      top:calc(env(safe-area-inset-top,0px) + 14px);
-      left:14px;
-      z-index:40;
-      display:none;
-      min-width:220px;
-      padding:11px 13px;
-      border-radius:14px;
-      background:rgba(1,8,20,.78);
-      border:1px solid rgba(255,255,255,.18);
-      box-shadow:0 18px 44px rgba(0,0,0,.30);
-      backdrop-filter:blur(16px);
-      color:rgba(255,255,255,.86);
-      font:700 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
-      letter-spacing:.02em;
-      pointer-events:none;
-    }
-    .motion-debug.is-visible{display:block}
-    .motion-debug strong{display:block;color:#fff;font-size:12px;margin-bottom:2px}
-
-    .status{
-      position:fixed;
-      right:18px;
-      bottom:18px;
-      z-index:30;
-      padding:10px 14px;
-      border-radius:999px;
-      background:rgba(255,255,255,.09);
-      border:1px solid rgba(255,255,255,.18);
-      color:rgba(255,255,255,.72);
-      font-size:12px;
-      font-weight:800;
-      backdrop-filter:blur(12px);
-      transition:opacity .45s ease;
-    }
-
-    @media(max-width:680px){
-      .stage{height:620vh}
-      .copy-layer{padding:18px}
-      .copy.left{top:14.5vh;left:24px;width:86vw}
-      h1{font-size:clamp(45px,13.2vw,72px);line-height:.95}
-      .lead{font-size:14px;line-height:1.65;max-width:335px}
-      .front-title{width:92vw;top:54%;transform:translate3d(0,-50%,0)}
-      .front-title h2{font-size:clamp(54px,15.5vw,78px)}
-      .front-title p{font-size:13px;max-width:330px}
-      .flow-cards{grid-template-columns:1fr;bottom:7vh;width:min(330px,82vw);gap:10px}
-      .flow-card{min-height:82px;display:grid;grid-template-columns:48px 1fr;align-items:center;text-align:left;padding:14px 16px;border-radius:22px}
-      .flow-icon{margin:0;width:42px;height:42px;border-radius:14px}
-      .flow-card h3{font-size:17px;margin:0 0 4px}
-      .flow-card p{font-size:11px}
-      .progress{left:18px;bottom:16px}
-      .bar{width:90px}
-      .status{display:none}
-      .grain{opacity:.022}
-      .grid{opacity:.14}
-      .orb{opacity:.35}
-      .spline-layer{filter:saturate(1.04) contrast(1.035) brightness(1)}
-    }
-
-    @media(prefers-reduced-motion:reduce){
-      .stage{height:140vh}
-      .progress{display:none}
-    }
-  </style>
-</head>
-<body>
-  <section class="pre">Scroll into prototype</section>
-
-  <section class="stage" id="stage">
-    <div class="pin">
-      <div class="light-field" id="lightField"></div>
-      <div class="orb one" id="orbOne"></div>
-      <div class="orb two" id="orbTwo"></div>
-      <div class="grid" id="gridField"></div>
-
-      <div class="copy-layer back">
-        <article class="copy left" id="copy1">
-          <span class="eyebrow">Student App</span>
-          <h1>離開教室，<br>練習也不斷線。</h1>
-          <p class="lead">名牌感應是入口，主畫面捷徑是延伸，把口說練習從教室帶回家裡。</p>
-        </article>
-      </div>
-
-      <div class="copy-layer mid">
-        <article class="copy" id="copy2">
-          <span class="eyebrow">No Card Needed</span>
-          <h1>下次打開，<br>直接進入學生主頁。</h1>
-          <p class="lead">不必重新嗶卡，不必重新找連結，點一下 App 就能接續今日任務。</p>
-        </article>
-      </div>
-
-      <div class="spline-layer" id="splineLayer">
-        <canvas id="canvas3d" aria-label="Tappie 3D card"></canvas>
-      </div>
-
-      <div class="front-layer">
-        <article class="front-title" id="copy3">
-          <span class="eyebrow">One Flow</span>
-          <h2>現場流程<br>更少步驟。</h2>
-          <p>打卡、加點、練習，同一套流程。</p>
-        </article>
-
-        <div class="flow-cards" id="flowCards">
-          <div class="flow-card">
-            <div class="flow-icon">✓</div>
-            <div><h3>打卡</h3><p>老師感應名牌，完成到校 / 離校紀錄。</p></div>
-          </div>
-          <div class="flow-card">
-            <div class="flow-icon">＋</div>
-            <div><h3>加點</h3><p>課堂表現與獎勵，即時進入學生點數紀錄。</p></div>
-          </div>
-          <div class="flow-card">
-            <div class="flow-icon">▶</div>
-            <div><h3>練習</h3><p>回家點開 App，接續口說任務。</p></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grain"></div>
-      <div class="vignette"></div>
-    </div>
-  </section>
-
-  <section class="post">End prototype</section>
-  <div class="progress"><span>Scroll</span><div class="bar"><span id="progressBar"></span></div></div>
-  <div class="status" id="status">載入 Spline Runtime v8...</div>
-  <div class="motion-debug" id="motionDebug"><strong>Motion Review</strong><span id="motionDebugText">0.0% · HERO</span></div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script type="module">
-    import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js';
-
-    gsap.registerPlugin(ScrollTrigger);
-    gsap.ticker.lagSmoothing(500, 33);
-    ScrollTrigger.config({ ignoreMobileResize: true });
-
-    const sceneUrl = 'https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode';
-    const canvas = document.getElementById('canvas3d');
-    const statusEl = document.getElementById('status');
-    const progressBar = document.getElementById('progressBar');
-    const copy1 = document.getElementById('copy1');
-    const copy2 = document.getElementById('copy2');
-    const copy3 = document.getElementById('copy3');
-    const flowCards = document.getElementById('flowCards');
-    const lightField = document.getElementById('lightField');
-    const orbOne = document.getElementById('orbOne');
-    const orbTwo = document.getElementById('orbTwo');
-    const gridField = document.getElementById('gridField');
-    const motionDebug = document.getElementById('motionDebug');
-    const motionDebugText = document.getElementById('motionDebugText');
-
-    const app = new Application(canvas);
-    const clamp01 = gsap.utils.clamp(0, 1);
-    const isMobile = window.matchMedia('(max-width: 680px)').matches;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const debugByQuery = new URLSearchParams(location.search).get('motionDebug') === '1';
-
-    let target = null;
-    let base = null;
-    let targetProgress = 0;
-    let cardProgress = 0;
-    let atmosphereProgress = 0;
-    let lastCardProgress = -1;
-    let lastAtmosphereProgress = -1;
-    let debugVisible = debugByQuery;
-
-    // v8 motion direction
-    // 1. 卡片快速跟手；背景與文字保留較慢的景深延遲。
-    // 2. 不再對每一段反覆 ease-in/ease-out，只在 Hero、背面、Lockup 三個姿態微停。
-    // 3. 直式名牌避免完全 90 度側面長時間停住，側邊只作短促高光過場。
-    const desktopFrames = [
-      {p:0.00,x:-132,y:126,z:16,rx:-0.07,ry:-0.13,rz:-0.18,s:1.70,curve:'out'},
-      {p:0.08,x:-78, y:70, z:31,rx:-0.02,ry: 0.06,rz:-0.12,s:1.91,curve:'out',pose:'HERO 正面展示'},
-      {p:0.13,x:-74, y:68, z:32,rx:-0.015,ry:0.10,rz:-0.105,s:1.92,curve:'linear',pose:'HERO 微停'},
-      {p:0.27,x:-24, y:31, z:52,rx: 0.04,ry: 1.12,rz:-0.04,s:2.06,curve:'linear'},
-      {p:0.34,x: 4,  y:20, z:59,rx: 0.06,ry: 1.56,rz: 0.02,s:2.02,curve:'linear',pose:'EDGE 側邊高光'},
-      {p:0.46,x: 52, y:13, z:48,rx:-0.025,ry:3.01,rz:-0.07,s:1.90,curve:'out',pose:'BACK 背面展示'},
-      {p:0.52,x: 50, y:15, z:47,rx:-0.018,ry:3.09,rz:-0.06,s:1.90,curve:'linear',pose:'BACK 微停'},
-      {p:0.64,x: 18, y:30, z:56,rx: 0.04,ry: 3.94,rz: 0.055,s:1.80,curve:'linear'},
-      {p:0.74,x:-14, y:43, z:40,rx: 0.045,ry:4.82,rz:0.05,s:1.65,curve:'linear',pose:'CROSS 穿字轉場'},
-      {p:0.84,x: 0,  y:61, z:14,rx: 0.018,ry:6.00,rz:-0.025,s:1.48,curve:'out',pose:'LOCKUP 回正'},
-      {p:0.89,x: 0,  y:64, z:11,rx: 0.012,ry:6.12,rz:-0.015,s:1.47,curve:'linear',pose:'LOCKUP 微停'},
-      {p:1.00,x: 0,  y:78, z: 0,rx: 0.00,ry:6.283,rz:0.00,s:1.36,curve:'out',pose:'FINAL 完成'}
-    ];
-
-    const mobileFrames = [
-      {p:0.00,x:-44,y:102,z:4,rx:-0.05,ry:-0.12,rz:-0.14,s:1.48,curve:'out'},
-      {p:0.08,x:-18,y:58,z:9,rx:-0.02,ry:0.06,rz:-0.10,s:1.60,curve:'out',pose:'HERO 正面展示'},
-      {p:0.13,x:-16,y:56,z:10,rx:-0.015,ry:0.10,rz:-0.085,s:1.61,curve:'linear',pose:'HERO 微停'},
-      {p:0.27,x:-2, y:24,z:16,rx:0.03,ry:1.16,rz:-0.03,s:1.68,curve:'linear'},
-      {p:0.34,x:8,  y:16,z:18,rx:0.04,ry:1.58,rz:0.01,s:1.65,curve:'linear',pose:'EDGE 側邊高光'},
-      {p:0.46,x:24, y:10,z:13,rx:-0.01,ry:3.02,rz:-0.055,s:1.50,curve:'out',pose:'BACK 背面展示'},
-      {p:0.52,x:22, y:12,z:13,rx:-0.005,ry:3.09,rz:-0.045,s:1.50,curve:'linear',pose:'BACK 微停'},
-      {p:0.64,x:10, y:28,z:17,rx:0.03,ry:3.95,rz:0.04,s:1.44,curve:'linear'},
-      {p:0.74,x:-10,y:42,z:14,rx:0.03,ry:4.82,rz:0.045,s:1.38,curve:'linear',pose:'CROSS 穿字轉場'},
-      {p:0.84,x:0,  y:65,z:7,rx:0.015,ry:6.02,rz:-0.02,s:1.30,curve:'out',pose:'LOCKUP 回正'},
-      {p:0.89,x:0,  y:68,z:5,rx:0.012,ry:6.12,rz:-0.012,s:1.29,curve:'linear',pose:'LOCKUP 微停'},
-      {p:1.00,x:0,  y:82,z:0,rx:0.00,ry:6.283,rz:0.00,s:1.22,curve:'out',pose:'FINAL 完成'}
-    ];
-
-    const frames = isMobile ? mobileFrames : desktopFrames;
-    const lerp = (a,b,t) => a + (b-a) * t;
-    const easeOutCubic = t => 1 - Math.pow(1-t,3);
-    const easeInOutSine = t => 0.5 - 0.5*Math.cos(Math.PI*t);
-
-    function curveValue(type,t){
-      if(type === 'out') return easeOutCubic(t);
-      if(type === 'soft') return easeInOutSine(t);
-      return t;
-    }
-
-    function sampleFrames(progress){
-      const p = clamp01(progress);
-      let a = frames[0];
-      let b = frames[frames.length - 1];
-      for(let i=0;i<frames.length-1;i++){
-        if(p >= frames[i].p && p <= frames[i+1].p){
-          a = frames[i];
-          b = frames[i+1];
-          break;
+body > section:not(.tappie-scroll-hero):not(.tappie-day-loop) > * {
+        max-width: 100%;
+    }}
+.tappie-day-screen:not(.mock):not(.custom-notice):not(.custom-console) {
+    background:
+        radial-gradient(circle at 70% 16%, rgba(255,255,255,.78), transparent 32%),
+        radial-gradient(circle at 24% 84%, rgba(0,123,255,.08), transparent 38%),
+        linear-gradient(135deg, #f8fafc 0%, #eef4fa 100%);
+}
+.tappie-day-screen[data-screen-ready="false"] > img {
+    background:
+        radial-gradient(circle at 70% 16%, rgba(255,255,255,.80), transparent 34%),
+        linear-gradient(135deg, #f8fafc 0%, #eef4fa 100%);
+}
+.tappie-day-loop {
+            position: relative;
+            height: 650vh;
+            margin-top: -1px;
+            overflow-x: clip;
+            overflow-y: visible;
+            isolation: isolate;
+            color: #f5f7ff;
+            background: #020306;
+            --day-ink: #f5f7ff;
+            --day-ink-soft: rgba(232, 236, 244, .74);
+            --day-accent: rgba(255,255,255,.74);
+            --day-track: rgba(255,255,255,.16);
+            --day-phone-glow-a: rgba(255, 199, 115, .14);
+            --day-phone-glow-b: rgba(90, 132, 255, .10);
+            --sun-left: -6%;
+            --sun-top: 76%;
+            --sun-scale: .9;
+            --sun-opacity: .24;
+            --moon-left: 106%;
+            --moon-top: 18%;
+            --moon-scale: .82;
+            --moon-opacity: 0;
+            --warm-opacity: .18;
+            --cool-opacity: 0;
+            --arc-opacity: .14;
         }
-      }
-      const rawT = a.p === b.p ? 0 : (p-a.p)/(b.p-a.p);
-      const t = curveValue(b.curve || 'linear', rawT);
-      return {
-        x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),z:lerp(a.z,b.z,t),
-        rx:lerp(a.rx,b.rx,t),ry:lerp(a.ry,b.ry,t),rz:lerp(a.rz,b.rz,t),
-        s:lerp(a.s,b.s,t)
-      };
+.tappie-day-loop::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg, rgba(245,245,247,.10) 0%, rgba(245,245,247,0) 16%),
+                linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.22) 100%);
+        }
+.tappie-day-loop::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: .46;
+            background:
+                radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0) 54%, rgba(0,0,0,.32) 100%),
+                repeating-radial-gradient(circle at 17% 21%, rgba(255,255,255,.018) 0 1px, rgba(255,255,255,0) 1px 4px);
+        }
+.tappie-day-loop[data-day-phase="0"] {
+            --day-accent: rgba(255,255,255,.72);
+            --day-phone-glow-a: rgba(255, 189, 110, .11);
+            --day-phone-glow-b: rgba(93, 128, 255, .08);
+        }
+.tappie-day-loop[data-day-phase="1"] {
+            --day-accent: #93c5fd;
+            --day-phone-glow-a: rgba(255, 204, 122, .13);
+            --day-phone-glow-b: rgba(93, 173, 255, .10);
+        }
+.tappie-day-loop[data-day-phase="2"] {
+            --day-accent: #f2d28b;
+            --day-phone-glow-a: rgba(255, 207, 118, .15);
+            --day-phone-glow-b: rgba(119, 153, 255, .09);
+        }
+.tappie-day-loop[data-day-phase="3"] {
+            --day-accent: #ffc983;
+            --day-phone-glow-a: rgba(255, 171, 83, .18);
+            --day-phone-glow-b: rgba(250, 210, 120, .06);
+        }
+.tappie-day-loop[data-day-phase="4"] {
+            --day-accent: #ffbe95;
+            --day-phone-glow-a: rgba(255, 168, 122, .16);
+            --day-phone-glow-b: rgba(162, 102, 255, .08);
+        }
+.tappie-day-loop[data-day-phase="5"] {
+            --day-accent: #c7d9ff;
+            --day-phone-glow-a: rgba(162, 182, 255, .10);
+            --day-phone-glow-b: rgba(101, 145, 255, .10);
+        }
+.tappie-day-loop[data-day-phase="6"] {
+            --day-accent: #e2ebff;
+            --day-phone-glow-a: rgba(204, 217, 255, .11);
+            --day-phone-glow-b: rgba(83, 123, 255, .10);
+        }
+.tappie-day-loop__sticky {
+            position: sticky;
+            top: 75px;
+            height: calc(100svh - 75px);
+            min-height: 670px;
+            width: min(1240px, calc(100vw - 52px));
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+            gap: clamp(28px, 6vw, 78px);
+            padding: clamp(32px, 5vw, 64px) 0;
+            z-index: 1;
+            overflow: visible;
+        }
+.tappie-day-loop__backdrop {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 100vw;
+            transform: translateX(-50%);
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% -18%, rgba(74, 112, 188, .08) 0%, rgba(74, 112, 188, 0) 30%),
+                linear-gradient(180deg, #020306 0%, #05070b 48%, #020306 100%);
+        }
+.tappie-day-loop__backdrop::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at var(--sun-left) var(--sun-top), rgba(255, 205, 125, .16) 0%, rgba(255, 205, 125, .07) 12%, rgba(255, 205, 125, 0) 31%),
+                radial-gradient(circle at var(--moon-left) var(--moon-top), rgba(201, 220, 255, .12) 0%, rgba(201, 220, 255, .055) 10%, rgba(201, 220, 255, 0) 28%);
+            opacity: .78;
+            filter: blur(4px);
+        }
+.tappie-day-loop__warm-aura,
+        .tappie-day-loop__cool-aura,
+        .tappie-day-loop__arc,
+        .tappie-day-loop__sun,
+        .tappie-day-loop__moon,
+        .tappie-day-loop__sheen {
+            position: absolute;
+            pointer-events: none;
+        }
+.tappie-day-loop__warm-aura {
+            inset: -8% -12%;
+            background: radial-gradient(circle at var(--sun-left) var(--sun-top), rgba(255, 178, 76, .18) 0%, rgba(255, 178, 76, .075) 13%, rgba(255, 178, 76, 0) 32%);
+            opacity: var(--warm-opacity);
+            filter: blur(10px);
+        }
+.tappie-day-loop__cool-aura {
+            inset: -8% -12%;
+            background: radial-gradient(circle at var(--moon-left) var(--moon-top), rgba(189, 214, 255, .18) 0%, rgba(189, 214, 255, .075) 12%, rgba(189, 214, 255, 0) 30%);
+            opacity: var(--cool-opacity);
+            filter: blur(10px);
+        }
+.tappie-day-loop__arc {
+            width: 112%;
+            height: 76%;
+            left: -6%;
+            top: 8%;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,.055);
+            mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.85) 16%, rgba(0,0,0,.85) 84%, transparent 100%);
+            opacity: var(--arc-opacity);
+            transform: rotate(-7deg);
+        }
+.tappie-day-loop__sun {
+            left: var(--sun-left);
+            top: var(--sun-top);
+            width: clamp(48px, 8vw, 92px);
+            height: clamp(48px, 8vw, 92px);
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 36% 34%, rgba(255,250,235,.94) 0%, rgba(255,236,190,.88) 18%, rgba(255,212,120,.78) 44%, rgba(255,170,74,.58) 67%, rgba(255,170,74,0) 74%),
+                radial-gradient(circle at 54% 56%, rgba(255, 185, 82, .54), rgba(255, 185, 82, 0) 72%);
+            transform: translate(-50%, -50%) scale(var(--sun-scale));
+            opacity: var(--sun-opacity);
+            box-shadow: 0 0 34px rgba(255,195,100,.24), 0 0 100px rgba(255,168,72,.10);
+            transition: transform .55s cubic-bezier(.22,.8,.2,1), opacity .55s ease;
+        }
+.tappie-day-loop__moon {
+            left: var(--moon-left);
+            top: var(--moon-top);
+            width: clamp(52px, 8vw, 88px);
+            height: clamp(52px, 8vw, 88px);
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 32% 30%, rgba(255,255,255,.94) 0%, rgba(233,240,255,.88) 28%, rgba(195,212,244,.72) 56%, rgba(195,212,244,0) 70%),
+                radial-gradient(circle at 58% 58%, rgba(207,223,255,.34), rgba(207,223,255,0) 68%);
+            transform: translate(-50%, -50%) scale(var(--moon-scale));
+            opacity: var(--moon-opacity);
+            box-shadow: 0 0 30px rgba(198,216,255,.16), 0 0 90px rgba(107,148,255,.08);
+            transition: transform .55s cubic-bezier(.22,.8,.2,1), opacity .55s ease;
+        }
+.tappie-day-loop__sheen {
+            inset: 0;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.045) 0%, rgba(255,255,255,0) 28%),
+                radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.035), rgba(255,255,255,0) 28%),
+                radial-gradient(ellipse at 84% 84%, rgba(91, 122, 255, .05), rgba(91, 122, 255, 0) 30%);
+            opacity: .52;
+        }
+.tappie-day-loop__copy {
+            position: relative;
+            z-index: 3;
+            min-width: 0;
+            align-self: center;
+        }
+.tappie-day-loop__copy h2 {
+            margin: 0;
+            font-size: clamp(2.55rem, 6vw, 6.45rem);
+            line-height: 0.96;
+            letter-spacing: -0.075em;
+            font-weight: 950;
+            color: var(--day-ink);
+            text-wrap: balance;
+            text-shadow: 0 2px 0 rgba(255,255,255,.02), 0 24px 70px rgba(0,0,0,.36);
+            transition: color .42s ease;
+        }
+.tappie-day-loop__kicker {
+            color: var(--day-accent);
+            transition: color .42s ease;
+        }
+.tappie-day-loop__caption {
+            position: relative;
+            min-height: 138px;
+            margin-top: clamp(26px, 4vw, 46px);
+        }
+.tappie-day-loop__step {
+            position: absolute;
+            inset: 0 auto auto 0;
+            max-width: 470px;
+            opacity: 0;
+            transform: translateY(22px);
+            transition: opacity 0.42s ease, transform 0.42s ease;
+            pointer-events: none;
+        }
+.tappie-day-loop__step.is-active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+.tappie-day-loop__step-number {
+            display: block;
+            color: var(--day-accent);
+            font-size: 12px;
+            font-weight: 950;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            margin-bottom: 13px;
+            transition: color .42s ease;
+        }
+.tappie-day-loop__step-title {
+            display: block;
+            color: var(--day-ink);
+            font-size: clamp(1.72rem, 3vw, 2.65rem);
+            line-height: 1.06;
+            letter-spacing: -0.06em;
+            font-weight: 950;
+            text-shadow: 0 12px 34px rgba(0,0,0,.22);
+            transition: color .42s ease;
+        }
+.tappie-day-loop__step-desc {
+            display: block;
+            margin-top: 12px;
+            color: var(--day-ink-soft);
+            font-size: 1rem;
+            line-height: 1.56;
+            font-weight: 760;
+            transition: color .42s ease;
+        }
+.tappie-day-loop__progress {
+            width: min(430px, 100%);
+            height: 3px;
+            border-radius: 999px;
+            background: var(--day-track);
+            overflow: hidden;
+            margin-top: clamp(18px, 3vw, 30px);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+            transition: background .42s ease;
+        }
+.tappie-day-loop__progress-bar {
+            height: 100%;
+            width: 14.285%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--day-accent), rgba(255,255,255,.96));
+            transition: width 0.34s ease, background .42s ease;
+        }
+.tappie-day-loop__stage {
+            position: relative;
+            display: grid;
+            place-items: center;
+            perspective: 1200px;
+            z-index: 2;
+        }
+.tappie-day-loop__glow {
+            position: absolute;
+            inset: 0% -10% -6%;
+            border-radius: 96px;
+            background:
+                radial-gradient(circle at 40% 28%, var(--day-phone-glow-a), transparent 38%),
+                radial-gradient(circle at 72% 72%, var(--day-phone-glow-b), transparent 40%),
+                radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.04), transparent 56%);
+            filter: blur(48px);
+            opacity: .86;
+            pointer-events: none;
+            transition: opacity .42s ease, background .42s ease;
+        }
+.tappie-day-phone {
+            position: relative;
+            border-radius: 48px;
+            background: #08101f;
+            border: 10px solid #0b1425;
+            box-shadow:
+                0 52px 118px rgba(0, 0, 0, .44),
+                0 12px 34px rgba(0, 0, 0, .28),
+                inset 0 0 0 1px rgba(255,255,255,0.16);
+        }
+.tappie-day-phone::before {
+            content: "";
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            width: 92px;
+            height: 22px;
+            border-radius: 999px;
+            background: #020617;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+.tappie-day-screen {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transform: scale(1.025);
+            transition: opacity 0.46s ease, transform 0.46s ease;
+            background: #f8fafc;
+        }
+.tappie-day-screen.is-active {
+            opacity: 1;
+            transform: scale(1);
+        }
+.tappie-day-screen img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+.tappie-day-screen.mock {
+            padding: 56px 26px 32px;
+            color: #101828;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-sizing: border-box;
+            background:
+                radial-gradient(circle at 76% 16%, rgba(0,123,255,0.14), transparent 34%),
+                linear-gradient(180deg, #ffffff 0%, #f2f6fb 100%);
+        }
+.tappie-day-screen.custom-notice,
+        .tappie-day-screen.custom-console {
+            padding: 0;
+            background: #07070a;
+        }
+@media  (max-width: 860px) {.tappie-day-loop {
+                height: calc(720vh + 120px);
+                padding-bottom: 112px;
+                box-sizing: content-box;
+            }
+.tappie-day-loop__sticky {
+                top: 75px;
+                height: calc(100svh - 75px);
+                width: calc(100vw - 32px);
+                grid-template-columns: 1fr;
+                padding: 28px 0 108px;
+                overflow: visible;
+            }
+.tappie-day-loop__backdrop {
+                width: 100vw;
+                left: 50%;
+                right: auto;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-50%);
+            }
+.tappie-day-loop__arc {
+                width: 138%;
+                height: 58%;
+                left: -18%;
+                top: 20%;
+                opacity: calc(var(--arc-opacity) * .72);
+            }
+.tappie-day-loop__copy h2 {
+                font-size: clamp(2.25rem, 10.5vw, 4.35rem);
+            }
+.tappie-day-loop__step-title {
+                font-size: clamp(1.35rem, 6.8vw, 2.05rem);
+            }
+.tappie-day-loop__step-desc {
+                max-width: 31ch;
+                font-size: 0.94rem;
+            }
+.tappie-day-phone {
+                border-width: 8px;
+                border-radius: 40px;
+            }}
+.notice-scene {position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; }
+.notice-scene__bg {position: absolute;
+            inset: -4%;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center top;
+            transform: scale(1.04);
+            pointer-events: none; }
+.notice-scene__bg {
+            filter: blur(22px) brightness(.68) saturate(.95);
+        }
+.notice-scene__shade {position: absolute;
+            inset: 0;
+            pointer-events: none; }
+.notice-scene__shade {
+            background:
+                linear-gradient(180deg, rgba(8,9,13,.56) 0%, rgba(8,9,13,.10) 22%, rgba(8,9,13,.22) 48%, rgba(8,9,13,.66) 100%),
+                radial-gradient(circle at 70% 14%, rgba(232,72,153,.20), transparent 24%);
+        }
+.notice-scene__hud {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            right: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 3;
+            color: rgba(255,255,255,.96);
+        }
+.notice-scene__user {
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+        }
+.notice-scene__actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+.notice-scene__pill,
+        .notice-scene__close {
+            height: 40px;
+            border-radius: 999px;
+            background: rgba(27,18,24,.92);
+            box-shadow: 0 14px 34px rgba(0,0,0,.26), inset 0 0 0 1px rgba(255,255,255,.06);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+.notice-scene__pill {
+            padding: 0 18px;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 860;
+        }
+.notice-scene__chev {
+            width: 12px;
+            height: 12px;
+            border-right: 2px solid rgba(255,255,255,.86);
+            border-bottom: 2px solid rgba(255,255,255,.86);
+            transform: rotate(45deg) translateY(-2px);
+            border-radius: 1px;
+        }
+.notice-scene__close {
+            width: 40px;
+            font-size: 24px;
+            line-height: 1;
+            font-weight: 500;
+        }
+.notice-stack {
+            position: absolute;
+            left: 18px;
+            right: 18px;
+            top: 80px;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+.ios-note {
+            position: relative;
+            min-height: 88px;
+            padding: 14px 18px 14px 74px;
+            border-radius: 26px;
+            background: linear-gradient(180deg, rgba(36,29,35,.94) 0%, rgba(24,20,24,.98) 100%);
+            box-shadow: 0 22px 56px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.05);
+            color: #fff;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            opacity: 0;
+            transform: translateY(28px) scale(.975);
+        }
+.tappie-day-screen.is-active .ios-note:nth-child(1) { animation: noteIn .72s cubic-bezier(.2,.82,.2,1) .08s forwards; }
+.tappie-day-screen.is-active .ios-note:nth-child(2) { animation: noteIn .72s cubic-bezier(.2,.82,.2,1) .24s forwards; }
+.tappie-day-screen.is-active .ios-note:nth-child(3) { animation: noteIn .72s cubic-bezier(.2,.82,.2,1) .40s forwards; }
+.ios-note__icon {
+            position: absolute;
+            left: 18px;
+            top: 16px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255,255,255,.12);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+            display: grid;
+            place-items: center;
+        }
+.ios-note__icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+.ios-note__meta {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 3px;
+        }
+.ios-note__title {
+            font-size: 14px;
+            line-height: 1.28;
+            font-weight: 880;
+            color: #fff;
+        }
+.ios-note__time {
+            color: rgba(255,255,255,.56);
+            font-size: 13px;
+            font-weight: 750;
+            white-space: nowrap;
+        }
+.ios-note__source {
+            display: block;
+            color: rgba(255,255,255,.76);
+            font-size: 12px;
+            font-weight: 820;
+            margin-bottom: 4px;
+        }
+.ios-note__body {
+            color: rgba(255,255,255,.94);
+            font-size: 13px;
+            line-height: 1.34;
+            font-weight: 680;
+            letter-spacing: -.01em;
+        }
+.notice-scene__footer {
+            position: absolute;
+            left: 22px;
+            bottom: 24px;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.10);
+            color: rgba(255,255,255,.88);
+            font-size: 12px;
+            font-weight: 780;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+        }
+@keyframes focusFade {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+@media  (max-width: 860px) {.notice-scene__pill,
+            .notice-scene__close {
+                height: 36px;
+            }
+.notice-stack {
+                top: 76px;
+            }
+.ios-note {
+                min-height: 84px;
+                padding: 12px 14px 12px 66px;
+                border-radius: 22px;
+            }
+.ios-note__icon {
+                width: 40px;
+                height: 40px;
+                left: 14px;
+                top: 14px;
+            }
+.ios-note__title {
+                font-size: 13px;
+            }
+.ios-note__time, .ios-note__source, .ios-note__body {font-size: 12px; }
+.notice-scene__footer {font-size: 10px; }}
+.tappie-day-nav {
+            position: absolute;
+            left: 50%;
+            bottom: clamp(18px, 4vh, 36px);
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.72);
+            border: 1px solid rgba(16,24,40,0.08);
+            box-shadow: 0 20px 55px rgba(16,24,40,0.08);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            z-index: 15;
+        }
+.tappie-day-dot {
+            width: 8px;
+            height: 8px;
+            border: 0;
+            padding: 0;
+            border-radius: 999px;
+            background: rgba(16,24,40,0.24);
+            transition: width 0.28s ease, background 0.28s ease;
+        }
+.tappie-day-dot.is-active {
+            width: 30px;
+            background: #101828;
+        }
+@media  (max-width: 860px) {.tappie-day-loop {
+                height: calc(720vh + 120px);
+                padding-bottom: 112px;
+                box-sizing: content-box;
+            }
+.tappie-day-loop__sticky {
+                top: 75px;
+                height: calc(100svh - 75px);
+                
+                width: calc(100vw - 32px);
+                grid-template-columns: 1fr;
+                
+                
+                padding: 28px 0 108px;
+            }
+.tappie-day-loop__copy h2 {
+                font-size: clamp(2.25rem, 10.5vw, 4.35rem);
+            }
+.tappie-day-loop__step-title {
+                font-size: clamp(1.35rem, 6.8vw, 2.05rem);
+            }
+.tappie-day-loop__step-desc {
+                max-width: 31ch;
+                font-size: 0.94rem;
+            }
+.tappie-day-phone {
+                
+                border-width: 8px;
+                border-radius: 40px;
+            }}
+@media  (max-width: 860px) {.tappie-day-nav {
+                top: 0;
+                bottom: auto;
+                transform: translateX(-50%);
+                padding: 7px 9px;
+                gap: 7px;
+                background: rgba(255,255,255,0.66);
+                box-shadow: 0 14px 36px rgba(16,24,40,0.08);
+            }
+.tappie-day-dot {
+                width: 7px;
+                height: 7px;
+                background: rgba(16,24,40,0.18);
+            }
+.tappie-day-dot.is-active {
+                width: 24px;
+                background: var(--primary-blue);
+            }}
+.tappie-day-phone .tappie-day-nav {
+            position: absolute;
+            left: 50%;
+            right: auto;
+            top: auto;
+            bottom: 14px;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.72);
+            border: 1px solid rgba(15,23,42,0.08);
+            box-shadow: 0 12px 34px rgba(15,23,42,0.14);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 25;
+        }
+.tappie-day-phone .tappie-day-dot {
+            width: 7px;
+            height: 7px;
+            border: 0;
+            padding: 0;
+            border-radius: 999px;
+            background: rgba(15,23,42,0.20);
+            transition: width 0.25s ease, background 0.25s ease;
+        }
+.tappie-day-phone .tappie-day-dot.is-active {
+            width: 24px;
+            background: var(--primary-blue);
+        }
+@media  (max-width: 860px) {.tappie-day-phone .tappie-day-nav {
+                top: auto;
+                bottom: 12px;
+                padding: 6px 9px;
+                gap: 6px;
+                background: rgba(255,255,255,0.76);
+            }
+.tappie-day-phone .tappie-day-dot {
+                width: 6px;
+                height: 6px;
+            }
+.tappie-day-phone .tappie-day-dot.is-active {
+                width: 22px;
+            }}
+@media  (max-width: 860px) {.tappie-day-loop__progress {
+                display: none;
+            }}
+.tappie-day-loop {
+    position: relative;
+    height: 650vh;
+    overflow: visible !important;
+}
+.tappie-day-loop__sticky {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 75px;
+}
+@media  (max-width: 860px) {.tappie-day-loop {
+        height: calc(720vh + 56px);
+        padding-bottom: 52px;
+        box-sizing: content-box;
+        overflow: visible !important;
     }
+.tappie-day-loop__sticky {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 75px;
+    }}
+.notice-scene--pure .notice-scene__bg {
+            background:
+                radial-gradient(circle at 64% 18%, rgba(255, 89, 155, .34), transparent 32%),
+                radial-gradient(circle at 16% 34%, rgba(90, 140, 255, .18), transparent 30%),
+                linear-gradient(135deg, #2d323b 0%, #12141a 48%, #24171e 100%);
+            filter: none;
+            transform: none;
+        }
+.notice-scene--pure::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(100deg, rgba(255,255,255,.10), transparent 22%),
+                radial-gradient(ellipse at 54% 82%, rgba(255,255,255,.14), transparent 34%);
+            opacity: .72;
+            pointer-events: none;
+            z-index: 1;
+        }
+.custom-notice .notice-stack {
+            top: 74px;
+            gap: 10px;
+        }
+.custom-notice .ios-note {
+            min-height: 76px;
+            padding: 11px 14px 11px 62px;
+            border-radius: 22px;
+        }
+.custom-notice .ios-note__icon {
+            width: 38px;
+            height: 38px;
+            left: 14px;
+            top: 13px;
+        }
+.custom-notice .ios-note__title {
+            font-size: 12.5px;
+            line-height: 1.28;
+        }
+.custom-notice .ios-note__source {
+            font-size: 11px;
+        }
+.custom-notice .ios-note__body {
+            font-size: 11.2px;
+            line-height: 1.32;
+        }
+.custom-notice .ios-note__time {
+            font-size: 11px;
+        }
+.custom-notice .notice-scene__hud {
+            top: 14px;
+            left: 15px;
+            right: 15px;
+        }
+.custom-notice .notice-scene__user {
+            font-size: 14px;
+            white-space: nowrap;
+        }
+.custom-notice .notice-scene__pill,
+        .custom-notice .notice-scene__close {
+            height: 34px;
+            transform: scale(.9);
+            transform-origin: right center;
+        }
+.custom-notice .notice-scene__pill {
+            padding: 0 14px;
+            font-size: 11px;
+        }
+.custom-notice .notice-scene__close {
+            width: 34px;
+            font-size: 20px;
+        }
+.console-live-ui {
+            position: absolute;
+            inset: 0;
+            padding: 18px 16px 18px;
+            background:
+                radial-gradient(circle at 80% 0%, rgba(0, 132, 255, .10), transparent 30%),
+                linear-gradient(180deg, #f9fbff 0%, #eef2f7 100%);
+            color: #101828;
+            overflow: hidden;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+.console-live-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(8px);
+        }
+.tappie-day-screen.is-active .console-live-top {
+            animation: focusFade .5s ease .05s forwards;
+        }
+.console-live-top strong {
+            display: block;
+            font-size: 17px;
+            line-height: 1.1;
+            font-weight: 950;
+            letter-spacing: -0.05em;
+        }
+.console-live-top span {
+            display: block;
+            margin-top: 4px;
+            color: #697386;
+            font-size: 10px;
+            font-weight: 720;
+        }
+.console-live-top em {
+            flex: 0 0 auto;
+            padding: 6px 8px;
+            border-radius: 999px;
+            background: rgba(43, 111, 255, .10);
+            color: #1d6cf2;
+            font-style: normal;
+            font-size: 10px;
+            font-weight: 900;
+        }
+.console-segment {
+            height: 44px;
+            border-radius: 999px;
+            padding: 4px;
+            background: #e8ecf3;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            box-shadow: inset 0 0 0 1px rgba(15,23,42,.06);
+            opacity: 0;
+            transform: translateY(8px);
+        }
+.tappie-day-screen.is-active .console-segment {
+            animation: focusFade .5s ease .16s forwards;
+        }
+.console-segment b,
+        .console-segment span {
+            display: grid;
+            place-items: center;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 950;
+            color: #697386;
+        }
+.console-segment b {
+            background: #fff;
+            color: #101828;
+            box-shadow: 0 6px 18px rgba(15,23,42,.08);
+        }
+.console-chart-card {
+            border-radius: 22px;
+            background: rgba(255,255,255,.94);
+            padding: 14px;
+            box-shadow: inset 0 0 0 1px rgba(15,23,42,.06), 0 14px 34px rgba(15,23,42,.08);
+            opacity: 0;
+            transform: translateY(10px);
+        }
+.tappie-day-screen.is-active .console-chart-card {
+            animation: focusFade .55s ease .26s forwards;
+        }
+.console-card-title {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+.console-card-title strong {
+            display: block;
+            font-size: 15px;
+            font-weight: 950;
+            letter-spacing: -0.045em;
+        }
+.console-card-title span {
+            display: block;
+            margin-top: 4px;
+            color: #697386;
+            font-size: 10.5px;
+            line-height: 1.32;
+            font-weight: 720;
+        }
+.console-card-title em {
+            flex: 0 0 auto;
+            padding: 6px 8px;
+            border-radius: 999px;
+            background: #e7f8ec;
+            color: #25a558;
+            font-size: 10px;
+            line-height: 1;
+            font-weight: 950;
+            font-style: normal;
+            box-shadow: 0 10px 22px rgba(37,165,88,.12);
+        }
+.console-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+.console-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 7px;
+            border-radius: 999px;
+            background: #f3f5f9;
+            color: #697386;
+            font-size: 9.5px;
+            font-weight: 820;
+        }
+.console-legend i {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+.console-legend .blue { background: #2f6df6; }
+.console-legend .green { background: #35c76b; }
+.console-legend .orange { background: #f5a623; }
+.console-chart {
+            width: 100%;
+            height: 138px;
+            overflow: visible;
+        }
+.console-chart line {
+            stroke: rgba(105,115,134,.18);
+            stroke-width: 1;
+        }
+.console-chart .area-blue {
+            fill: rgba(47,109,246,.14);
+        }
+.console-chart path[class^="line-"] {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 420;
+            stroke-dashoffset: 420;
+        }
+.console-chart .line-blue { stroke: #2f6df6; }
+.console-chart .line-green { stroke: #35c76b; stroke-width: 3; }
+.console-chart .line-orange { stroke: #f5a623; stroke-width: 3; }
+.console-chart .peak-dot { fill: #2f6df6; stroke: #fff; stroke-width: 3; opacity: 0; }
+.tappie-day-screen.is-active .console-chart path[class^="line-"] {
+            animation: drawChart 1.25s ease .48s forwards;
+        }
+.tappie-day-screen.is-active .console-chart .peak-dot {
+            animation: dotPop .38s ease 1.5s forwards;
+        }
+.console-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+.tappie-day-screen.is-active .console-stat-grid {
+            animation: focusFade .55s ease .52s forwards;
+        }
+.console-stat-grid div {
+            min-height: 56px;
+            border-radius: 16px;
+            background: #fff;
+            padding: 10px 12px;
+            box-shadow: inset 0 0 0 1px rgba(15,23,42,.06);
+        }
+.console-stat-grid small {
+            color: #697386;
+            font-size: 10px;
+            font-weight: 820;
+        }
+.console-stat-grid b {
+            display: block;
+            margin-top: 4px;
+            color: #101828;
+            font-size: 20px;
+            font-weight: 950;
+            letter-spacing: -0.055em;
+        }
+.console-bottom-nav {
+            margin-top: auto;
+            height: 48px;
+            border-radius: 24px;
+            background: #101828;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            padding: 5px;
+            box-shadow: 0 16px 34px rgba(15,23,42,.22);
+            opacity: 0;
+            transform: translateY(10px);
+        }
+.tappie-day-screen.is-active .console-bottom-nav {
+            animation: focusFade .55s ease .66s forwards;
+        }
+.console-bottom-nav span {
+            display: grid;
+            place-items: center;
+            border-radius: 20px;
+            color: rgba(255,255,255,.62);
+            font-size: 9.5px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+.console-bottom-nav .active {
+            background: rgba(255,255,255,.12);
+            color: #fff;
+        }
+@media  (max-width: 860px) {.custom-notice .notice-stack {
+                top: 64px;
+                left: 14px;
+                right: 14px;
+                gap: 8px;
+            }
+.custom-notice .ios-note {
+                min-height: 66px;
+                padding: 9px 11px 9px 54px;
+                border-radius: 19px;
+            }
+.custom-notice .ios-note:nth-child(3) {
+                display: none;
+            }
+.custom-notice .ios-note__icon {
+                width: 32px;
+                height: 32px;
+                left: 12px;
+                top: 12px;
+                border-radius: 10px;
+            }
+.custom-notice .ios-note__title {
+                font-size: 10.8px;
+            }
+.custom-notice .ios-note__source,
+            .custom-notice .ios-note__time {
+                font-size: 9.8px;
+            }
+.custom-notice .ios-note__body {
+                font-size: 10px;
+                line-height: 1.3;
+            }
+.custom-notice .notice-scene__hud {
+                top: 12px;
+                left: 14px;
+                right: 12px;
+            }
+.custom-notice .notice-scene__user {
+                font-size: 12px;
+            }
+.custom-notice .notice-scene__actions {
+                gap: 5px;
+            }
+.custom-notice .notice-scene__pill,
+            .custom-notice .notice-scene__close {
+                transform: scale(.78);
+            }
+.custom-notice .notice-scene__footer {
+                display: none;
+            }
+.console-live-ui {
+                padding: 14px 13px;
+                gap: 9px;
+            }
+.console-live-top strong {
+                font-size: 14px;
+            }
+.console-live-top span,
+            .console-live-top em,
+            .console-card-title span,
+            .console-card-title em,
+            .console-legend span,
+            .console-stat-grid small,
+            .console-bottom-nav span {
+                font-size: 8.8px;
+            }
+.console-segment {
+                height: 38px;
+            }
+.console-segment b,
+            .console-segment span {
+                font-size: 11px;
+            }
+.console-chart-card {
+                padding: 11px;
+                border-radius: 18px;
+            }
+.console-card-title strong {
+                font-size: 12px;
+            }
+.console-chart {
+                height: 112px;
+            }
+.console-stat-grid {
+                gap: 7px;
+            }
+.console-stat-grid div {
+                min-height: 46px;
+                padding: 8px 10px;
+                border-radius: 14px;
+            }
+.console-stat-grid b {
+                font-size: 17px;
+            }
+.console-bottom-nav {
+                height: 40px;
+                border-radius: 20px;
+            }}
+.tappie-day-phone {
+            overflow: hidden !important;
+        }
+.tappie-day-screen:not(.custom-notice):not(.custom-console) {
+            padding: 0 !important;
+            background: #f8fafc;
+        }
+.tappie-day-screen:not(.custom-notice):not(.custom-console) > img {
+            position: absolute;
+            inset: 0;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+.tappie-day-screen.custom-notice,
+        .tappie-day-screen.custom-console {
+            overflow: hidden !important;
+        }
+.tappie-problem-photo h2, .tappie-day-loop__copy h2, .tappie-role-hero h2 {font-family: var(--tappie-font-stack) !important;
+            line-height: var(--tappie-display-leading) !important;
+            letter-spacing: var(--tappie-display-tracking) !important;
+            font-weight: 860 !important; }
+.tappie-problem-photo p,
+        .tappie-day-loop__step-desc,
+        .tappie-role-hero p,
+        .tappie-feature-caption {
+            font-family: var(--tappie-font-stack) !important;
+            line-height: var(--tappie-body-leading) !important;
+            letter-spacing: -0.012em;
+        }
+.tappie-problem-photo__kicker,
+        .tappie-day-loop__kicker,
+        .tappie-role-label,
+        .tappie-feature-card.apple-visual-card .tappie-feature-copy span {
+            font-family: var(--tappie-font-stack) !important;
+            letter-spacing: .12em !important;
+            font-weight: 760 !important;
+        }
+.tappie-day-loop__sticky {
+            align-items: center !important;
+        }
+.tappie-day-loop__stage {
+            min-height: min(600px, calc(100svh - 150px)) !important;
+            align-items: center !important;
+            justify-items: center !important;
+        }
+.tappie-day-phone {
+            width: auto !important;
+            height: min(600px, calc(100svh - 180px)) !important;
+            max-height: calc(100svh - 180px) !important;
+            aspect-ratio: 0.49 !important;
+            transform: translateY(-10px) translateZ(0) !important;
+        }
+@media  (max-width: 860px) {.tappie-day-loop__stage {
+                
+                
+                padding-top: 0 !important;
+            }}
+@media  (min-width: 861px) {.tappie-day-loop__sticky {
+                top: 75px !important;
+                height: calc(100svh - 75px) !important;
+                min-height: 700px !important;
+                align-items: center !important;
+                padding-top: clamp(26px, 4vw, 54px) !important;
+                
+            }
+.tappie-day-loop__stage {
+                
+                align-items: center !important;
+                justify-items: center !important;
+            }}
+@media  (max-width: 860px) {.tappie-day-loop__sticky {
+                min-height: 720px !important;
+                align-content: start !important;
+                gap: 18px !important;
+                padding-top: 32px !important;
+                padding-bottom: 88px !important;
+            }
+.tappie-day-loop__caption {
+                min-height: 142px !important;
+                margin-top: 24px !important;
+            }
+.tappie-day-loop__stage {
+                min-height: 392px !important;
+                
+                
+                align-items: center !important;
+                justify-items: center !important;
+            }
+.tappie-day-phone {
+                width: min(216px, 55vw) !important;
+                height: auto !important;
+                max-height: none !important;
+                
+            }}
+@media  (max-width: 390px) {.tappie-day-loop__sticky {
+                min-height: 690px !important;
+                padding-bottom: 52px !important;
+            }
+.tappie-day-loop__stage {
+                min-height: 372px !important;
+            }
+.tappie-day-phone {
+                width: min(202px, 54vw) !important;
+                
+            }}
+@media  (min-width: 861px) {.tappie-day-loop__sticky {
+                padding-bottom: clamp(82px, 9vw, 128px) !important;
+            }
+.tappie-day-loop__stage {
+                min-height: min(680px, calc(100svh - 92px)) !important;
+                padding-bottom: 18px !important;
+            }
+.tappie-day-phone {
+                height: min(620px, calc(100svh - 128px)) !important;
+                max-height: calc(100svh - 128px) !important;
+                width: auto !important;
+                aspect-ratio: 0.49 !important;
+                transform: translateY(-22px) translateZ(0) !important;
+            }}
+@media  (max-width: 860px) {.tappie-day-loop__stage {
+                padding-bottom: 38px !important;
+            }
+.tappie-day-phone {
+                transform: translateY(-8px) translateZ(0) !important;
+            }}
+@media  (max-width: 390px) {.tappie-day-phone {
+                transform: translateY(-8px) translateZ(0) !important;
+            }}
+.parent-notice-card .parent-notice-ui {
+            position: relative !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: inherit !important;
+            overflow: hidden !important;
+            background: #101318 !important;
+        }
+.parent-notice-card .parent-notice-scene {
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: inherit !important;
+        }
+.parent-notice-card .ios-note:nth-child(1) {
+            animation: parentNoticeIn .7s cubic-bezier(.2,.82,.2,1) .15s forwards,
+                       parentNoticeLoop 6.8s cubic-bezier(.2,.82,.2,1) .15s infinite;
+        }
+.parent-notice-card .ios-note:nth-child(2) {
+            animation: parentNoticeIn .7s cubic-bezier(.2,.82,.2,1) .36s forwards,
+                       parentNoticeLoop 6.8s cubic-bezier(.2,.82,.2,1) .36s infinite;
+        }
+.parent-notice-card .ios-note:nth-child(3) {
+            animation: parentNoticeIn .7s cubic-bezier(.2,.82,.2,1) .57s forwards,
+                       parentNoticeLoop 6.8s cubic-bezier(.2,.82,.2,1) .57s infinite;
+        }
+.parent-notice-card .notice-scene__footer {
+            left: 18px;
+            bottom: 16px;
+        }
+@media  (max-width: 860px) {.parent-notice-card .notice-stack {
+                top: 62px;
+                left: 12px;
+                right: 12px;
+                gap: 8px;
+            }
+.parent-notice-card .ios-note {
+                min-height: 62px;
+                padding: 9px 11px 9px 52px;
+                border-radius: 18px;
+            }
+.parent-notice-card .ios-note:nth-child(3) {
+                display: none;
+            }
+.parent-notice-card .ios-note__icon {
+                width: 31px;
+                height: 31px;
+                left: 12px;
+                top: 12px;
+            }
+.parent-notice-card .notice-scene__footer {
+                display: none;
+            }}
+.tappie-role-story .student-guide-card,
+        .tappie-role-story .collection-gacha-card,
+        .tappie-role-story .parent-notice-card,
+        .tappie-role-story .teacher-points-card,
+        .tappie-role-story .manager-brand-card {
+            --role-ui-x: 50%;
+            --role-ui-y: 50%;
+            --role-ui-w: 100%;
+            --role-ui-h: 100%;
+        }
+.tappie-role-story .student-guide-card .ref-guide-ui, .tappie-role-story .collection-gacha-card .collection-gacha-ui, .tappie-role-story .parent-notice-card .parent-notice-ui, .tappie-role-story .manager-brand-card .brand-home-ui {position: relative !important;
+            display: block !important;
+            overflow: hidden !important; }
+.tappie-role-story .student-guide-card .ref-guide-ui > .mock-ui-box, .tappie-role-story .collection-gacha-card .collection-gacha-demo, .tappie-role-story .parent-notice-card .parent-notice-scene, .tappie-role-story .manager-brand-card .brand-home-shell {position: absolute !important;
+            left: var(--role-ui-x) !important;
+            top: var(--role-ui-y) !important;
+            width: var(--role-ui-w) !important;
+            height: var(--role-ui-h) !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            transform: translate(-50%, -50%) scale(var(--role-ui-scale, 1)) !important;
+            transform-origin: center center !important;
+            box-sizing: border-box !important;
+            margin: 0 !important; }
+.tappie-role-story .parent-notice-card {
+            --role-ui-scale: 1;
+        }
+.tappie-role-story .parent-notice-card .notice-stack {
+            left: 4.4% !important;
+            right: 4.4% !important;
+            top: 22% !important;
+            gap: 3.3% !important;
+        }
+.tappie-role-story .parent-notice-card .ios-note {
+            min-height: clamp(58px, calc(var(--role-card-w) * .162), 84px) !important;
+            padding: clamp(9px, calc(var(--role-card-w) * .03), 14px)
+                     clamp(10px, calc(var(--role-card-w) * .04), 18px)
+                     clamp(9px, calc(var(--role-card-w) * .03), 14px)
+                     clamp(50px, calc(var(--role-card-w) * .14), 72px) !important;
+            border-radius: clamp(18px, calc(var(--role-card-w) * .054), 26px) !important;
+        }
+.tappie-role-story .parent-notice-card .ios-note:nth-child(3) {
+            display: none !important;
+        }
+.tappie-role-story .parent-notice-card .ios-note__icon {
+            width: clamp(31px, calc(var(--role-card-w) * .083), 44px) !important;
+            height: clamp(31px, calc(var(--role-card-w) * .083), 44px) !important;
+            left: clamp(12px, calc(var(--role-card-w) * .036), 18px) !important;
+            top: clamp(12px, calc(var(--role-card-w) * .038), 16px) !important;
+        }
+.tappie-role-story .parent-notice-card .ios-note__title {
+            font-size: clamp(11px, calc(var(--role-card-w) * .029), 14px) !important;
+        }
+.tappie-role-story .parent-notice-card .ios-note__body,
+        .tappie-role-story .parent-notice-card .ios-note__source {
+            font-size: clamp(10px, calc(var(--role-card-w) * .026), 13px) !important;
+        }
+.tappie-role-story .parent-notice-card .notice-scene__footer {
+            left: 4.4% !important;
+            bottom: 5.2% !important;
+        }
+.parent-notice-card .notice-scene__footer {
+            display: none !important;
+        }
+.manager-analysis-card .analysis-console-card {
+            padding: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            min-height: 0;
+        }
+.manager-analysis-card .analysis-console-card .console-card-title strong { font-size: 14px; }
+.manager-analysis-card .analysis-console-card .console-card-title span,
+        .manager-analysis-card .analysis-console-card .console-card-title em { font-size: 9px; }
+.manager-analysis-card .analysis-console-card .console-legend span { font-size: 9px; padding: 5px 8px; }
+.manager-analysis-card .analysis-console-card .console-chart { height: 124px; }
+@media  (max-width: 860px) {.tappie-day-loop__stage {
+                margin-top: -16px !important;
+                transform: translateY(-16px);
+            }}
+.tappie-solution-showcase__header h2,
+.tappie-day-loop__copy h2,
+.value-tabs-v51__title {
+    font-size: var(--tappie-vs-display-l);
+    line-height: var(--tappie-vs-leading-display);
+    letter-spacing: var(--tappie-vs-tracking-display);
+    text-wrap: balance;
+}
+.value-tabs-v51__copy-title,
+.tappie-day-loop__step-title,
+.tappie-feature-card.apple-visual-card .tappie-feature-copy h4,
+.implementation-v36-step h3,
+.physical-v38-product h3,
+.pricing-v46-card h3,
+.booking-v47-panel h3 {
+    line-height: var(--tappie-vs-leading-title);
+    letter-spacing: var(--tappie-vs-tracking-title);
+}
+.tappie-problem-photo p,
+.tappie-solution-showcase__lead,
+.tappie-role-hero p,
+.value-tabs-v51__intro,
+.value-tabs-v51__copy-body,
+.tappie-day-loop__step-desc,
+.implementation-v36-intro p,
+.physical-v38-intro p,
+.pricing-v46-intro p,
+.booking-v47-intro p,
+.faq-v49-intro p,
+.faq-v49-answer p {
+    line-height: var(--tappie-vs-leading-body);
+    letter-spacing: var(--tappie-vs-tracking-body);
+}
+.tappie-problem-photo__kicker,
+.tappie-solution-showcase__kicker,
+.tappie-day-loop__kicker,
+.tappie-role-label,
+.value-tabs-v51__kicker,
+.implementation-v36-label,
+.physical-v38-label,
+.pricing-v46-label,
+.booking-v47-label,
+.faq-v49-label {
+    font-size: var(--tappie-vs-caption);
+    line-height: 1.2;
+    letter-spacing: .12em;
+    font-weight: 820;
+}</style></head><body>
+<section class="story-lab" id="storyLab" aria-label="Tappie 產品故事與一日流程銜接">
+  <div class="story-sticky">
+    <div class="story-grid" aria-hidden="true"></div>
+    <div class="story-copy-zone">
+      <article class="story-scene is-intro" data-story-scene="0">
+        <div class="story-kicker">Tappie 解法</div>
+        <h2>離開教室，<br><span class="accent">練習也不斷線。</span></h2>
+        <p class="story-lead">一張每天會戴的名牌，接住學生開口、家長回饋與現場流程。</p>
+      </article>
+      <article class="story-scene" data-story-scene="1">
+        <div class="story-feature-index">01 / 學生口說動力</div>
+        <h2>一嗶，<br><span class="accent">就開口。</span></h2>
+        <span class="story-feature-note">不用帳密，不用教操作。</span>
+      </article>
+      <article class="story-scene" data-story-scene="2">
+        <div class="story-feature-index">02 / 家長回饋</div>
+        <h2>每天，<br><span class="accent">看得見。</span></h2>
+        <span class="story-feature-note">到校、離校、練習，都有紀錄。</span>
+      </article>
+      <article class="story-scene" data-story-scene="3">
+        <div class="story-feature-index">03 / 現場流程</div>
+        <h2>更少，<br><span class="accent">步驟。</span></h2>
+        <span class="story-feature-note">打卡、加點、練習，同一套流程。</span>
+      </article>
+    </div>
+    <div class="story-spline" id="storySpline"><canvas id="canvas3d" aria-label="Tappie 3D card"></canvas></div>
+    <div class="story-handoff-stage tappie-day-loop__stage" id="handoffPhone" aria-hidden="true">
+      <div class="tappie-day-loop__glow"></div>
+      <div class="tappie-day-phone">
+        <div class="tappie-day-screen is-active"><img src="/assets/official/tappieweb-stickty-1.PNG" alt=""></div>
+      </div>
+    </div>
+    <div class="story-handoff-copy" id="handoffCopy">一張名牌，接進一天裡每一個需要被看見的時刻。</div>
+    <div class="story-progress"><span>Story</span><span class="story-progress-track"><span class="story-progress-fill" id="storyProgress"></span></span></div>
+  </div>
+</section>
 
-    function currentPose(progress){
-      let nearest = frames[0];
-      for(const frame of frames){
-        if(frame.p <= progress && frame.pose) nearest = frame;
-      }
-      return nearest.pose || 'ENTRY 入場';
-    }
+<section aria-label="Tappie 一日閉環" class="tappie-day-loop" id="tappie-day-loop">
+<div class="tappie-day-loop__sticky">
+<div aria-hidden="true" class="tappie-day-loop__backdrop">
+<div class="tappie-day-loop__warm-aura"></div>
+<div class="tappie-day-loop__cool-aura"></div>
+<div class="tappie-day-loop__arc"></div>
+<div class="tappie-day-loop__sun"></div>
+<div class="tappie-day-loop__moon"></div>
+<div class="tappie-day-loop__sheen"></div>
+</div>
+<div class="tappie-day-loop__copy">
+<div class="tappie-day-loop__kicker">Tappie的一日流程</div>
+<h2>從早到晚，<br/>練習不停歇。</h2>
+<div class="tappie-day-loop__caption">
+<div class="tappie-day-loop__step is-active" data-day-step="0">
+<span class="tappie-day-loop__step-number">01 / 每天戴著。</span>
+<span class="tappie-day-loop__step-title">校園名牌</span>
+</div>
+<div class="tappie-day-loop__step" data-day-step="1">
+<span class="tappie-day-loop__step-number">02 / 一嗶通知。</span>
+<span class="tappie-day-loop__step-title">放學通知</span>
+</div>
+<div class="tappie-day-loop__step" data-day-step="2">
+<span class="tappie-day-loop__step-number">03 / 一嗶進入，直接開口。</span>
+<span class="tappie-day-loop__step-title">開始口說</span>
+</div>
+<div class="tappie-day-loop__step" data-day-step="3">
+<span class="tappie-day-loop__step-number">04 / 加扣點，一掃就完成。</span>
+<span class="tappie-day-loop__step-title">獲得點數</span>
+</div>
+<div class="tappie-day-loop__step" data-day-step="4">
+<span class="tappie-day-loop__step-number">05 / 成長被看見。</span>
+<span class="tappie-day-loop__step-title">家長看見</span>
+</div>
+<div class="tappie-day-loop__step" data-day-step="5">
+<span class="tappie-day-loop__step-number">06 / 回家繼續。</span>
+<span class="tappie-day-loop__step-title">回家練習</span>
+</div>
+<div class="tappie-day-loop__step" data-day-step="6">
+<span class="tappie-day-loop__step-number">07 / 校區一眼掌握。</span>
+<span class="tappie-day-loop__step-title">校區掌控</span>
+</div>
+</div>
+<div aria-hidden="true" class="tappie-day-loop__progress">
+<div class="tappie-day-loop__progress-bar" id="tappieDayProgress"></div>
+</div>
+</div>
+<div aria-hidden="true" class="tappie-day-loop__stage">
+<div class="tappie-day-loop__glow"></div>
+<div class="tappie-day-phone">
+<div class="tappie-day-screen is-active" data-screen-step="0">
+<img alt="" src="/assets/official/tappieweb-stickty-1.PNG"/>
+</div>
+<div class="tappie-day-screen custom-notice" data-screen-step="1">
+<div class="notice-scene notice-scene--pure">
+<div class="notice-scene__bg"></div>
+<div class="notice-scene__shade"></div>
+<div class="notice-scene__hud">
+<div class="notice-scene__user">家長通知</div>
+<div class="notice-scene__actions">
+<div class="notice-scene__pill"><span class="notice-scene__chev"></span>顯示較少</div>
+<div class="notice-scene__close">×</div>
+</div>
+</div>
+<div class="notice-stack">
+<div class="ios-note">
+<div class="ios-note__icon"><img alt="" src="/assets/logo.webp"/></div>
+<div class="ios-note__meta"><div class="ios-note__title">🏠 Tappie 測試校區｜離校通知</div><div class="ios-note__time">現在</div></div>
+<span class="ios-note__source">from 學生家長通知</span>
+<div class="ios-note__body">學生已於 18:50 離校，請家長留意接送安排。</div>
+</div>
+<div class="ios-note">
+<div class="ios-note__icon"><img alt="" src="/assets/logo.webp"/></div>
+<div class="ios-note__meta"><div class="ios-note__title">✅ Tappie 測試校區｜到校通知</div><div class="ios-note__time">現在</div></div>
+<span class="ios-note__source">from 學生家長通知</span>
+<div class="ios-note__body">學生已於 18:50 平安到校，今日學習旅程開始囉！</div>
+</div>
+<div class="ios-note ios-note--compact">
+<div class="ios-note__icon"><img alt="" src="/assets/logo.webp"/></div>
+<div class="ios-note__meta"><div class="ios-note__title">🔔 通知已啟用</div><div class="ios-note__time">1 分鐘前</div></div>
+<div class="ios-note__body">老師完成到校或離校打卡時，家長會收到提醒。</div>
+</div>
+</div>
+<div class="notice-scene__footer"></div>
+</div>
+</div>
+<div class="tappie-day-screen" data-screen-step="2">
+<img alt="" src="/assets/official/tappieweb-stickty-2.PNG"/>
+</div>
+<div class="tappie-day-screen" data-screen-step="3">
+<img alt="" src="/assets/official/tappieweb-stickty-3.PNG"/>
+</div>
+<div class="tappie-day-screen" data-screen-step="4">
+<img alt="" src="/assets/official/tappieweb-stickty-4.PNG"/>
+</div>
+<div class="tappie-day-screen" data-screen-step="5">
+<img alt="" src="/assets/official/tappieweb-stickty-5.PNG"/>
+</div>
+<div class="tappie-day-screen custom-console" data-screen-step="6">
+<div class="console-live-ui">
+<div class="console-live-top">
+<div>
+<strong>使用趨勢與學習模式</strong>
+<span>近期互動、學習模式與班級活躍度</span>
+</div>
+<em>手機版後台</em>
+</div>
+<div class="console-segment">
+<b>近 7 天</b>
+<span>近 30 天</span>
+</div>
+<div class="console-chart-card">
+<div class="console-card-title">
+<div>
+<strong>每日使用量趨勢</strong>
+<span>練習、挑戰、對戰與抽卡互動</span>
+</div>
+<em>高峰 6/18・2,259</em>
+</div>
+<div class="console-legend">
+<span><i class="blue"></i>總互動</span>
+<span><i class="green"></i>今日挑戰</span>
+<span><i class="orange"></i>對戰合計</span>
+</div>
+<svg aria-hidden="true" class="console-chart" preserveaspectratio="none" viewbox="0 0 320 178">
+<line x1="0" x2="320" y1="32" y2="32"></line>
+<line x1="0" x2="320" y1="78" y2="78"></line>
+<line x1="0" x2="320" y1="124" y2="124"></line>
+<path class="area-blue" d="M0,132 L48,124 L96,86 L144,24 L192,96 L240,126 L320,118 L320,178 L0,178 Z"></path>
+<path class="line-blue" d="M0,132 L48,124 L96,86 L144,24 L192,96 L240,126 L320,118"></path>
+<path class="line-green" d="M0,146 L48,132 L96,104 L144,58 L192,122 L240,142 L320,136"></path>
+<path class="line-orange" d="M0,158 L48,162 L96,142 L144,112 L192,148 L240,156 L320,152"></path>
+<circle class="peak-dot" cx="144" cy="24" r="5"></circle>
+</svg>
+</div>
+<div class="console-stat-grid">
+<div><small>總互動</small><b>488</b></div>
+<div><small>一般練習</small><b>0</b></div>
+<div><small>今日挑戰</small><b>289</b></div>
+<div><small>1v1 對戰</small><b>14</b></div>
+</div>
+<div class="console-bottom-nav">
+<span class="active">分析</span>
+<span>資料健康</span>
+<span>學生編輯</span>
+<span>加扣分查</span>
+</div>
+</div>
+</div>
+<div aria-hidden="true" class="tappie-day-nav">
+<button class="tappie-day-dot is-active" data-dot-step="0" type="button"></button>
+<button class="tappie-day-dot" data-dot-step="1" type="button"></button>
+<button class="tappie-day-dot" data-dot-step="2" type="button"></button>
+<button class="tappie-day-dot" data-dot-step="3" type="button"></button>
+<button class="tappie-day-dot" data-dot-step="4" type="button"></button>
+<button class="tappie-day-dot" data-dot-step="5" type="button"></button>
+<button class="tappie-day-dot" data-dot-step="6" type="button"></button>
+</div>
+</div>
+</div>
+</div>
+</section><section class="prototype-end">END OF STORY LAB</section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script type="module">
+import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js';
+const section=document.getElementById('storyLab');
+const canvas=document.getElementById('canvas3d');
+const splineLayer=document.getElementById('storySpline');
+const phone=document.getElementById('handoffPhone');
+const handoffCopy=document.getElementById('handoffCopy');
+const progressEl=document.getElementById('storyProgress');
+const scenes=[...section.querySelectorAll('[data-story-scene]')];
+const app=new Application(canvas);
+const isMobile=matchMedia('(max-width:860px)').matches;
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=t=>{t=clamp(t);return t*t*(3-2*t)};
+const range=(p,a,b)=>clamp((p-a)/(b-a));
+let target=null,base=null,raf=0,last=-1;
+const sceneUrl='https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode';
 
-    function renderSpline(progress){
-      if(!target || !base) return;
-      const k = sampleFrames(progress);
-      target.position.x = base.px + k.x;
-      target.position.y = base.py + k.y;
-      target.position.z = base.pz + k.z;
-      target.rotation.x = base.rx + k.rx;
-      target.rotation.y = base.ry + k.ry;
-      target.rotation.z = base.rz + k.rz;
-      target.scale.x = base.sx * k.s;
-      target.scale.y = base.sy * k.s;
-      target.scale.z = base.sz * k.s;
-      if(typeof app.requestRender === 'function') app.requestRender();
-      else if(typeof app.render === 'function') app.render();
-    }
+/* Editorial product poses. The back-facing pose adds a half-turn around Z so the existing back artwork remains upright. */
+const desktop=[
+ {p:0.00,x:-82,y:50,z:12,rx:-.035,ry:-.10,rz:-.10,s:1.34},
+ {p:0.15,x:-72,y:42,z:20,rx:-.02,ry:.12,rz:-.075,s:1.42},
+ {p:0.29,x:-40,y:24,z:32,rx:.015,ry:.94,rz:-.025,s:1.46},
+ {p:0.38,x:-8,y:18,z:40,rx:.025,ry:1.48,rz:.03,s:1.40},
+ {p:0.49,x:34,y:18,z:34,rx:-.012,ry:3.08,rz:3.14,s:1.31},
+ {p:0.57,x:32,y:19,z:33,rx:-.01,ry:3.11,rz:3.14,s:1.31},
+ {p:0.68,x:4,y:26,z:29,rx:.02,ry:4.72,rz:3.14,s:1.22},
+ {p:0.77,x:-18,y:38,z:20,rx:.012,ry:6.12,rz:.04,s:1.18},
+ {p:0.88,x:0,y:62,z:-6,rx:0,ry:6.26,rz:0,s:.68},
+ {p:1.00,x:0,y:70,z:-18,rx:0,ry:6.283,rz:0,s:.48}
+];
+const mobile=[
+ {p:0.00,x:-16,y:40,z:5,rx:-.025,ry:-.08,rz:-.08,s:1.00},
+ {p:0.15,x:-14,y:35,z:8,rx:-.015,ry:.10,rz:-.06,s:1.05},
+ {p:0.29,x:-7,y:23,z:12,rx:.012,ry:.90,rz:-.02,s:1.08},
+ {p:0.38,x:2,y:20,z:14,rx:.018,ry:1.46,rz:.02,s:1.03},
+ {p:0.49,x:10,y:22,z:11,rx:-.008,ry:3.07,rz:3.14,s:.98},
+ {p:0.57,x:9,y:23,z:11,rx:-.006,ry:3.11,rz:3.14,s:.98},
+ {p:0.68,x:2,y:28,z:10,rx:.012,ry:4.72,rz:3.14,s:.94},
+ {p:0.77,x:-4,y:38,z:7,rx:.008,ry:6.12,rz:.03,s:.92},
+ {p:0.88,x:0,y:62,z:-5,rx:0,ry:6.26,rz:0,s:.55},
+ {p:1.00,x:0,y:70,z:-14,rx:0,ry:6.283,rz:0,s:.38}
+];
+const frames=isMobile?mobile:desktop;
+function sample(p){let a=frames[0],b=frames.at(-1);for(let i=0;i<frames.length-1;i++){if(p>=frames[i].p&&p<=frames[i+1].p){a=frames[i];b=frames[i+1];break}}const t=a.p===b.p?0:smooth((p-a.p)/(b.p-a.p));return Object.fromEntries(['x','y','z','rx','ry','rz','s'].map(k=>[k,lerp(a[k],b[k],t)]))}
+function renderCard(p){if(!target||!base)return;const k=sample(p);target.position.x=base.px+k.x;target.position.y=base.py+k.y;target.position.z=base.pz+k.z;target.rotation.x=base.rx+k.rx;target.rotation.y=base.ry+k.ry;target.rotation.z=base.rz+k.rz;target.scale.x=base.sx*k.s;target.scale.y=base.sy*k.s;target.scale.z=base.sz*k.s;app.requestRender?.()}
+function sceneOpacity(p,start,hold,end){const a=smooth(range(p,start,hold));const b=1-smooth(range(p,hold,end));return Math.min(a,b)}
+function setScene(el,o,dir=0){el.style.opacity=o.toFixed(3);el.style.transform=`translateY(calc(-50% + ${lerp(18,0,o)+dir}px))`;if(isMobile)el.style.transform=`translateY(${lerp(14,0,o)+dir}px)`}
+function render(p){
+ renderCard(p);
+ const vals=[sceneOpacity(p,0,.06,.23),sceneOpacity(p,.16,.24,.41),sceneOpacity(p,.35,.43,.60),sceneOpacity(p,.54,.62,.79)];
+ scenes.forEach((el,i)=>setScene(el,vals[i]));
+ const ph=smooth(range(p,.76,.94));
+ phone.style.opacity=ph.toFixed(3);phone.style.transform=`translate3d(${lerp(isMobile?0:6,0,ph)}vw,${lerp(42,0,ph)}px,0) scale(${lerp(.90,1,ph)})`;
+ const hc=smooth(range(p,.83,.97));handoffCopy.style.opacity=hc.toFixed(3);handoffCopy.style.transform=`translateX(-50%) translateY(${lerp(16,0,hc)}px)`;
+ splineLayer.style.opacity=(1-.72*smooth(range(p,.88,1))).toFixed(3);
+ progressEl.style.width=`${(p*100).toFixed(2)}%`;
+}
+function update(){raf=0;const r=section.getBoundingClientRect();const max=Math.max(section.offsetHeight-innerHeight,1);const p=clamp(-r.top/max);if(Math.abs(p-last)>.0002){last=p;render(p)}}
+function request(){if(!raf)raf=requestAnimationFrame(update)}
+app.load(sceneUrl).then(()=>{target=app.findObjectByName('hero_card_stage')||app.findObjectByName('tappie_card_group')||app.findObjectByName('card_movement')||app.findObjectByName('card_rotation');if(target){base={px:target.position.x,py:target.position.y,pz:target.position.z,rx:target.rotation.x,ry:target.rotation.y,rz:target.rotation.z,sx:target.scale.x,sy:target.scale.y,sz:target.scale.z};render(0)}}).catch(console.error);
+addEventListener('scroll',request,{passive:true});addEventListener('resize',request,{passive:true});request();
+</script>
 
-    const invLerp = (a,b,v) => clamp01((v-a)/(b-a));
-    function setVisual(el,opacity,y,blur,scale=1){
-      el.style.opacity = opacity.toFixed(4);
-      el.style.transform = `translate3d(0,${y.toFixed(2)}px,0) scale(${scale.toFixed(4)})`;
-      el.style.filter = `blur(${blur.toFixed(2)}px)`;
-    }
+<script>
+// 02-day-loop.js
+// Black stage day-loop cleanup: full-bleed black base + stable celestial light arc.
+(() => {
+        const section = document.getElementById('tappie-day-loop');
+        if (!section) return;
 
-    function renderCopy(progress){
-      const c1Out = easeOutCubic(invLerp(0.14,0.27,progress));
-      setVisual(copy1,lerp(1,0.10,c1Out),lerp(0,-32,c1Out),lerp(0,7,c1Out),lerp(1,.987,c1Out));
+        const steps = Array.from(section.querySelectorAll('.tappie-day-loop__step'));
+        const screens = Array.from(section.querySelectorAll('.tappie-day-screen'));
+        const dots = Array.from(section.querySelectorAll('.tappie-day-dot'));
+        const progress = section.querySelector('#tappieDayProgress');
+        const total = steps.length;
+        let activeIndex = -1;
+        let activeScreenIndex = -1;
+        let rafId = null;
+        let manualUntil = 0;
 
-      const c2In = easeOutCubic(invLerp(0.27,0.37,progress));
-      const c2Out = easeOutCubic(invLerp(0.53,0.65,progress));
-      const c2Opacity = c2In*(1-0.90*c2Out);
-      setVisual(copy2,c2Opacity,lerp(28,0,c2In)-24*c2Out,lerp(8,0,c2In)+8*c2Out,lerp(.987,1,c2In));
+        const screenReady = new WeakMap();
 
-      const c3In = easeOutCubic(invLerp(0.67,0.79,progress));
-      setVisual(copy3,c3In,lerp(30,0,c3In),lerp(8,0,c3In),lerp(.985,1,c3In));
+        const clamp = (n, min = 0, max = 1) => Math.min(max, Math.max(min, n));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const smooth = (t) => {
+            t = clamp(t, 0, 1);
+            return t * t * (3 - 2 * t);
+        };
 
-      const cardsIn = easeOutCubic(invLerp(0.84,0.96,progress));
-      flowCards.style.opacity = cardsIn.toFixed(4);
-      flowCards.style.transform = `translate3d(-50%,${lerp(24,0,cardsIn).toFixed(2)}px,0) scale(${lerp(.988,1,cardsIn).toFixed(4)})`;
-      flowCards.style.filter = `blur(${lerp(7,0,cardsIn).toFixed(2)}px)`;
-    }
+        function getPrimaryImage(screen) {
+            if (!screen) return null;
+            if (screen.classList.contains('mock') || screen.classList.contains('custom-notice') || screen.classList.contains('custom-console')) return null;
+            return screen.querySelector(':scope > img') || screen.querySelector('img');
+        }
 
-    function renderAtmosphere(progress){
-      const p = clamp01(progress);
-      lightField.style.transform = `translate3d(${lerp(-2.5,2.5,p).toFixed(2)}%,${lerp(-1.5,1.5,p).toFixed(2)}%,0) scale(${lerp(1.03,1.08,p).toFixed(4)})`;
-      orbOne.style.transform = `translate3d(${lerp(0,44,p).toFixed(1)}px,${lerp(0,-18,p).toFixed(1)}px,0)`;
-      orbTwo.style.transform = `translate3d(${lerp(0,-36,p).toFixed(1)}px,${lerp(0,20,p).toFixed(1)}px,0)`;
-      gridField.style.opacity = lerp(isMobile?.12:.18,isMobile?.17:.24,p).toFixed(3);
-    }
+        function markScreenReady(screen, ready) {
+            screenReady.set(screen, ready);
+            screen.dataset.screenReady = ready ? 'true' : 'false';
+        }
 
-    function renderDebug(progress){
-      if(!debugVisible) return;
-      motionDebugText.textContent = `${(progress*100).toFixed(1)}% · ${currentPose(progress)}`;
-    }
+        function isScreenReady(screen) {
+            if (!screen) return true;
+            if (screenReady.has(screen)) return screenReady.get(screen);
+            const img = getPrimaryImage(screen);
+            if (!img) {
+                markScreenReady(screen, true);
+                return true;
+            }
+            const ready = !!(img.complete && img.naturalWidth > 0);
+            markScreenReady(screen, ready);
+            return ready;
+        }
 
-    function renderCardLayer(progress){
-      renderSpline(progress);
-      renderDebug(progress);
-    }
+        function applyScreen(index) {
+            const target = screens[index];
+            if (!target) return;
+            screens.forEach((el, i) => el.classList.toggle('is-active', i === index));
+            activeScreenIndex = index;
+        }
 
-    function renderAtmosphereLayer(progress){
-      renderCopy(progress);
-      renderAtmosphere(progress);
-    }
+        screens.forEach((screen, index) => {
+            const img = getPrimaryImage(screen);
+            if (!img) {
+                markScreenReady(screen, true);
+                return;
+            }
+            const updateReady = () => {
+                const ok = img.naturalWidth > 0 || img.complete;
+                markScreenReady(screen, ok);
+                if (ok && index === activeIndex) applyScreen(index);
+            };
+            if (img.complete && img.naturalWidth > 0) {
+                markScreenReady(screen, true);
+            } else {
+                markScreenReady(screen, false);
+                img.addEventListener('load', updateReady, { once: true });
+                img.addEventListener('error', () => {
+                    markScreenReady(screen, true);
+                    if (index === activeIndex) applyScreen(index);
+                }, { once: true });
+            }
+            if (img.decode) {
+                img.decode().then(updateReady).catch(() => {});
+            }
+        });
 
-    function setDebugVisible(value){
-      debugVisible = value;
-      motionDebug.classList.toggle('is-visible',value);
-      if(value) renderDebug(cardProgress);
-    }
-    setDebugVisible(debugVisible);
-    window.addEventListener('keydown',event=>{
-      if(event.key.toLowerCase()==='m') setDebugVisible(!debugVisible);
-    });
+        function applyBackdrop(scrollProgress) {
+            const p = clamp(scrollProgress, 0, 1);
 
-    // 卡片採快速響應，約 1–2 幀內大幅追上手指；背景及文字才保留較慢景深延遲。
-    gsap.ticker.add(()=>{
-      const dt = Math.min(2,gsap.ticker.deltaRatio(60));
-      if(prefersReducedMotion){
-        cardProgress = targetProgress;
-        atmosphereProgress = targetProgress;
-      }else{
-        const cardResponse = 1-Math.exp(-0.92*dt);
-        const atmosphereResponse = 1-Math.exp(-0.30*dt);
-        cardProgress += (targetProgress-cardProgress)*cardResponse;
-        atmosphereProgress += (targetProgress-atmosphereProgress)*atmosphereResponse;
-      }
+            const sunTravel = clamp(p / 0.66, 0, 1);
+            const sunLeft = lerp(-7, 84, sunTravel);
+            const sunTop = 72 - Math.sin(sunTravel * Math.PI * 0.92) * 42;
+            const sunRise = Math.sin(clamp(p / 0.54, 0, 1) * Math.PI * 0.92);
+            const sunFade = 1 - smooth((p - 0.56) / 0.16);
+            const sunOpacity = clamp((0.16 + sunRise * 0.54) * sunFade, 0, 0.70);
+            const sunScale = lerp(0.84, 1.06, clamp(p / 0.58, 0, 1));
 
-      if(Math.abs(cardProgress-lastCardProgress)>0.00005){
-        lastCardProgress = cardProgress;
-        renderCardLayer(cardProgress);
-      }
-      if(Math.abs(atmosphereProgress-lastAtmosphereProgress)>0.00005){
-        lastAtmosphereProgress = atmosphereProgress;
-        renderAtmosphereLayer(atmosphereProgress);
-      }
-      progressBar.style.width = `${(targetProgress*100).toFixed(2)}%`;
-    });
+            const moonTravel = smooth((p - 0.58) / 0.38);
+            const moonLeft = lerp(108, 72, moonTravel);
+            const moonTop = lerp(18, 28, moonTravel);
+            const moonOpacity = clamp(moonTravel * 0.78, 0, 0.78);
+            const moonScale = lerp(0.82, 1.00, moonTravel);
 
-    app.load(sceneUrl).then(()=>{
-      target =
-        app.findObjectByName('hero_card_stage') ||
-        app.findObjectByName('tappie_card_group') ||
-        app.findObjectByName('card_movement') ||
-        app.findObjectByName('card_rotation');
+            const warmOpacity = clamp(Math.sin(clamp(p / 0.66, 0, 1) * Math.PI) * 0.36 + 0.08, 0, 0.42) * sunFade;
+            const coolOpacity = clamp(smooth((p - 0.54) / 0.38) * 0.38, 0, 0.38);
+            const arcOpacity = lerp(0.10, 0.20, Math.sin(p * Math.PI));
 
-      if(!target){
-        statusEl.textContent='找不到 hero_card_stage / tappie_card_group，請確認 Spline 物件命名';
-        return;
-      }
+            section.style.setProperty('--sun-left', `${sunLeft}%`);
+            section.style.setProperty('--sun-top', `${sunTop}%`);
+            section.style.setProperty('--sun-scale', sunScale.toFixed(3));
+            section.style.setProperty('--sun-opacity', sunOpacity.toFixed(3));
+            section.style.setProperty('--moon-left', `${moonLeft}%`);
+            section.style.setProperty('--moon-top', `${moonTop}%`);
+            section.style.setProperty('--moon-scale', moonScale.toFixed(3));
+            section.style.setProperty('--moon-opacity', moonOpacity.toFixed(3));
+            section.style.setProperty('--warm-opacity', warmOpacity.toFixed(3));
+            section.style.setProperty('--cool-opacity', coolOpacity.toFixed(3));
+            section.style.setProperty('--arc-opacity', arcOpacity.toFixed(3));
+        }
 
-      base={
-        px:target.position.x,py:target.position.y,pz:target.position.z,
-        rx:target.rotation.x,ry:target.rotation.y,rz:target.rotation.z,
-        sx:target.scale.x,sy:target.scale.y,sz:target.scale.z
-      };
-      statusEl.textContent=`控制物件：${target.name}`;
-      renderCardLayer(0);
-      renderAtmosphereLayer(0);
-      setTimeout(()=>statusEl.style.opacity='0',1400);
-      requestAnimationFrame(()=>ScrollTrigger.refresh());
-    }).catch(error=>{
-      console.error(error);
-      statusEl.textContent='Spline Runtime 載入失敗，請檢查 scene URL';
-    });
+        function setActive(index) {
+            index = Math.max(0, Math.min(total - 1, index));
+            const changed = index !== activeIndex;
+            activeIndex = index;
 
-    ScrollTrigger.create({
-      trigger:'#stage',
-      start:'top top',
-      end:'bottom bottom',
-      invalidateOnRefresh:true,
-      onUpdate:self=>{targetProgress=self.progress;}
-    });
+            section.dataset.dayPhase = String(index);
+            if (changed) {
+                steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
+                dots.forEach((el, i) => el.classList.toggle('is-active', i === index));
+            }
 
-    if(prefersReducedMotion){
-      targetProgress=0.84;
-      cardProgress=0.84;
-      atmosphereProgress=0.84;
-      renderCopy(0.84);
-      renderAtmosphere(0.84);
-    }else{
-      setVisual(copy1,1,0,0,1);
-      setVisual(copy2,0,28,8,.987);
-      setVisual(copy3,0,30,8,.985);
-      flowCards.style.opacity='0';
-    }
-  </script>
-</body>
-</html>
+            const targetScreen = screens[index];
+            if (targetScreen && isScreenReady(targetScreen)) {
+                applyScreen(index);
+            } else if (activeScreenIndex < 0) {
+                applyScreen(index);
+            }
+
+            if (progress) progress.style.width = `${((index + 1) / total) * 100}%`;
+        }
+
+        function getScrollState() {
+            const rect = section.getBoundingClientRect();
+            const maxScroll = Math.max(section.offsetHeight - window.innerHeight, 1);
+            const scrolled = Math.min(Math.max(-rect.top, 0), maxScroll);
+            const p = scrolled / maxScroll;
+            const index = Math.min(total - 1, Math.floor(p * total));
+            return { index, progress: p };
+        }
+
+        function update() {
+            rafId = null;
+            if (Date.now() < manualUntil) return;
+            const state = getScrollState();
+            applyBackdrop(state.progress);
+            setActive(state.index);
+        }
+
+        function requestUpdate() {
+            if (!rafId) rafId = requestAnimationFrame(update);
+        }
+
+        dots.forEach((dot) => {
+            dot.addEventListener('click', () => {
+                const index = Number(dot.dataset.dotStep || 0);
+                manualUntil = Date.now() + 1000;
+                applyBackdrop(index / Math.max(total - 1, 1));
+                setActive(index);
+            });
+        });
+
+        applyBackdrop(0);
+        setActive(0);
+        window.addEventListener('scroll', requestUpdate, { passive: true });
+        window.addEventListener('resize', requestUpdate);
+        requestUpdate();
+    })();
+
+</script></body></html>
