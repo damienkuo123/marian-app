@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>Tappie 第三屏 Spline Runtime Prototype v7 - Premium Scrub</title>
+  <title>Tappie 第三屏 Spline Runtime Prototype v8 - Motion Director</title>
   <style>
     :root{
       --bg0:#010611;
@@ -37,7 +37,7 @@
       text-transform:uppercase;
     }
     .stage{
-      height:820vh;
+      height:700vh;
       position:relative;
       background:
         radial-gradient(circle at 18% 15%, rgba(0,110,255,.18), transparent 32%),
@@ -55,6 +55,7 @@
       touch-action:pan-y;
     }
     .vignette,.grain,.light-field,.grid{pointer-events:none}
+    .light-field,.orb,.grid{will-change:transform,opacity}
     .vignette{
       position:absolute;
       inset:0;
@@ -275,6 +276,27 @@
     }
     .bar{width:112px;height:3px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden}
     .bar span{display:block;width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#26b8ff,#61d9ff);will-change:width}
+    .motion-debug{
+      position:fixed;
+      top:calc(env(safe-area-inset-top,0px) + 14px);
+      left:14px;
+      z-index:40;
+      display:none;
+      min-width:220px;
+      padding:11px 13px;
+      border-radius:14px;
+      background:rgba(1,8,20,.78);
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 18px 44px rgba(0,0,0,.30);
+      backdrop-filter:blur(16px);
+      color:rgba(255,255,255,.86);
+      font:700 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.02em;
+      pointer-events:none;
+    }
+    .motion-debug.is-visible{display:block}
+    .motion-debug strong{display:block;color:#fff;font-size:12px;margin-bottom:2px}
+
     .status{
       position:fixed;
       right:18px;
@@ -292,7 +314,7 @@
     }
 
     @media(max-width:680px){
-      .stage{height:760vh}
+      .stage{height:620vh}
       .copy-layer{padding:18px}
       .copy.left{top:14.5vh;left:24px;width:86vw}
       h1{font-size:clamp(45px,13.2vw,72px);line-height:.95}
@@ -325,10 +347,10 @@
 
   <section class="stage" id="stage">
     <div class="pin">
-      <div class="light-field"></div>
-      <div class="orb one"></div>
-      <div class="orb two"></div>
-      <div class="grid"></div>
+      <div class="light-field" id="lightField"></div>
+      <div class="orb one" id="orbOne"></div>
+      <div class="orb two" id="orbTwo"></div>
+      <div class="grid" id="gridField"></div>
 
       <div class="copy-layer back">
         <article class="copy left" id="copy1">
@@ -380,7 +402,8 @@
 
   <section class="post">End prototype</section>
   <div class="progress"><span>Scroll</span><div class="bar"><span id="progressBar"></span></div></div>
-  <div class="status" id="status">載入 Spline Runtime v7...</div>
+  <div class="status" id="status">載入 Spline Runtime v8...</div>
+  <div class="motion-debug" id="motionDebug"><strong>Motion Review</strong><span id="motionDebugText">0.0% · HERO</span></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -399,53 +422,77 @@
     const copy2 = document.getElementById('copy2');
     const copy3 = document.getElementById('copy3');
     const flowCards = document.getElementById('flowCards');
+    const lightField = document.getElementById('lightField');
+    const orbOne = document.getElementById('orbOne');
+    const orbTwo = document.getElementById('orbTwo');
+    const gridField = document.getElementById('gridField');
+    const motionDebug = document.getElementById('motionDebug');
+    const motionDebugText = document.getElementById('motionDebugText');
 
     const app = new Application(canvas);
     const clamp01 = gsap.utils.clamp(0, 1);
     const isMobile = window.matchMedia('(max-width: 680px)').matches;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const debugByQuery = new URLSearchParams(location.search).get('motionDebug') === '1';
 
     let target = null;
     let base = null;
     let targetProgress = 0;
-    let renderedProgress = 0;
-    let lastRenderedProgress = -1;
+    let cardProgress = 0;
+    let atmosphereProgress = 0;
+    let lastCardProgress = -1;
+    let lastAtmosphereProgress = -1;
+    let debugVisible = debugByQuery;
 
-    // 兩套獨立姿態：手機不再沿用桌機的大幅位移與放大倍率。
-    // 每一段都先建立可觀看的產品姿態，再進入下一個翻面動作。
+    // v8 motion direction
+    // 1. 卡片快速跟手；背景與文字保留較慢的景深延遲。
+    // 2. 不再對每一段反覆 ease-in/ease-out，只在 Hero、背面、Lockup 三個姿態微停。
+    // 3. 直式名牌避免完全 90 度側面長時間停住，側邊只作短促高光過場。
     const desktopFrames = [
-      {p:0.00,x:-150,y:138,z:18,rx:-0.08,ry:-0.16,rz:-0.20,s:1.82},
-      {p:0.11,x:-92, y:78, z:34,rx:-0.02,ry: 0.10,rz:-0.14,s:2.00},
-      {p:0.24,x:-32, y:34, z:52,rx: 0.05,ry: 0.76,rz:-0.06,s:2.15},
-      {p:0.36,x: 8,  y:18, z:62,rx: 0.07,ry: 1.48,rz: 0.03,s:2.11},
-      {p:0.49,x: 58, y:12, z:50,rx:-0.03,ry: 3.06,rz:-0.08,s:1.98},
-      {p:0.62,x: 22, y:28, z:58,rx: 0.05,ry: 3.92,rz: 0.06,s:1.88},
-      {p:0.74,x:-12, y:42, z:42,rx: 0.05,ry: 4.72,rz: 0.05,s:1.72},
-      {p:0.86,x: 0,  y:66, z:16,rx: 0.02,ry: 5.56,rz:-0.02,s:1.52},
-      {p:1.00,x: 0,  y:82, z: 0,rx: 0.00,ry: 6.27,rz: 0.00,s:1.38}
+      {p:0.00,x:-132,y:126,z:16,rx:-0.07,ry:-0.13,rz:-0.18,s:1.70,curve:'out'},
+      {p:0.08,x:-78, y:70, z:31,rx:-0.02,ry: 0.06,rz:-0.12,s:1.91,curve:'out',pose:'HERO 正面展示'},
+      {p:0.13,x:-74, y:68, z:32,rx:-0.015,ry:0.10,rz:-0.105,s:1.92,curve:'linear',pose:'HERO 微停'},
+      {p:0.27,x:-24, y:31, z:52,rx: 0.04,ry: 1.12,rz:-0.04,s:2.06,curve:'linear'},
+      {p:0.34,x: 4,  y:20, z:59,rx: 0.06,ry: 1.56,rz: 0.02,s:2.02,curve:'linear',pose:'EDGE 側邊高光'},
+      {p:0.46,x: 52, y:13, z:48,rx:-0.025,ry:3.01,rz:-0.07,s:1.90,curve:'out',pose:'BACK 背面展示'},
+      {p:0.52,x: 50, y:15, z:47,rx:-0.018,ry:3.09,rz:-0.06,s:1.90,curve:'linear',pose:'BACK 微停'},
+      {p:0.64,x: 18, y:30, z:56,rx: 0.04,ry: 3.94,rz: 0.055,s:1.80,curve:'linear'},
+      {p:0.74,x:-14, y:43, z:40,rx: 0.045,ry:4.82,rz:0.05,s:1.65,curve:'linear',pose:'CROSS 穿字轉場'},
+      {p:0.84,x: 0,  y:61, z:14,rx: 0.018,ry:6.00,rz:-0.025,s:1.48,curve:'out',pose:'LOCKUP 回正'},
+      {p:0.89,x: 0,  y:64, z:11,rx: 0.012,ry:6.12,rz:-0.015,s:1.47,curve:'linear',pose:'LOCKUP 微停'},
+      {p:1.00,x: 0,  y:78, z: 0,rx: 0.00,ry:6.283,rz:0.00,s:1.36,curve:'out',pose:'FINAL 完成'}
     ];
 
     const mobileFrames = [
-      {p:0.00,x:-52,y:112,z: 4,rx:-0.06,ry:-0.14,rz:-0.14,s:1.55},
-      {p:0.12,x:-20,y:66, z:10,rx:-0.01,ry: 0.12,rz:-0.10,s:1.66},
-      {p:0.25,x:-2, y:22, z:16,rx: 0.04,ry: 0.74,rz:-0.04,s:1.72},
-      {p:0.37,x: 8, y:10, z:18,rx: 0.05,ry: 1.44,rz: 0.02,s:1.66},
-      {p:0.50,x: 28,y: 8, z:14,rx:-0.02,ry: 3.04,rz:-0.06,s:1.53},
-      {p:0.63,x: 12,y:26, z:18,rx: 0.04,ry: 3.90,rz: 0.05,s:1.46},
-      {p:0.75,x:-8, y:44, z:12,rx: 0.04,ry: 4.72,rz: 0.04,s:1.38},
-      {p:0.87,x: 0, y:74, z: 4,rx: 0.02,ry: 5.58,rz:-0.02,s:1.28},
-      {p:1.00,x: 0, y:92, z: 0,rx: 0.00,ry: 6.27,rz: 0.00,s:1.20}
+      {p:0.00,x:-44,y:102,z:4,rx:-0.05,ry:-0.12,rz:-0.14,s:1.48,curve:'out'},
+      {p:0.08,x:-18,y:58,z:9,rx:-0.02,ry:0.06,rz:-0.10,s:1.60,curve:'out',pose:'HERO 正面展示'},
+      {p:0.13,x:-16,y:56,z:10,rx:-0.015,ry:0.10,rz:-0.085,s:1.61,curve:'linear',pose:'HERO 微停'},
+      {p:0.27,x:-2, y:24,z:16,rx:0.03,ry:1.16,rz:-0.03,s:1.68,curve:'linear'},
+      {p:0.34,x:8,  y:16,z:18,rx:0.04,ry:1.58,rz:0.01,s:1.65,curve:'linear',pose:'EDGE 側邊高光'},
+      {p:0.46,x:24, y:10,z:13,rx:-0.01,ry:3.02,rz:-0.055,s:1.50,curve:'out',pose:'BACK 背面展示'},
+      {p:0.52,x:22, y:12,z:13,rx:-0.005,ry:3.09,rz:-0.045,s:1.50,curve:'linear',pose:'BACK 微停'},
+      {p:0.64,x:10, y:28,z:17,rx:0.03,ry:3.95,rz:0.04,s:1.44,curve:'linear'},
+      {p:0.74,x:-10,y:42,z:14,rx:0.03,ry:4.82,rz:0.045,s:1.38,curve:'linear',pose:'CROSS 穿字轉場'},
+      {p:0.84,x:0,  y:65,z:7,rx:0.015,ry:6.02,rz:-0.02,s:1.30,curve:'out',pose:'LOCKUP 回正'},
+      {p:0.89,x:0,  y:68,z:5,rx:0.012,ry:6.12,rz:-0.012,s:1.29,curve:'linear',pose:'LOCKUP 微停'},
+      {p:1.00,x:0,  y:82,z:0,rx:0.00,ry:6.283,rz:0.00,s:1.22,curve:'out',pose:'FINAL 完成'}
     ];
 
     const frames = isMobile ? mobileFrames : desktopFrames;
     const lerp = (a,b,t) => a + (b-a) * t;
-    const cinematicEase = t => 0.5 - 0.5 * Math.cos(Math.PI * t);
+    const easeOutCubic = t => 1 - Math.pow(1-t,3);
+    const easeInOutSine = t => 0.5 - 0.5*Math.cos(Math.PI*t);
+
+    function curveValue(type,t){
+      if(type === 'out') return easeOutCubic(t);
+      if(type === 'soft') return easeInOutSine(t);
+      return t;
+    }
 
     function sampleFrames(progress){
       const p = clamp01(progress);
       let a = frames[0];
       let b = frames[frames.length - 1];
-
       for(let i=0;i<frames.length-1;i++){
         if(p >= frames[i].p && p <= frames[i+1].p){
           a = frames[i];
@@ -453,14 +500,21 @@
           break;
         }
       }
-
-      const rawT = a.p === b.p ? 0 : (p - a.p) / (b.p - a.p);
-      const t = cinematicEase(rawT);
+      const rawT = a.p === b.p ? 0 : (p-a.p)/(b.p-a.p);
+      const t = curveValue(b.curve || 'linear', rawT);
       return {
-        x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t), z:lerp(a.z,b.z,t),
-        rx:lerp(a.rx,b.rx,t), ry:lerp(a.ry,b.ry,t), rz:lerp(a.rz,b.rz,t),
+        x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),z:lerp(a.z,b.z,t),
+        rx:lerp(a.rx,b.rx,t),ry:lerp(a.ry,b.ry,t),rz:lerp(a.rz,b.rz,t),
         s:lerp(a.s,b.s,t)
       };
+    }
+
+    function currentPose(progress){
+      let nearest = frames[0];
+      for(const frame of frames){
+        if(frame.p <= progress && frame.pose) nearest = frame;
+      }
+      return nearest.pose || 'ENTRY 入場';
     }
 
     function renderSpline(progress){
@@ -475,66 +529,93 @@
       target.scale.x = base.sx * k.s;
       target.scale.y = base.sy * k.s;
       target.scale.z = base.sz * k.s;
-
       if(typeof app.requestRender === 'function') app.requestRender();
       else if(typeof app.render === 'function') app.render();
     }
 
     const invLerp = (a,b,v) => clamp01((v-a)/(b-a));
-    const easeOut = t => 1 - Math.pow(1-t,3);
-
-    function setVisual(el, opacity, y, blur, scale=1){
+    function setVisual(el,opacity,y,blur,scale=1){
       el.style.opacity = opacity.toFixed(4);
       el.style.transform = `translate3d(0,${y.toFixed(2)}px,0) scale(${scale.toFixed(4)})`;
       el.style.filter = `blur(${blur.toFixed(2)}px)`;
     }
 
     function renderCopy(progress){
-      // copy 1：先完整停留，再被卡片穿越帶走。
-      const c1Out = easeOut(invLerp(0.12,0.27,progress));
-      setVisual(copy1, lerp(1,0.10,c1Out), lerp(0,-34,c1Out), lerp(0,7,c1Out), lerp(1,.985,c1Out));
+      const c1Out = easeOutCubic(invLerp(0.14,0.27,progress));
+      setVisual(copy1,lerp(1,0.10,c1Out),lerp(0,-32,c1Out),lerp(0,7,c1Out),lerp(1,.987,c1Out));
 
-      // copy 2：卡片在文字前方翻面，文字只在中段保持清晰。
-      const c2In = easeOut(invLerp(0.25,0.35,progress));
-      const c2Out = easeOut(invLerp(0.53,0.66,progress));
-      const c2Opacity = c2In * (1 - 0.88*c2Out);
-      setVisual(copy2, c2Opacity, lerp(30,0,c2In) - 26*c2Out, lerp(8,0,c2In) + 8*c2Out, lerp(.985,1,c2In));
+      const c2In = easeOutCubic(invLerp(0.27,0.37,progress));
+      const c2Out = easeOutCubic(invLerp(0.53,0.65,progress));
+      const c2Opacity = c2In*(1-0.90*c2Out);
+      setVisual(copy2,c2Opacity,lerp(28,0,c2In)-24*c2Out,lerp(8,0,c2In)+8*c2Out,lerp(.987,1,c2In));
 
-      // copy 3：最後才浮到卡片前方，建立正式 lockup。
-      const c3In = easeOut(invLerp(0.66,0.78,progress));
-      setVisual(copy3, c3In, lerp(34,0,c3In), lerp(9,0,c3In), lerp(.98,1,c3In));
+      const c3In = easeOutCubic(invLerp(0.67,0.79,progress));
+      setVisual(copy3,c3In,lerp(30,0,c3In),lerp(8,0,c3In),lerp(.985,1,c3In));
 
-      const cardsIn = easeOut(invLerp(0.80,0.93,progress));
+      const cardsIn = easeOutCubic(invLerp(0.84,0.96,progress));
       flowCards.style.opacity = cardsIn.toFixed(4);
-      flowCards.style.transform = `translate3d(-50%,${lerp(28,0,cardsIn).toFixed(2)}px,0) scale(${lerp(.985,1,cardsIn).toFixed(4)})`;
-      flowCards.style.filter = `blur(${lerp(8,0,cardsIn).toFixed(2)}px)`;
+      flowCards.style.transform = `translate3d(-50%,${lerp(24,0,cardsIn).toFixed(2)}px,0) scale(${lerp(.988,1,cardsIn).toFixed(4)})`;
+      flowCards.style.filter = `blur(${lerp(7,0,cardsIn).toFixed(2)}px)`;
     }
 
-    function renderProgress(progress){
-      const value = clamp01(progress);
-      renderSpline(value);
-      renderCopy(value);
-      progressBar.style.width = `${(value*100).toFixed(2)}%`;
+    function renderAtmosphere(progress){
+      const p = clamp01(progress);
+      lightField.style.transform = `translate3d(${lerp(-2.5,2.5,p).toFixed(2)}%,${lerp(-1.5,1.5,p).toFixed(2)}%,0) scale(${lerp(1.03,1.08,p).toFixed(4)})`;
+      orbOne.style.transform = `translate3d(${lerp(0,44,p).toFixed(1)}px,${lerp(0,-18,p).toFixed(1)}px,0)`;
+      orbTwo.style.transform = `translate3d(${lerp(0,-36,p).toFixed(1)}px,${lerp(0,20,p).toFixed(1)}px,0)`;
+      gridField.style.opacity = lerp(isMobile?.12:.18,isMobile?.17:.24,p).toFixed(3);
     }
 
-    // 使用低延遲、依幀率自動調整的阻尼。
-    // 它只消除手機觸控與瀏覽器 scroll event 的抖動，不會產生明顯延遲。
-    gsap.ticker.add(() => {
-      if(prefersReducedMotion){
-        renderedProgress = targetProgress;
-      }else{
-        const dt = Math.min(2, gsap.ticker.deltaRatio(60));
-        const damping = 1 - Math.exp(-0.22 * dt);
-        renderedProgress += (targetProgress - renderedProgress) * damping;
-      }
+    function renderDebug(progress){
+      if(!debugVisible) return;
+      motionDebugText.textContent = `${(progress*100).toFixed(1)}% · ${currentPose(progress)}`;
+    }
 
-      if(Math.abs(renderedProgress - lastRenderedProgress) > 0.00008){
-        lastRenderedProgress = renderedProgress;
-        renderProgress(renderedProgress);
-      }
+    function renderCardLayer(progress){
+      renderSpline(progress);
+      renderDebug(progress);
+    }
+
+    function renderAtmosphereLayer(progress){
+      renderCopy(progress);
+      renderAtmosphere(progress);
+    }
+
+    function setDebugVisible(value){
+      debugVisible = value;
+      motionDebug.classList.toggle('is-visible',value);
+      if(value) renderDebug(cardProgress);
+    }
+    setDebugVisible(debugVisible);
+    window.addEventListener('keydown',event=>{
+      if(event.key.toLowerCase()==='m') setDebugVisible(!debugVisible);
     });
 
-    app.load(sceneUrl).then(() => {
+    // 卡片採快速響應，約 1–2 幀內大幅追上手指；背景及文字才保留較慢景深延遲。
+    gsap.ticker.add(()=>{
+      const dt = Math.min(2,gsap.ticker.deltaRatio(60));
+      if(prefersReducedMotion){
+        cardProgress = targetProgress;
+        atmosphereProgress = targetProgress;
+      }else{
+        const cardResponse = 1-Math.exp(-0.92*dt);
+        const atmosphereResponse = 1-Math.exp(-0.30*dt);
+        cardProgress += (targetProgress-cardProgress)*cardResponse;
+        atmosphereProgress += (targetProgress-atmosphereProgress)*atmosphereResponse;
+      }
+
+      if(Math.abs(cardProgress-lastCardProgress)>0.00005){
+        lastCardProgress = cardProgress;
+        renderCardLayer(cardProgress);
+      }
+      if(Math.abs(atmosphereProgress-lastAtmosphereProgress)>0.00005){
+        lastAtmosphereProgress = atmosphereProgress;
+        renderAtmosphereLayer(atmosphereProgress);
+      }
+      progressBar.style.width = `${(targetProgress*100).toFixed(2)}%`;
+    });
+
+    app.load(sceneUrl).then(()=>{
       target =
         app.findObjectByName('hero_card_stage') ||
         app.findObjectByName('tappie_card_group') ||
@@ -542,23 +623,23 @@
         app.findObjectByName('card_rotation');
 
       if(!target){
-        statusEl.textContent = '找不到 hero_card_stage / tappie_card_group，請確認 Spline 物件命名';
+        statusEl.textContent='找不到 hero_card_stage / tappie_card_group，請確認 Spline 物件命名';
         return;
       }
 
-      base = {
-        px:target.position.x, py:target.position.y, pz:target.position.z,
-        rx:target.rotation.x, ry:target.rotation.y, rz:target.rotation.z,
-        sx:target.scale.x, sy:target.scale.y, sz:target.scale.z
+      base={
+        px:target.position.x,py:target.position.y,pz:target.position.z,
+        rx:target.rotation.x,ry:target.rotation.y,rz:target.rotation.z,
+        sx:target.scale.x,sy:target.scale.y,sz:target.scale.z
       };
-
-      statusEl.textContent = `控制物件：${target.name}`;
-      renderProgress(0);
-      setTimeout(() => statusEl.style.opacity = '0', 1600);
-      requestAnimationFrame(() => ScrollTrigger.refresh());
-    }).catch((error) => {
+      statusEl.textContent=`控制物件：${target.name}`;
+      renderCardLayer(0);
+      renderAtmosphereLayer(0);
+      setTimeout(()=>statusEl.style.opacity='0',1400);
+      requestAnimationFrame(()=>ScrollTrigger.refresh());
+    }).catch(error=>{
       console.error(error);
-      statusEl.textContent = 'Spline Runtime 載入失敗，請檢查 scene URL';
+      statusEl.textContent='Spline Runtime 載入失敗，請檢查 scene URL';
     });
 
     ScrollTrigger.create({
@@ -566,20 +647,20 @@
       start:'top top',
       end:'bottom bottom',
       invalidateOnRefresh:true,
-      onUpdate:self => {
-        targetProgress = self.progress;
-      }
+      onUpdate:self=>{targetProgress=self.progress;}
     });
 
     if(prefersReducedMotion){
-      targetProgress = 0.82;
-      renderedProgress = 0.82;
-      renderCopy(0.82);
+      targetProgress=0.84;
+      cardProgress=0.84;
+      atmosphereProgress=0.84;
+      renderCopy(0.84);
+      renderAtmosphere(0.84);
     }else{
       setVisual(copy1,1,0,0,1);
-      setVisual(copy2,0,30,8,.985);
-      setVisual(copy3,0,34,9,.98);
-      flowCards.style.opacity = '0';
+      setVisual(copy2,0,28,8,.987);
+      setVisual(copy3,0,30,8,.985);
+      flowCards.style.opacity='0';
     }
   </script>
 </body>
