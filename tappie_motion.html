@@ -4,169 +4,187 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Tappie Motion Tuning Lab v1</title>
+<title>Tappie Motion Tuning Lab v2 Professional</title>
 <style>
 :root{
-  --bg:#080b10;--panel:#10141b;--panel2:#151a22;--line:rgba(255,255,255,.09);
-  --text:#f5f7fb;--muted:#8f98a8;--blue:#39c7ff;--blue2:#168ef5;--danger:#ff6b6b;
-  --radius:16px;--shadow:0 24px 80px rgba(0,0,0,.38);
+  --bg:#07090d;--panel:#0f131a;--panel2:#141a23;--panel3:#19202b;--line:rgba(255,255,255,.09);
+  --line2:rgba(255,255,255,.15);--text:#f6f8fb;--muted:#8d97a8;--muted2:#b2bac8;
+  --blue:#45caff;--blue2:#168cf5;--green:#74e19a;--danger:#ff7a7a;--yellow:#ffd36b;
+  --radius:15px;--shadow:0 26px 90px rgba(0,0,0,.42);
 }
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:"PingFang TC","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-button,input,select,textarea{font:inherit}
-button{color:inherit}
-body{overflow:hidden}
-.app{height:100svh;display:grid;grid-template-rows:58px minmax(0,1fr);background:linear-gradient(180deg,#0b0e14,#07090d)}
-.toolbar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);background:rgba(12,15,21,.96);backdrop-filter:blur(18px);z-index:50}
-.brand{display:flex;align-items:center;gap:10px;min-width:230px}.brand-mark{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#1c78ff);display:grid;place-items:center;font-weight:900;box-shadow:0 8px 24px rgba(34,164,255,.24)}
-.brand strong{font-size:14px;letter-spacing:.01em}.brand span{display:block;color:var(--muted);font-size:10px;margin-top:1px}
-.toolbar-group{display:flex;align-items:center;gap:6px}.toolbar-spacer{flex:1}.sep{width:1px;height:24px;background:var(--line);margin:0 3px}
-.btn,.seg button{border:1px solid var(--line);background:#141922;border-radius:10px;padding:8px 11px;font-size:12px;font-weight:720;cursor:pointer;transition:.18s ease;white-space:nowrap}.btn:hover,.seg button:hover{background:#1a202b;border-color:rgba(255,255,255,.16)}.btn.primary{background:linear-gradient(135deg,#179cf7,#2378ed);border-color:transparent}.btn.ghost{background:transparent}.btn.icon{width:34px;padding:8px 0}.btn.danger{color:#ffb1b1}.btn:disabled{opacity:.42;cursor:not-allowed}
-.seg{display:flex;padding:3px;border:1px solid var(--line);border-radius:12px;background:#0d1117}.seg button{border:0;background:transparent;padding:6px 10px}.seg button.active{background:#252c38;box-shadow:0 1px 6px rgba(0,0,0,.24)}
-.workspace{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 420px}
-.preview-pane{position:relative;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(circle at 52% 45%,#151a25 0,#080b10 58%,#05070a 100%)}
-.preview-head{position:absolute;left:16px;top:14px;z-index:30;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.badge{font-size:10px;font-weight:780;letter-spacing:.09em;text-transform:uppercase;color:#aeb8c8;padding:7px 9px;border:1px solid var(--line);border-radius:999px;background:rgba(10,13,18,.74);backdrop-filter:blur(10px)}.badge.ready{color:#91e6b0}.badge.error{color:#ffabab}
-.viewport-stage{position:absolute;inset:58px 16px 18px;display:grid;place-items:center;overflow:hidden}
-.viewport-shell{position:relative;width:min(100%,calc((100svh - 106px)*1.6));max-height:100%;aspect-ratio:var(--view-ratio,1.6);overflow:hidden;border-radius:18px;background:#02060d;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 32px 100px rgba(0,0,0,.5);isolation:isolate;transition:width .24s ease,aspect-ratio .24s ease,border-radius .24s ease}
-.viewport-shell.mobile{width:min(430px,calc((100svh - 110px)*.462));border-radius:28px}
-.scene-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at var(--glow-x,72%) var(--glow-y,35%),rgba(35,151,255,var(--glow-a,.16)),transparent 32%),radial-gradient(circle at 20% 82%,rgba(61,205,255,.055),transparent 35%),linear-gradient(180deg,#02050a,#06172b 58%,#02050a)}
-.scene-bg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.52));pointer-events:none}
-.reference-layer{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;display:grid;place-items:center}.reference-layer img{width:100%;height:100%;object-fit:contain;filter:none}.reference-layer.visible{opacity:var(--ref-opacity,.4)}
-.copy-layer{position:absolute;inset:0;z-index:4;pointer-events:none}.copy-block{position:absolute;left:var(--copy-left,8%);top:var(--copy-top,58%);width:var(--copy-width,43%);transform:translateY(-50%) scale(var(--copy-scale,1));transform-origin:left center;text-align:var(--copy-align,left);opacity:var(--copy-opacity,1);text-shadow:0 18px 54px rgba(0,0,0,.34)}.copy-kicker{font-size:clamp(9px,1vw,13px);font-weight:760;letter-spacing:.15em;color:rgba(255,255,255,.56);margin-bottom:10px;text-transform:uppercase}.copy-title{margin:0;font-size:clamp(26px,4.8vw,78px);line-height:.96;letter-spacing:-.06em;font-weight:900}.copy-title .accent{color:#43c8ff}.copy-note{display:block;margin-top:16px;color:rgba(255,255,255,.67);font-size:clamp(10px,1.2vw,18px);line-height:1.55;font-weight:620}
-.card-canvas-layer{position:absolute;inset:0;z-index:5;pointer-events:none;will-change:transform,opacity;filter:brightness(var(--card-brightness,1)) contrast(var(--card-contrast,1)) saturate(var(--card-saturation,1)) drop-shadow(0 26px 54px rgba(0,0,0,var(--card-shadow,.22)))}
-#canvas3d{display:block;width:100%;height:100%;pointer-events:none}
-.phone-layer{position:absolute;left:var(--phone-left,70%);top:var(--phone-top,50%);z-index:7;width:var(--phone-width,23%);aspect-ratio:9/19.5;transform:translate(-50%,-50%) scale(var(--phone-scale,1));opacity:var(--phone-opacity,0);pointer-events:none}.phone-shell{position:relative;width:100%;height:100%;overflow:hidden;border-radius:12%;background:#0c1423;border:max(4px,.65vw) solid #091120;box-shadow:0 40px 100px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.12)}.phone-shell::before{content:"";position:absolute;z-index:5;top:2.2%;left:50%;width:28%;height:3.6%;border-radius:999px;background:#010514;transform:translateX(-50%)}.phone-screen{position:absolute;inset:0;background:#eef2f6}.phone-screen img{width:100%;height:100%;display:block;object-fit:cover}.phone-placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#667085;font-size:11px;background:linear-gradient(180deg,#f8fafc,#e8edf4)}
-.grid-overlay{position:absolute;inset:0;z-index:20;pointer-events:none;display:none;background-image:linear-gradient(to right,rgba(98,212,255,.24) 1px,transparent 1px),linear-gradient(to bottom,rgba(98,212,255,.24) 1px,transparent 1px);background-size:calc(100%/12) calc(100%/12)}.grid-overlay.visible{display:block}.grid-overlay::before,.grid-overlay::after{content:"";position:absolute;background:rgba(255,255,255,.5)}.grid-overlay::before{left:50%;top:0;width:1px;height:100%}.grid-overlay::after{top:50%;left:0;height:1px;width:100%}.safe-area{position:absolute;inset:6%;border:1px dashed rgba(255,203,90,.55);border-radius:12px}.grid-labels{position:absolute;inset:0}.grid-label{position:absolute;color:rgba(255,255,255,.56);font:700 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;text-shadow:0 1px 3px #000}.grid-label.col{top:4px;transform:translateX(-50%)}.grid-label.row{left:4px;transform:translateY(-50%)}
-.drag-surface{position:absolute;inset:0;z-index:25;cursor:grab}.drag-surface.dragging{cursor:grabbing}.drag-surface.disabled{pointer-events:none}
-.frame-info{position:absolute;right:10px;bottom:10px;z-index:32;display:flex;gap:6px;align-items:center;padding:7px 9px;border-radius:9px;background:rgba(5,8,12,.74);border:1px solid var(--line);backdrop-filter:blur(8px);font:700 10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:#aeb8c8}.frame-info strong{color:#fff}.coord-pill{color:#6ed5ff}
-.inspector{min-width:0;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;border-left:1px solid var(--line);background:#0f131a;box-shadow:-20px 0 60px rgba(0,0,0,.22);z-index:40}
-.inspector-title{padding:14px 16px 10px;border-bottom:1px solid var(--line)}.inspector-title strong{font-size:14px}.inspector-title p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.45}
-.frame-strip{display:flex;gap:7px;padding:10px 12px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:thin}.frame-chip{min-width:94px;text-align:left;border:1px solid var(--line);border-radius:11px;background:#141922;padding:9px 10px;cursor:pointer}.frame-chip.active{border-color:#39c7ff;background:linear-gradient(180deg,rgba(43,172,255,.18),rgba(24,29,39,.95));box-shadow:0 0 0 1px rgba(57,199,255,.16)}.frame-chip b{display:block;font-size:11px}.frame-chip span{display:block;margin-top:3px;color:var(--muted);font-size:9px}.frame-chip .pct{color:#5fd2ff}
-.tabs{display:flex;gap:4px;padding:8px 10px 0}.tab{flex:1;border:0;border-bottom:2px solid transparent;background:transparent;padding:8px 3px;color:#7f899a;font-size:11px;font-weight:760;cursor:pointer}.tab.active{color:#fff;border-color:var(--blue)}
-.tab-panels{min-height:0;overflow:auto;padding:12px 14px 18px;scrollbar-color:#333b49 transparent}.panel{display:none}.panel.active{display:block}.section{border:1px solid var(--line);border-radius:14px;background:#131820;margin-bottom:10px;overflow:hidden}.section-head{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;border-bottom:1px solid var(--line)}.section-head strong{font-size:11px;letter-spacing:.03em}.section-head span{color:var(--muted);font-size:9px}.section-body{padding:11px 12px}.row{display:grid;grid-template-columns:88px minmax(0,1fr) 62px;align-items:center;gap:8px;min-height:35px}.row+.row{margin-top:4px}.row label{font-size:10px;color:#aab3c1;font-weight:650}.row input[type=range]{width:100%;accent-color:#35c4ff}.row input[type=number],.row select,.row input[type=text]{width:100%;border:1px solid var(--line);border-radius:8px;background:#0e1218;color:#eef2f7;padding:6px 7px;font-size:10px;outline:0}.row input:focus,.row select:focus{border-color:#35c4ff}.row .unit{color:#657083;font-size:9px;margin-left:-5px}.check-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}.check-row label{font-size:10px;color:#aab3c1}.switch{position:relative;width:34px;height:20px}.switch input{display:none}.switch span{position:absolute;inset:0;border-radius:999px;background:#282f3a;transition:.18s}.switch span::after{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;border-radius:50%;background:#fff;transition:.18s}.switch input:checked+span{background:#168ef5}.switch input:checked+span::after{transform:translateX(14px)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}.mini-btn{border:1px solid var(--line);border-radius:9px;background:#191f29;padding:8px 7px;font-size:10px;font-weight:700;cursor:pointer}.mini-btn:hover{background:#232b37}.mini-btn.active{border-color:#38c7ff;color:#63d4ff}
-.timeline{padding:12px 14px;border-top:1px solid var(--line);background:#0d1117}.timeline-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}.timeline-top strong{font-size:10px}.timeline-top span{color:#55ceff;font:700 10px ui-monospace,SFMono-Regular,Menlo,monospace}.timeline input[type=range]{width:100%;accent-color:#35c4ff}.timeline-actions{display:flex;gap:6px;margin-top:8px}.timeline-actions .btn{flex:1;padding:7px}
-.toast{position:fixed;left:50%;bottom:22px;z-index:100;transform:translate(-50%,20px);opacity:0;padding:10px 14px;border-radius:10px;background:#1b2430;border:1px solid rgba(255,255,255,.14);box-shadow:var(--shadow);font-size:11px;font-weight:700;transition:.22s;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}
-.modal{position:fixed;inset:0;z-index:110;display:none;place-items:center;background:rgba(0,0,0,.62);backdrop-filter:blur(8px)}.modal.show{display:grid}.modal-card{width:min(680px,92vw);max-height:82vh;overflow:auto;border-radius:18px;background:#131820;border:1px solid var(--line);box-shadow:var(--shadow);padding:18px}.modal-card h3{margin:0 0 10px}.modal-card textarea{width:100%;height:340px;border:1px solid var(--line);border-radius:12px;background:#090d12;color:#dce5f2;padding:12px;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
-.screenshot-mode .toolbar,.screenshot-mode .inspector,.screenshot-mode .preview-head{display:none}.screenshot-mode .workspace{grid-template-columns:1fr}.screenshot-mode .viewport-stage{inset:0}.screenshot-mode .viewport-shell{max-height:96svh}
-@media(max-width:980px){body{overflow:auto}.app{height:auto;min-height:100svh;grid-template-rows:auto auto}.toolbar{position:sticky;top:0;flex-wrap:wrap}.brand{min-width:190px}.workspace{grid-template-columns:1fr;grid-template-rows:72svh auto}.inspector{border-left:0;border-top:1px solid var(--line);min-height:760px}.preview-pane{min-height:72svh}.viewport-stage{inset:56px 8px 10px}.toolbar-group.hide-small{display:none}}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:"PingFang TC","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}body{overflow:hidden}
+.app{height:100svh;display:grid;grid-template-rows:auto minmax(0,1fr);background:linear-gradient(180deg,#0a0d12,#06080b)}
+.toolbar{min-height:62px;display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--line);background:rgba(11,14,19,.97);backdrop-filter:blur(18px);z-index:70;overflow-x:auto}
+.brand{display:flex;align-items:center;gap:10px;min-width:242px}.brand-mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--blue),#1f72f1);display:grid;place-items:center;font-weight:950;box-shadow:0 9px 26px rgba(37,161,255,.25)}
+.brand strong{font-size:14px}.brand small{display:block;color:var(--muted);font-size:9px;margin-top:2px;letter-spacing:.05em}.toolbar-spacer{flex:1}.sep{width:1px;height:28px;background:var(--line);flex:none;margin:0 2px}
+.btn,.seg button,.control-select{border:1px solid var(--line);background:#141922;border-radius:10px;padding:8px 10px;font-size:11px;font-weight:760;white-space:nowrap;transition:.16s ease}.btn:hover,.seg button:hover,.control-select:hover{background:#1a202a;border-color:var(--line2)}.btn.primary{background:linear-gradient(135deg,#159af5,#2477ed);border-color:transparent}.btn.danger{color:#ffb3b3}.btn.ghost{background:transparent}.btn.icon{width:34px;padding:8px 0}.btn:disabled{opacity:.36;cursor:not-allowed}.seg{display:flex;padding:3px;border:1px solid var(--line);border-radius:12px;background:#0c1016}.seg button{border:0;background:transparent;padding:6px 9px}.seg button.active{background:#252c38;box-shadow:0 1px 7px rgba(0,0,0,.24)}
+.workspace{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 430px}
+.preview-pane{position:relative;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(circle at 52% 45%,#151b25 0,#080b10 58%,#05070a 100%)}
+.preview-head{position:absolute;left:14px;top:12px;right:14px;z-index:45;display:flex;align-items:center;gap:7px;flex-wrap:wrap;pointer-events:none}.preview-head>*{pointer-events:auto}.badge{font-size:9px;font-weight:790;letter-spacing:.08em;text-transform:uppercase;color:#aeb7c6;padding:6px 8px;border:1px solid var(--line);border-radius:999px;background:rgba(8,11,16,.78);backdrop-filter:blur(10px)}.badge.ready{color:#91e4ac}.badge.error{color:#ffabab}.object-seg{margin-left:auto}
+.viewport-stage{position:absolute;inset:56px 14px 16px;overflow:hidden;display:grid;place-items:center}
+.viewport-shell{position:relative;overflow:hidden;background:#02060d;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 32px 100px rgba(0,0,0,.54);isolation:isolate;transform:translateZ(0);transition:border-radius .18s ease}.viewport-shell[data-device="desktop"]{border-radius:18px}.viewport-shell[data-device="mobile"]{border-radius:28px}
+.composer-scene,.index-scene{position:absolute;inset:0}.index-scene{display:none;background:#020306}.viewport-shell.mode-index .composer-scene{display:none}.viewport-shell.mode-index .index-scene{display:block}
+.scene-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 72% 35%,rgba(35,151,255,.16),transparent 32%),radial-gradient(circle at 20% 82%,rgba(61,205,255,.055),transparent 35%),linear-gradient(180deg,#02050a,#06172b 58%,#02050a)}.scene-bg::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 54%,rgba(0,0,0,.52));pointer-events:none}
+.reference-layer{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;display:grid;place-items:center}.reference-layer.visible{opacity:var(--ref-opacity,.4)}.reference-layer img{width:100%;height:100%;object-fit:contain}
+.copy-layer{position:absolute;inset:0;z-index:4;pointer-events:none}.copy-block{position:absolute;left:var(--copy-left,8%);top:var(--copy-top,58%);width:var(--copy-width,43%);transform:translateY(-50%) scale(var(--copy-scale,1));transform-origin:left center;text-align:var(--copy-align,left);opacity:var(--copy-opacity,1);text-shadow:0 18px 54px rgba(0,0,0,.34);transition:box-shadow .12s ease}.copy-block.selected{outline:1px solid rgba(69,202,255,.66);outline-offset:7px;border-radius:8px}.copy-kicker{font-size:clamp(9px,1vw,13px);font-weight:760;letter-spacing:.15em;color:rgba(255,255,255,.56);margin-bottom:10px;text-transform:uppercase}.copy-title{margin:0;font-size:clamp(26px,4.8vw,78px);line-height:.96;letter-spacing:-.06em;font-weight:950}.copy-title .accent{color:#43c8ff}.copy-note{display:block;margin-top:16px;color:rgba(255,255,255,.67);font-size:clamp(10px,1.2vw,18px);line-height:1.55;font-weight:620}
+.card-canvas-layer{position:absolute;inset:0;z-index:5;pointer-events:none;will-change:transform,opacity;filter:brightness(var(--card-brightness,1)) contrast(var(--card-contrast,1)) saturate(var(--card-saturation,1)) drop-shadow(0 27px 58px rgba(0,0,0,var(--card-shadow,.24)))}#canvas3d{display:block;width:100%;height:100%;pointer-events:none}
+.phone-layer{position:absolute;left:var(--phone-left,70%);top:var(--phone-top,50%);z-index:7;width:var(--phone-width,23%);aspect-ratio:9/19.5;transform:translate(-50%,-50%) scale(var(--phone-scale,1));opacity:var(--phone-opacity,0);pointer-events:none;transition:outline .12s ease}.phone-layer.selected{outline:1px solid rgba(69,202,255,.66);outline-offset:8px;border-radius:14%}.phone-shell{position:relative;width:100%;height:100%;overflow:hidden;border-radius:12%;background:#0c1423;border:max(4px,.65vw) solid #091120;box-shadow:0 40px 100px rgba(0,0,0,.52),inset 0 0 0 1px rgba(255,255,255,.12)}.phone-shell::before{content:"";position:absolute;z-index:5;top:2.2%;left:50%;width:28%;height:3.6%;border-radius:999px;background:#010514;transform:translateX(-50%)}.phone-screen{position:absolute;inset:0;background:#eef2f6}.phone-screen img{width:100%;height:100%;display:block;object-fit:cover}.phone-placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#667085;font-size:11px;background:linear-gradient(180deg,#f8fafc,#e8edf4)}
+.object-anchor{position:absolute;z-index:24;pointer-events:none;border:1px dashed transparent}.object-anchor.card{inset:20% 26%}.object-anchor.selected{border-color:rgba(69,202,255,.58)}
+.grid-overlay{position:absolute;inset:0;z-index:30;pointer-events:none;display:none;background-image:linear-gradient(to right,rgba(98,212,255,.23) 1px,transparent 1px),linear-gradient(to bottom,rgba(98,212,255,.23) 1px,transparent 1px);background-size:calc(100%/12) calc(100%/12)}.grid-overlay.visible{display:block}.grid-overlay::before,.grid-overlay::after{content:"";position:absolute;background:rgba(255,255,255,.46)}.grid-overlay::before{left:50%;top:0;width:1px;height:100%}.grid-overlay::after{top:50%;left:0;height:1px;width:100%}.safe-area{position:absolute;inset:6%;border:1px dashed rgba(255,203,90,.55);border-radius:12px}.grid-label{position:absolute;color:rgba(255,255,255,.56);font:700 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;text-shadow:0 1px 3px #000}.grid-label.col{top:4px;transform:translateX(-50%)}.grid-label.row{left:4px;transform:translateY(-50%)}
+.drag-surface{position:absolute;inset:0;z-index:35;cursor:grab}.drag-surface.dragging{cursor:grabbing}.drag-surface.disabled{pointer-events:none}
+.frame-info{position:absolute;right:10px;bottom:10px;z-index:42;display:flex;gap:6px;align-items:center;padding:7px 9px;border-radius:9px;background:rgba(5,8,12,.78);border:1px solid var(--line);backdrop-filter:blur(8px);font:700 9px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:#aeb8c8}.frame-info strong{color:#fff}.coord-pill{color:#6ed5ff}
+.index-viewport{position:absolute;left:0;top:0;transform-origin:0 0;background:#020306}.index-frame{display:block;border:0;background:#020306;pointer-events:none}.index-scene.manual .index-frame{pointer-events:auto}.index-overlay{position:absolute;inset:0;z-index:5;pointer-events:none;display:grid;place-items:center;background:rgba(3,6,10,.84);color:#c5cedd;font-size:12px;letter-spacing:.04em}.index-overlay.hidden{display:none}.index-hint{position:absolute;left:10px;bottom:10px;z-index:8;padding:7px 9px;border-radius:9px;background:rgba(5,8,12,.78);border:1px solid var(--line);font-size:9px;color:#aeb8c8}
+.inspector{min-width:0;min-height:0;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;border-left:1px solid var(--line);background:#0f131a;box-shadow:-20px 0 60px rgba(0,0,0,.22);z-index:50}.inspector-title{padding:12px 14px 9px;border-bottom:1px solid var(--line)}.inspector-title strong{font-size:13px}.inspector-title p{margin:4px 0 0;color:var(--muted);font-size:10px;line-height:1.45}
+.point-actions{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:6px;padding:9px 10px;border-bottom:1px solid var(--line)}.point-actions .btn{padding:7px 7px}
+.point-strip{display:flex;gap:7px;padding:9px 10px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:thin;min-height:66px}.point-empty{display:flex;align-items:center;color:#758093;font-size:10px;padding:0 4px}.point-chip{min-width:112px;text-align:left;border:1px solid var(--line);border-radius:11px;background:#141922;padding:8px 9px;cursor:pointer}.point-chip.active{border-color:#39c7ff;background:linear-gradient(180deg,rgba(43,172,255,.18),rgba(24,29,39,.96));box-shadow:0 0 0 1px rgba(57,199,255,.16)}.point-chip b{display:block;font-size:10px}.point-chip span{display:block;margin-top:3px;color:var(--muted);font-size:8px}.point-chip .pct{color:#5fd2ff}.point-chip .scene{color:#ffd88b}
+.tabs{display:flex;gap:3px;padding:7px 9px 0}.tab{flex:1;border:0;border-bottom:2px solid transparent;background:transparent;padding:8px 2px;color:#7f899a;font-size:10px;font-weight:760;cursor:pointer}.tab.active{color:#fff;border-color:var(--blue)}.tab-panels{min-height:0;overflow:auto;padding:10px 12px 16px;scrollbar-color:#333b49 transparent}.panel{display:none}.panel.active{display:block}.section{border:1px solid var(--line);border-radius:14px;background:#131820;margin-bottom:9px;overflow:hidden}.section-head{display:flex;align-items:center;justify-content:space-between;padding:10px 11px;border-bottom:1px solid var(--line)}.section-head strong{font-size:10px;letter-spacing:.03em}.section-head span{color:var(--muted);font-size:8px}.section-body{padding:10px 11px}.row{display:grid;grid-template-columns:80px minmax(0,1fr) 60px;align-items:center;gap:7px;min-height:33px}.row+.row{margin-top:4px}.row label{font-size:9px;color:#aab3c1;font-weight:650}.row input[type=range]{width:100%;accent-color:#32bdf7}.row input[type=number],.row input[type=text],.row select,.row textarea,.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);background:#0e1218;border-radius:8px;padding:6px 7px;font-size:9px;color:#e9edf4;outline:none}.row input:focus,.row textarea:focus,.field input:focus,.field textarea:focus{border-color:rgba(69,202,255,.55)}.row textarea{grid-column:2/4;min-height:58px;resize:vertical}.field{margin-bottom:8px}.field label{display:block;margin-bottom:4px;color:#aab3c1;font-size:9px;font-weight:650}.field textarea{min-height:58px;resize:vertical}.check-row{display:flex;align-items:center;justify-content:space-between;min-height:34px;font-size:9px;color:#aab3c1}.switch{position:relative;width:38px;height:22px}.switch input{display:none}.switch span{position:absolute;inset:0;border-radius:999px;background:#252c36;transition:.15s}.switch span::after{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.15s}.switch input:checked+span{background:#1f9cf1}.switch input:checked+span::after{transform:translateX(16px)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.mini-btn{border:1px solid var(--line);background:#181e27;border-radius:9px;padding:7px 8px;font-size:9px;font-weight:700}.mini-btn:hover{background:#202733}.hint{color:#7f8999;font-size:9px;line-height:1.5}.hint strong{color:#b9c3d2}.status-line{display:flex;align-items:center;gap:7px;font-size:9px;color:#9ca6b5}.dot{width:7px;height:7px;border-radius:50%;background:#768091}.dot.ok{background:#73df9c}.dot.warn{background:#ffd36b}
+.timeline{padding:9px 12px 11px;border-top:1px solid var(--line);background:#0b0f15}.timeline-top{display:flex;align-items:center;gap:7px;margin-bottom:7px;font-size:9px;color:#9aa4b3}.timeline-top strong{font-size:10px;color:#eef2f7}.timeline input[type=range]{width:100%;accent-color:#42c8ff}.timeline-track{position:relative;height:22px;margin-top:-7px;pointer-events:none}.timeline-marker{position:absolute;top:5px;width:2px;height:13px;background:#ffd46c;transform:translateX(-50%);border-radius:4px}.timeline-marker.active{width:4px;background:#4bd0ff}.timeline-actions{display:flex;gap:6px;margin-top:3px}.timeline-actions .btn{flex:1;padding:7px}
+.toast{position:fixed;left:50%;bottom:20px;z-index:100;transform:translate(-50%,20px);opacity:0;background:#1d2430;border:1px solid var(--line2);border-radius:11px;padding:9px 13px;font-size:10px;box-shadow:var(--shadow);transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}.modal{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.66);display:none;place-items:center;padding:20px}.modal.open{display:grid}.modal-card{width:min(760px,96vw);background:#121821;border:1px solid var(--line2);border-radius:18px;padding:15px;box-shadow:var(--shadow)}.modal-card h3{margin:0 0 10px;font-size:14px}.modal-card textarea{width:100%;height:52vh;background:#080b10;border:1px solid var(--line);color:#dbe2ed;border-radius:12px;padding:12px;font:10px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}.modal-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:9px}.file-input{width:100%;font-size:9px;color:#aab3c1}
+.screenshot-mode .toolbar,.screenshot-mode .inspector,.screenshot-mode .preview-head{display:none}.screenshot-mode .workspace{grid-template-columns:1fr}.screenshot-mode .viewport-stage{inset:0}.screenshot-mode .viewport-shell{border-radius:0!important;box-shadow:none}
+@media(max-width:1050px){body{overflow:auto}.app{height:auto;min-height:100svh}.toolbar{position:sticky;top:0;flex-wrap:wrap}.brand{min-width:190px}.workspace{grid-template-columns:1fr;grid-template-rows:72svh auto}.inspector{border-left:0;border-top:1px solid var(--line);min-height:820px}.preview-pane{min-height:72svh}.viewport-stage{inset:58px 8px 10px}.toolbar .hide-small{display:none}}
 </style>
 </head>
 <body>
 <div class="app" id="appRoot">
   <header class="toolbar">
-    <div class="brand"><div class="brand-mark">T</div><div><strong>Tappie Motion Tuning Lab</strong><span>Desktop / Mobile 關鍵幀調整器</span></div></div>
-    <div class="seg" id="deviceSeg"><button data-device="desktop" class="active">電腦</button><button data-device="mobile">手機</button></div>
-    <div class="toolbar-group hide-small"><select id="viewportPreset" class="btn" aria-label="Viewport preset"><option value="1440x900">1440 × 900</option><option value="1280x800">1280 × 800</option><option value="1920x1080">1920 × 1080</option><option value="390x844">390 × 844</option><option value="430x932">430 × 932</option></select></div>
+    <div class="brand"><div class="brand-mark">T</div><div><strong>Tappie Motion Tuning Lab</strong><small>V2 PROFESSIONAL · DYNAMIC KEYFRAMES</small></div></div>
+    <div class="seg" id="previewModeSeg"><button class="active" data-mode="composer">編排工具</button><button data-mode="index">原始 INDEX 一日流程</button></div>
     <div class="sep"></div>
-    <button class="btn icon" id="undoBtn" title="Undo (Ctrl/Cmd+Z)">↶</button><button class="btn icon" id="redoBtn" title="Redo">↷</button>
-    <button class="btn" id="gridBtn">格線</button><button class="btn" id="dragBtn">拖曳：開</button>
+    <div class="seg" id="deviceSeg"><button class="active" data-device="desktop">電腦</button><button data-device="mobile">手機</button></div>
+    <select id="viewportPreset" class="control-select" aria-label="Viewport preset">
+      <option value="1440x900">1440 × 900</option><option value="1280x800">1280 × 800</option><option value="1920x1080">1920 × 1080</option><option value="430x932">430 × 932</option><option value="390x844">390 × 844</option>
+    </select>
+    <button class="btn" id="fitViewportBtn">最大顯示</button>
+    <div class="sep"></div>
+    <div class="seg hide-small" id="objectSeg"><button class="active" data-object="card">卡片</button><button data-object="copy">文字</button><button data-object="phone">手機</button></div>
+    <button class="btn hide-small" id="gridBtn">格線</button>
     <div class="toolbar-spacer"></div>
-    <button class="btn ghost" id="importBtn">匯入</button><button class="btn ghost" id="exportBtn">匯出 JSON</button><button class="btn primary" id="saveBtn">儲存關鍵幀</button>
+    <button class="btn icon" id="undoBtn" title="Undo">↶</button><button class="btn icon" id="redoBtn" title="Redo">↷</button>
+    <button class="btn" id="importBtn">匯入</button><button class="btn primary" id="exportBtn">匯出 JSON</button>
     <input type="file" id="importFile" accept="application/json" hidden>
   </header>
 
   <main class="workspace">
     <section class="preview-pane">
-      <div class="preview-head"><span class="badge" id="splineStatus">Spline 載入中</span><span class="badge" id="modeBadge">EDIT FRAME</span><span class="badge" id="viewBadge">1440×900</span></div>
-      <div class="viewport-stage">
-        <div class="viewport-shell" id="viewportShell">
-          <div class="scene-bg" id="sceneBg"></div>
-          <div class="reference-layer" id="referenceLayer"><img id="referenceImage" alt="Reference overlay"></div>
-          <div class="copy-layer" id="copyLayer"><div class="copy-block" id="copyBlock"><div class="copy-kicker" id="copyKicker">Tappie 解法</div><h2 class="copy-title" id="copyTitle">離開教室，<br><span class="accent">練習也不斷線。</span></h2><span class="copy-note" id="copyNote">一張每天會戴的名牌，接住學生開口、家長回饋與現場流程。</span></div></div>
-          <div class="card-canvas-layer" id="cardLayer"><canvas id="canvas3d" aria-label="Tappie 3D card"></canvas></div>
-          <div class="phone-layer" id="phoneLayer"><div class="phone-shell"><div class="phone-screen"><img id="phoneImage" src="https://tappieapp.com/assets/official/tappieweb-stickty-1.PNG" alt=""><div class="phone-placeholder" id="phonePlaceholder" hidden>PHONE</div></div></div></div>
-          <div class="grid-overlay" id="gridOverlay"><div class="safe-area"></div><div class="grid-labels" id="gridLabels"></div></div>
-          <div class="drag-surface" id="dragSurface"></div>
-          <div class="frame-info"><strong id="frameInfoId">D01</strong><span id="frameInfoLabel">Hero</span><span class="coord-pill" id="frameCoord">F5</span></div>
+      <div class="preview-head">
+        <span class="badge" id="splineStatus">Spline loading</span><span class="badge" id="viewBadge">1440×900</span><span class="badge" id="modeBadge">WORKING STATE</span><span class="badge" id="selectionBadge">CARD</span>
+      </div>
+      <div class="viewport-stage" id="viewportStage">
+        <div class="viewport-shell" id="viewportShell" data-device="desktop">
+          <div class="composer-scene" id="composerScene">
+            <div class="scene-bg"></div>
+            <div class="reference-layer" id="referenceLayer"><img id="referenceImage" alt=""></div>
+            <div class="copy-layer" id="copyLayer"><div class="copy-block" id="copyBlock"><div class="copy-kicker" id="copyKicker"></div><h2 class="copy-title" id="copyTitle"></h2><span class="copy-note" id="copyNote"></span></div></div>
+            <div class="card-canvas-layer" id="cardLayer"><canvas id="canvas3d"></canvas></div>
+            <div class="phone-layer" id="phoneLayer"><div class="phone-shell"><div class="phone-screen"><img id="phoneImage" alt=""><div class="phone-placeholder" id="phonePlaceholder">Phone preview</div></div></div></div>
+            <div class="object-anchor card" id="cardAnchor"></div>
+            <div class="grid-overlay" id="gridOverlay"><div class="safe-area"></div><div id="gridLabels"></div></div>
+            <div class="drag-surface" id="dragSurface"></div>
+            <div class="frame-info"><strong id="frameInfoId">WORK</strong><span id="frameInfoLabel">未儲存</span><span class="coord-pill" id="frameCoord">F6</span></div>
+          </div>
+          <div class="index-scene" id="indexScene">
+            <div class="index-viewport" id="indexViewport"><iframe class="index-frame" id="indexFrame" src="about:blank" title="Current INDEX day loop"></iframe></div>
+            <div class="index-overlay" id="indexOverlay">載入目前 /index.html 的原始一日流程…</div>
+            <div class="index-hint">此模式直接讀取目前網站的 INDEX，因此圖片、太陽、月亮、文字與 Sticky 邏輯不再重製。</div>
+          </div>
         </div>
       </div>
     </section>
 
     <aside class="inspector">
-      <div class="inspector-title"><strong id="inspectorFrameTitle">D01 · Hero</strong><p>先把每一張靜態畫面調到好看，再用時間軸預覽動畫。</p></div>
-      <div class="frame-strip" id="frameStrip"></div>
+      <div class="inspector-title"><strong id="inspectorTitle">工作狀態（尚未儲存定位點）</strong><p>先拖曳與調整，再按「新增定位點」。定位點數量不受限制，會依 Progress 自動排序。</p></div>
+      <div class="point-actions"><button class="btn primary" id="addPointBtn">＋ 新增定位點</button><button class="btn" id="duplicatePointBtn">複製</button><button class="btn" id="deselectPointBtn">工作狀態</button><button class="btn danger" id="deletePointBtn">刪除</button></div>
+      <div class="point-strip" id="pointStrip"></div>
       <div>
-        <div class="tabs" id="tabs"><button class="tab active" data-tab="card">卡片</button><button class="tab" data-tab="copy">文字</button><button class="tab" data-tab="phone">手機</button><button class="tab" data-tab="motion">動態</button><button class="tab" data-tab="compare">比對</button></div>
+        <div class="tabs" id="tabs"><button class="tab active" data-tab="card">卡片</button><button class="tab" data-tab="copy">文字</button><button class="tab" data-tab="phone">手機</button><button class="tab" data-tab="motion">定位點</button><button class="tab" data-tab="reference">參考</button></div>
       </div>
       <div class="tab-panels">
         <section class="panel active" data-panel="card">
-          <div class="section"><div class="section-head"><strong>畫面位置</strong><span>可直接拖曳</span></div><div class="section-body">
-            <div class="row"><label>水平 X</label><input type="range" data-bind="card.x" min="-55" max="55" step=".1"><input type="number" data-bind-num="card.x" min="-55" max="55" step=".1"></div>
-            <div class="row"><label>垂直 Y</label><input type="range" data-bind="card.y" min="-55" max="55" step=".1"><input type="number" data-bind-num="card.y" min="-55" max="55" step=".1"></div>
-            <div class="row"><label>模型深度 Z</label><input type="range" data-bind="card.z" min="-80" max="80" step=".5"><input type="number" data-bind-num="card.z" min="-80" max="80" step=".5"></div>
-            <div class="row"><label>大小 Scale</label><input type="range" data-bind="card.scale" min=".15" max="2.8" step=".01"><input type="number" data-bind-num="card.scale" min=".15" max="2.8" step=".01"></div>
+          <div class="section"><div class="section-head"><strong>卡片構圖</strong><span>可直接拖曳</span></div><div class="section-body">
+            <div class="row"><label>水平 X</label><input type="range" data-bind="card.x" min="-65" max="65" step=".1"><input type="number" data-bind-num="card.x" min="-65" max="65" step=".1"></div>
+            <div class="row"><label>垂直 Y</label><input type="range" data-bind="card.y" min="-65" max="65" step=".1"><input type="number" data-bind-num="card.y" min="-65" max="65" step=".1"></div>
+            <div class="row"><label>模型深度 Z</label><input type="range" data-bind="card.z" min="-30" max="70" step=".1"><input type="number" data-bind-num="card.z" min="-30" max="70" step=".1"></div>
+            <div class="row"><label>大小 Scale</label><input type="range" data-bind="card.scale" min=".15" max="3" step=".01"><input type="number" data-bind-num="card.scale" min=".15" max="3" step=".01"></div>
           </div></div>
-          <div class="section"><div class="section-head"><strong>翻滾角度</strong><span>degrees</span></div><div class="section-body">
-            <div class="row"><label>Rotate X</label><input type="range" data-bind="card.rotX" min="-180" max="180" step="1"><input type="number" data-bind-num="card.rotX" min="-180" max="180" step="1"></div>
-            <div class="row"><label>Rotate Y</label><input type="range" data-bind="card.rotY" min="-720" max="720" step="1"><input type="number" data-bind-num="card.rotY" min="-720" max="720" step="1"></div>
-            <div class="row"><label>Rotate Z</label><input type="range" data-bind="card.rotZ" min="-360" max="360" step="1"><input type="number" data-bind-num="card.rotZ" min="-360" max="360" step="1"></div>
-            <div class="grid2" style="margin-top:8px"><button class="mini-btn" data-nudge="front">正面</button><button class="mini-btn" data-nudge="back">背面</button><button class="mini-btn" data-nudge="edgeX">水平薄邊</button><button class="mini-btn" data-nudge="edgeY">垂直薄邊</button></div>
+          <div class="section"><div class="section-head"><strong>三軸翻滾</strong><span>degrees</span></div><div class="section-body">
+            <div class="row"><label>Rotate X</label><input type="range" data-bind="card.rotX" min="-180" max="180" step=".5"><input type="number" data-bind-num="card.rotX" min="-720" max="720" step=".5"></div>
+            <div class="row"><label>Rotate Y</label><input type="range" data-bind="card.rotY" min="-360" max="360" step=".5"><input type="number" data-bind-num="card.rotY" min="-1080" max="1080" step=".5"></div>
+            <div class="row"><label>Rotate Z</label><input type="range" data-bind="card.rotZ" min="-180" max="180" step=".5"><input type="number" data-bind-num="card.rotZ" min="-720" max="720" step=".5"></div>
+            <div class="grid2" style="margin-top:8px"><button class="mini-btn" data-pose="front">完整正面</button><button class="mini-btn" data-pose="back">完整背面</button><button class="mini-btn" data-pose="edgeY">垂直薄邊</button><button class="mini-btn" data-pose="edgeX">水平薄邊</button></div>
           </div></div>
-          <div class="section"><div class="section-head"><strong>層級與畫質</strong><span>visual</span></div><div class="section-body">
-            <div class="row"><label>卡片層級</label><select data-select="card.layer"><option value="behindCopy">文字後</option><option value="frontCopy">文字前／手機後</option><option value="frontAll">最前方</option></select><span></span></div>
+          <div class="section"><div class="section-head"><strong>層級與材質</strong><span>visual</span></div><div class="section-body">
+            <div class="row"><label>層級</label><select data-select="card.layer"><option value="behindCopy">文字後方</option><option value="frontCopy">文字前方</option><option value="frontAll">手機前方</option></select><span></span></div>
             <div class="row"><label>透明度</label><input type="range" data-bind="card.opacity" min="0" max="1" step=".01"><input type="number" data-bind-num="card.opacity" min="0" max="1" step=".01"></div>
-            <div class="row"><label>亮度</label><input type="range" data-bind="card.brightness" min=".5" max="1.6" step=".01"><input type="number" data-bind-num="card.brightness" min=".5" max="1.6" step=".01"></div>
-            <div class="row"><label>對比</label><input type="range" data-bind="card.contrast" min=".5" max="1.7" step=".01"><input type="number" data-bind-num="card.contrast" min=".5" max="1.7" step=".01"></div>
-            <div class="row"><label>飽和</label><input type="range" data-bind="card.saturation" min=".4" max="1.5" step=".01"><input type="number" data-bind-num="card.saturation" min=".4" max="1.5" step=".01"></div>
+            <div class="row"><label>亮度</label><input type="range" data-bind="card.brightness" min=".4" max="1.8" step=".01"><input type="number" data-bind-num="card.brightness" min=".4" max="1.8" step=".01"></div>
+            <div class="row"><label>對比</label><input type="range" data-bind="card.contrast" min=".5" max="1.8" step=".01"><input type="number" data-bind-num="card.contrast" min=".5" max="1.8" step=".01"></div>
+            <div class="row"><label>飽和</label><input type="range" data-bind="card.saturation" min="0" max="1.8" step=".01"><input type="number" data-bind-num="card.saturation" min="0" max="1.8" step=".01"></div>
           </div></div>
         </section>
 
         <section class="panel" data-panel="copy">
-          <div class="section"><div class="section-head"><strong>文字內容</strong><span>目前關鍵幀</span></div><div class="section-body">
-            <div class="row"><label>版型</label><select data-select="copy.preset" id="copyPreset"><option value="hero">Hero</option><option value="tap">一嗶就開口</option><option value="visible">每天看得見</option><option value="steps">更少步驟</option><option value="none">無文字</option></select><span></span></div>
-            <div class="row"><label>Kicker</label><input type="text" data-text="copy.kicker" style="grid-column:2/4"></div>
-            <div class="row"><label>標題 HTML</label><input type="text" data-text="copy.title" style="grid-column:2/4"></div>
-            <div class="row"><label>補充文字</label><input type="text" data-text="copy.note" style="grid-column:2/4"></div>
+          <div class="section"><div class="section-head"><strong>文字內容</strong><span>editable</span></div><div class="section-body">
+            <div class="field"><label>Kicker</label><input type="text" data-text="copy.kicker"></div>
+            <div class="field"><label>標題（可使用 &lt;br&gt; 與 &lt;span class=&quot;accent&quot;&gt;）</label><textarea data-text="copy.title"></textarea></div>
+            <div class="field"><label>說明文字</label><textarea data-text="copy.note"></textarea></div>
           </div></div>
-          <div class="section"><div class="section-head"><strong>文字構圖</strong><span>fixed copy</span></div><div class="section-body">
-            <div class="row"><label>水平 X</label><input type="range" data-bind="copy.x" min="0" max="100" step=".1"><input type="number" data-bind-num="copy.x" min="0" max="100" step=".1"></div>
+          <div class="section"><div class="section-head"><strong>文字位置</strong><span>可直接拖曳</span></div><div class="section-body">
+            <div class="row"><label>水平 X</label><input type="range" data-bind="copy.x" min="-10" max="100" step=".1"><input type="number" data-bind-num="copy.x" min="-10" max="100" step=".1"></div>
             <div class="row"><label>垂直 Y</label><input type="range" data-bind="copy.y" min="0" max="100" step=".1"><input type="number" data-bind-num="copy.y" min="0" max="100" step=".1"></div>
-            <div class="row"><label>寬度</label><input type="range" data-bind="copy.width" min="20" max="90" step=".5"><input type="number" data-bind-num="copy.width" min="20" max="90" step=".5"></div>
-            <div class="row"><label>縮放</label><input type="range" data-bind="copy.scale" min=".5" max="1.6" step=".01"><input type="number" data-bind-num="copy.scale" min=".5" max="1.6" step=".01"></div>
+            <div class="row"><label>區塊寬度</label><input type="range" data-bind="copy.width" min="10" max="100" step=".5"><input type="number" data-bind-num="copy.width" min="10" max="100" step=".5"></div>
+            <div class="row"><label>文字縮放</label><input type="range" data-bind="copy.scale" min=".35" max="2" step=".01"><input type="number" data-bind-num="copy.scale" min=".35" max="2" step=".01"></div>
             <div class="row"><label>透明度</label><input type="range" data-bind="copy.opacity" min="0" max="1" step=".01"><input type="number" data-bind-num="copy.opacity" min="0" max="1" step=".01"></div>
             <div class="row"><label>對齊</label><select data-select="copy.align"><option value="left">靠左</option><option value="center">置中</option><option value="right">靠右</option></select><span></span></div>
           </div></div>
         </section>
 
         <section class="panel" data-panel="phone">
-          <div class="section"><div class="section-head"><strong>手機物件</strong><span>handoff / day</span></div><div class="section-body">
+          <div class="section"><div class="section-head"><strong>手機物件</strong><span>可直接拖曳</span></div><div class="section-body">
             <div class="check-row"><label>顯示手機</label><span class="switch"><input type="checkbox" data-check="phone.visible"><span></span></span></div>
+            <div class="field"><label>螢幕圖片路徑</label><input type="text" data-text="phone.image"></div>
             <div class="row"><label>水平 X</label><input type="range" data-bind="phone.x" min="0" max="100" step=".1"><input type="number" data-bind-num="phone.x" min="0" max="100" step=".1"></div>
             <div class="row"><label>垂直 Y</label><input type="range" data-bind="phone.y" min="0" max="100" step=".1"><input type="number" data-bind-num="phone.y" min="0" max="100" step=".1"></div>
-            <div class="row"><label>寬度</label><input type="range" data-bind="phone.width" min="12" max="80" step=".5"><input type="number" data-bind-num="phone.width" min="12" max="80" step=".5"></div>
-            <div class="row"><label>縮放</label><input type="range" data-bind="phone.scale" min=".3" max="2" step=".01"><input type="number" data-bind-num="phone.scale" min=".3" max="2" step=".01"></div>
+            <div class="row"><label>寬度</label><input type="range" data-bind="phone.width" min="8" max="90" step=".5"><input type="number" data-bind-num="phone.width" min="8" max="90" step=".5"></div>
+            <div class="row"><label>縮放</label><input type="range" data-bind="phone.scale" min=".2" max="2.5" step=".01"><input type="number" data-bind-num="phone.scale" min=".2" max="2.5" step=".01"></div>
             <div class="row"><label>透明度</label><input type="range" data-bind="phone.opacity" min="0" max="1" step=".01"><input type="number" data-bind-num="phone.opacity" min="0" max="1" step=".01"></div>
           </div></div>
         </section>
 
         <section class="panel" data-panel="motion">
-          <div class="section"><div class="section-head"><strong>時間軸位置</strong><span>0–100%</span></div><div class="section-body">
+          <div class="section"><div class="section-head"><strong>定位點資訊</strong><span>dynamic</span></div><div class="section-body">
+            <div class="field"><label>名稱</label><input type="text" data-text="label"></div>
             <div class="row"><label>Progress</label><input type="range" data-bind="progress" min="0" max="100" step=".1"><input type="number" data-bind-num="progress" min="0" max="100" step=".1"></div>
-            <div class="row"><label>展示停留</label><input type="range" data-bind="motion.hold" min="0" max="12" step=".1"><input type="number" data-bind-num="motion.hold" min="0" max="12" step=".1"></div>
-            <div class="row"><label>前往下一幀</label><select data-select="motion.easing"><option value="linear">Linear 跟手</option><option value="easeOut">Ease Out 展示</option><option value="easeInOut">Ease In-Out</option><option value="fastPass">Fast Pass 快速穿越</option></select><span></span></div>
+            <div class="row"><label>展示停留</label><input type="range" data-bind="motion.hold" min="0" max="15" step=".1"><input type="number" data-bind-num="motion.hold" min="0" max="15" step=".1"></div>
+            <div class="row"><label>下一段速度</label><select data-select="motion.easing"><option value="linear">Linear 跟手</option><option value="easeOut">Ease Out 展示</option><option value="easeInOut">Ease In-Out</option><option value="fastPass">Fast Pass 快速穿越</option></select><span></span></div>
+            <div class="hint" style="margin-top:8px">定位點會依 Progress 自動排序。Hold 是在此姿態保留的 Scroll 百分比，不會真的鎖住頁面。</div>
           </div></div>
-          <div class="section"><div class="section-head"><strong>關鍵幀管理</strong><span>workflow</span></div><div class="section-body"><div class="grid2"><button class="mini-btn" id="copyFrameBtn">複製此幀</button><button class="mini-btn" id="resetFrameBtn">重設此幀</button><button class="mini-btn" id="copyDeviceBtn">複製到另一裝置</button><button class="mini-btn" id="specBtn">複製規格文字</button></div></div></div>
+          <div class="section"><div class="section-head"><strong>定位點工具</strong><span>workflow</span></div><div class="section-body"><div class="grid2"><button class="mini-btn" id="copySpecBtn">複製規格文字</button><button class="mini-btn" id="copyOtherDeviceBtn">複製到另一裝置</button><button class="mini-btn" id="fitCardBtn">卡片回安全區</button><button class="mini-btn" id="resetWorkingBtn">重設工作狀態</button></div></div></div>
         </section>
 
-        <section class="panel" data-panel="compare">
-          <div class="section"><div class="section-head"><strong>參考圖疊加</strong><span>local only</span></div><div class="section-body">
-            <input type="file" id="referenceFile" accept="image/*" style="width:100%;font-size:10px;color:#aab3c1">
+        <section class="panel" data-panel="reference">
+          <div class="section"><div class="section-head"><strong>Flowcard／截圖疊加</strong><span>local image</span></div><div class="section-body">
+            <input type="file" id="referenceFile" accept="image/*" class="file-input">
             <div class="check-row"><label>顯示參考圖</label><span class="switch"><input type="checkbox" id="referenceVisible"><span></span></span></div>
             <div class="row"><label>透明度</label><input type="range" id="referenceOpacity" min="0" max="1" step=".01" value=".4"><input type="number" id="referenceOpacityNum" min="0" max="1" step=".01" value=".4"></div>
           </div></div>
-          <div class="section"><div class="section-head"><strong>檢視工具</strong><span>review</span></div><div class="section-body"><div class="grid2"><button class="mini-btn" id="screenshotBtn">截圖模式</button><button class="mini-btn" id="centerBtn">中心十字</button><button class="mini-btn" id="fitBtn">卡片回安全區</button><button class="mini-btn" id="resetProjectBtn">重設整個專案</button></div></div></div>
-          <div class="section"><div class="section-head"><strong>進階 Spline</strong><span>model source</span></div><div class="section-body">
-            <div class="row"><label>Scene URL</label><input type="text" id="sceneUrl" style="grid-column:2/4"></div>
-            <div class="row"><label>Object Name</label><input type="text" id="objectName" style="grid-column:2/4"></div>
-            <button class="mini-btn" id="reloadSceneBtn" style="width:100%;margin-top:8px">重新載入模型</button>
+          <div class="section"><div class="section-head"><strong>目前 INDEX 一日流程</strong><span>live same-origin</span></div><div class="section-body">
+            <div class="field"><label>INDEX URL</label><input type="text" id="indexUrl" value="/index.html"></div>
+            <div class="status-line"><span class="dot" id="indexDot"></span><span id="indexStatusText">尚未載入</span></div>
+            <div class="grid2" style="margin-top:8px"><button class="mini-btn" id="reloadIndexBtn">重新載入 INDEX</button><button class="mini-btn" id="toggleIndexManualBtn">允許內頁手動滑動</button></div>
+            <p class="hint">切換上方「原始 INDEX 一日流程」後，底部時間軸會直接控制目前網站的 <strong>#tappie-day-loop</strong>。這是原始區段，不再用替代圖片或重寫太陽月亮。</p>
           </div></div>
+          <div class="section"><div class="section-head"><strong>模型來源</strong><span>Spline</span></div><div class="section-body">
+            <div class="field"><label>Scene URL</label><input type="text" id="sceneUrl"></div><div class="field"><label>Object Name</label><input type="text" id="objectName"></div><button class="mini-btn" id="reloadSceneBtn" style="width:100%">重新載入模型</button>
+          </div></div>
+          <div class="section"><div class="section-head"><strong>檢視工具</strong><span>review</span></div><div class="section-body"><div class="grid2"><button class="mini-btn" id="screenshotBtn">截圖模式</button><button class="mini-btn" id="resetProjectBtn">重設整個專案</button></div></div></div>
         </section>
       </div>
       <div class="timeline">
-        <div class="timeline-top"><strong>Motion Preview</strong><span id="scrubValue">0.0%</span><div class="toolbar-spacer"></div><span id="timelineDevice">DESKTOP</span></div>
+        <div class="timeline-top"><strong id="timelineTitle">Composer Timeline</strong><span id="scrubValue">0.0%</span><div class="toolbar-spacer"></div><span id="timelineDevice">DESKTOP</span></div>
         <input type="range" id="scrubSlider" min="0" max="100" step=".1" value="0">
-        <div class="timeline-actions"><button class="btn" id="editModeBtn">編輯單幀</button><button class="btn" id="playBtn">▶ 播放</button><button class="btn" id="stopBtn">停止</button></div>
+        <div class="timeline-track" id="timelineTrack"></div>
+        <div class="timeline-actions"><button class="btn" id="editStateBtn">編輯工作狀態</button><button class="btn" id="previewTimelineBtn">預覽定位點</button><button class="btn" id="playBtn">▶ 播放</button><button class="btn" id="stopBtn">停止</button></div>
       </div>
     </aside>
   </main>
@@ -181,130 +199,145 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const deg=v=>v*Math.PI/180;
-const deepClone=o=>JSON.parse(JSON.stringify(o));
+const clone=o=>JSON.parse(JSON.stringify(o));
 const getPath=(o,p)=>p.split('.').reduce((a,k)=>a?.[k],o);
-const setPath=(o,p,v)=>{const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++)a=a[ks[i]];a[ks.at(-1)]=v};
+const setPath=(o,p,v)=>{const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++){if(!a[ks[i]])a[ks[i]]={};a=a[ks[i]]}a[ks.at(-1)]=v};
+const uid=()=>`P${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
 const toast=(msg)=>{const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1800)};
 
-const COPY_PRESETS={
- hero:{kicker:'Tappie 解法',title:'離開教室，<br><span class="accent">練習也不斷線。</span>',note:'一張每天會戴的名牌，接住學生開口、家長回饋與現場流程。'},
- tap:{kicker:'01 / 學生口說動力',title:'一嗶，<br><span class="accent">就開口。</span>',note:'不用帳密，不用教操作。'},
- visible:{kicker:'02 / 家長回饋',title:'每天，<br><span class="accent">看得見。</span>',note:'到校、離校、練習，都有紀錄。'},
- steps:{kicker:'03 / 現場流程',title:'更少，<br><span class="accent">步驟。</span>',note:'打卡、加點、練習，同一套流程。'},
- none:{kicker:'',title:'',note:''}
-};
-const SEMANTIC_FRAMES=[['01','Hero'],['02','Tap'],['03','Edge'],['04','Back'],['05','Visible'],['06','Steps'],['07','Handoff'],['08','Phone']];
-function makeFrame(id,label,preset,progress,card={},copy={},phone={},motion={}){
- const cp=COPY_PRESETS[preset]||COPY_PRESETS.none;
- return {id,label,progress,motion:{hold:0,easing:'easeOut',...motion},card:{x:0,y:0,z:18,scale:1,rotX:0,rotY:0,rotZ:0,opacity:1,layer:'frontCopy',brightness:1,contrast:1,saturation:1,...card},copy:{preset,kicker:cp.kicker,title:cp.title,note:cp.note,x:8,y:55,width:43,scale:1,opacity:1,align:'left',...copy},phone:{visible:false,x:70,y:50,width:23,scale:1,opacity:0,...phone}};
+const DEFAULT_COPY={kicker:'Tappie 解法',title:'離開教室，<br><span class="accent">練習也不斷線。</span>',note:'一張每天會戴的名牌，接住學生開口、家長回饋與現場流程。',x:8,y:55,width:43,scale:1,opacity:1,align:'left'};
+function baseFrame(device='desktop'){
+  return {
+    id:null,label:'未命名定位點',progress:0,motion:{hold:0,easing:'easeOut'},
+    card:{x:device==='desktop'?12:0,y:0,z:18,scale:device==='desktop'?1.25:.95,rotX:-2,rotY:-6,rotZ:-5,opacity:1,layer:'frontCopy',brightness:1,contrast:1,saturation:1},
+    copy:{...clone(DEFAULT_COPY),x:device==='desktop'?7:6,y:device==='desktop'?56:72,width:device==='desktop'?43:88,scale:device==='desktop'?1:.88,align:device==='desktop'?'left':'center'},
+    phone:{visible:false,image:'/assets/official/tappieweb-stickty-1.PNG',x:device==='desktop'?70:50,y:50,width:device==='desktop'?23:72,scale:1,opacity:1}
+  };
 }
-const DEFAULT_PROJECT={
- version:1,sceneUrl:'https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode',objectName:'hero_card_stage',
- viewport:{desktop:'1440x900',mobile:'390x844'},
- desktop:{frames:[
-  makeFrame('D01','Hero','hero',0,{x:16,y:-16,scale:1.48,rotX:-2,rotY:-7,rotZ:-7,layer:'behindCopy'},{x:8,y:66,width:66,align:'center'}),
-  makeFrame('D02','Tap','tap',15,{x:20,y:8,scale:1.55,rotX:-4,rotY:12,rotZ:-5,layer:'frontCopy'},{x:7,y:47,width:38}),
-  makeFrame('D03','Edge','tap',29,{x:4,y:2,scale:1.62,rotX:-8,rotY:70,rotZ:2,layer:'frontCopy'},{x:7,y:47,width:38},{},{hold:0,easing:'fastPass'}),
-  makeFrame('D04','Back','visible',43,{x:17,y:-3,scale:1.52,rotX:-2,rotY:180,rotZ:180,layer:'behindCopy'},{x:58,y:48,width:35,align:'right'},{},{hold:2.5,easing:'easeOut'}),
-  makeFrame('D05','Visible','visible',58,{x:-7,y:13,scale:1.48,rotX:-6,rotY:212,rotZ:178,layer:'frontCopy'},{x:7,y:48,width:37}),
-  makeFrame('D06','Steps','steps',72,{x:15,y:3,scale:1.52,rotX:-4,rotY:320,rotZ:8,layer:'behindCopy'},{x:7,y:48,width:37}),
-  makeFrame('D07','Handoff','steps',85,{x:16,y:1,scale:1.03,rotX:0,rotY:360,rotZ:0,layer:'frontCopy'},{x:7,y:48,width:37},{visible:true,x:69,y:50,width:24,scale:.88,opacity:.6}),
-  makeFrame('D08','Phone','none',96,{x:18,y:0,scale:.44,rotX:0,rotY:360,rotZ:0,layer:'frontAll',opacity:.9},{opacity:0},{visible:true,x:64,y:50,width:24,scale:1,opacity:1},{hold:4,easing:'linear'})
- ]},
- mobile:{frames:[
-  makeFrame('M01','Hero','hero',0,{x:0,y:-23,scale:1.04,rotX:-2,rotY:-6,rotZ:-6,layer:'behindCopy'},{x:6,y:70,width:88,align:'center',scale:.9}),
-  makeFrame('M02','Tap','tap',15,{x:4,y:8,scale:1.12,rotX:-4,rotY:10,rotZ:-5,layer:'frontCopy'},{x:6,y:27,width:83,scale:.9}),
-  makeFrame('M03','Edge','tap',29,{x:-2,y:20,scale:1.13,rotX:-8,rotY:68,rotZ:1,layer:'frontCopy'},{x:6,y:23,width:83,scale:.9},{},{hold:0,easing:'fastPass'}),
-  makeFrame('M04','Back','visible',43,{x:4,y:4,scale:1.08,rotX:-2,rotY:180,rotZ:180,layer:'behindCopy'},{x:6,y:22,width:83,scale:.88},{},{hold:2.5,easing:'easeOut'}),
-  makeFrame('M05','Visible','visible',58,{x:-3,y:22,scale:1.08,rotX:-6,rotY:214,rotZ:178,layer:'frontCopy'},{x:6,y:22,width:83,scale:.88}),
-  makeFrame('M06','Steps','steps',72,{x:4,y:12,scale:1.09,rotX:-4,rotY:318,rotZ:7,layer:'behindCopy'},{x:6,y:21,width:83,scale:.88}),
-  makeFrame('M07','Handoff','steps',85,{x:0,y:8,scale:.79,rotX:0,rotY:360,rotZ:0,layer:'frontCopy'},{x:6,y:20,width:83,scale:.88},{visible:true,x:50,y:58,width:71,scale:.85,opacity:.55}),
-  makeFrame('M08','Phone','none',96,{x:0,y:7,scale:.34,rotX:0,rotY:360,rotZ:0,layer:'frontAll',opacity:.9},{opacity:0},{visible:true,x:50,y:55,width:71,scale:1,opacity:1},{hold:4,easing:'linear'})
- ]}
-};
+function defaultProject(){return {version:2,sceneUrl:'https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode',objectName:'hero_card_stage',viewport:{desktop:'1440x900',mobile:'430x932'},tracks:{desktop:{points:[],working:baseFrame('desktop')},mobile:{points:[],working:baseFrame('mobile')}},indexReference:{url:'/index.html',progress:{desktop:0,mobile:0}}};}
 
 let project=loadProject();
-let device='desktop',frameIndex=0,mode='edit',playing=false,playRAF=0;
-let app3d=null,target=null,base=null;
+let device='desktop';
+let previewMode='composer';
+let selectedPointId=null;
+let selectedObject='card';
+let renderMode='edit';
+let playing=false,playRaf=null;
 let history=[],future=[];
-const els={root:$('#appRoot'),viewport:$('#viewportShell'),cardLayer:$('#cardLayer'),copyLayer:$('#copyLayer'),copyBlock:$('#copyBlock'),copyKicker:$('#copyKicker'),copyTitle:$('#copyTitle'),copyNote:$('#copyNote'),phoneLayer:$('#phoneLayer'),phoneImage:$('#phoneImage'),phonePlaceholder:$('#phonePlaceholder'),grid:$('#gridOverlay'),gridLabels:$('#gridLabels'),drag:$('#dragSurface'),status:$('#splineStatus'),viewBadge:$('#viewBadge'),modeBadge:$('#modeBadge'),frameInfoId:$('#frameInfoId'),frameInfoLabel:$('#frameInfoLabel'),frameCoord:$('#frameCoord'),frameStrip:$('#frameStrip'),scrub:$('#scrubSlider'),scrubValue:$('#scrubValue'),timelineDevice:$('#timelineDevice'),referenceLayer:$('#referenceLayer'),referenceImage:$('#referenceImage')};
+let app3d=null,target=null,base=null;
+let referenceUrl='';
+let indexReady=false,indexManual=false;
 
-function loadProject(){try{const x=JSON.parse(localStorage.getItem('tappieMotionLabV1'));if(x?.version===1)return x}catch{}return deepClone(DEFAULT_PROJECT)}
-function persist(){localStorage.setItem('tappieMotionLabV1',JSON.stringify(project))}
-function frames(){return project[device].frames}
-function current(){return frames()[frameIndex]}
-function snapshot(){history.push(JSON.stringify(project));if(history.length>80)history.shift();future=[]}
-function undo(){if(!history.length)return;future.push(JSON.stringify(project));project=JSON.parse(history.pop());frameIndex=Math.min(frameIndex,frames().length-1);persist();syncAll();toast('已復原')}
-function redo(){if(!future.length)return;history.push(JSON.stringify(project));project=JSON.parse(future.pop());frameIndex=Math.min(frameIndex,frames().length-1);persist();syncAll();toast('已重做')}
+const els={
+  viewportStage:$('#viewportStage'),viewport:$('#viewportShell'),composer:$('#composerScene'),indexScene:$('#indexScene'),indexViewport:$('#indexViewport'),indexFrame:$('#indexFrame'),indexOverlay:$('#indexOverlay'),
+  cardLayer:$('#cardLayer'),cardAnchor:$('#cardAnchor'),copyLayer:$('#copyLayer'),copyBlock:$('#copyBlock'),copyKicker:$('#copyKicker'),copyTitle:$('#copyTitle'),copyNote:$('#copyNote'),phoneLayer:$('#phoneLayer'),phoneImage:$('#phoneImage'),phonePlaceholder:$('#phonePlaceholder'),
+  grid:$('#gridOverlay'),gridLabels:$('#gridLabels'),drag:$('#dragSurface'),status:$('#splineStatus'),viewBadge:$('#viewBadge'),modeBadge:$('#modeBadge'),selectionBadge:$('#selectionBadge'),frameInfoId:$('#frameInfoId'),frameInfoLabel:$('#frameInfoLabel'),frameCoord:$('#frameCoord'),pointStrip:$('#pointStrip'),scrub:$('#scrubSlider'),scrubValue:$('#scrubValue'),timelineTrack:$('#timelineTrack'),timelineTitle:$('#timelineTitle'),timelineDevice:$('#timelineDevice'),referenceLayer:$('#referenceLayer'),referenceImage:$('#referenceImage')
+};
 
-function viewportDimensions(){const value=project.viewport[device];const [w,h]=value.split('x').map(Number);return {w,h,ratio:w/h}}
-function applyViewport(){const {w,h,ratio}=viewportDimensions();els.viewport.style.setProperty('--view-ratio',ratio);els.viewport.classList.toggle('mobile',device==='mobile');els.viewBadge.textContent=`${w}×${h}`;els.timelineDevice.textContent=device.toUpperCase();$('#viewportPreset').value=project.viewport[device]}
+function loadProject(){try{const p=JSON.parse(localStorage.getItem('tappieMotionLabV2'));if(p?.version===2)return normalizeProject(p)}catch(e){}return defaultProject()}
+function normalizeProject(p){const d=defaultProject();p.viewport=p.viewport||d.viewport;p.tracks=p.tracks||d.tracks;for(const dev of ['desktop','mobile']){p.tracks[dev]=p.tracks[dev]||{points:[],working:baseFrame(dev)};p.tracks[dev].points=Array.isArray(p.tracks[dev].points)?p.tracks[dev].points:[];p.tracks[dev].working={...baseFrame(dev),...(p.tracks[dev].working||{})};p.tracks[dev].working.card={...baseFrame(dev).card,...p.tracks[dev].working.card};p.tracks[dev].working.copy={...baseFrame(dev).copy,...p.tracks[dev].working.copy};p.tracks[dev].working.phone={...baseFrame(dev).phone,...p.tracks[dev].working.phone};p.tracks[dev].points=p.tracks[dev].points.map(x=>normalizeFrame(x,dev))}p.indexReference={...d.indexReference,...(p.indexReference||{}),progress:{...d.indexReference.progress,...(p.indexReference?.progress||{})}};return p}
+function normalizeFrame(f,dev){const b=baseFrame(dev);return {...b,...f,id:f.id||uid(),card:{...b.card,...f.card},copy:{...b.copy,...f.copy},phone:{...b.phone,...f.phone},motion:{...b.motion,...f.motion}}}
+function persist(){localStorage.setItem('tappieMotionLabV2',JSON.stringify(project))}
+function snapshot(){history.push(JSON.stringify(project));if(history.length>100)history.shift();future=[]}
+function undo(){if(!history.length)return;future.push(JSON.stringify(project));project=normalizeProject(JSON.parse(history.pop()));ensureSelection();persist();syncAll();toast('已復原')}
+function redo(){if(!future.length)return;history.push(JSON.stringify(project));project=normalizeProject(JSON.parse(future.pop()));ensureSelection();persist();syncAll();toast('已重做')}
+function track(){return project.tracks[device]}
+function points(){return track().points.sort((a,b)=>a.progress-b.progress)}
+function selectedPoint(){return selectedPointId?points().find(p=>p.id===selectedPointId)||null:null}
+function editable(){return selectedPoint()||track().working}
+function ensureSelection(){if(selectedPointId&&!points().some(p=>p.id===selectedPointId))selectedPointId=null}
+function setWorkingFromFrame(f){track().working=normalizeFrame({...clone(f),id:null,label:f.label||'工作狀態'},device)}
+
+function viewportDims(){const [w,h]=project.viewport[device].split('x').map(Number);return {w,h,ratio:w/h}}
+function fitViewport(){const {w,h,ratio}=viewportDims();const r=els.viewportStage.getBoundingClientRect();const pad=4;let width=Math.max(100,r.width-pad*2),height=Math.max(100,r.height-pad*2);if(width/height>ratio)width=height*ratio;else height=width/ratio;els.viewport.style.width=`${Math.floor(width)}px`;els.viewport.style.height=`${Math.floor(height)}px`;els.viewport.dataset.device=device;els.viewBadge.textContent=`${w}×${h}`;els.timelineDevice.textContent=device.toUpperCase();$('#viewportPreset').value=project.viewport[device];fitIndexIframe()}
+function fitIndexIframe(){const {w,h}=viewportDims();const rect=els.viewport.getBoundingClientRect();if(!rect.width||!rect.height)return;const scale=rect.width/w;els.indexViewport.style.width=`${w}px`;els.indexViewport.style.height=`${h}px`;els.indexViewport.style.transform=`scale(${scale})`;els.indexFrame.style.width=`${w}px`;els.indexFrame.style.height=`${h}px`}
+new ResizeObserver(()=>fitViewport()).observe(els.viewportStage);
+
 function createGrid(){els.gridLabels.innerHTML='';'ABCDEFGHIJKL'.split('').forEach((l,i)=>{const s=document.createElement('span');s.className='grid-label col';s.style.left=`${(i+.5)/12*100}%`;s.textContent=l;els.gridLabels.appendChild(s)});for(let i=0;i<12;i++){const s=document.createElement('span');s.className='grid-label row';s.style.top=`${(i+.5)/12*100}%`;s.textContent=i+1;els.gridLabels.appendChild(s)}}
-function coordFromFrame(f){const col=clamp(Math.floor((50+f.card.x)/100*12),0,11);const row=clamp(Math.floor((50+f.card.y)/100*12),0,11);return `${'ABCDEFGHIJKL'[col]}${row+1}`}
-function renderFrameChips(){els.frameStrip.innerHTML='';frames().forEach((f,i)=>{const b=document.createElement('button');b.className='frame-chip'+(i===frameIndex?' active':'');b.innerHTML=`<b>${f.id} · ${f.label}</b><span><span class="pct">${f.progress.toFixed(1)}%</span> · Hold ${f.motion.hold.toFixed(1)}%</span>`;b.onclick=()=>{mode='edit';frameIndex=i;els.scrub.value=f.progress;syncAll()};els.frameStrip.appendChild(b)})}
-function setCopy(frame){const c=frame.copy;els.copyKicker.textContent=c.kicker;els.copyTitle.innerHTML=c.title;els.copyNote.textContent=c.note;els.copyBlock.style.setProperty('--copy-left',c.x+'%');els.copyBlock.style.setProperty('--copy-top',c.y+'%');els.copyBlock.style.setProperty('--copy-width',c.width+'%');els.copyBlock.style.setProperty('--copy-scale',c.scale);els.copyBlock.style.setProperty('--copy-opacity',c.opacity);els.copyBlock.style.setProperty('--copy-align',c.align);els.copyBlock.style.transformOrigin=c.align==='right'?'right center':c.align==='center'?'center center':'left center'}
-function setPhone(frame){const p=frame.phone;els.phoneLayer.style.setProperty('--phone-left',p.x+'%');els.phoneLayer.style.setProperty('--phone-top',p.y+'%');els.phoneLayer.style.setProperty('--phone-width',p.width+'%');els.phoneLayer.style.setProperty('--phone-scale',p.scale);els.phoneLayer.style.setProperty('--phone-opacity',p.visible?p.opacity:0)}
-function setCard(frame){const c=frame.card;els.cardLayer.style.transform=`translate3d(${c.x}%,${c.y}%,0)`;els.cardLayer.style.opacity=c.opacity;els.cardLayer.style.setProperty('--card-brightness',c.brightness);els.cardLayer.style.setProperty('--card-contrast',c.contrast);els.cardLayer.style.setProperty('--card-saturation',c.saturation);els.cardLayer.style.zIndex=c.layer==='behindCopy'?3:c.layer==='frontAll'?9:5;els.copyLayer.style.zIndex=4;els.phoneLayer.style.zIndex=7;if(!target||!base)return;target.position.x=base.px;target.position.y=base.py;target.position.z=base.pz+c.z;target.rotation.x=base.rx+deg(c.rotX);target.rotation.y=base.ry+deg(c.rotY);target.rotation.z=base.rz+deg(c.rotZ);target.scale.x=base.sx*c.scale;target.scale.y=base.sy*c.scale;target.scale.z=base.sz*c.scale;app3d.requestRender?.()}
-function render(frame){setCopy(frame);setPhone(frame);setCard(frame);els.frameInfoId.textContent=frame.id;els.frameInfoLabel.textContent=frame.label;els.frameCoord.textContent=coordFromFrame(frame);$('#inspectorFrameTitle').textContent=`${frame.id} · ${frame.label}`}
+function coordFor(obj,f){let x=50,y=50;if(obj==='card'){x=50+f.card.x;y=50+f.card.y}else if(obj==='copy'){x=f.copy.x;y=f.copy.y}else{x=f.phone.x;y=f.phone.y}const col=clamp(Math.floor(x/100*12),0,11),row=clamp(Math.floor(y/100*12),0,11);return `${'ABCDEFGHIJKL'[col]}${row+1}`}
 
+function setCopy(f){const c=f.copy;els.copyKicker.textContent=c.kicker||'';els.copyTitle.innerHTML=c.title||'';els.copyNote.textContent=c.note||'';els.copyBlock.style.setProperty('--copy-left',`${c.x}%`);els.copyBlock.style.setProperty('--copy-top',`${c.y}%`);els.copyBlock.style.setProperty('--copy-width',`${c.width}%`);els.copyBlock.style.setProperty('--copy-scale',c.scale);els.copyBlock.style.setProperty('--copy-opacity',c.opacity);els.copyBlock.style.setProperty('--copy-align',c.align);els.copyBlock.style.transformOrigin=c.align==='right'?'right center':c.align==='center'?'center center':'left center';els.copyBlock.classList.toggle('selected',selectedObject==='copy'&&previewMode==='composer')}
+function setPhone(f){const p=f.phone;els.phoneLayer.style.setProperty('--phone-left',`${p.x}%`);els.phoneLayer.style.setProperty('--phone-top',`${p.y}%`);els.phoneLayer.style.setProperty('--phone-width',`${p.width}%`);els.phoneLayer.style.setProperty('--phone-scale',p.scale);els.phoneLayer.style.setProperty('--phone-opacity',p.visible?p.opacity:0);els.phoneLayer.classList.toggle('selected',selectedObject==='phone'&&previewMode==='composer');if(els.phoneImage.getAttribute('src')!==p.image){els.phonePlaceholder.style.display='grid';els.phoneImage.src=p.image||''}els.phoneImage.onload=()=>els.phonePlaceholder.style.display='none';els.phoneImage.onerror=()=>els.phonePlaceholder.style.display='grid'}
+function setCard(f){const c=f.card;els.cardLayer.style.transform=`translate3d(${c.x}%,${c.y}%,0)`;els.cardLayer.style.opacity=c.opacity;els.cardLayer.style.setProperty('--card-brightness',c.brightness);els.cardLayer.style.setProperty('--card-contrast',c.contrast);els.cardLayer.style.setProperty('--card-saturation',c.saturation);els.cardLayer.style.zIndex=c.layer==='behindCopy'?3:c.layer==='frontAll'?9:5;els.copyLayer.style.zIndex=4;els.phoneLayer.style.zIndex=7;els.cardAnchor.classList.toggle('selected',selectedObject==='card'&&previewMode==='composer');if(!target||!base)return;target.position.x=base.px;target.position.y=base.py;target.position.z=base.pz+c.z;target.rotation.x=base.rx+deg(c.rotX);target.rotation.y=base.ry+deg(c.rotY);target.rotation.z=base.rz+deg(c.rotZ);target.scale.x=base.sx*c.scale;target.scale.y=base.sy*c.scale;target.scale.z=base.sz*c.scale;app3d.requestRender?.()}
+function renderFrame(f,meta={}){setCopy(f);setPhone(f);setCard(f);els.frameInfoId.textContent=meta.id||f.id||'WORK';els.frameInfoLabel.textContent=meta.label||f.label||'未儲存';els.frameCoord.textContent=coordFor(selectedObject,f);els.modeBadge.textContent=meta.mode||((selectedPointId&&renderMode==='edit')?'EDIT POINT':renderMode==='preview'?'TIMELINE PREVIEW':'WORKING STATE');els.selectionBadge.textContent=selectedObject.toUpperCase();$('#inspectorTitle').textContent=selectedPoint()?`${selectedPoint().label} · ${selectedPoint().progress.toFixed(1)}%`:'工作狀態（尚未儲存定位點）'}
 function ease(t,type){t=clamp(t,0,1);if(type==='linear')return t;if(type==='easeOut')return 1-Math.pow(1-t,3);if(type==='easeInOut')return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;if(type==='fastPass')return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;return t}
-function mixObj(a,b,t){const out={};for(const k in a){if(typeof a[k]==='number')out[k]=lerp(a[k],b[k],t);else out[k]=t<.5?a[k]:b[k]}return out}
-function sampleAt(p){const fs=[...frames()].sort((a,b)=>a.progress-b.progress);if(p<=fs[0].progress)return deepClone(fs[0]);if(p>=fs.at(-1).progress+fs.at(-1).motion.hold)return deepClone(fs.at(-1));for(let i=0;i<fs.length-1;i++){const a=fs[i],b=fs[i+1],holdEnd=a.progress+a.motion.hold;if(p>=a.progress&&p<=holdEnd)return deepClone(a);if(p>holdEnd&&p<=b.progress){const t=ease((p-holdEnd)/(b.progress-holdEnd||1),a.motion.easing);return {...a,id:`${a.id}→${b.id}`,label:`${a.label} → ${b.label}`,progress:p,card:mixObj(a.card,b.card,t),copy:t<.5?deepClone(a.copy):deepClone(b.copy),phone:mixObj(a.phone,b.phone,t),motion:a.motion}}}return deepClone(fs.at(-1))}
-function syncControls(){const f=current();$$('[data-bind]').forEach(el=>{const v=getPath(f,el.dataset.bind);el.value=v});$$('[data-bind-num]').forEach(el=>{const v=getPath(f,el.dataset.bindNum);el.value=v});$$('[data-select]').forEach(el=>el.value=getPath(f,el.dataset.select));$$('[data-text]').forEach(el=>el.value=getPath(f,el.dataset.text));$$('[data-check]').forEach(el=>el.checked=!!getPath(f,el.dataset.check));$('#sceneUrl').value=project.sceneUrl;$('#objectName').value=project.objectName;$('#scrubValue').textContent=`${Number(els.scrub.value).toFixed(1)}%`}
-function syncAll(){applyViewport();renderFrameChips();syncControls();const f=mode==='scrub'?sampleAt(Number(els.scrub.value)):current();render(f);els.modeBadge.textContent=mode==='scrub'?'MOTION PREVIEW':'EDIT FRAME';els.scrubValue.textContent=`${Number(els.scrub.value).toFixed(1)}%`}
+function mixObj(a,b,t){const out={};const keys=new Set([...Object.keys(a||{}),...Object.keys(b||{})]);for(const k of keys){const av=a?.[k],bv=b?.[k];out[k]=typeof av==='number'&&typeof bv==='number'?lerp(av,bv,t):(t<.5?av:bv)}return out}
+function sampleAt(p){const fs=points();if(!fs.length)return clone(track().working);if(fs.length===1)return clone(fs[0]);if(p<=fs[0].progress)return clone(fs[0]);const last=fs.at(-1);if(p>=last.progress+last.motion.hold)return clone(last);for(let i=0;i<fs.length-1;i++){const a=fs[i],b=fs[i+1],holdEnd=a.progress+a.motion.hold;if(p>=a.progress&&p<=holdEnd)return clone(a);if(p>holdEnd&&p<=b.progress){const t=ease((p-holdEnd)/Math.max(.001,b.progress-holdEnd),a.motion.easing);return {...clone(a),id:null,label:`${a.label} → ${b.label}`,progress:p,card:mixObj(a.card,b.card,t),copy:mixObj(a.copy,b.copy,t),phone:mixObj(a.phone,b.phone,t),motion:clone(a.motion)}}}return clone(last)}
+function frameForRender(){if(renderMode==='preview')return sampleAt(Number(els.scrub.value));return editable()}
 
-async function loadSpline(){els.status.textContent='Spline 載入中';els.status.className='badge';try{app3d?.dispose?.();target=null;base=null;app3d=new Application($('#canvas3d'));await app3d.load(project.sceneUrl);target=app3d.findObjectByName(project.objectName)||app3d.findObjectByName('tappie_card_group')||app3d.findObjectByName('card_movement')||app3d.findObjectByName('card_rotation');if(!target)throw new Error('找不到卡片物件');base={px:target.position.x,py:target.position.y,pz:target.position.z,rx:target.rotation.x,ry:target.rotation.y,rz:target.rotation.z,sx:target.scale.x,sy:target.scale.y,sz:target.scale.z};els.status.textContent='Spline Ready';els.status.className='badge ready';syncAll()}catch(e){console.error(e);els.status.textContent='Spline Error';els.status.className='badge error';toast('模型載入失敗，請確認 Scene URL / Object Name')}}
+function renderPoints(){els.pointStrip.innerHTML='';const fs=points();if(!fs.length){els.pointStrip.innerHTML='<div class="point-empty">尚無定位點。調整畫面後按「＋ 新增定位點」。</div>';return}fs.forEach((p,i)=>{const b=document.createElement('button');b.className='point-chip'+(p.id===selectedPointId?' active':'');b.innerHTML=`<b>${String(i+1).padStart(2,'0')} · ${escapeHtml(p.label)}</b><span><span class="pct">${p.progress.toFixed(1)}%</span> · Hold ${p.motion.hold.toFixed(1)}%</span>`;b.onclick=()=>{selectedPointId=p.id;renderMode='edit';els.scrub.value=p.progress;syncAll()};els.pointStrip.appendChild(b)})}
+function renderTimelineMarkers(){els.timelineTrack.innerHTML='';points().forEach(p=>{const m=document.createElement('span');m.className='timeline-marker'+(p.id===selectedPointId?' active':'');m.style.left=`${p.progress}%`;els.timelineTrack.appendChild(m)})}
+function escapeHtml(s=''){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
-function updatePath(path,val,commit=false){if(mode!=='edit'){mode='edit';frameIndex=nearestFrameIndex(Number(els.scrub.value))}if(commit)snapshot();setPath(current(),path,val);persist();renderFrameChips();render(current());syncControls()}
-function nearestFrameIndex(p){let best=0,d=Infinity;frames().forEach((f,i)=>{const n=Math.abs(f.progress-p);if(n<d){d=n;best=i}});return best}
-$$('[data-bind]').forEach(el=>{el.addEventListener('input',()=>updatePath(el.dataset.bind,Number(el.value)));el.addEventListener('change',()=>{snapshot();setPath(current(),el.dataset.bind,Number(el.value));persist();syncAll()})});
-$$('[data-bind-num]').forEach(el=>{el.addEventListener('change',()=>{snapshot();updatePath(el.dataset.bindNum,Number(el.value));syncAll()})});
-$$('[data-select]').forEach(el=>el.addEventListener('change',()=>{snapshot();const p=el.dataset.select;setPath(current(),p,el.value);if(p==='copy.preset'&&COPY_PRESETS[el.value])Object.assign(current().copy,COPY_PRESETS[el.value]);persist();syncAll()}));
-$$('[data-text]').forEach(el=>el.addEventListener('change',()=>{snapshot();setPath(current(),el.dataset.text,el.value);persist();syncAll()}));
-$$('[data-check]').forEach(el=>el.addEventListener('change',()=>{snapshot();setPath(current(),el.dataset.check,el.checked);persist();syncAll()}));
+function syncControls(){const f=editable();$$('[data-bind]').forEach(el=>el.value=getPath(f,el.dataset.bind)??0);$$('[data-bind-num]').forEach(el=>el.value=getPath(f,el.dataset.bindNum)??0);$$('[data-select]').forEach(el=>el.value=getPath(f,el.dataset.select)??'');$$('[data-text]').forEach(el=>el.value=getPath(f,el.dataset.text)??'');$$('[data-check]').forEach(el=>el.checked=!!getPath(f,el.dataset.check));$('#sceneUrl').value=project.sceneUrl;$('#objectName').value=project.objectName;$('#indexUrl').value=project.indexReference.url;els.scrubValue.textContent=`${Number(els.scrub.value).toFixed(1)}%`;$('#deletePointBtn').disabled=!selectedPoint();$('#duplicatePointBtn').disabled=!selectedPoint()}
+function syncAll(){fitViewport();renderPoints();renderTimelineMarkers();syncControls();if(previewMode==='composer'){renderFrame(frameForRender(),{mode:renderMode==='preview'?'TIMELINE PREVIEW':selectedPoint()?'EDIT POINT':'WORKING STATE'})}else{syncIndexProgress(Number(els.scrub.value))}updateModeUI()}
+function updateModeUI(){els.viewport.classList.toggle('mode-index',previewMode==='index');els.timelineTitle.textContent=previewMode==='index'?'Current INDEX · #tappie-day-loop':'Composer Timeline';$('#previewModeSeg button').forEach(b=>b.classList.toggle('active',b.dataset.mode===previewMode));$('#deviceSeg button').forEach(b=>b.classList.toggle('active',b.dataset.device===device));$('#objectSeg button').forEach(b=>b.classList.toggle('active',b.dataset.object===selectedObject));const composerOnly=previewMode==='composer';$('#objectSeg').style.opacity=composerOnly?1:.35;$('#addPointBtn').disabled=!composerOnly;$('#duplicatePointBtn').disabled=!composerOnly||!selectedPoint();$('#deletePointBtn').disabled=!composerOnly||!selectedPoint();$('#deselectPointBtn').disabled=!composerOnly;els.selectionBadge.style.display=composerOnly?'inline-flex':'none'}
 
-$('#deviceSeg').addEventListener('click',e=>{const b=e.target.closest('button[data-device]');if(!b)return;device=b.dataset.device;frameIndex=0;mode='edit';$('#deviceSeg button').forEach(x=>x.classList.toggle('active',x===b));els.scrub.value=current().progress;syncAll()});
-$('#viewportPreset').onchange=e=>{snapshot();project.viewport[device]=e.target.value;persist();applyViewport()};
+function enterEdit(){renderMode='edit';if(!selectedPointId)setWorkingFromFrame(sampleAt(Number(els.scrub.value)));syncAll()}
+function updatePath(path,val){if(previewMode!=='composer')return;if(renderMode==='preview'){setWorkingFromFrame(sampleAt(Number(els.scrub.value)));selectedPointId=null;renderMode='edit'}setPath(editable(),path,val);if(path==='progress'&&selectedPoint())selectedPoint().progress=clamp(Number(val),0,100);persist();renderPoints();renderTimelineMarkers();renderFrame(editable());syncControls()}
+$$('[data-bind]').forEach(el=>el.addEventListener('input',()=>updatePath(el.dataset.bind,Number(el.value))));
+$$('[data-bind-num]').forEach(el=>el.addEventListener('change',()=>{snapshot();updatePath(el.dataset.bindNum,Number(el.value));syncAll()}));
+$$('[data-select]').forEach(el=>el.addEventListener('change',()=>{snapshot();updatePath(el.dataset.select,el.value);syncAll()}));
+$$('[data-text]').forEach(el=>el.addEventListener('input',()=>updatePath(el.dataset.text,el.value)));
+$$('[data-check]').forEach(el=>el.addEventListener('change',()=>{snapshot();updatePath(el.dataset.check,el.checked);syncAll()}));
+
+$('#addPointBtn').onclick=()=>{snapshot();const p=Number(els.scrub.value);const source=renderMode==='preview'?sampleAt(p):clone(editable());const n=points().length+1;const point=normalizeFrame({...source,id:uid(),label:`定位點 ${n}`,progress:p},device);track().points.push(point);selectedPointId=point.id;renderMode='edit';persist();syncAll();toast(`已新增定位點 ${n}`)};
+$('#duplicatePointBtn').onclick=()=>{const src=selectedPoint();if(!src)return;snapshot();const point=normalizeFrame({...clone(src),id:uid(),label:`${src.label} 副本`,progress:clamp(src.progress+2,0,100)},device);track().points.push(point);selectedPointId=point.id;persist();syncAll();toast('已複製定位點')};
+$('#deletePointBtn').onclick=()=>{const p=selectedPoint();if(!p)return;snapshot();track().points=track().points.filter(x=>x.id!==p.id);selectedPointId=null;persist();syncAll();toast('已刪除定位點')};
+$('#deselectPointBtn').onclick=()=>{selectedPointId=null;renderMode='edit';els.scrub.value=track().working.progress||0;syncAll()};
+
+$('#previewModeSeg').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;previewMode=b.dataset.mode;renderMode=previewMode==='composer'?'edit':'preview';if(previewMode==='index'){els.scrub.value=project.indexReference.progress[device]||0;loadIndexReference()}else{els.scrub.value=selectedPoint()?.progress??track().working.progress??0}syncAll()};
+$('#deviceSeg').onclick=e=>{const b=e.target.closest('[data-device]');if(!b)return;device=b.dataset.device;selectedPointId=null;renderMode=previewMode==='composer'?'edit':'preview';els.scrub.value=previewMode==='index'?(project.indexReference.progress[device]||0):(track().working.progress||0);fitViewport();if(previewMode==='index')loadIndexReference(true);syncAll()};
+$('#objectSeg').onclick=e=>{const b=e.target.closest('[data-object]');if(!b||previewMode!=='composer')return;selectedObject=b.dataset.object;const map={card:'card',copy:'copy',phone:'phone'};const tab=$(`[data-tab="${map[selectedObject]}"]`);tab?.click();renderFrame(frameForRender());updateModeUI()};
+$('#viewportPreset').onchange=e=>{snapshot();project.viewport[device]=e.target.value;persist();fitViewport();if(previewMode==='index')loadIndexReference(true)};
+$('#fitViewportBtn').onclick=()=>{fitViewport();toast('已重新最大化顯示')};
 $('#gridBtn').onclick=()=>{els.grid.classList.toggle('visible');$('#gridBtn').classList.toggle('primary',els.grid.classList.contains('visible'))};
-let dragEnabled=true;$('#dragBtn').onclick=()=>{dragEnabled=!dragEnabled;els.drag.classList.toggle('disabled',!dragEnabled);$('#dragBtn').textContent=`拖曳：${dragEnabled?'開':'關'}`};
-let drag=null;els.drag.addEventListener('pointerdown',e=>{if(!dragEnabled||mode!=='edit')return;drag={x:e.clientX,y:e.clientY,ox:current().card.x,oy:current().card.y};snapshot();els.drag.setPointerCapture(e.pointerId);els.drag.classList.add('dragging')});
-els.drag.addEventListener('pointermove',e=>{if(!drag)return;const r=els.viewport.getBoundingClientRect();current().card.x=clamp(drag.ox+(e.clientX-drag.x)/r.width*100,-55,55);current().card.y=clamp(drag.oy+(e.clientY-drag.y)/r.height*100,-55,55);persist();render(current());syncControls()});
-els.drag.addEventListener('pointerup',()=>{drag=null;els.drag.classList.remove('dragging');renderFrameChips()});
-
-$$('[data-nudge]').forEach(b=>b.onclick=()=>{snapshot();const c=current().card;if(b.dataset.nudge==='front'){c.rotX=0;c.rotY=Math.round(c.rotY/360)*360;c.rotZ=0}else if(b.dataset.nudge==='back'){c.rotX=0;c.rotY=Math.round(c.rotY/360)*360+180;c.rotZ=180}else if(b.dataset.nudge==='edgeX'){c.rotX=90;c.rotY=0;c.rotZ=0}else{c.rotX=0;c.rotY=90;c.rotZ=0}persist();syncAll()});
-$('#tabs').onclick=e=>{const t=e.target.closest('[data-tab]');if(!t)return;$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('active',x.dataset.panel===t.dataset.tab))};
-
-els.scrub.oninput=()=>{mode='scrub';playing=false;cancelAnimationFrame(playRAF);syncAll()};
-$('#editModeBtn').onclick=()=>{mode='edit';frameIndex=nearestFrameIndex(Number(els.scrub.value));els.scrub.value=current().progress;syncAll()};
-$('#playBtn').onclick=()=>{playing=true;mode='scrub';const start=performance.now(),from=Number(els.scrub.value);function tick(now){if(!playing)return;const p=from+(now-start)/10000*100;if(p>=100){els.scrub.value=100;playing=false;syncAll();return}els.scrub.value=p;syncAll();playRAF=requestAnimationFrame(tick)}playRAF=requestAnimationFrame(tick)};
-$('#stopBtn').onclick=()=>{playing=false;cancelAnimationFrame(playRAF)};
-
-$('#saveBtn').onclick=()=>{persist();toast(`${current().id} 已儲存`)};
 $('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;
-$('#copyFrameBtn').onclick=async()=>{await navigator.clipboard.writeText(JSON.stringify(current(),null,2));toast('已複製此幀 JSON')};
-$('#resetFrameBtn').onclick=()=>{snapshot();const def=DEFAULT_PROJECT[device].frames.find(x=>x.id===current().id);frames()[frameIndex]=deepClone(def);persist();syncAll();toast('此幀已重設')};
-$('#copyDeviceBtn').onclick=()=>{snapshot();const other=device==='desktop'?'mobile':'desktop';const dest=project[other].frames[frameIndex];const src=current();dest.card={...dest.card,...deepClone(src.card),scale:src.card.scale*(other==='mobile'?.72:1.38),x:src.card.x*(other==='mobile'?.45:2.0),y:src.card.y};dest.copy={...dest.copy,preset:src.copy.preset,kicker:src.copy.kicker,title:src.copy.title,note:src.copy.note};dest.motion=deepClone(src.motion);persist();toast(`已複製到 ${other==='mobile'?'手機':'電腦'} ${dest.id}`)};
-$('#specBtn').onclick=async()=>{const f=current(),txt=`${f.id} ${f.label}\nProgress ${f.progress}% / Hold ${f.motion.hold}% / ${f.motion.easing}\nCard: X ${f.card.x}, Y ${f.card.y}, Z ${f.card.z}, Scale ${f.card.scale}, RX ${f.card.rotX}°, RY ${f.card.rotY}°, RZ ${f.card.rotZ}°, Layer ${f.card.layer}\nCopy: X ${f.copy.x}%, Y ${f.copy.y}%, W ${f.copy.width}%, Scale ${f.copy.scale}, Align ${f.copy.align}\nPhone: ${f.phone.visible?'ON':'OFF'}, X ${f.phone.x}%, Y ${f.phone.y}%, W ${f.phone.width}%, Scale ${f.phone.scale}`;await navigator.clipboard.writeText(txt);toast('已複製規格文字')};
 
-$('#referenceFile').onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{els.referenceImage.src=r.result;$('#referenceVisible').checked=true;els.referenceLayer.classList.add('visible')};r.readAsDataURL(file)};
+let drag=null;
+els.drag.addEventListener('pointerdown',e=>{if(previewMode!=='composer'||renderMode==='preview')enterEdit();const f=editable();const r=els.viewport.getBoundingClientRect();drag={sx:e.clientX,sy:e.clientY,rect:r,obj:selectedObject,base:selectedObject==='card'?{x:f.card.x,y:f.card.y}:selectedObject==='copy'?{x:f.copy.x,y:f.copy.y}:{x:f.phone.x,y:f.phone.y}};snapshot();els.drag.setPointerCapture(e.pointerId);els.drag.classList.add('dragging')});
+els.drag.addEventListener('pointermove',e=>{if(!drag)return;const f=editable(),dx=(e.clientX-drag.sx)/drag.rect.width*100,dy=(e.clientY-drag.sy)/drag.rect.height*100;if(drag.obj==='card'){f.card.x=clamp(drag.base.x+dx,-65,65);f.card.y=clamp(drag.base.y+dy,-65,65)}else if(drag.obj==='copy'){f.copy.x=clamp(drag.base.x+dx,-10,100);f.copy.y=clamp(drag.base.y+dy,0,100)}else{f.phone.x=clamp(drag.base.x+dx,0,100);f.phone.y=clamp(drag.base.y+dy,0,100)}persist();renderFrame(f);syncControls()});
+els.drag.addEventListener('pointerup',()=>{drag=null;els.drag.classList.remove('dragging');renderPoints()});
+
+$$('[data-pose]').forEach(b=>b.onclick=()=>{snapshot();enterEdit();const c=editable().card;if(b.dataset.pose==='front'){c.rotX=0;c.rotY=Math.round(c.rotY/360)*360;c.rotZ=0}else if(b.dataset.pose==='back'){c.rotX=0;c.rotY=Math.round(c.rotY/360)*360+180;c.rotZ=180}else if(b.dataset.pose==='edgeY'){c.rotX=0;c.rotY=90;c.rotZ=0}else{c.rotX=90;c.rotY=0;c.rotZ=0}persist();syncAll()});
+$('#tabs').onclick=e=>{const t=e.target.closest('[data-tab]');if(!t)return;$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(x=>x.classList.toggle('active',x.dataset.panel===t.dataset.tab));if(['card','copy','phone'].includes(t.dataset.tab)){selectedObject=t.dataset.tab;updateModeUI();renderFrame(frameForRender())}};
+
+els.scrub.addEventListener('input',()=>{const p=Number(els.scrub.value);els.scrubValue.textContent=`${p.toFixed(1)}%`;if(previewMode==='index'){project.indexReference.progress[device]=p;persist();syncIndexProgress(p)}else{renderMode='preview';renderFrame(sampleAt(p),{mode:'TIMELINE PREVIEW',id:`${p.toFixed(1)}%`,label:'插值預覽'});renderTimelineMarkers();syncControls()}});
+$('#editStateBtn').onclick=enterEdit;
+$('#previewTimelineBtn').onclick=()=>{renderMode='preview';renderFrame(sampleAt(Number(els.scrub.value)),{mode:'TIMELINE PREVIEW'});syncControls()};
+$('#playBtn').onclick=()=>{if(playing)return;playing=true;let start=null;const from=Number(els.scrub.value);const duration=9500*(1-from/100);const step=ts=>{if(!playing)return;if(start===null)start=ts;const p=clamp(from+(ts-start)/duration*(100-from),0,100);els.scrub.value=p;els.scrub.dispatchEvent(new Event('input'));if(p<100)playRaf=requestAnimationFrame(step);else playing=false};playRaf=requestAnimationFrame(step)};
+$('#stopBtn').onclick=()=>{playing=false;if(playRaf)cancelAnimationFrame(playRaf)};
+
+$('#copySpecBtn').onclick=async()=>{const f=editable(),txt=`${selectedPoint()?selectedPoint().label:'WORKING'}\nProgress ${f.progress}% / Hold ${f.motion.hold}% / ${f.motion.easing}\nCard: X ${f.card.x}, Y ${f.card.y}, Z ${f.card.z}, Scale ${f.card.scale}, RX ${f.card.rotX}°, RY ${f.card.rotY}°, RZ ${f.card.rotZ}°, Layer ${f.card.layer}\nCopy: X ${f.copy.x}%, Y ${f.copy.y}%, W ${f.copy.width}%, Scale ${f.copy.scale}, Align ${f.copy.align}\nPhone: ${f.phone.visible?'ON':'OFF'}, X ${f.phone.x}%, Y ${f.phone.y}%, W ${f.phone.width}%, Scale ${f.phone.scale}, Image ${f.phone.image}`;await navigator.clipboard.writeText(txt);toast('已複製規格文字')};
+$('#copyOtherDeviceBtn').onclick=()=>{snapshot();const other=device==='desktop'?'mobile':'desktop';const source=clone(editable());const otherFrame=normalizeFrame(source,other);otherFrame.id=null;otherFrame.label='由另一裝置複製';if(other==='mobile'){otherFrame.card.x*=.45;otherFrame.card.scale*=.72;otherFrame.copy.x=6;otherFrame.copy.width=88;otherFrame.copy.scale*=.88;otherFrame.phone.x=50;otherFrame.phone.width=Math.max(52,otherFrame.phone.width*2.6)}else{otherFrame.card.x*=2;otherFrame.card.scale*=1.35;otherFrame.copy.x=7;otherFrame.copy.width=43;otherFrame.phone.x=70;otherFrame.phone.width=Math.min(28,otherFrame.phone.width*.38)}project.tracks[other].working=otherFrame;persist();toast(`已複製到${other==='mobile'?'手機':'電腦'}工作狀態`)};
+$('#fitCardBtn').onclick=()=>{snapshot();const c=editable().card;c.x=clamp(c.x,-30,30);c.y=clamp(c.y,-30,30);c.scale=clamp(c.scale,.35,device==='desktop'?1.8:1.25);persist();syncAll()};
+$('#resetWorkingBtn').onclick=()=>{snapshot();track().working=baseFrame(device);selectedPointId=null;persist();syncAll();toast('已重設工作狀態')};
+
+$('#referenceFile').onchange=e=>{const file=e.target.files?.[0];if(!file)return;if(referenceUrl)URL.revokeObjectURL(referenceUrl);referenceUrl=URL.createObjectURL(file);els.referenceImage.src=referenceUrl;els.referenceLayer.classList.add('visible');$('#referenceVisible').checked=true};
 $('#referenceVisible').onchange=e=>els.referenceLayer.classList.toggle('visible',e.target.checked);
-function setRefOpacity(v){$('#referenceOpacity').value=v;$('#referenceOpacityNum').value=v;els.referenceLayer.style.setProperty('--ref-opacity',v)}
+function setRefOpacity(v){els.referenceLayer.style.setProperty('--ref-opacity',v);$('#referenceOpacity').value=v;$('#referenceOpacityNum').value=v}
 $('#referenceOpacity').oninput=e=>setRefOpacity(e.target.value);$('#referenceOpacityNum').onchange=e=>setRefOpacity(e.target.value);
-$('#screenshotBtn').onclick=()=>{els.root.classList.toggle('screenshot-mode');document.body.classList.toggle('screenshot-mode');toast(document.body.classList.contains('screenshot-mode')?'按 Esc 離開截圖模式':'已離開截圖模式')};
-$('#centerBtn').onclick=()=>els.grid.classList.toggle('visible');
-$('#fitBtn').onclick=()=>{snapshot();const c=current().card;c.x=clamp(c.x,-28,28);c.y=clamp(c.y,-30,30);c.scale=Math.min(c.scale,device==='mobile'?1.15:1.7);persist();syncAll();toast('已移回安全區')};
-$('#resetProjectBtn').onclick=()=>{if(!confirm('確定要重設全部電腦與手機關鍵幀？'))return;snapshot();project=deepClone(DEFAULT_PROJECT);frameIndex=0;device='desktop';persist();loadSpline();syncAll()};
+
+async function loadSpline(){els.status.textContent='Spline loading';els.status.className='badge';try{app3d?.dispose?.();target=null;base=null;app3d=new Application($('#canvas3d'));await app3d.load(project.sceneUrl);target=app3d.findObjectByName(project.objectName)||app3d.findObjectByName('tappie_card_group')||app3d.findObjectByName('card_movement')||app3d.findObjectByName('card_rotation');if(!target)throw new Error('找不到卡片物件');base={px:target.position.x,py:target.position.y,pz:target.position.z,rx:target.rotation.x,ry:target.rotation.y,rz:target.rotation.z,sx:target.scale.x,sy:target.scale.y,sz:target.scale.z};els.status.textContent='Spline ready';els.status.className='badge ready';syncAll()}catch(e){console.error(e);els.status.textContent='Spline error';els.status.className='badge error';toast('模型載入失敗，請確認 Scene URL / Object Name')}}
 $('#reloadSceneBtn').onclick=()=>{snapshot();project.sceneUrl=$('#sceneUrl').value.trim();project.objectName=$('#objectName').value.trim();persist();loadSpline()};
 
-function openExport(){const txt=JSON.stringify(project,null,2);$('#jsonText').value=txt;$('#jsonModal').classList.add('show')}
-$('#exportBtn').onclick=openExport;$('#closeModalBtn').onclick=()=>$('#jsonModal').classList.remove('show');$('#copyJsonBtn').onclick=async()=>{await navigator.clipboard.writeText($('#jsonText').value);toast('JSON 已複製')};
-function downloadJSON(){const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tappie-motion-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-$('#downloadJsonBtn').onclick=downloadJSON;
-$('#importBtn').onclick=()=>$('#importFile').click();$('#importFile').onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.desktop?.frames||!x.mobile?.frames)throw 0;snapshot();project=x;frameIndex=0;device='desktop';persist();loadSpline();syncAll();toast('專案已匯入')}catch{toast('JSON 格式不正確')}};r.readAsText(file)};
+function loadIndexReference(force=false){const url=$('#indexUrl').value.trim()||'/index.html';project.indexReference.url=url;persist();if(!force&&els.indexFrame.dataset.url===url&&indexReady){syncIndexProgress(Number(els.scrub.value));return}indexReady=false;els.indexOverlay.classList.remove('hidden');els.indexOverlay.textContent='載入目前 INDEX 的原始一日流程…';$('#indexDot').className='dot';$('#indexStatusText').textContent='載入中';els.indexFrame.dataset.url=url;els.indexFrame.src=url+(url.includes('?')?'&':'?')+`motionLab=${Date.now()}#tappie-day-loop`}
+els.indexFrame.addEventListener('load',()=>{try{const win=els.indexFrame.contentWindow,doc=win.document;const section=doc.querySelector('#tappie-day-loop');if(!section)throw new Error('找不到 #tappie-day-loop');doc.documentElement.style.scrollBehavior='auto';indexReady=true;els.indexOverlay.classList.add('hidden');$('#indexDot').className='dot ok';$('#indexStatusText').textContent='已連接目前 INDEX 原始區段';syncIndexProgress(Number(els.scrub.value))}catch(e){console.error(e);indexReady=false;els.indexOverlay.textContent='無法讀取 INDEX。請將工具上傳至與 index.html 相同網域。';$('#indexDot').className='dot warn';$('#indexStatusText').textContent='需同網域 HTTPS'}});
+function syncIndexProgress(p){project.indexReference.progress[device]=p;persist();if(!indexReady)return;try{const win=els.indexFrame.contentWindow,doc=win.document,section=doc.querySelector('#tappie-day-loop');if(!section)return;const vh=viewportDims().h;const max=Math.max(section.offsetHeight-vh,1);const y=section.offsetTop+max*(p/100);win.scrollTo(0,y)}catch(e){}}
+$('#reloadIndexBtn').onclick=()=>loadIndexReference(true);
+$('#toggleIndexManualBtn').onclick=()=>{indexManual=!indexManual;els.indexScene.classList.toggle('manual',indexManual);$('#toggleIndexManualBtn').textContent=indexManual?'改回時間軸控制':'允許內頁手動滑動'};
+$('#indexUrl').onchange=()=>loadIndexReference(true);
 
-window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('screenshot-mode')){$('#screenshotBtn').click();return}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();toast('已儲存')}if(mode==='edit'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();snapshot();const step=e.shiftKey?.1:1;if(e.key==='ArrowLeft')current().card.x-=step;if(e.key==='ArrowRight')current().card.x+=step;if(e.key==='ArrowUp')current().card.y-=step;if(e.key==='ArrowDown')current().card.y+=step;persist();syncAll()}});
+$('#screenshotBtn').onclick=()=>document.body.classList.toggle('screenshot-mode');
+$('#resetProjectBtn').onclick=()=>{if(!confirm('確定清除所有定位點與設定？'))return;snapshot();project=defaultProject();device='desktop';previewMode='composer';selectedPointId=null;renderMode='edit';persist();syncAll();loadSpline();toast('已重設整個專案')};
 
-createGrid();applyViewport();els.scrub.value=current().progress;syncAll();loadSpline();
+function exportProject(){const text=JSON.stringify(project,null,2);$('#jsonText').value=text;$('#jsonModal').classList.add('open')}
+$('#exportBtn').onclick=exportProject;$('#closeModalBtn').onclick=()=>$('#jsonModal').classList.remove('open');$('#copyJsonBtn').onclick=async()=>{await navigator.clipboard.writeText($('#jsonText').value);toast('已複製 JSON')};$('#downloadJsonBtn').onclick=()=>{const blob=new Blob([$('#jsonText').value],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tappie-motion-keyframes-v2.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+$('#importBtn').onclick=()=>$('#importFile').click();$('#importFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());snapshot();if(data.version===1&&data.desktop?.frames){project=defaultProject();project.sceneUrl=data.sceneUrl||project.sceneUrl;project.objectName=data.objectName||project.objectName;project.tracks.desktop.points=(data.desktop.frames||[]).map(f=>normalizeFrame({...f,id:f.id||uid()},'desktop'));project.tracks.mobile.points=(data.mobile.frames||[]).map(f=>normalizeFrame({...f,id:f.id||uid()},'mobile'))}else project=normalizeProject(data);selectedPointId=null;persist();syncAll();loadSpline();toast('已匯入專案')}catch(err){toast('JSON 格式錯誤')}};
+
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('screenshot-mode')){document.body.classList.remove('screenshot-mode');return}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();toast('已儲存')}if(previewMode==='composer'&&renderMode==='edit'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();snapshot();const f=editable(),step=e.shiftKey?.1:1,obj=selectedObject==='card'?f.card:selectedObject==='copy'?f.copy:f.phone;if(e.key==='ArrowLeft')obj.x-=step;if(e.key==='ArrowRight')obj.x+=step;if(e.key==='ArrowUp')obj.y-=step;if(e.key==='ArrowDown')obj.y+=step;persist();syncAll()}});
+
+createGrid();fitViewport();syncAll();loadSpline();setTimeout(()=>fitViewport(),80);
 </script>
 </body>
 </html>
