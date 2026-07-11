@@ -4,254 +4,59 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Tappie Story Lab v11</title>
+<title>Tappie Spline Story</title>
 <style>
-:root{
-  --bg:#02060d;
-  --bg2:#061426;
-  --white:#f5f7fb;
-  --muted:rgba(228,234,244,.68);
-  --blue:#35c4ff;
-  --panel-pad:clamp(32px,7vw,116px);
-}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--white);font-family:"PingFang TC","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-body{overflow-x:hidden}
-
-.master-story{position:relative;isolation:isolate;background:linear-gradient(180deg,#020306 0%,#03101f 48%,#020306 100%)}
-.master-stage{position:sticky;top:0;height:100svh;min-height:660px;overflow:hidden;background:
- radial-gradient(circle at 72% 26%,rgba(37,147,255,.11),transparent 31%),
- radial-gradient(circle at 18% 78%,rgba(55,197,255,.05),transparent 34%),
- linear-gradient(180deg,#020306 0%,#041225 60%,#020306 100%);z-index:1}
-.master-stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:20;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.46) 100%)}
-.stage-grid{position:absolute;left:50%;bottom:-27%;width:124%;height:46%;transform:translateX(-50%) perspective(760px) rotateX(66deg);transform-origin:center bottom;background-image:linear-gradient(rgba(88,148,222,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(88,148,222,.04) 1px,transparent 1px);background-size:58px 58px;mask-image:linear-gradient(180deg,transparent,#000 42%,#000);opacity:.34;z-index:0}
-.stage-glow{position:absolute;inset:-10%;pointer-events:none;z-index:0;background:radial-gradient(circle at var(--glow-x,70%) var(--glow-y,38%),rgba(34,158,255,var(--glow-a,.11)),transparent 32%);transition:background .35s linear}
-
-.card-layer{position:absolute;inset:0;z-index:4;pointer-events:none;will-change:transform,opacity}
-#canvas3d{display:block;width:100%;height:100%;pointer-events:none}
-
-.phone-stage{position:absolute;left:var(--phone-x,64%);top:50%;z-index:7;width:min(350px,24vw);aspect-ratio:9/19.5;transform:translate(-50%,-50%) scale(var(--phone-scale,1));opacity:var(--phone-opacity,0);will-change:transform,opacity,left;pointer-events:none}
-.phone-glow{position:absolute;inset:-12% -22%;border-radius:120px;background:radial-gradient(circle at 42% 28%,rgba(255,188,102,.13),transparent 38%),radial-gradient(circle at 72% 74%,rgba(78,145,255,.10),transparent 42%);filter:blur(42px);z-index:-1}
-.phone-shell{position:relative;width:100%;height:100%;overflow:hidden;border-radius:46px;background:#07101f;border:9px solid #0a1426;box-shadow:0 48px 120px rgba(0,0,0,.48),0 12px 32px rgba(0,0,0,.34),inset 0 0 0 1px rgba(255,255,255,.12)}
-.phone-shell::before{content:"";position:absolute;z-index:20;top:11px;left:50%;width:88px;height:22px;border-radius:999px;background:#020617;transform:translateX(-50%)}
-.phone-screen{position:absolute;inset:0;opacity:0;transform:scale(1.02);transition:opacity .34s ease,transform .34s ease;background:#f8fafc}
-.phone-screen.is-active{opacity:1;transform:scale(1)}
-.phone-screen img{width:100%;height:100%;object-fit:cover;display:block}
-.phone-screen.notice{background:linear-gradient(180deg,#dce7f5 0%,#b9c6da 52%,#93a2b8 100%);padding:72px 18px 24px;color:#111827}
-.notice-title{font-size:13px;font-weight:800;letter-spacing:.06em;margin-bottom:16px}
-.notice-card{padding:14px;border-radius:20px;background:rgba(255,255,255,.82);box-shadow:0 10px 30px rgba(15,23,42,.12);margin-bottom:12px}
-.notice-card strong{display:block;font-size:13px;margin-bottom:4px}.notice-card span{font-size:11px;line-height:1.45;color:#475569}
-.phone-dots{position:absolute;left:50%;bottom:14px;z-index:30;display:flex;gap:7px;transform:translateX(-50%);padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.78);backdrop-filter:blur(8px)}
-.phone-dot{width:7px;height:7px;border:0;border-radius:50%;background:rgba(100,116,139,.35);padding:0}.phone-dot.is-active{width:24px;border-radius:999px;background:#2488ff}
-
-.day-copy{position:absolute;left:var(--panel-pad);top:50%;z-index:8;width:min(430px,34vw);transform:translateY(-50%);opacity:var(--day-copy-opacity,0);pointer-events:none}
-.day-kicker{font-size:13px;line-height:1.2;letter-spacing:.14em;font-weight:760;color:rgba(255,255,255,.62);margin-bottom:14px}
-.day-copy h2{margin:0;font-size:clamp(48px,4.6vw,78px);line-height:.98;letter-spacing:-.055em;font-weight:880}
-.day-caption{position:relative;min-height:124px;margin-top:34px}
-.day-step{position:absolute;inset:0;opacity:0;transform:translateY(8px);transition:opacity .26s ease,transform .26s ease}
-.day-step.is-active{opacity:1;transform:translateY(0)}
-.day-step small{display:block;margin-bottom:10px;font-size:12px;letter-spacing:.12em;color:rgba(255,255,255,.58);font-weight:760}
-.day-step strong{display:block;font-size:clamp(36px,3.2vw,56px);line-height:1.02;letter-spacing:-.045em;color:var(--day-accent,#fff)}
-.day-step p{margin:14px 0 0;color:rgba(255,255,255,.64);font-size:17px;line-height:1.55;font-weight:620}
-.day-progress{height:3px;width:min(460px,33vw);border-radius:999px;background:rgba(255,255,255,.16);margin-top:30px;overflow:hidden}.day-progress>span{display:block;height:100%;width:var(--day-progress,0%);background:var(--day-accent,#fff);border-radius:inherit}
-
-.story-progress{position:absolute;left:clamp(24px,4vw,58px);bottom:clamp(24px,4vh,42px);z-index:22;display:flex;align-items:center;gap:14px;color:rgba(255,255,255,.55);font-size:11px;font-weight:760;letter-spacing:.18em;text-transform:uppercase}
-.story-progress-track{width:112px;height:2px;background:rgba(255,255,255,.14);overflow:hidden;border-radius:999px}.story-progress-fill{display:block;width:0;height:100%;background:#42c8ff}
-
-.master-track{position:relative;margin-top:-100svh;z-index:2}
-.story-panel{position:relative;height:108svh;padding:0 var(--panel-pad)}
-.story-panel.hero{height:116svh}
-.story-panel.handoff{height:92svh}
-.story-copy{position:sticky;top:27svh;width:min(520px,38vw);z-index:6}
-.story-panel.right .story-copy{margin-left:auto;text-align:right}
-.story-panel.hero .story-copy{top:58svh;margin:0 auto;width:min(1040px,86vw);text-align:center}
-.story-panel.behind .story-copy{z-index:3}
-.story-kicker{margin:0 0 15px;color:rgba(255,255,255,.62);font-size:13px;line-height:1.2;font-weight:760;letter-spacing:.14em;text-transform:uppercase}
-.story-copy h2{margin:0;font-size:clamp(52px,5vw,86px);line-height:.98;letter-spacing:-.06em;font-weight:900;text-wrap:balance;text-shadow:0 20px 60px rgba(0,0,0,.38)}
-.story-panel.hero .story-copy h2{font-size:clamp(72px,7vw,122px);line-height:.92}
-.accent{color:#43c8ff}.story-note{display:block;margin-top:20px;color:rgba(255,255,255,.66);font-size:clamp(16px,1.25vw,21px);line-height:1.55;font-weight:620}
-.feature-index{display:flex;align-items:center;gap:10px;margin-bottom:15px;color:rgba(255,255,255,.52);font-size:12px;font-weight:760;letter-spacing:.13em;text-transform:uppercase}.feature-index::before{content:"";width:25px;height:1px;background:rgba(67,200,255,.72)}.right .feature-index{justify-content:flex-end}
-
-.day-scroll{height:650svh;position:relative}
-.end{height:50vh;display:grid;place-items:center;background:#f5f5f7;color:#667085;font-weight:700;letter-spacing:.08em}
-
-@media(max-width:860px){
- .master-stage{min-height:0}
- .story-panel{height:104svh;padding:0 24px}.story-panel.hero{height:112svh}.story-panel.handoff{height:84svh}
- .story-copy{top:14svh;width:min(88vw,410px)}.story-panel.right .story-copy{margin-left:0;text-align:left}.right .feature-index{justify-content:flex-start}
- .story-panel.hero .story-copy{top:60svh;width:92vw}
- .story-copy h2{font-size:clamp(42px,11vw,62px);line-height:1}.story-panel.hero .story-copy h2{font-size:clamp(58px,15vw,82px)}
- .story-note{font-size:15px;margin-top:14px}.story-kicker{font-size:11px}.feature-index{font-size:10px}
- .phone-stage{width:min(72vw,330px);left:50%}
- .day-copy{left:24px;right:24px;top:11svh;width:auto;transform:none}.day-copy h2{font-size:clamp(42px,10vw,58px)}.day-caption{min-height:104px;margin-top:20px}.day-step strong{font-size:clamp(32px,9vw,46px)}.day-step p{font-size:14px}.day-progress{width:100%;margin-top:18px}
- .story-progress{left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
- .stage-grid{bottom:-18%;height:34%;opacity:.28}
-}
+:root{--bg:#02050a;--blue:#42c8ff;--text:#f8fafc;--muted:rgba(255,255,255,.68)}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:"PingFang TC","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}body{overflow-x:hidden}
+.master{height:1050vh;position:relative;background:#02050a}.sticky{position:sticky;top:0;height:100svh;overflow:hidden;isolation:isolate;background:#02050a}
+.story,.day{position:absolute;inset:0}.story{z-index:2;background:radial-gradient(circle at 72% 35%,rgba(35,151,255,.16),transparent 31%),radial-gradient(circle at 20% 82%,rgba(61,205,255,.05),transparent 35%),linear-gradient(180deg,#02050a,#06172b 58%,#02050a)}.story:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 52%,rgba(0,0,0,.5));pointer-events:none}
+.day{z-index:1;opacity:0;visibility:hidden;background:#020306}.day iframe{width:100%;height:100%;border:0;display:block;background:#020306}.day-msg{position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.55);font-size:13px;letter-spacing:.06em}
+.text-layer{position:absolute;inset:0;pointer-events:none}.behind{z-index:3}.front{z-index:7}.copy{position:absolute;left:var(--x);top:var(--y);width:var(--w);transform:translateY(-50%) scale(var(--s));transform-origin:var(--origin);text-align:var(--align);opacity:var(--o);text-shadow:0 18px 54px rgba(0,0,0,.35)}.copy .kicker{font-size:clamp(10px,1vw,14px);font-weight:760;letter-spacing:.15em;color:rgba(255,255,255,.58);margin-bottom:12px;text-transform:uppercase}.copy h2{margin:0;font-size:clamp(38px,5.4vw,86px);line-height:.94;letter-spacing:-.065em;font-weight:950}.copy h2 .accent{color:var(--blue)}.copy p{margin:18px 0 0;color:var(--muted);font-size:clamp(13px,1.25vw,19px);line-height:1.55;font-weight:620}
+.card-stage{position:absolute;inset:0;z-index:5;pointer-events:none;will-change:transform,opacity;filter:brightness(var(--br,1)) contrast(var(--ct,1)) saturate(var(--sat,1)) drop-shadow(0 30px 70px rgba(0,0,0,.34));transform:translate3d(var(--stage-x,0),var(--stage-y,0),0)}.card-stage[data-layer="behind"]{z-index:2}.card-stage[data-layer="front"]{z-index:5}.card-stage[data-layer="top"]{z-index:9}.spline-wrap,.fallback-wrap{position:absolute;inset:0;display:grid;place-items:center}.spline-wrap{opacity:0;transition:opacity .28s}.card-stage.spline-ready .spline-wrap{opacity:1}.card-stage.spline-ready .fallback-wrap{opacity:0}.fallback-wrap{perspective:1500px;transition:opacity .22s}.card{position:relative;width:clamp(300px,24vw,390px);aspect-ratio:54/86;transform-style:preserve-3d;transform:translateZ(var(--z,0)) rotateX(var(--rx,0)) rotateY(var(--ry,0)) rotateZ(var(--rz,0)) scale(var(--scale,1));opacity:var(--opacity,1)}.face{position:absolute;inset:0;border-radius:5.5%;overflow:hidden;backface-visibility:hidden;background:#12ace8;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4),8px 8px 0 -5px rgba(233,247,255,.72)}.face.front-face{background:#13afe9 url('/assets/official/tappiecard-blue-front.png') center/cover no-repeat}.face.back-face{transform:rotateY(180deg);display:grid;place-items:center;padding:12%;color:#fff;background:radial-gradient(circle at 18% 16%,rgba(255,255,255,.12),transparent 24%),radial-gradient(circle at 85% 82%,rgba(255,255,255,.10),transparent 25%),linear-gradient(160deg,#14b7ee,#0799da)}.back-inner{text-align:center;font-weight:900;font-size:clamp(14px,1.35vw,20px)}.back-inner small{display:block;margin-top:48%;font-size:.62em}
+canvas{width:100%;height:100%;display:block}.debug{display:none;position:fixed;left:14px;bottom:14px;z-index:99;padding:8px 10px;border:1px solid rgba(255,255,255,.15);border-radius:10px;background:rgba(5,8,12,.75);font:700 10px ui-monospace,monospace;color:#cfefff}.debug.show{display:block}
+@media(max-width:760px){.master{height:920vh}.card{width:min(78vw,350px)}.copy h2{font-size:clamp(42px,13.5vw,68px)}.copy p{font-size:clamp(13px,4vw,17px);margin-top:14px}.copy .kicker{font-size:11px;margin-bottom:10px}}
+@media(prefers-reduced-motion:reduce){.master{height:100vh}.sticky{position:relative}.day{display:none}}
 </style>
 </head>
 <body>
-<section class="master-story" id="masterStory">
-  <div class="master-stage" id="masterStage">
-    <div class="stage-glow"></div>
-    <div class="stage-grid"></div>
-    <div class="card-layer" id="cardLayer"><canvas id="canvas3d" aria-label="Tappie 3D card"></canvas></div>
-
-    <div class="phone-stage" id="phoneStage" aria-hidden="true">
-      <div class="phone-glow"></div>
-      <div class="phone-shell">
-        <div class="phone-screen is-active" data-screen="0"><img src="https://tappieapp.com/assets/official/tappieweb-stickty-1.PNG" alt=""></div>
-        <div class="phone-screen notice" data-screen="1">
-          <div class="notice-title">家長通知</div>
-          <div class="notice-card"><strong>🏠 離校通知</strong><span>學生已於 18:50 離校，請家長留意接送安排。</span></div>
-          <div class="notice-card"><strong>✅ 到校通知</strong><span>學生已平安到校，今日學習旅程開始囉！</span></div>
-          <div class="notice-card"><strong>🔔 通知已啟用</strong><span>老師完成打卡時，家長會收到提醒。</span></div>
-        </div>
-        <div class="phone-screen" data-screen="2"><img src="https://tappieapp.com/assets/official/tappieweb-stickty-2.PNG" alt=""></div>
-        <div class="phone-screen" data-screen="3"><img src="https://tappieapp.com/assets/official/tappieweb-stickty-3.PNG" alt=""></div>
-        <div class="phone-screen" data-screen="4"><img src="https://tappieapp.com/assets/official/tappieweb-stickty-4.PNG" alt=""></div>
-        <div class="phone-screen" data-screen="5"><img src="https://tappieapp.com/assets/official/tappieweb-stickty-5.PNG" alt=""></div>
-        <div class="phone-screen" data-screen="6"><img src="https://tappieapp.com/assets/official/tappie-console-1.PNG" alt=""></div>
-        <div class="phone-dots" id="phoneDots"></div>
-      </div>
+<main class="master" id="master"><section class="sticky" id="sticky">
+  <div class="story" id="story">
+    <div class="text-layer behind" id="textBehind"></div>
+    <div class="card-stage" id="cardStage" data-layer="front">
+      <div class="spline-wrap"><canvas id="canvas3d"></canvas></div>
+      <div class="fallback-wrap"><div class="card" id="cssCard"><div class="face front-face"></div><div class="face back-face"><div class="back-inner">一嗶感應，秒說外語！<small>www.tappieapp.com</small></div></div></div></div>
     </div>
-
-    <div class="day-copy" id="dayCopy">
-      <div class="day-kicker">Tappie 的一日流程</div>
-      <h2>從早到晚，<br>練習不停歇。</h2>
-      <div class="day-caption">
-        <div class="day-step is-active" data-step="0"><small>01 / 每天戴著。</small><strong>校園名牌</strong><p>一張每天會戴的名牌，成為整天的入口。</p></div>
-        <div class="day-step" data-step="1"><small>02 / 一嗶通知。</small><strong>放學通知</strong><p>老師完成打卡，家長立即收到到離校提醒。</p></div>
-        <div class="day-step" data-step="2"><small>03 / 一嗶進入。</small><strong>開始口說</strong><p>不用重新輸入帳密，感應後直接開口練習。</p></div>
-        <div class="day-step" data-step="3"><small>04 / 一掃完成。</small><strong>獲得點數</strong><p>學習成果和現場獎勵，接在同一套流程裡。</p></div>
-        <div class="day-step" data-step="4"><small>05 / 成長被看見。</small><strong>家長看見</strong><p>每日練習、進步與任務都有清楚紀錄。</p></div>
-        <div class="day-step" data-step="5"><small>06 / 回家繼續。</small><strong>回家練習</strong><p>離開教室，學生仍能延續今天的學習。</p></div>
-        <div class="day-step" data-step="6"><small>07 / 一眼掌握。</small><strong>校區掌控</strong><p>老師與校區端同步掌握使用狀態與學習趨勢。</p></div>
-      </div>
-      <div class="day-progress"><span id="dayProgress"></span></div>
-    </div>
-
-    <div class="story-progress"><span id="progressLabel">Story</span><span class="story-progress-track"><span class="story-progress-fill" id="storyProgress"></span></span></div>
+    <div class="text-layer front" id="textFront"></div>
   </div>
+  <div class="day" id="day"><div class="day-msg" id="dayMsg">正在載入原始 INDEX 一日流程…</div><iframe id="dayFrame" title="Tappie 一日流程" loading="eager"></iframe></div>
+</section></main>
+<div class="debug" id="debug"></div>
+<script>const EMBEDDED_PROJECT={"version":3,"sceneUrl":"https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode","objectName":"hero_card_stage","engine":"css","indexUrl":"/index.html","viewport":{"desktop":"1440x900","mobile":"430x932"},"segments":{"storyEnd":55,"handoffEnd":68},"tracks":{"desktop":{"points":[{"id":"Pmrg2ufqra8mx","label":"定位點 1","progress":0,"hold":0,"easing":"linear","x":0,"y":37.9,"z":0,"scale":0.2,"rotX":100,"rotY":360,"rotZ":0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"Pmrg42v46tmkd","label":"定位點 1 複製","progress":7,"hold":3,"easing":"linear","x":0,"y":-17.8,"z":0,"scale":0.5,"rotX":0,"rotY":0,"rotZ":0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"Pmrg4073qeeiy","label":"定位點 1 複製","progress":15,"hold":3,"easing":"linear","x":23.1,"y":-1.9,"z":0,"scale":0.75,"rotX":0,"rotY":-360,"rotZ":-7,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"Pmrg2wxq2u77k","label":"定位點 2","progress":25,"hold":3,"easing":"easeInOut","x":-14.7,"y":0.6,"z":0,"scale":0.86,"rotX":-39,"rotY":204,"rotZ":-37,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"Pmrg410lrijv4","label":"定位點 3 複製","progress":35,"hold":3,"easing":"easeOut","x":14.7,"y":6.5,"z":0,"scale":0.8,"rotX":52,"rotY":-21,"rotZ":36,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"Pmrg3fi58fygq","label":"定位點 3","progress":45,"hold":5,"easing":"easeOut","x":0,"y":0,"z":0,"scale":0.8,"rotX":0,"rotY":90,"rotZ":0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"Pmrg5j6b8ihny","label":"定位點 7","progress":54.9,"hold":3,"easing":"easeOut","x":23.8,"y":0,"z":0,"scale":0.4,"rotX":0,"rotY":0,"rotZ":0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1}],"working":{"id":null,"label":"工作狀態","progress":54.9,"hold":3,"easing":"easeOut","x":25.6,"y":0,"z":0,"scale":0.5,"rotX":0,"rotY":0,"rotZ":0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},"texts":[{"id":"Pmrg2nfvr10b8","label":"Tappie 解法","start":15,"end":22,"kicker":"Tappie 解法","title":"離開教室，<br><span class=\"accent\">練習不斷線。</span>","note":"一張學生名牌，接住學生開口、家長回饋與現場流程。","x":6.999189574688796,"y":50,"width":46.5,"scale":1,"align":"left","opacity":1,"layer":"behind"},{"id":"Pmrg2nfvrzrny","label":"01 / 學生口說動力","start":25,"end":32,"kicker":"","title":"一嗶<br><span class=\"accent\">就開口</span>","note":"不用帳密，不用教操作。","x":46.88743840767635,"y":65,"width":40,"scale":1,"align":"right","opacity":1,"layer":"front"},{"id":"Pmrg2nfvr7anb","label":"02 / 每天，看得見","start":35,"end":42,"kicker":"","title":"每天<br><span class=\"accent\">看得見</span>","note":"到校、離校、練習，都有紀錄。","x":13.4,"y":35,"width":40,"scale":1,"align":"left","opacity":1,"layer":"behind"},{"id":"Pmrg3tpm9o66i","label":"03 / 現場流程","start":45,"end":50,"kicker":"","title":"更少<span class=\"accent\">步驟</span>","note":"打卡、加點、練習，同一套流程。","x":28.5,"y":50,"width":43,"scale":1,"align":"center","opacity":1,"layer":"behind"}],"selectedText":"Pmrg3tpm9o66i","handoff":{"phone":{"x":0,"y":0,"scale":1},"copy":{"x":0,"y":0,"scale":1}}},"mobile":{"points":[{"id":"M01_derived","label":"手機推導 01","progress":0,"hold":0,"easing":"linear","x":0.0,"y":34.0,"z":0,"scale":0.16,"rotX":74.0,"rotY":360,"rotZ":0.0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"M02_derived","label":"手機推導 02","progress":7,"hold":3,"easing":"linear","x":0.0,"y":-20.0,"z":0,"scale":0.7,"rotX":0.0,"rotY":0,"rotZ":0.0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"M03_derived","label":"手機推導 03","progress":15,"hold":3,"easing":"linear","x":8.09,"y":-8.0,"z":0,"scale":0.92,"rotX":0.0,"rotY":-360,"rotZ":-4.76,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"M04_derived","label":"手機推導 04","progress":25,"hold":3,"easing":"easeInOut","x":-5.14,"y":14.0,"z":0,"scale":0.88,"rotX":-28.86,"rotY":204,"rotZ":-25.16,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"M05_derived","label":"手機推導 05","progress":35,"hold":3,"easing":"easeOut","x":5.14,"y":15.0,"z":0,"scale":0.84,"rotX":38.48,"rotY":-21,"rotZ":24.48,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"M06_derived","label":"手機推導 06","progress":45,"hold":5,"easing":"easeOut","x":0.0,"y":17.0,"z":0,"scale":0.78,"rotX":0.0,"rotY":90,"rotZ":0.0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},{"id":"M07_derived","label":"手機推導 07","progress":54.9,"hold":3,"easing":"easeOut","x":8.33,"y":3.0,"z":0,"scale":0.34,"rotX":0.0,"rotY":0,"rotZ":0.0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1}],"working":{"id":null,"label":"手機工作狀態","progress":54.9,"hold":3,"easing":"easeOut","x":8.33,"y":3.0,"z":0,"scale":0.34,"rotX":0.0,"rotY":0,"rotZ":0.0,"opacity":1,"layer":"front","brightness":1,"contrast":1,"saturation":1},"texts":[{"id":"MT01_derived","label":"Tappie 解法","start":15,"end":22,"kicker":"Tappie 解法","title":"離開教室，<br><span class=\"accent\">練習不斷線。</span>","note":"一張學生名牌，接住學生開口、家長回饋與現場流程。","x":6,"y":78,"width":88,"scale":0.7,"align":"center","opacity":1,"layer":"behind"},{"id":"MT02_derived","label":"01 / 學生口說動力","start":25,"end":32,"kicker":"","title":"一嗶<br><span class=\"accent\">就開口</span>","note":"不用帳密，不用教操作。","x":6,"y":18,"width":88,"scale":0.82,"align":"left","opacity":1,"layer":"front"},{"id":"MT03_derived","label":"02 / 每天，看得見","start":35,"end":42,"kicker":"","title":"每天<br><span class=\"accent\">看得見</span>","note":"到校、離校、練習，都有紀錄。","x":6,"y":18,"width":88,"scale":0.82,"align":"left","opacity":1,"layer":"behind"},{"id":"MT04_derived","label":"03 / 現場流程","start":45,"end":50,"kicker":"","title":"更少<span class=\"accent\">步驟</span>","note":"打卡、加點、練習，同一套流程。","x":6,"y":18,"width":88,"scale":0.82,"align":"left","opacity":1,"layer":"behind"}],"selectedText":"MT01_derived","handoff":{"phone":{"x":0,"y":8,"scale":0.88},"copy":{"x":0,"y":0,"scale":0.88}}}}};</script>
+<script>
+(()=>{'use strict';
+const $=s=>document.querySelector(s), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+const ease=(t,k)=>{t=clamp(t,0,1);if(k==='easeInOut')return t*t*(3-2*t);if(k==='easeOut')return 1-Math.pow(1-t,3);if(k==='easeIn')return t*t*t;if(k==='fastPass')return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;return t};
+let project=EMBEDDED_PROJECT, device=matchMedia('(max-width:760px)').matches?'mobile':'desktop';
+let targetP=0,currentP=0, splineApp=null,splineTarget=null,splineBase=null,indexReady=false,indexSection=null,indexStage=null,indexPhone=null,indexBridge=null;
+const master=$('#master'),story=$('#story'),day=$('#day'),frame=$('#dayFrame'),msg=$('#dayMsg'),cardStage=$('#cardStage'),cssCard=$('#cssCard'),debug=$('#debug');
+const params=new URLSearchParams(location.search),debugOn=params.has('debug'),forcedProgress=params.get('progress');if(debugOn)debug.classList.add('show');
+async function loadConfig(){try{const r=await fetch('./tappie-motion-keyframes.json?ts='+Date.now(),{cache:'no-store'});if(r.ok)project=await r.json()}catch(e){} device=matchMedia('(max-width:760px)').matches?'mobile':'desktop';frame.src=(project.indexUrl||'/index.html')+((project.indexUrl||'/index.html').includes('?')?'&':'?')+'tappieSplineStory=1#tappie-day-loop';loadSpline();}
+function track(){return project.tracks[device]||project.tracks.desktop}function points(){return [...track().points].sort((a,b)=>a.progress-b.progress)}
+function sample(p){const a=points();if(!a.length)return track().working;if(p<=a[0].progress)return {...a[0]};if(p>=a.at(-1).progress+a.at(-1).hold)return {...a.at(-1)};for(let i=0;i<a.length-1;i++){const A=a[i],B=a[i+1],start=A.progress+A.hold;if(p<=start)return {...A};if(p<=B.progress){const q=ease((p-start)/Math.max(B.progress-start,.001),A.easing),o={...A};for(const k of ['x','y','z','scale','rotX','rotY','rotZ','opacity','brightness','contrast','saturation'])o[k]=lerp(A[k],B[k],q);o.layer=q<.5?A.layer:B.layer;return o}}return {...a.at(-1)}}
+function edgeOpacity(p,s,e){const feather=.65;if(p<s||p>e)return 0;if(p<s+feather)return (p-s)/feather;if(p>e-feather)return (e-p)/feather;return 1}
+function renderTexts(p){$('#textBehind').innerHTML='';$('#textFront').innerHTML='';for(const t of track().texts){const o=edgeOpacity(p,t.start,t.end)*t.opacity;if(o<=0)continue;const d=document.createElement('div');d.className='copy';d.style.cssText=`--x:${t.x}%;--y:${t.y}%;--w:${t.width}%;--s:${t.scale};--o:${o};--align:${t.align};--origin:${t.align==='right'?'right center':t.align==='center'?'center center':'left center'}`;d.innerHTML=`<div class="kicker">${t.kicker||''}</div><h2>${t.title||''}</h2><p>${t.note||''}</p>`;(t.layer==='front'?$('#textFront'):$('#textBehind')).appendChild(d)}}
+function applyCard(f){const rect=$('#sticky').getBoundingClientRect();cardStage.dataset.layer=f.layer||'front';cardStage.style.setProperty('--stage-x',(f.x/100*rect.width)+'px');cardStage.style.setProperty('--stage-y',(f.y/100*rect.height)+'px');cardStage.style.setProperty('--br',f.brightness||1);cardStage.style.setProperty('--ct',f.contrast||1);cardStage.style.setProperty('--sat',f.saturation||1);cssCard.style.setProperty('--z',(f.z||0)+'px');cssCard.style.setProperty('--rx',(f.rotX||0)+'deg');cssCard.style.setProperty('--ry',(f.rotY||0)+'deg');cssCard.style.setProperty('--rz',(f.rotZ||0)+'deg');cssCard.style.setProperty('--scale',f.scale);cssCard.style.setProperty('--opacity',f.opacity);if(splineTarget&&splineBase){splineTarget.position.x=splineBase.px;splineTarget.position.y=splineBase.py;splineTarget.position.z=splineBase.pz+(f.z||0);splineTarget.rotation.x=splineBase.rx+(f.rotX||0)*Math.PI/180;splineTarget.rotation.y=splineBase.ry+(f.rotY||0)*Math.PI/180;splineTarget.rotation.z=splineBase.rz+(f.rotZ||0)*Math.PI/180;splineTarget.scale.x=splineBase.sx*f.scale;splineTarget.scale.y=splineBase.sy*f.scale;splineTarget.scale.z=splineBase.sz*f.scale;splineApp.requestRender?.()}}
+async function loadSpline(){if(params.get('engine')==='css')return;try{const mod=await import('https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js');splineApp=new mod.Application($('#canvas3d'));await Promise.race([splineApp.load(project.sceneUrl),new Promise((_,rej)=>setTimeout(()=>rej(Error('timeout')),15000))]);splineTarget=splineApp.findObjectByName(project.objectName)||splineApp.findObjectByName('tappie_card_group')||splineApp.findObjectByName('card_movement')||splineApp.findObjectByName('card_rotation');if(!splineTarget)throw Error('object');splineBase={px:splineTarget.position.x,py:splineTarget.position.y,pz:splineTarget.position.z,rx:splineTarget.rotation.x,ry:splineTarget.rotation.y,rz:splineTarget.rotation.z,sx:splineTarget.scale.x,sy:splineTarget.scale.y,sz:splineTarget.scale.z};cardStage.classList.add('spline-ready')}catch(e){console.warn('Spline fallback active',e)}}
+function injectIndex(){try{const doc=frame.contentDocument,sec=doc.querySelector('#tappie-day-loop'),stage=sec?.querySelector('.tappie-day-loop__stage'),phone=sec?.querySelector('.tappie-day-phone');if(!sec||!stage||!phone)throw Error('missing day loop');indexSection=sec;indexStage=stage;indexPhone=phone;doc.documentElement.style.scrollBehavior='auto';let st=doc.getElementById('tappieSplineProdStyle');if(!st){st=doc.createElement('style');st.id='tappieSplineProdStyle';st.textContent=`nav{visibility:hidden!important}.tappie-day-loop{margin-top:0!important}.tappie-day-loop__stage{position:relative!important}.tappie-day-phone{position:relative!important;z-index:5!important;transform:translate3d(var(--prod-phone-x,0px),calc(var(--prod-phone-base-y,-22px) + var(--prod-phone-y,0px)),0) scale(var(--prod-phone-scale,1))!important;transform-origin:center center!important}.tappie-day-loop__copy{transform:translate3d(var(--prod-copy-x,0px),var(--prod-copy-y,0px),0) scale(var(--prod-copy-scale,1))!important;transform-origin:left center!important}.tappie-spline-bridge{position:absolute!important;inset:0!important;z-index:3!important;pointer-events:none!important;perspective:1500px!important}.tappie-spline-bridge-card{position:absolute!important;width:min(31vw,340px)!important;aspect-ratio:54/86!important;transform-style:preserve-3d!important;will-change:transform,opacity!important}.tappie-spline-bridge-card>i{position:absolute;inset:0;border-radius:5.5%;display:block;background:#13afe9 url('/assets/official/tappiecard-blue-front.png') center/cover no-repeat;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4),8px 8px 0 -5px rgba(233,247,255,.72)}@media(max-width:760px){.tappie-spline-bridge-card{width:min(78vw,350px)!important}}`;doc.head.appendChild(st)}const wrap=doc.createElement('div');wrap.className='tappie-spline-bridge';wrap.innerHTML='<div class="tappie-spline-bridge-card"><i></i></div>';stage.insertBefore(wrap,stage.firstChild);indexBridge=wrap.firstElementChild;indexReady=true;applyIndexTweaks();msg.style.display='none';syncIndex(0)}catch(e){msg.textContent='請將 tappie_spline.html 與 index.html 放在同一網域後測試完整一日流程。'}}
+frame.addEventListener('load',injectIndex);
 
-  <div class="master-track" id="masterTrack">
-    <section class="story-panel hero behind">
-      <div class="story-copy">
-        <div class="story-kicker">Tappie 解法</div>
-        <h2>離開教室，<br><span class="accent">練習也不斷線。</span></h2>
-        <span class="story-note">一張每天會戴的名牌，接住學生開口、家長回饋與現場流程。</span>
-      </div>
-    </section>
-    <section class="story-panel">
-      <div class="story-copy">
-        <div class="feature-index">01 / 學生口說動力</div>
-        <h2>一嗶，<br><span class="accent">就開口。</span></h2>
-        <span class="story-note">不用帳密，不用教操作。</span>
-      </div>
-    </section>
-    <section class="story-panel right behind">
-      <div class="story-copy">
-        <div class="feature-index">02 / 家長回饋</div>
-        <h2>每天，<br><span class="accent">看得見。</span></h2>
-        <span class="story-note">到校、離校、練習，都有紀錄。</span>
-      </div>
-    </section>
-    <section class="story-panel">
-      <div class="story-copy">
-        <div class="feature-index">03 / 現場流程</div>
-        <h2>更少，<br><span class="accent">步驟。</span></h2>
-        <span class="story-note">打卡、加點、練習，同一套流程。</span>
-      </div>
-    </section>
-    <section class="story-panel handoff" id="handoffPanel"></section>
-    <div class="day-scroll" id="dayScroll"></div>
-  </div>
-</section>
-<section class="end">END OF STORY LAB</section>
-
-<script type="module">
-import { Application } from 'https://unpkg.com/@splinetool/runtime@1.12.98/build/runtime.js';
-const master=document.getElementById('masterStory');
-const handoff=document.getElementById('handoffPanel');
-const dayScroll=document.getElementById('dayScroll');
-const stage=document.getElementById('masterStage');
-const cardLayer=document.getElementById('cardLayer');
-const phoneStage=document.getElementById('phoneStage');
-const dayCopy=document.getElementById('dayCopy');
-const storyProgress=document.getElementById('storyProgress');
-const dayProgressEl=document.getElementById('dayProgress');
-const progressLabel=document.getElementById('progressLabel');
-const canvas=document.getElementById('canvas3d');
-const screens=[...document.querySelectorAll('.phone-screen')];
-const steps=[...document.querySelectorAll('.day-step')];
-const dotsWrap=document.getElementById('phoneDots');
-const isMobile=matchMedia('(max-width:860px)').matches;
-const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
-const lerp=(a,b,t)=>a+(b-a)*t;
-const smooth=t=>{t=clamp(t);return t*t*(3-2*t)};
-const range=(p,a,b)=>clamp((p-a)/(b-a));
-const app=new Application(canvas);
-let target=null,base=null,raf=0,lastStory=-1,lastDay=-1;
-
-for(let i=0;i<screens.length;i++){const d=document.createElement('span');d.className='phone-dot'+(i===0?' is-active':'');dotsWrap.appendChild(d)}
-const dots=[...dotsWrap.children];
-
-const desktop=[
- {p:0.00,x:10,y:-27,s:1.66,ry:-.12,rz:-.12},
- {p:0.12,x:15,y:-5,s:1.84,ry:.06,rz:-.08},
- {p:0.26,x:-11,y:18,s:1.92,ry:.88,rz:.03},
- {p:0.38,x:14,y:-2,s:1.86,ry:1.52,rz:.08},
- {p:0.50,x:-9,y:23,s:1.82,ry:3.08,rz:3.14},
- {p:0.61,x:12,y:-3,s:1.90,ry:3.98,rz:3.08},
- {p:0.73,x:-13,y:18,s:1.84,ry:5.08,rz:.10},
- {p:0.83,x:7,y:3,s:1.72,ry:6.12,rz:.01},
- {p:0.90,x:14,y:1,s:1.26,ry:6.25,rz:0},
- {p:0.96,x:14,y:0,s:.72,ry:6.283,rz:0},
- {p:1.00,x:14,y:0,s:.50,ry:6.283,rz:0}
-];
-const mobile=[
- {p:0.00,x:0,y:-24,s:1.30,ry:-.10,rz:-.10},
- {p:0.12,x:4,y:-4,s:1.44,ry:.05,rz:-.07},
- {p:0.26,x:-5,y:16,s:1.48,ry:.84,rz:.02},
- {p:0.38,x:5,y:-1,s:1.42,ry:1.50,rz:.06},
- {p:0.50,x:-5,y:20,s:1.40,ry:3.08,rz:3.14},
- {p:0.61,x:5,y:-2,s:1.44,ry:3.96,rz:3.08},
- {p:0.73,x:-5,y:16,s:1.40,ry:5.06,rz:.08},
- {p:0.83,x:2,y:3,s:1.32,ry:6.12,rz:.01},
- {p:0.90,x:0,y:2,s:.94,ry:6.25,rz:0},
- {p:0.96,x:0,y:0,s:.58,ry:6.283,rz:0},
- {p:1.00,x:0,y:0,s:.42,ry:6.283,rz:0}
-];
-const frames=isMobile?mobile:desktop;
-function sample(p){let a=frames[0],b=frames.at(-1);for(let i=0;i<frames.length-1;i++){if(p>=frames[i].p&&p<=frames[i+1].p){a=frames[i];b=frames[i+1];break}}const t=(p-a.p)/(b.p-a.p||1);return {x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),s:lerp(a.s,b.s,t),ry:lerp(a.ry,b.ry,t),rz:lerp(a.rz,b.rz,t)}}
-function renderCard(p){if(!target||!base)return;const k=sample(p);target.position.x=base.px;target.position.y=base.py;target.position.z=base.pz+18;target.rotation.x=base.rx-.015;target.rotation.y=base.ry+k.ry;target.rotation.z=base.rz+k.rz;target.scale.x=base.sx*k.s;target.scale.y=base.sy*k.s;target.scale.z=base.sz*k.s;cardLayer.style.transform=`translate3d(${k.x}vw,${k.y}vh,0)`;cardLayer.style.opacity=(1-smooth(range(p,.94,1))).toFixed(3);cardLayer.style.zIndex=p<.18?3:p<.40?5:p<.62?3:p<.84?5:4;app.requestRender?.()}
-function setScreen(i){screens.forEach((el,n)=>el.classList.toggle('is-active',n===i));steps.forEach((el,n)=>el.classList.toggle('is-active',n===i));dots.forEach((el,n)=>el.classList.toggle('is-active',n===i))}
-function render(storyP,dayP){
- renderCard(storyP);
- const handIn=smooth(range(storyP,.82,.92));
- const handDone=smooth(range(storyP,.92,1));
- const dayActive=dayP>0||storyP>.985;
- const phoneOpacity=dayActive?1:handIn;
- const phoneX=isMobile?50:lerp(50,64,Math.max(handIn,dayActive?1:0));
- const phoneScale=lerp(.86,1,handIn);
- stage.style.setProperty('--phone-opacity',phoneOpacity.toFixed(3));
- stage.style.setProperty('--phone-x',phoneX+'%');
- stage.style.setProperty('--phone-scale',phoneScale.toFixed(3));
- const dayCopyOpacity=dayP<=0?0:smooth(range(dayP,0,.04));
- stage.style.setProperty('--day-copy-opacity',dayCopyOpacity.toFixed(3));
- stage.style.setProperty('--day-progress',(dayP*100).toFixed(2)+'%');
- storyProgress.style.width=((dayP>0?dayP:storyP)*100).toFixed(2)+'%';
- progressLabel.textContent=dayP>0?'Day':'Story';
- const phase=Math.min(6,Math.floor(clamp(dayP)*7));
- if(dayP!==lastDay){setScreen(phase);lastDay=dayP}
- const accents=['#f3d08b','#93c5fd','#45c8ff','#ffd166','#ffb389','#c7d9ff','#e2ebff'];
- stage.style.setProperty('--day-accent',accents[phase]);
- stage.style.setProperty('--glow-x',(phase<3?72:phase<5?58:78)+'%');
- stage.style.setProperty('--glow-y',(phase<2?35:phase<5?58:28)+'%');
- stage.style.setProperty('--glow-a',(dayP>0?.10:.11));
-}
-function update(){raf=0;const r=master.getBoundingClientRect();const inside=clamp(-r.top,0,master.offsetHeight-innerHeight);const handoffOffset=handoff.offsetTop;const dayOffset=dayScroll.offsetTop;const storyP=clamp(inside/dayOffset);const dayP=clamp((inside-dayOffset)/(dayScroll.offsetHeight-innerHeight));if(Math.abs(storyP-lastStory)>.0001||Math.abs(dayP-lastDay)>.0001){lastStory=storyP;render(storyP,dayP)}}
-function request(){if(!raf)raf=requestAnimationFrame(update)}
-app.load('https://prod.spline.design/qB19EwIaoVYzkSPV/scene.splinecode').then(()=>{target=app.findObjectByName('hero_card_stage')||app.findObjectByName('tappie_card_group')||app.findObjectByName('card_movement')||app.findObjectByName('card_rotation');if(target){base={px:target.position.x,py:target.position.y,pz:target.position.z,rx:target.rotation.x,ry:target.rotation.y,rz:target.rotation.z,sx:target.scale.x,sy:target.scale.y,sz:target.scale.z};request()}}).catch(console.error);
-addEventListener('scroll',request,{passive:true});addEventListener('resize',request,{passive:true});request();
+function applyIndexTweaks(){if(!indexReady||!indexSection)return;const h=track().handoff||{},ph=h.phone||{},cp=h.copy||{};indexSection.style.setProperty('--prod-phone-x',(ph.x||0)+'px');indexSection.style.setProperty('--prod-phone-y',(ph.y||0)+'px');indexSection.style.setProperty('--prod-phone-scale',ph.scale??1);indexSection.style.setProperty('--prod-copy-x',(cp.x||0)+'px');indexSection.style.setProperty('--prod-copy-y',(cp.y||0)+'px');indexSection.style.setProperty('--prod-copy-scale',cp.scale??1);indexSection.style.setProperty('--prod-phone-base-y',device==='mobile'?'-8px':'-22px')}
+function syncIndex(percent){if(!indexReady)return;try{const win=frame.contentWindow,vh=frame.clientHeight,max=Math.max(indexSection.offsetHeight-vh,1),y=indexSection.offsetTop+max*clamp(percent/100,0,1);win.scrollTo(0,y)}catch(e){}}
+function renderBridge(q,finalFrame){if(!indexReady||!indexBridge||!indexPhone)return;const sr=indexStage.getBoundingClientRect(),pr=indexPhone.getBoundingClientRect();const startX=sr.width/2+finalFrame.x/100*sr.width,startY=sr.height/2+finalFrame.y/100*sr.height;const endX=pr.left-sr.left+pr.width/2,endY=pr.top-sr.top+pr.height*.48;const baseW=Math.min(device==='mobile'?sr.width*.78:sr.width*.31,device==='mobile'?350:340),targetW=pr.width*.72,targetScale=targetW/baseW;const x=lerp(startX,endX,q),y=lerp(startY,endY,q),sc=lerp(finalFrame.scale,targetScale,q),rx=lerp(finalFrame.rotX,0,q),ry=lerp(finalFrame.rotY,0,q),rz=lerp(finalFrame.rotZ,0,q);indexBridge.style.left=x+'px';indexBridge.style.top=y+'px';indexBridge.style.transform=`translate(-50%,-50%) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`;indexBridge.style.opacity=String(1-q*.92)}
+function render(p){applyIndexTweaks();const s=project.segments.storyEnd,h=project.segments.handoffEnd,f=sample(Math.min(p,s));if(p<s){story.style.opacity=1;story.style.visibility='visible';day.style.opacity=0;day.style.visibility='hidden';cardStage.style.opacity=f.opacity;renderTexts(p);applyCard(f)}else if(p<h){const q=ease((p-s)/(h-s),'easeInOut');story.style.visibility='visible';day.style.visibility='visible';story.style.opacity=1-q;day.style.opacity=q;renderTexts(s-.01);applyCard(f);cardStage.style.opacity=1-q;syncIndex(0);renderBridge(q,f)}else{story.style.opacity=0;story.style.visibility='hidden';day.style.opacity=1;day.style.visibility='visible';cardStage.style.opacity=0;syncIndex((p-h)/(100-h)*100)}if(debugOn)debug.textContent=`${device} · ${p.toFixed(2)}% · ${p<s?'STORY':p<h?'HANDOFF':'DAY'}`}
+function measure(){const r=master.getBoundingClientRect(),max=master.offsetHeight-innerHeight;targetP=clamp(-r.top/Math.max(max,1)*100,0,100)}
+function tick(){currentP+= (targetP-currentP)*(device==='mobile'?.28:.22);if(Math.abs(targetP-currentP)<.002)currentP=targetP;render(currentP);requestAnimationFrame(tick)}
+addEventListener('scroll',measure,{passive:true});addEventListener('resize',()=>{device=matchMedia('(max-width:760px)').matches?'mobile':'desktop';measure()});loadConfig().then(()=>{if(forcedProgress!==null){requestAnimationFrame(()=>{const max=master.offsetHeight-innerHeight;scrollTo(0,max*clamp(Number(forcedProgress)/100,0,1));measure()})}else measure();tick()});
+})();
 </script>
 </body></html>
