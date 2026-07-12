@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Tappie Motion Tuning Lab v11 — WYSIWYG Live Viewport</title>
+<title>Tappie Motion Tuning Lab v12 — Stable Device Viewport</title>
 <style>
 :root{
   --bg:#070a0f;--panel:#0f141c;--panel2:#151b25;--panel3:#1b2330;--line:rgba(255,255,255,.09);
@@ -31,10 +31,10 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}.a
 <body>
 <div class="app">
 <header class="toolbar">
-  <div class="brand"><div class="brand-mark">T</div><div><strong>Tappie Motion Tuning Lab</strong><small>V11 · SAME RUNTIME + LIVE OUTPUT VIEWPORT</small></div></div>
+  <div class="brand"><div class="brand-mark">T</div><div><strong>Tappie Motion Tuning Lab</strong><small>V12 · LOCKED DEVICE VIEWPORT + SHARED RUNTIME</small></div></div>
   <div class="seg" id="deviceSeg"><button class="active" data-device="desktop">電腦</button><button data-device="mobile">手機</button></div>
-  <select class="select" id="viewportPreset" title="只改預覽視窗，不會改動你的設計座標"><option value="browser">與成品頁相同視窗</option><option value="design">設計畫布尺寸</option><option value="1440x900">1440 × 900</option><option value="1280x800">1280 × 800</option><option value="1920x1080">1920 × 1080</option><option value="430x932">430 × 932</option><option value="390x844">390 × 844</option></select>
-  <button class="btn" id="fitBtn" title="用與 tappie_spline.html 相同的實際瀏覽器視窗預覽">成品 1:1</button><div class="sep"></div>
+  <select class="select" id="viewportPreset" title="目前裝置的設計與成品尺寸；切換電腦／手機時會自動切回各自尺寸"><option value="1440x900">1440 × 900</option><option value="1280x800">1280 × 800</option><option value="1920x1080">1920 × 1080</option><option value="430x932">430 × 932</option><option value="390x844">390 × 844</option></select>
+  <button class="btn" id="fitBtn" title="把目前裝置畫布放到編輯區可容納的最大尺寸，不改任何數值">最大顯示</button><div class="sep"></div>
   <div class="seg" id="objectSeg"><button class="active" data-object="card">卡片</button><button data-object="text">文字</button><button data-object="phone">原始手機</button></div>
   <button class="btn" id="gridBtn">格線</button><div class="spacer"></div>
   <button class="btn icon" id="undoBtn">↶</button><button class="btn icon" id="redoBtn">↷</button><button class="btn" id="importBtn">匯入</button><button class="btn" id="previewProdBtn">預覽成品</button><button class="btn primary" id="exportBtn">匯出 JSON</button><input type="file" id="importFile" accept="application/json" hidden>
@@ -47,7 +47,7 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}.a
     <div class="story-scene" id="storyScene"><div class="story-bg"></div><div class="text-layer text-layer--behind" id="textLayerBehind"></div><div class="text-layer text-layer--front" id="textLayerFront"></div>
       <div class="card-stage" id="cardStage" data-layer="front"><div class="spline-wrap"><canvas id="canvas3d"></canvas></div><div class="css-card-wrap"><div class="css-card" id="cssCard"><div class="css-card-face front"></div><div class="css-card-face back"><div class="back-copy">一嗶感應，秒說外語！<small>www.tappieapp.com</small></div></div><div class="css-card-edge"></div></div></div></div>
     </div>
-    <iframe class="runtime-preview" id="runtimePreview" src="./tappie_spline.html?editor=1&v=11.0.0" title="Exact production runtime preview"></iframe>
+    <iframe class="runtime-preview" id="runtimePreview" src="./tappie_spline.html?editor=1&v=12.0.0" title="Exact production runtime preview"></iframe>
     <div class="grid" id="grid"><div class="safe"></div></div><div class="drag-layer" id="dragLayer"></div>
     <div class="segment-ribbon"><b id="segmentName">卡片故事</b><span id="segmentHelp">文字固定，卡片穿越</span></div>
     <div class="frame-info"><strong id="frameId">WORK</strong><span id="frameLabel">工作狀態</span><span class="coord" id="coord">F6</span></div>
@@ -145,42 +145,62 @@ let device='desktop',selectedPointId=null,selectedObject='card',renderMode='edit
 const els={runtimePreview:$('#runtimePreview'),viewportStage:$('#viewportStage'),viewport:$('#viewportShell'),story:$('#storyScene'),day:$('#dayScene'),dayViewport:$('#dayViewport'),dayFrame:$('#dayFrame'),dayOverlay:$('#dayOverlay'),textLayerBehind:$('#textLayerBehind'),textLayerFront:$('#textLayerFront'),cardStage:$('#cardStage'),cssCard:$('#cssCard'),drag:$('#dragLayer'),grid:$('#grid'),pointStrip:$('#pointStrip'),textList:$('#textList'),scrub:$('#scrub'),scrubValue:$('#scrubValue'),timelineTrack:$('#timelineTrack'),dayBadge:$('#dayBadge'),viewBadge:$('#viewBadge'),designBadge:$('#designBadge'),zoomBadge:$('#zoomBadge'),parityBadge:$('#parityBadge'),segmentBadge:$('#segmentBadge'),selectionBadge:$('#selectionBadge'),segmentName:$('#segmentName'),segmentHelp:$('#segmentHelp'),frameId:$('#frameId'),frameLabel:$('#frameLabel'),coord:$('#coord'),indexDot:$('#indexDot'),indexStatus:$('#indexStatus')};
 function persist(){localStorage.setItem('tappieMotionLabV7',JSON.stringify(project))}function snap(){history.push(JSON.stringify(project));if(history.length>80)history.shift();future=[]}function undo(){if(!history.length)return;future.push(JSON.stringify(project));project=normalize(JSON.parse(history.pop()));ensure();persist();syncAll()}function redo(){if(!future.length)return;history.push(JSON.stringify(project));project=normalize(JSON.parse(future.pop()));ensure();persist();syncAll()}
 function track(){return project.tracks[device]}function points(){return track().points.sort((a,b)=>a.progress-b.progress)}function selectedPoint(){return points().find(p=>p.id===selectedPointId)||null}function editable(){return selectedPoint()||track().working}function selectedText(){return track().texts.find(t=>t.id===track().selectedText)||track().texts[0]||null}function ensure(){if(selectedPointId&&!points().some(p=>p.id===selectedPointId))selectedPointId=null;if(!track().texts.some(t=>t.id===track().selectedText))track().selectedText=track().texts[0]?.id||null}
-function designDims(){const [w,h]=project.viewport[device].split('x').map(Number);return{w,h,r:w/h}}
-const PREVIEW_KEY='tappieMotionPreviewViewportV11';
-let previewViewport=(()=>{try{return{desktop:'browser',mobile:'430x932',...JSON.parse(localStorage.getItem(PREVIEW_KEY)||'{}')}}catch(e){return{desktop:'browser',mobile:'430x932'}}})();
-function browserDims(){return{w:Math.max(320,Math.round(window.innerWidth)),h:Math.max(320,Math.round(window.innerHeight))}}
-function previewDims(){const raw=previewViewport[device]|| (device==='desktop'?'browser':'430x932');if(raw==='browser')return browserDims();if(raw==='design')return designDims();let [w,h]=String(raw).split('x').map(Number);if(!w||!h)return device==='desktop'?browserDims():{w:430,h:932};return{w,h,r:w/h}}
-function syncViewportSelect(){const sel=$('#viewportPreset'),bd=browserDims();const opt=sel.querySelector('option[value="browser"]');if(opt)opt.textContent=`與成品頁相同視窗 · ${bd.w}×${bd.h}`;sel.value=previewViewport[device]|| (device==='desktop'?'browser':'430x932')}
+function designDims(){
+  const raw=String(project.viewport?.[device]|| (device==='desktop'?'1440x900':'430x932'));
+  let [w,h]=raw.split('x').map(Number);
+  if(!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0){
+    [w,h]=device==='desktop'?[1440,900]:[430,932];
+    project.viewport[device]=`${w}x${h}`;
+  }
+  return{w,h,r:w/h};
+}
+function previewDims(){return designDims()}
+function syncViewportSelect(){
+  const sel=$('#viewportPreset');
+  const allowed=device==='desktop'?new Set(['1440x900','1280x800','1920x1080']):new Set(['430x932','390x844']);
+  [...sel.options].forEach(o=>{o.hidden=!allowed.has(o.value);o.disabled=!allowed.has(o.value)});
+  let value=project.viewport[device];
+  if(!allowed.has(value)){
+    value=device==='desktop'?'1440x900':'430x932';
+    project.viewport[device]=value;
+    persist();
+  }
+  sel.value=value;
+}
 let previewFocus=false;
 function fit(){
-  const target=previewDims(),design=designDims(),box=els.viewportStage.getBoundingClientRect();
-  let s;
-  if(previewFocus&&previewViewport[device]==='browser'&&device==='desktop'){
-    s=1;
-  }else{
-    s=Math.max(.05,Math.min((box.width-10)/target.w,(box.height-10)/target.h));
-  }
+  const target=designDims(),box=els.viewportStage.getBoundingClientRect();
+  const pad=previewFocus?0:10;
+  const s=Math.max(.05,Math.min((box.width-pad)/target.w,(box.height-pad)/target.h));
   els.viewport.style.width=target.w+'px';
   els.viewport.style.height=target.h+'px';
   els.viewport.style.transform=`scale(${s})`;
   els.viewport.dataset.device=device;
   els.viewBadge.textContent=`成品 ${target.w}×${target.h}`;
-  if(els.designBadge)els.designBadge.textContent=`設計 ${design.w}×${design.h}`;
+  if(els.designBadge)els.designBadge.textContent=`設計 ${target.w}×${target.h}`;
   if(els.zoomBadge)els.zoomBadge.textContent=`縮圖 ${Math.round(s*100)}%`;
+  if(els.parityBadge){els.parityBadge.textContent=`LOCK · ${target.w}×${target.h} · 1.000×`;els.parityBadge.className='badge ready'}
   syncViewportSelect();
   $('#timelineDevice').textContent=device.toUpperCase();
   fitIframe();
 }
 function setPreviewFocus(on){
   previewFocus=!!on;
-  if(previewFocus&&device==='desktop')previewViewport.desktop='browser';
-  localStorage.setItem(PREVIEW_KEY,JSON.stringify(previewViewport));
   document.body.classList.toggle('preview-focus',previewFocus);
-  $('#fitBtn').textContent=previewFocus?'返回編輯':'成品 1:1';
+  $('#fitBtn').textContent=previewFocus?'返回編輯':'最大顯示';
   requestAnimationFrame(()=>requestAnimationFrame(()=>{fit();sendRuntime(Number(els.scrub.value),currentFrame(),false)}));
 }
-function fitIframe(){const target=previewDims(),r=els.viewport.getBoundingClientRect();if(!r.width)return;const s=r.width/target.w;els.dayViewport.style.width=target.w+'px';els.dayViewport.style.height=target.h+'px';els.dayViewport.style.transform=`scale(${s})`;els.dayFrame.style.width=target.w+'px';els.dayFrame.style.height=target.h+'px'}
-new ResizeObserver(fit).observe(els.viewportStage);
+function fitIframe(){
+  const target=designDims(),r=els.viewport.getBoundingClientRect();
+  if(!r.width)return;
+  const s=r.width/target.w;
+  els.dayViewport.style.width=target.w+'px';
+  els.dayViewport.style.height=target.h+'px';
+  els.dayViewport.style.transform=`scale(${s})`;
+  els.dayFrame.style.width=target.w+'px';
+  els.dayFrame.style.height=target.h+'px';
+}
+new ResizeObserver(()=>requestAnimationFrame(fit)).observe(els.viewportStage);
 function ease(t,type){t=clamp(t,0,1);if(type==='linear')return t;if(type==='easeOut')return 1-Math.pow(1-t,3);if(type==='easeInOut')return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;if(type==='fastPass')return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;return t}
 function sample(p){const a=points();if(!a.length)return{...track().working,progress:p};if(p<=a[0].progress)return{...a[0],progress:p};if(p>=a.at(-1).progress+a.at(-1).hold)return{...a.at(-1),progress:p};for(let i=0;i<a.length-1;i++){const A=a[i],B=a[i+1],start=A.progress+A.hold;if(p<=start)return{...A,progress:p};if(p<=B.progress){const q=ease((p-start)/Math.max(B.progress-start,.001),A.easing),out={...A,progress:p};['x','y','z','scale','rotX','rotY','rotZ','opacity','brightness','contrast','saturation'].forEach(k=>out[k]=lerp(A[k],B[k],q));out.layer=q<.5?A.layer:B.layer;return out}}return{...a.at(-1),progress:p}}
 function currentFrame(){return renderMode==='preview'?sample(Number(els.scrub.value)):editable()}
@@ -195,8 +215,34 @@ function render(p,frame=currentFrame()){const seg=segmentFor(p);sendRuntime(p,fr
 function renderPoints(){els.pointStrip.innerHTML='';if(!points().length){els.pointStrip.innerHTML='<div class="empty">尚無定位點。先調整卡片，再按「新增定位點」。</div>'}points().forEach((p,i)=>{const b=document.createElement('button');b.className='chip'+(p.id===selectedPointId?' active':'');b.innerHTML=`<b>${String(i+1).padStart(2,'0')} · ${p.label}</b><span class="pct">${p.progress.toFixed(1)}%</span><span>Hold ${p.hold.toFixed(1)}%</span>`;b.onclick=()=>{selectedPointId=p.id;renderMode='edit';els.scrub.value=p.progress;syncAll()};els.pointStrip.appendChild(b)})}
 function renderTextsList(){els.textList.innerHTML='';track().texts.forEach(t=>{const b=document.createElement('button');b.className='chip'+(t.id===track().selectedText?' active':'');b.innerHTML=`<b>${t.label}</b><span>${t.start.toFixed(1)}–${t.end.toFixed(1)}%</span>`;b.onclick=()=>{track().selectedText=t.id;selectedObject='text';renderMode='edit';els.scrub.value=clamp((t.start+t.end)/2,0,Math.max(0,project.segments.storyEnd-.1));$$('#objectSeg button').forEach(x=>x.classList.toggle('active',x.dataset.object==='text'));document.querySelector('[data-tab="text"]')?.click();syncAll()};els.textList.appendChild(b)})}
 function renderTimeline(){els.timelineTrack.innerHTML='';points().forEach(p=>{const m=document.createElement('i');m.className='marker'+(p.id===selectedPointId?' active':'');m.style.left=p.progress+'%';els.timelineTrack.appendChild(m)});for(const [v,l] of [[project.segments.storyEnd,'交接開始'],[project.segments.handoffEnd,'一日流程']]){const m=document.createElement('i');m.className='segment-mark';m.style.left=v+'%';m.innerHTML=`<span>${l}</span>`;els.timelineTrack.appendChild(m)}}
-function updateControls(f){$$('[data-card]').forEach(e=>e.value=f[e.dataset.card]);$$('[data-card-num]').forEach(e=>e.value=f[e.dataset.cardNum]);$('#pointLabel').value=f.label||'';$('#pointProgress').value=f.progress;$('#pointProgressNum').value=f.progress;$('#pointHold').value=f.hold;$('#pointHoldNum').value=f.hold;$('#pointEasing').value=f.easing;const t=selectedText();if(t){$('#textLabel').value=t.label;$('#textKicker').value=t.kicker;$('#textTitle').value=t.title;$('#textNote').value=t.note;$$('[data-textprop]').forEach(e=>e.value=t[e.dataset.textprop]);$$('[data-textnum]').forEach(e=>e.value=t[e.dataset.textnum]);$('#textLayerSelect').value=t.layer;$('#textAlign').value=t.align;$('#textWrap').value=t.titleWrap||'manual'}const h=track().handoff;$$('[data-phone]').forEach(e=>e.value=h.phone[e.dataset.phone]);$$('[data-phone-num]').forEach(e=>e.value=h.phone[e.dataset.phoneNum]);$$('[data-daycopy]').forEach(e=>e.value=h.copy[e.dataset.daycopy]);$$('[data-daycopy-num]').forEach(e=>e.value=h.copy[e.dataset.daycopyNum]);$('#storyEnd').value=$('#storyEndNum').value=project.segments.storyEnd;$('#handoffEnd').value=$('#handoffEndNum').value=project.segments.handoffEnd;$('#engineSelect').value=project.engine;window.addEventListener('resize',()=>{if(previewViewport[device]==='browser')requestAnimationFrame(fit)});
-$('#sceneUrl').value=project.sceneUrl;$('#objectName').value=project.objectName;$('#indexUrl').value=project.indexUrl;els.scrubValue.textContent=Number(els.scrub.value).toFixed(1)+'%';els.selectionBadge.textContent=selectedObject.toUpperCase();$('#timelineDevice').textContent=device.toUpperCase();$('#duplicatePointBtn').disabled=!selectedPoint();$('#deletePointBtn').disabled=!selectedPoint()}
+function safeNum(v,fallback=0){const n=Number(v);return Number.isFinite(n)?n:fallback}
+function setValue(el,v,fallback=0){if(!el)return;const n=safeNum(v,fallback);el.value=String(Math.round(n*1000)/1000)}
+function updateControls(f){
+  const base=baseCard(device);f={...base,...(f||{})};
+  $$('[data-card]').forEach(e=>setValue(e,f[e.dataset.card],base[e.dataset.card]));
+  $$('[data-card-num]').forEach(e=>setValue(e,f[e.dataset.cardNum],base[e.dataset.cardNum]));
+  $('#pointLabel').value=f.label||'';
+  setValue($('#pointProgress'),f.progress,0);setValue($('#pointProgressNum'),f.progress,0);
+  setValue($('#pointHold'),f.hold,0);setValue($('#pointHoldNum'),f.hold,0);
+  $('#pointEasing').value=f.easing||'easeOut';
+  const t=selectedText();
+  if(t){
+    $('#textLabel').value=t.label||'';$('#textKicker').value=t.kicker||'';$('#textTitle').value=t.title||'';$('#textNote').value=t.note||'';
+    $$('[data-textprop]').forEach(e=>setValue(e,t[e.dataset.textprop],0));
+    $$('[data-textnum]').forEach(e=>setValue(e,t[e.dataset.textnum],0));
+    $('#textLayerSelect').value=t.layer||'behind';$('#textAlign').value=t.align||'left';$('#textWrap').value=t.titleWrap||'manual';
+  }
+  const h=track().handoff;
+  $$('[data-phone]').forEach(e=>setValue(e,h.phone[e.dataset.phone],0));
+  $$('[data-phone-num]').forEach(e=>setValue(e,h.phone[e.dataset.phoneNum],0));
+  $$('[data-daycopy]').forEach(e=>setValue(e,h.copy[e.dataset.daycopy],0));
+  $$('[data-daycopy-num]').forEach(e=>setValue(e,h.copy[e.dataset.daycopyNum],0));
+  setValue($('#storyEnd'),project.segments.storyEnd,55);setValue($('#storyEndNum'),project.segments.storyEnd,55);
+  setValue($('#handoffEnd'),project.segments.handoffEnd,68);setValue($('#handoffEndNum'),project.segments.handoffEnd,68);
+  $('#engineSelect').value=project.engine;$('#sceneUrl').value=project.sceneUrl;$('#objectName').value=project.objectName;$('#indexUrl').value=project.indexUrl;
+  els.scrubValue.textContent=safeNum(els.scrub.value,0).toFixed(1)+'%';els.selectionBadge.textContent=selectedObject.toUpperCase();$('#timelineDevice').textContent=device.toUpperCase();
+  $('#duplicatePointBtn').disabled=!selectedPoint();$('#deletePointBtn').disabled=!selectedPoint();
+}
 function syncAll(){ensure();fit();renderPoints();renderTextsList();renderTimeline();render(Number(els.scrub.value));persist()}
 function updateCard(k,v){if(renderMode==='preview'){track().working={...sample(Number(els.scrub.value)),id:null,label:'工作狀態'};selectedPointId=null;renderMode='edit'}editable()[k]=Number(v);persist();render(Number(els.scrub.value),editable());renderPoints();renderTimeline()}
 $$('[data-card]').forEach(e=>e.oninput=()=>updateCard(e.dataset.card,e.value));$$('[data-card-num]').forEach(e=>e.oninput=()=>updateCard(e.dataset.cardNum,e.value));
@@ -212,9 +258,9 @@ function addPoint(){snap();const p={...clone(currentFrame()),id:uid(),label:`定
 $('#addPointBtn').onclick=addPoint;$('#duplicatePointBtn').onclick=()=>{const p=selectedPoint();if(!p)return;snap();const n={...clone(p),id:uid(),label:p.label+' 複製',progress:Math.min(100,p.progress+2)};track().points.push(n);selectedPointId=n.id;syncAll()};$('#deletePointBtn').onclick=()=>{const p=selectedPoint();if(!p)return;snap();track().points=track().points.filter(x=>x.id!==p.id);selectedPointId=null;syncAll()};$('#workBtn').onclick=()=>{selectedPointId=null;renderMode='edit';els.scrub.value=track().working.progress||0;syncAll()};
 $('#scrub').oninput=()=>{renderMode='preview';const p=Number(els.scrub.value);render(p,sample(p));renderTimeline()};$('#editBtn').onclick=()=>{track().working={...sample(Number(els.scrub.value)),id:null,label:'工作狀態'};selectedPointId=null;renderMode='edit';syncAll()};$('#previewBtn').onclick=()=>{renderMode='preview';render(Number(els.scrub.value),sample(Number(els.scrub.value)))};
 $('#playBtn').onclick=()=>{playing=true;let start=null,from=Number(els.scrub.value);const run=t=>{if(!playing)return;if(!start)start=t;const p=from+(t-start)/150;els.scrub.value=p>100?0:p;renderMode='preview';render(Number(els.scrub.value),sample(Number(els.scrub.value)));if(p>100)start=t;raf=requestAnimationFrame(run)};raf=requestAnimationFrame(run)};$('#stopBtn').onclick=()=>{playing=false;cancelAnimationFrame(raf)};
-$('#deviceSeg').onclick=e=>{const b=e.target.closest('[data-device]');if(!b)return;device=b.dataset.device;selectedPointId=null;renderMode='edit';els.scrub.value=track().working.progress||0;$$('#deviceSeg button').forEach(x=>x.classList.toggle('active',x.dataset.device===device));syncAll();loadIndex(true)};
+$('#deviceSeg').onclick=e=>{const b=e.target.closest('[data-device]');if(!b||b.dataset.device===device)return;const keepProgress=Number(els.scrub.value)||0;device=b.dataset.device;selectedPointId=null;renderMode='preview';els.scrub.value=keepProgress;$$('#deviceSeg button').forEach(x=>x.classList.toggle('active',x.dataset.device===device));syncViewportSelect();syncAll();loadIndex(true)};
 $('#objectSeg').onclick=e=>{const b=e.target.closest('[data-object]');if(!b)return;selectedObject=b.dataset.object;$$('#objectSeg button').forEach(x=>x.classList.toggle('active',x.dataset.object===selectedObject));const tab=selectedObject==='phone'?'handoff':selectedObject;document.querySelector(`[data-tab="${tab}"]`)?.click();syncAll()};
-$('#viewportPreset').onchange=e=>{previewViewport[device]=e.target.value;localStorage.setItem(PREVIEW_KEY,JSON.stringify(previewViewport));fit();sendRuntime(Number(els.scrub.value),currentFrame(),false)};$('#fitBtn').onclick=()=>setPreviewFocus(!previewFocus);$('#focusExitBtn').onclick=()=>setPreviewFocus(false);$('#gridBtn').onclick=()=>els.grid.classList.toggle('visible');
+$('#viewportPreset').onchange=e=>{project.viewport[device]=e.target.value;persist();fit();sendRuntime(Number(els.scrub.value),currentFrame(),false)};$('#fitBtn').onclick=()=>setPreviewFocus(!previewFocus);$('#focusExitBtn').onclick=()=>setPreviewFocus(false);$('#gridBtn').onclick=()=>els.grid.classList.toggle('visible');
 $$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===t.dataset.tab))});
 function updateSegments(k,v){project.segments[k]=Number(v);if(project.segments.handoffEnd<=project.segments.storyEnd+2)project.segments.handoffEnd=project.segments.storyEnd+2;persist();syncAll()}
 $('#storyEnd').oninput=e=>{updateSegments('storyEnd',e.target.value);$('#storyEndNum').value=project.segments.storyEnd};$('#storyEndNum').oninput=e=>{updateSegments('storyEnd',e.target.value);$('#storyEnd').value=project.segments.storyEnd};$('#handoffEnd').oninput=e=>{updateSegments('handoffEnd',e.target.value);$('#handoffEndNum').value=project.segments.handoffEnd};$('#handoffEndNum').oninput=e=>{updateSegments('handoffEnd',e.target.value);$('#handoffEnd').value=project.segments.handoffEnd};
@@ -233,8 +279,8 @@ window.addEventListener('message',e=>{
   if(d.type==='TAPPIE_RUNTIME_INDEX_READY'){els.dayBadge.textContent='原始 INDEX 已連接';els.dayBadge.className='badge ready';els.indexDot.className='dot ok';els.indexStatus.textContent='成品與編輯器共用同一個獨立一日流程模組'}
   if(d.type==='TAPPIE_RUNTIME_INDEX_ERROR'){els.dayBadge.textContent='INDEX 同網域需求';els.dayBadge.className='badge error';els.indexDot.className='dot warn';els.indexStatus.textContent='需要與 index.html 同網域'}
   if(d.type==='TAPPIE_RUNTIME_LAYOUT'&&els.parityBadge){
-    const target=previewDims(),same=Math.abs(Number(d.viewportW)-target.w)<1.5&&Math.abs(Number(d.viewportH)-target.h)<1.5;
-    els.parityBadge.textContent=same?`MATCH · ${Math.round(d.viewportW)}×${Math.round(d.viewportH)} · ${Number(d.fit).toFixed(3)}×`:`CHECK · Runtime ${Math.round(d.viewportW)}×${Math.round(d.viewportH)}`;
+    const target=designDims(),same=Math.abs(Number(d.viewportW)-target.w)<1.5&&Math.abs(Number(d.viewportH)-target.h)<1.5;
+    els.parityBadge.textContent=same?`MATCH · ${target.w}×${target.h} · 1.000×`:`CHECK · Runtime ${Math.round(d.viewportW)}×${Math.round(d.viewportH)}`;
     els.parityBadge.className='badge '+(same?'ready':'warn');
   }
 });
@@ -242,10 +288,10 @@ window.addEventListener('message',e=>{
 function pointerObjectAt(e){if(segmentFor(Number(els.scrub.value))==='handoff'&&selectedObject==='phone')return'phone';return selectedObject}
 els.drag.onpointerdown=e=>{const obj=pointerObjectAt(e);if(obj==='text'&&!selectedText())return;if(renderMode==='preview'&&obj==='card'){$('#editBtn').click()}const rect=els.viewport.getBoundingClientRect();drag={obj,sx:e.clientX,sy:e.clientY,rect,base:obj==='card'?{x:editable().x,y:editable().y}:obj==='text'?{x:selectedText().x,y:selectedText().y}:obj==='phone'?{x:track().handoff.phone.x,y:track().handoff.phone.y}:null};snap();els.drag.setPointerCapture(e.pointerId);els.drag.classList.add('dragging')};els.drag.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;if(drag.obj==='card'){editable().x=drag.base.x+dx/drag.rect.width*100;editable().y=drag.base.y+dy/drag.rect.height*100}else if(drag.obj==='text'){selectedText().x=drag.base.x+dx/drag.rect.width*100;selectedText().y=drag.base.y+dy/drag.rect.height*100}else if(drag.obj==='phone'){track().handoff.phone.x=drag.base.x+dx;track().handoff.phone.y=drag.base.y+dy}persist();render(Number(els.scrub.value),currentFrame())};els.drag.onpointerup=e=>{drag=null;els.drag.classList.remove('dragging')};
 $('#previewProdBtn').onclick=()=>window.open('./tappie_spline.html?ts='+Date.now(),'_blank');
-$('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;$('#screenshotBtn').onclick=()=>document.body.classList.toggle('screenshot-mode');$('#resetBtn').onclick=()=>{if(!confirm('確定清除所有設定？'))return;project=defaultProject();selectedPointId=null;device='desktop';persist();syncAll();loadIndex(true)};
+$('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;$('#screenshotBtn').onclick=()=>document.body.classList.toggle('screenshot-mode');$('#resetBtn').onclick=()=>{if(!confirm('確定清除所有設定？'))return;project=defaultProject();selectedPointId=null;device='desktop';renderMode='edit';$$('#deviceSeg button').forEach(x=>x.classList.toggle('active',x.dataset.device===device));persist();syncViewportSelect();syncAll();loadIndex(true)};
 $('#exportBtn').onclick=()=>{$('#jsonText').value=JSON.stringify(project,null,2);$('#modal').classList.add('open')};$('#closeModal').onclick=()=>$('#modal').classList.remove('open');$('#copyJson').onclick=async()=>{await navigator.clipboard.writeText($('#jsonText').value);toast('已複製')};$('#downloadJson').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('#jsonText').value],{type:'application/json'}));a.download='tappie-motion-keyframes-v7.json';a.click();URL.revokeObjectURL(a.href)};$('#importBtn').onclick=()=>$('#importFile').click();$('#importFile').onchange=async e=>{try{project=normalize(JSON.parse(await e.target.files[0].text()));device='desktop';selectedPointId=null;persist();syncAll();loadIndex(true);toast('匯入完成，已同步成品 Runtime')}catch(err){toast('JSON 格式錯誤')}};
 window.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();toast('已儲存')}if(e.key==='Escape'){if(document.body.classList.contains('screenshot-mode'))document.body.classList.remove('screenshot-mode');if(previewFocus)setPreviewFocus(false)}});
-window.addEventListener('resize',()=>{if(previewViewport[device]==='browser')requestAnimationFrame(fit)});
-$('#sceneUrl').value=project.sceneUrl;$('#objectName').value=project.objectName;$('#indexUrl').value=project.indexUrl;setEngine();syncAll();loadIndex();
+window.addEventListener('resize',()=>requestAnimationFrame(fit));
+$('#sceneUrl').value=project.sceneUrl;$('#objectName').value=project.objectName;$('#indexUrl').value=project.indexUrl;$$('#deviceSeg button').forEach(x=>x.classList.toggle('active',x.dataset.device===device));syncViewportSelect();setEngine();syncAll();loadIndex();
 </script>
 </body></html>
