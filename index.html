@@ -8644,7 +8644,7 @@ body nav.tappie-site-header .nav-logo span {
         <iframe
             class="tappie-spline-embed__frame"
             data-tappie-spline-frame
-            src="./tappie_spline.html?embed=1&amp;v=20260713-02"
+            src="./tappie_spline.html?embed=1&amp;v=20260713-03"
             title="Tappie 數位口說名牌互動展示"
             loading="eager"
             scrolling="no"
@@ -12467,7 +12467,8 @@ body nav.tappie-site-header .nav-logo span {
 </script>
 <script>
 // 03-tappie-spline-scroll-bridge.js
-// index.html owns scrolling; tappie_spline.html only renders the supplied 0–100 progress.
+// index.html owns scrolling. Same-origin direct calls are preferred;
+// postMessage remains as a safe fallback for delayed or cross-origin frames.
 (() => {
     function setupTappieSplineThirdScreen() {
         const section = document.querySelector('[data-tappie-spline-story]');
@@ -12475,12 +12476,14 @@ body nav.tappie-site-header .nav-logo span {
         if (!section || !frame) return;
 
         const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const deviceQuery = window.matchMedia('(max-width: 760px)');
         let raf = 0;
         let lastProgress = -1;
         let lastDevice = '';
+        let nearViewport = true;
 
         const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-        const getDevice = () => window.matchMedia('(max-width: 760px)').matches ? 'mobile' : 'desktop';
+        const getDevice = () => deviceQuery.matches ? 'mobile' : 'desktop';
 
         function getProgress() {
             if (reducedMotionQuery.matches) return 86;
@@ -12489,37 +12492,58 @@ body nav.tappie-site-header .nav-logo span {
             return clamp((-rect.top / travel) * 100, 0, 100);
         }
 
-        function postProgress(force = false) {
-            raf = 0;
-            if (!frame.contentWindow) return;
-
-            const progress = getProgress();
-            const device = getDevice();
-            if (!force && Math.abs(progress - lastProgress) < 0.01 && device === lastDevice) return;
-
-            lastProgress = progress;
-            lastDevice = device;
-            frame.contentWindow.postMessage({
+        function deliverProgress(progress, device) {
+            try {
+                const runtime = frame.contentWindow?.TappieStoryRuntime;
+                if (runtime && typeof runtime.setProgress === 'function') {
+                    runtime.setProgress(progress, device);
+                    return;
+                }
+            } catch (_) {
+                // Cross-origin or not ready yet: use postMessage below.
+            }
+            frame.contentWindow?.postMessage({
                 type: 'TAPPIE_STORY_PROGRESS',
                 progress,
                 device
             }, '*');
         }
 
+        function pushProgress(force = false) {
+            raf = 0;
+            if (!frame.contentWindow) return;
+            const progress = getProgress();
+            const device = getDevice();
+            if (!force && Math.abs(progress - lastProgress) < 0.01 && device === lastDevice) return;
+            lastProgress = progress;
+            lastDevice = device;
+            deliverProgress(progress, device);
+        }
+
         function requestProgress(force = false) {
-            if (force) {
-                if (raf) window.cancelAnimationFrame(raf);
-                raf = window.requestAnimationFrame(() => postProgress(true));
-                return;
-            }
-            if (!raf) raf = window.requestAnimationFrame(() => postProgress(false));
+            if (!force && !nearViewport) return;
+            if (raf) return;
+            raf = window.requestAnimationFrame(() => pushProgress(force));
+        }
+
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                nearViewport = Boolean(entries[0]?.isIntersecting);
+                if (nearViewport) requestProgress(true);
+                else if (raf) {
+                    window.cancelAnimationFrame(raf);
+                    raf = 0;
+                }
+            }, { rootMargin: '120% 0px 120% 0px', threshold: 0 });
+            observer.observe(section);
         }
 
         frame.addEventListener('load', () => requestProgress(true));
         window.addEventListener('scroll', () => requestProgress(false), { passive: true });
         window.addEventListener('resize', () => requestProgress(true), { passive: true });
-        window.addEventListener('orientationchange', () => window.setTimeout(() => requestProgress(true), 220));
+        window.addEventListener('orientationchange', () => window.setTimeout(() => requestProgress(true), 180));
         reducedMotionQuery.addEventListener?.('change', () => requestProgress(true));
+        deviceQuery.addEventListener?.('change', () => requestProgress(true));
         window.addEventListener('message', (event) => {
             if (event.source !== frame.contentWindow || event.data?.type !== 'TAPPIE_RUNTIME_READY') return;
             requestProgress(true);
