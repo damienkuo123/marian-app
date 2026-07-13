@@ -19,7 +19,7 @@ const master=$('#master'),sticky=$('#sticky'),shell=$('#viewportShell'),stage=$(
 const debugOn=qs.has('debug');if(debugOn)debug.classList.add('show');
 function activeDevice(){return forcedDevice||device}
 function track(){return project.tracks[activeDevice()]||project.tracks.desktop}
-function parseViewport(){const mobile=activeDevice()==='mobile',raw=project.viewport?.[activeDevice()]||(mobile?'430x932':'1440x900');let [w,h]=String(raw).split('x').map(Number);if(!w||!h||(mobile&&(w>=h||w>760))||(!mobile&&w<h)){w=mobile?430:1440;h=mobile?932:900}return{w,h}}
+function parseViewport(){const mobile=activeDevice()==='mobile',raw=project.viewport?.[activeDevice()]||(mobile?'390x844':'1440x900');let [w,h]=String(raw).split('x').map(Number);if(!w||!h||(mobile&&(w>=h||w>760))||(!mobile&&w<h)){w=mobile?390:1440;h=mobile?844:900}return{w,h}}
 function renderConfig(){return project.render||{}}
 function points(){return [...(track().points||[])].sort((a,b)=>a.progress-b.progress)}
 function sample(p){const a=points();if(!a.length)return {...(track().working||{})};if(p<=a[0].progress)return {...a[0]};if(p>=a.at(-1).progress+a.at(-1).hold)return {...a.at(-1)};for(let i=0;i<a.length-1;i++){const A=a[i],B=a[i+1],start=Number(A.progress)+Number(A.hold||0);if(p<=start)return {...A};if(p<=B.progress){const q=ease((p-start)/Math.max(Number(B.progress)-start,.001),A.easing),o={...A};for(const k of ['x','y','z','scale','rotX','rotY','rotZ','opacity','brightness','contrast','saturation'])o[k]=lerp(Number(A[k]??0),Number(B[k]??0),q);o.layer=q<.5?A.layer:B.layer;return o}}return {...a.at(-1)}}
