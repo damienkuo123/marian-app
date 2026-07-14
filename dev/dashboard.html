@@ -635,7 +635,303 @@
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
     /* Chrome 專用：箭頭朝上彈跳 */
     @keyframes bounce-up { 0%, 100% { transform: translateY(0) rotate(180deg); } 50% { transform: translateY(-10px) rotate(180deg); } }
-  </style>
+  
+
+    /* =======================================================
+       TAPPIE_CLASS_SPEAKING_ROUTE_V2
+       Direct, data-driven class route for the challenge tab.
+       ======================================================= */
+    .mission-route-panel {
+      padding: 24px 0 20px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 86% 3%, rgba(0,102,204,.09), transparent 28%),
+        linear-gradient(155deg, rgba(255,255,255,.92), rgba(248,251,255,.68));
+    }
+    .mission-route-header,
+    .mission-route-meta,
+    .mission-route-footer { margin-inline: 22px; }
+    .mission-route-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .mission-route-kicker {
+      margin-bottom: 7px;
+      color: rgba(0,102,204,.58);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .18em;
+    }
+    .mission-route-heading {
+      margin: 0;
+      color: var(--text-main);
+      font-size: 22px;
+      font-weight: 950;
+      letter-spacing: .5px;
+      line-height: 1.18;
+    }
+    .mission-route-progress-chip {
+      min-width: 86px;
+      padding: 10px 13px;
+      border-radius: 18px;
+      text-align: right;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(255,255,255,.96);
+      box-shadow: inset 0 1px 0 #fff, 0 10px 22px rgba(0,102,204,.07);
+    }
+    .mission-route-progress-chip span {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--text-sub);
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .mission-route-progress-chip strong {
+      color: var(--primary-blue);
+      font-size: 20px;
+      font-weight: 950;
+    }
+    .mission-route-meta {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 14px;
+      margin-top: 16px;
+      padding: 14px 15px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.50);
+      border: 1px solid rgba(255,255,255,.88);
+    }
+    .mission-route-meta-item { min-width: 0; }
+    .mission-route-meta-item:last-child { text-align: right; }
+    .mission-route-meta-item span {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--text-sub);
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .mission-route-meta-item strong {
+      display: block;
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 950;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mission-route-legend {
+      display: flex;
+      gap: 8px;
+      padding: 14px 22px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .mission-route-legend::-webkit-scrollbar { display: none; }
+    .mission-route-legend-item {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: var(--text-sub);
+      background: rgba(255,255,255,.60);
+      border: 1px solid rgba(255,255,255,.90);
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .mission-route-legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #bdc8d4;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.65);
+    }
+    .mission-route-legend-dot.safe { background: #74b9ff; }
+    .mission-route-legend-dot.good { background: #55d6b0; }
+    .mission-route-legend-dot.perfect { background: #ffb657; }
+    .mission-route-viewport {
+      position: relative;
+      height: min(66vh, 650px);
+      min-height: 500px;
+      margin-top: 2px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      background:
+        linear-gradient(180deg, rgba(247,250,255,.35), rgba(255,255,255,.16)),
+        radial-gradient(circle at 50% 50%, rgba(0,102,204,.025), transparent 55%);
+      border-top: 1px solid rgba(255,255,255,.72);
+      border-bottom: 1px solid rgba(255,255,255,.72);
+    }
+    .mission-route-viewport::-webkit-scrollbar { display: none; }
+    .mission-route-stage {
+      position: relative;
+      width: 100%;
+      min-height: 620px;
+    }
+    .mission-route-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .mission-route-node {
+      position: absolute;
+      width: 0;
+      height: 0;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+    }
+    .mission-route-node-core {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 42px;
+      height: 42px;
+      transform: translate(-50%, -50%);
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #9ba8b5;
+      background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(235,241,247,.86));
+      border: 2px solid rgba(185,197,209,.56);
+      box-shadow: 0 8px 18px rgba(54,72,91,.10), inset 0 1px 0 #fff;
+      font-size: 11px;
+      font-weight: 950;
+      transition: .25s ease;
+    }
+    .mission-route-node.is-complete .mission-route-node-core {
+      color: #fff;
+      border-color: rgba(255,255,255,.72);
+      background: linear-gradient(145deg, #58c9f5, #0879db);
+      box-shadow: 0 10px 24px rgba(0,102,204,.22), inset 0 1px 0 rgba(255,255,255,.48);
+    }
+    .mission-route-node.is-current .mission-route-node-core {
+      width: 52px;
+      height: 52px;
+      color: #fff;
+      background: linear-gradient(145deg, #2cc7ff, #0066cc);
+      border: 4px solid rgba(255,255,255,.96);
+      box-shadow: 0 0 0 7px rgba(0,102,204,.10), 0 14px 30px rgba(0,102,204,.28);
+    }
+    .mission-route-node.is-milestone-safe .mission-route-node-core {
+      border-radius: 16px;
+      color: #fff;
+      background: linear-gradient(145deg, #82c7ff, #3b8ee8);
+    }
+    .mission-route-node.is-milestone-good .mission-route-node-core {
+      border-radius: 15px 24px 15px 24px;
+      color: #fff;
+      background: linear-gradient(145deg, #70e1c0, #24ac8f);
+    }
+    .mission-route-node.is-milestone-perfect .mission-route-node-core {
+      width: 50px;
+      height: 50px;
+      border-radius: 18px;
+      color: #fff;
+      background: linear-gradient(145deg, #ffc66c, #f18f24);
+      box-shadow: 0 12px 28px rgba(243,156,18,.25), inset 0 1px 0 rgba(255,255,255,.55);
+    }
+    .mission-route-people {
+      position: absolute;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 92px;
+      max-width: 132px;
+      transform: translateY(-50%);
+    }
+    .mission-route-node.side-left .mission-route-people { right: 34px; align-items: flex-end; }
+    .mission-route-node.side-right .mission-route-people { left: 34px; align-items: flex-start; }
+    .mission-route-person {
+      display: block;
+      max-width: 126px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      color: #566575;
+      background: rgba(255,255,255,.84);
+      border: 1px solid rgba(255,255,255,.98);
+      box-shadow: 0 5px 13px rgba(42,56,70,.08);
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mission-route-person.is-me {
+      color: #fff;
+      background: linear-gradient(135deg, #28baf3, #0066cc);
+      box-shadow: 0 7px 17px rgba(0,102,204,.22);
+    }
+    .mission-route-person.more {
+      color: var(--primary-blue);
+      background: rgba(225,242,255,.90);
+    }
+    .mission-route-milestone-copy {
+      position: absolute;
+      top: 30px;
+      width: 126px;
+      color: var(--text-main);
+      font-size: 10px;
+      font-weight: 950;
+      line-height: 1.35;
+    }
+    .mission-route-milestone-copy small {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-sub);
+      font-size: 9px;
+      font-weight: 850;
+    }
+    .mission-route-node.side-left .mission-route-milestone-copy { right: 30px; text-align: right; }
+    .mission-route-node.side-right .mission-route-milestone-copy { left: 30px; text-align: left; }
+    .mission-route-empty {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      color: var(--text-sub);
+      font-size: 13px;
+      font-weight: 900;
+      text-align: center;
+    }
+    .mission-route-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 15px;
+      color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .mission-route-locate {
+      border: 1px solid rgba(0,102,204,.12);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--primary-blue);
+      background: rgba(0,102,204,.07);
+      font-size: 11px;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    @media (min-width: 768px) {
+      .mission-route-viewport { height: 700px; }
+      .mission-route-header, .mission-route-meta, .mission-route-footer { margin-inline: 32px; }
+      .mission-route-legend { padding-inline: 32px; }
+    }
+</style>
 </head>
 
 <body>
@@ -759,40 +1055,40 @@
       </div>
 
       <div id="mission-route-panel" class="glass-panel mission-route-panel">
-        <div class="mission-route-head">
+        <div class="mission-route-header">
           <div>
-            <div class="mission-route-eyebrow">CLASS SPEAKING ROUTE</div>
-            <h3 class="mission-route-title">口說挑戰路線</h3>
+            <div class="mission-route-kicker">CLASS SPEAKING ROUTE</div>
+            <h3 class="mission-route-heading">班級口說挑戰路線</h3>
           </div>
-          <div class="mission-route-current">
-            <span class="mission-route-current-label">我的進度</span>
+          <div class="mission-route-progress-chip">
+            <span>我的進度</span>
             <strong id="mission-count">0 次</strong>
           </div>
         </div>
 
-        <div class="mission-route-summary">
-          <div class="mission-route-summary-item">
+        <div class="mission-route-meta">
+          <div class="mission-route-meta-item">
             <span>目前單元</span>
             <strong id="mission-route-unit">-</strong>
           </div>
-          <div class="mission-route-summary-item align-right">
+          <div class="mission-route-meta-item">
             <span>預計結算</span>
             <strong id="mission-est">-250 點</strong>
           </div>
         </div>
 
-        <div class="mission-route-key" id="mission-route-key"></div>
+        <div id="mission-route-legend" class="mission-route-legend"></div>
 
-        <div id="mission-route-scroll" class="mission-route-scroll" aria-label="班級口說挑戰進度路線">
+        <div id="mission-route-viewport" class="mission-route-viewport" aria-label="班級口說挑戰路線">
           <div id="mission-route-stage" class="mission-route-stage">
             <svg id="mission-route-svg" class="mission-route-svg" aria-hidden="true"></svg>
-            <div id="mission-route-nodes" class="mission-route-nodes"></div>
+            <div id="mission-route-nodes"></div>
           </div>
         </div>
 
         <div class="mission-route-footer">
           <span>結算日 <strong class="end-date-display">-</strong></span>
-          <button type="button" id="mission-route-back-to-me" class="mission-route-locate-btn">回到我的位置</button>
+          <button type="button" id="mission-route-locate" class="mission-route-locate">回到我的位置</button>
         </div>
       </div>
 
@@ -2121,100 +2417,116 @@
       })();
     }
     
+
+
     function escapeMissionRouteHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     }
 
-    function buildMissionRouteMilestones(gami) {
-      const mission = gami?.mission || {};
+    function getMissionRouteMilestones(gami) {
+      const m = gami?.mission || {};
       return [
-        { count: Number(mission.failThreshold || 0), type: 'safe', label: '安全門檻', detail: '達成免扣' },
-        { count: Number(mission.goodThreshold || 0), type: 'good', label: '進階獎勵', detail: `+${Number(mission.goodReward || 0)} 點` },
-        { count: Number(mission.perfectThreshold || 0), type: 'perfect', label: '最高獎勵', detail: `+${Number(mission.perfectReward || 0)} 點` }
+        { count: Number(m.failThreshold || 0), type: 'safe', title: '安全門檻', detail: '達成免扣' },
+        { count: Number(m.goodThreshold || 0), type: 'good', title: '進階獎勵', detail: `+${Number(m.goodReward || 0)} 點` },
+        { count: Number(m.perfectThreshold || 0), type: 'perfect', title: '最高獎勵', detail: `+${Number(m.perfectReward || 0)} 點` }
       ].filter(item => item.count > 0);
     }
 
     function renderMissionClassRoute(data, gami) {
-      const scroll = document.getElementById('mission-route-scroll');
+      const viewport = document.getElementById('mission-route-viewport');
       const stage = document.getElementById('mission-route-stage');
       const svg = document.getElementById('mission-route-svg');
-      const nodesLayer = document.getElementById('mission-route-nodes');
-      const key = document.getElementById('mission-route-key');
-      if (!scroll || !stage || !svg || !nodesLayer || !key) return;
+      const nodes = document.getElementById('mission-route-nodes');
+      const legend = document.getElementById('mission-route-legend');
+      if (!viewport || !stage || !svg || !nodes || !legend) return;
 
-      const classProgress = Array.isArray(data.classProgress) ? data.classProgress : [];
+      const rows = Array.isArray(data.classProgress) ? data.classProgress : [];
       const currentCount = Math.max(0, Number(data.missionCount || 0));
-      const milestones = buildMissionRouteMilestones(gami);
+      const milestones = getMissionRouteMilestones(gami);
       const highestMilestone = milestones.reduce((max, item) => Math.max(max, item.count), 0);
-      const classMax = Math.max(Number(data.classMaxCount || 0), ...classProgress.map(row => Number(row.completionCount || 0)), currentCount);
-      const routeEnd = Math.max(6, highestMilestone, classMax) + 3;
-      const stepY = 108;
-      const topPad = 75;
-      const stageHeight = topPad * 2 + routeEnd * stepY;
-      const xPattern = [50, 33, 65, 40, 69, 52, 31, 61];
+      const classMax = Math.max(currentCount, Number(data.classMaxCount || 0), ...rows.map(row => Number(row.completionCount || 0)));
+      const routeEnd = Math.max(8, highestMilestone, classMax) + 3;
+      const step = 112;
+      const padding = 78;
+      const stageHeight = padding * 2 + routeEnd * step;
+      const center = 210;
+      const xPattern = [210, 158, 248, 176, 268, 218, 146, 238, 286, 194];
       const points = [];
 
       stage.style.height = `${stageHeight}px`;
       svg.setAttribute('viewBox', `0 0 420 ${stageHeight}`);
+      svg.setAttribute('preserveAspectRatio', 'none');
+
+      for (let count = routeEnd; count >= 0; count--) {
+        const idx = routeEnd - count;
+        points.push({ count, x: xPattern[idx % xPattern.length], y: padding + idx * step });
+      }
+
+      const routePath = points.map((p, i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ');
+      const completedPoints = points.filter(p => p.count <= currentCount);
+      const completedPath = completedPoints.map((p, i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ');
+
       svg.innerHTML = `
         <defs>
-          <linearGradient id="routeProgressGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#54c7f3"/>
-            <stop offset="100%" stop-color="#0066cc"/>
+          <linearGradient id="routeBaseGradientV2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#dce6ef"/>
+            <stop offset="100%" stop-color="#cbd7e2"/>
           </linearGradient>
-        </defs>`;
-
-      for (let i = 0; i <= routeEnd; i++) {
-        points.push({ count: i, x: xPattern[i % xPattern.length] * 4.2, y: topPad + i * stepY });
-      }
-      const pathD = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
-      const progressPoints = points.slice(0, Math.min(points.length, currentCount + 1));
-      const progressD = progressPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
-      svg.insertAdjacentHTML('beforeend', `<path class="mission-route-line-base" d="${pathD}"/>${progressPoints.length > 1 ? `<path class="mission-route-line-progress" d="${progressD}"/>` : ''}`);
+          <linearGradient id="routeDoneGradientV2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#59cef6"/>
+            <stop offset="100%" stop-color="#0878d7"/>
+          </linearGradient>
+        </defs>
+        <path d="${routePath}" fill="none" stroke="url(#routeBaseGradientV2)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.72"/>
+        ${completedPoints.length > 1 ? `<path d="${completedPath}" fill="none" stroke="url(#routeDoneGradientV2)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      `;
 
       const grouped = new Map();
-      classProgress.forEach(row => {
+      rows.forEach(row => {
         const count = Math.max(0, Number(row.completionCount || 0));
         if (!grouped.has(count)) grouped.set(count, []);
         grouped.get(count).push(row);
       });
-      if (!classProgress.some(row => row.isCurrent || row.uid === STUDENT_ID)) {
+      const hasCurrent = rows.some(row => row.isCurrent || row.uid === STUDENT_ID);
+      if (!hasCurrent) {
         if (!grouped.has(currentCount)) grouped.set(currentCount, []);
-        grouped.get(currentCount).unshift({ uid: STUDENT_ID, name: data.studentName || '我', completionCount: currentCount, isCurrent: true });
+        grouped.get(currentCount).unshift({ uid: STUDENT_ID, name: '我', completionCount: currentCount, isCurrent: true });
       }
 
-      const milestoneByCount = new Map(milestones.map(item => [item.count, item]));
-      const shapePattern = ['shape-circle','shape-square','shape-circle','shape-diamond','shape-circle','shape-square','shape-pill'];
-      nodesLayer.innerHTML = points.map((point, index) => {
-        const milestone = milestoneByCount.get(point.count);
+      const milestoneMap = new Map(milestones.map(item => [item.count, item]));
+      nodes.innerHTML = points.map(point => {
+        const milestone = milestoneMap.get(point.count);
         const people = grouped.get(point.count) || [];
-        const isCurrent = point.count === currentCount;
-        const side = point.x < 210 ? 'side-right' : 'side-left';
-        const milestoneClass = milestone ? `is-milestone-${milestone.type}` : '';
-        const completeClass = point.count <= currentCount ? 'is-complete' : '';
-        const currentClass = isCurrent ? 'is-current' : '';
-        const shape = milestone?.type === 'good' ? 'shape-diamond' : milestone?.type === 'perfect' ? 'shape-pill' : milestone?.type === 'safe' ? 'shape-square' : shapePattern[index % shapePattern.length];
-        const visiblePeople = people.slice(0, 3);
-        const peopleHtml = people.length ? `<div class="mission-route-people">${visiblePeople.map(person => `<span class="mission-route-person ${(person.isCurrent || person.uid === STUDENT_ID) ? 'is-me' : ''}">${escapeMissionRouteHtml(person.name || '學生')}</span>`).join('')}${people.length > visiblePeople.length ? `<span class="mission-route-person more">+${people.length - visiblePeople.length}</span>` : ''}</div>` : '';
-        const milestoneHtml = milestone ? `<div class="mission-route-milestone-label"><div>${escapeMissionRouteHtml(milestone.label)}</div><div style="color:var(--text-sub);font-size:9px;margin-top:2px;">${escapeMissionRouteHtml(milestone.detail)}</div></div>` : '';
-        return `<div class="mission-route-node ${side} ${completeClass} ${currentClass} ${milestoneClass}" data-route-count="${point.count}" style="left:${(point.x / 420) * 100}%;top:${point.y}px;">
-          <div class="mission-route-node-core ${shape}"><span class="mission-route-node-index">${point.count}</span></div>
-          ${peopleHtml}${milestoneHtml}
+        const visible = people.slice(0, 3);
+        const side = point.x >= center ? 'side-left' : 'side-right';
+        const classes = [
+          'mission-route-node', side,
+          point.count <= currentCount ? 'is-complete' : '',
+          point.count === currentCount ? 'is-current' : '',
+          milestone ? `is-milestone-${milestone.type}` : ''
+        ].filter(Boolean).join(' ');
+        const peopleHtml = people.length ? `<div class="mission-route-people">${visible.map(person => `<span class="mission-route-person ${(person.isCurrent || person.uid === STUDENT_ID) ? 'is-me' : ''}">${escapeMissionRouteHtml(person.name || '學生')}</span>`).join('')}${people.length > visible.length ? `<span class="mission-route-person more">+${people.length - visible.length}</span>` : ''}</div>` : '';
+        const milestoneHtml = milestone ? `<div class="mission-route-milestone-copy">${escapeMissionRouteHtml(milestone.title)}<small>${escapeMissionRouteHtml(milestone.detail)}</small></div>` : '';
+        return `<div class="${classes}" data-route-count="${point.count}" style="left:${(point.x / 420) * 100}%;top:${point.y}px;">
+          <div class="mission-route-node-core">${point.count}</div>
+          ${peopleHtml}
+          ${milestoneHtml}
         </div>`;
       }).join('');
 
-      key.innerHTML = milestones.map(item => `<div class="mission-route-key-item"><span class="mission-route-key-shape ${item.type}"></span><span>${item.count} 次 · ${escapeMissionRouteHtml(item.detail)}</span></div>`).join('');
-      document.getElementById('mission-route-unit').textContent = data.currentUnit || '未排定';
+      legend.innerHTML = milestones.map(item => `<span class="mission-route-legend-item"><span class="mission-route-legend-dot ${item.type}"></span>${item.count} 次 · ${escapeMissionRouteHtml(item.detail)}</span>`).join('');
+      const unit = document.getElementById('mission-route-unit');
+      if (unit) unit.textContent = data.currentUnit || '未排定';
 
-      const locate = () => {
-        const currentNode = nodesLayer.querySelector(`[data-route-count="${currentCount}"]`);
-        if (!currentNode) return;
-        const target = currentNode.offsetTop - (scroll.clientHeight / 2) + (currentNode.offsetHeight / 2);
-        scroll.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+      const locateCurrent = (smooth = true) => {
+        const current = nodes.querySelector(`[data-route-count="${currentCount}"]`);
+        if (!current) return;
+        const target = current.offsetTop - viewport.clientHeight * 0.56;
+        viewport.scrollTo({ top: Math.max(0, target), behavior: smooth ? 'smooth' : 'auto' });
       };
-      const locateBtn = document.getElementById('mission-route-back-to-me');
-      if (locateBtn) locateBtn.onclick = locate;
-      setTimeout(locate, 180);
+      const locateBtn = document.getElementById('mission-route-locate');
+      if (locateBtn) locateBtn.onclick = () => locateCurrent(true);
+      requestAnimationFrame(() => setTimeout(() => locateCurrent(false), 80));
     }
 
     function renderDashboard(data) {
@@ -2424,12 +2736,12 @@
       }
 
       // ==========================================
-      // 班級口說競速路線：使用後端真實完整挑戰次數
+      // 班級口說挑戰路線：真實 classProgress + Console 動態門檻
       // ==========================================
-      const count = Number(data.missionCount || 0);
+      const count = Math.max(0, Number(data.missionCount || 0));
       document.getElementById('mission-count').innerText = `${count} 次`;
 
-      let estText = '';
+      let estText = '-';
       let estColor = 'var(--text-main)';
       if (gami && gami.mission) {
         if (count >= Number(gami.mission.perfectThreshold || 0)) {
@@ -2441,12 +2753,12 @@
         } else if (count >= Number(gami.mission.failThreshold || 0)) {
           estText = '安全（不扣點）';
         } else {
-          const penalty = Number(gami.mission.failBasePenalty || 0) + (count * Number(gami.mission.failPenaltyStep || 0));
+          const penalty = Number(gami.mission.failBasePenalty || 0) + count * Number(gami.mission.failPenaltyStep || 0);
           estText = `${penalty} 點`;
           estColor = 'var(--marian-red)';
         }
       }
-      document.getElementById('mission-est').innerText = estText || '-';
+      document.getElementById('mission-est').innerText = estText;
       document.getElementById('mission-est').style.color = estColor;
       document.querySelectorAll('.end-date-display').forEach(el => el.innerText = data.endDate || '-');
       renderMissionClassRoute(data, gami);
@@ -3039,126 +3351,7 @@
                   <div style="position:absolute; width:100%; height:100%; border-radius:50%; border:4px solid #ffd700; border-top-color: transparent; animation:spin 1s linear infinite;"></div>
                   <div style="font-size:30px; animation:blink 1.5s infinite;">🪪</div>
                 </div>
-                <style> @keyframes spin { to { transform: rotate(360deg); } } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } 
-
-    /* =======================================================
-       Tappie 班級口說競速路線 v1
-       - 直接顯示於挑戰分頁
-       - 真實資料來自 get-dashboard-gami-overlay.classProgress
-       ======================================================= */
-    .mission-route-panel {
-      padding: 25px 0 18px;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at 86% 2%, rgba(0,102,204,.11), transparent 28%),
-        linear-gradient(155deg, rgba(255,255,255,.86), rgba(248,251,255,.58));
-    }
-    .mission-route-head, .mission-route-summary, .mission-route-footer {
-      margin-inline: 24px;
-    }
-    .mission-route-head {
-      display:flex; align-items:flex-start; justify-content:space-between; gap:18px;
-    }
-    .mission-route-eyebrow {
-      color:rgba(0,102,204,.62); font-size:10px; font-weight:900; letter-spacing:.16em; margin-bottom:7px;
-    }
-    .mission-route-title {
-      margin:0; color:var(--text-main); font-size:22px; line-height:1.15; font-weight:950; letter-spacing:1px;
-    }
-    .mission-route-current {
-      min-width:92px; padding:11px 14px; border-radius:18px; text-align:right;
-      background:rgba(255,255,255,.62); border:1px solid rgba(255,255,255,.92);
-      box-shadow:inset 0 1px 0 #fff, 0 8px 20px rgba(0,102,204,.07);
-    }
-    .mission-route-current-label { display:block; color:var(--text-sub); font-size:10px; font-weight:900; margin-bottom:3px; }
-    .mission-route-current strong { color:var(--primary-blue); font-size:20px; font-weight:950; }
-    .mission-route-summary {
-      display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px;
-      padding:15px 16px; border-radius:20px; background:rgba(255,255,255,.46);
-      border:1px solid rgba(255,255,255,.8);
-    }
-    .mission-route-summary-item { min-width:0; }
-    .mission-route-summary-item.align-right { text-align:right; }
-    .mission-route-summary-item span { display:block; color:var(--text-sub); font-size:10px; font-weight:900; margin-bottom:4px; }
-    .mission-route-summary-item strong { display:block; color:var(--text-main); font-size:14px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .mission-route-key {
-      display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:15px 24px 8px;
-    }
-    .mission-route-key::-webkit-scrollbar { display:none; }
-    .mission-route-key-item {
-      flex:0 0 auto; display:flex; align-items:center; gap:7px; padding:8px 10px; border-radius:14px;
-      background:rgba(255,255,255,.54); border:1px solid rgba(255,255,255,.82); color:var(--text-sub);
-      font-size:10px; font-weight:900; white-space:nowrap;
-    }
-    .mission-route-key-shape { width:11px; height:11px; display:inline-block; background:#b9c2cc; border:2px solid #fff; box-shadow:0 2px 7px rgba(0,0,0,.12); }
-    .mission-route-key-shape.safe { border-radius:50%; background:#65bfa2; }
-    .mission-route-key-shape.good { border-radius:3px; background:#4f91df; transform:rotate(45deg); }
-    .mission-route-key-shape.perfect { border-radius:50% 50% 8px 8px; background:#7569d8; }
-    .mission-route-scroll {
-      position:relative; width:100%; height:min(62vh,640px); min-height:470px; margin-top:5px; overflow-y:auto; overflow-x:hidden;
-      overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scroll-behavior:smooth;
-      mask-image:linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
-      -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
-    }
-    .mission-route-scroll::-webkit-scrollbar { display:none; }
-    .mission-route-stage { position:relative; width:100%; min-height:520px; }
-    .mission-route-svg, .mission-route-nodes { position:absolute; inset:0; width:100%; height:100%; }
-    .mission-route-line-base { fill:none; stroke:rgba(108,126,145,.16); stroke-width:14; stroke-linecap:round; stroke-linejoin:round; }
-    .mission-route-line-progress { fill:none; stroke:url(#routeProgressGradient); stroke-width:7; stroke-linecap:round; stroke-linejoin:round; }
-    .mission-route-node {
-      position:absolute; width:58px; height:58px; transform:translate(-50%,-50%); z-index:3;
-    }
-    .mission-route-node-core {
-      position:absolute; inset:7px; display:grid; place-items:center; background:linear-gradient(145deg,#f7f9fb,#dfe5eb);
-      border:2px solid rgba(255,255,255,.96); box-shadow:0 7px 0 rgba(137,150,163,.35), 0 12px 24px rgba(48,66,83,.12), inset 0 2px 3px rgba(255,255,255,.9);
-      transition:.25s;
-    }
-    .mission-route-node-core.shape-circle { border-radius:50%; }
-    .mission-route-node-core.shape-square { border-radius:14px; }
-    .mission-route-node-core.shape-diamond { border-radius:13px; transform:rotate(45deg) scale(.88); }
-    .mission-route-node-core.shape-pill { border-radius:50% 50% 15px 15px; }
-    .mission-route-node-index { color:#8c98a4; font-size:12px; font-weight:950; }
-    .mission-route-node-core.shape-diamond .mission-route-node-index { transform:rotate(-45deg); }
-    .mission-route-node.is-complete .mission-route-node-core {
-      background:linear-gradient(145deg,#4ab6ee,#167fd0); box-shadow:0 7px 0 #0d68af, 0 13px 27px rgba(0,102,204,.24), inset 0 2px 2px rgba(255,255,255,.35);
-    }
-    .mission-route-node.is-complete .mission-route-node-index { color:#fff; }
-    .mission-route-node.is-current .mission-route-node-core {
-      background:linear-gradient(145deg,#68d0ff,#0066cc); box-shadow:0 7px 0 #064d96, 0 0 0 8px rgba(0,102,204,.11), 0 16px 32px rgba(0,102,204,.28);
-      animation:missionRoutePulse 2.2s ease-in-out infinite;
-    }
-    @keyframes missionRoutePulse { 0%,100%{box-shadow:0 7px 0 #064d96,0 0 0 7px rgba(0,102,204,.09),0 16px 32px rgba(0,102,204,.24)} 50%{box-shadow:0 7px 0 #064d96,0 0 0 12px rgba(0,102,204,.04),0 18px 36px rgba(0,102,204,.31)} }
-    .mission-route-node.is-milestone-safe .mission-route-node-core { background:linear-gradient(145deg,#75d8ba,#3ba887); box-shadow:0 7px 0 #27886b,0 14px 28px rgba(59,168,135,.23); }
-    .mission-route-node.is-milestone-good .mission-route-node-core { background:linear-gradient(145deg,#76aef3,#416dcc); box-shadow:0 7px 0 #3057aa,0 14px 28px rgba(65,109,204,.25); }
-    .mission-route-node.is-milestone-perfect .mission-route-node-core { background:linear-gradient(145deg,#9a8cf1,#6754c7); box-shadow:0 7px 0 #4f3ead,0 14px 30px rgba(103,84,199,.26); }
-    .mission-route-node.is-milestone-safe .mission-route-node-index, .mission-route-node.is-milestone-good .mission-route-node-index, .mission-route-node.is-milestone-perfect .mission-route-node-index { color:#fff; }
-    .mission-route-milestone-label {
-      position:absolute; top:50%; width:98px; transform:translateY(-50%); color:var(--text-main);
-      font-size:10px; line-height:1.35; font-weight:950;
-    }
-    .mission-route-node.side-left .mission-route-milestone-label { left:62px; text-align:left; }
-    .mission-route-node.side-right .mission-route-milestone-label { right:62px; text-align:right; }
-    .mission-route-people {
-      position:absolute; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:5px; width:112px; z-index:5;
-    }
-    .mission-route-node.side-left .mission-route-people { right:63px; align-items:flex-end; }
-    .mission-route-node.side-right .mission-route-people { left:63px; align-items:flex-start; }
-    .mission-route-person {
-      max-width:108px; padding:5px 9px; border-radius:999px; background:rgba(255,255,255,.82); border:1px solid rgba(255,255,255,.96);
-      box-shadow:0 5px 14px rgba(44,62,80,.08); color:#586573; font-size:10px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .mission-route-person.is-me { color:#fff; background:linear-gradient(135deg,#168ce0,#0066cc); box-shadow:0 7px 16px rgba(0,102,204,.23); }
-    .mission-route-person.more { color:var(--primary-blue); background:rgba(229,244,255,.9); }
-    .mission-route-empty { padding:90px 28px; color:var(--text-sub); font-size:13px; font-weight:900; text-align:center; line-height:1.7; }
-    .mission-route-footer {
-      display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:14px; border-top:1px solid rgba(123,142,160,.12);
-      color:var(--text-sub); font-size:11px; font-weight:900;
-    }
-    .mission-route-locate-btn {
-      border:1px solid rgba(0,102,204,.12); background:rgba(0,102,204,.08); color:var(--primary-blue); border-radius:999px; padding:9px 12px; font-size:11px; font-weight:950; cursor:pointer;
-    }
-    @media (prefers-reduced-motion: reduce) { .mission-route-node.is-current .mission-route-node-core { animation:none; } }
-</style>
+                <style> @keyframes spin { to { transform: rotate(360deg); } } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } </style>
               `;
               document.body.appendChild(loader);
 
