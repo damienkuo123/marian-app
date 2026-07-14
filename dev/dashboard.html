@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
-  <title>Tappie學美語</title>
+    <!-- TAPPIE_PRIVATE_PAGE_ROBOTS_20260627: prevent internal app/admin pages from being indexed. -->
+  <meta name="robots" content="noindex,nofollow">
+<title>Tappie學美語</title>
+  <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,6 +21,7 @@
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
   <script src="./tappie-api.js?v=20260522-micro-polish-v2"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
 
   <style>
     :root { 
@@ -377,6 +381,127 @@
       box-shadow: 0 8px 18px rgba(0,102,204,0.22);
     }
 
+    /* =======================================================
+       🔔 主畫面 App 上放學通知引導彈窗
+       - 只在 standalone / PWA 模式自動顯示
+       - 系統授權仍需家長點擊「開啟通知」後才觸發
+       ======================================================= */
+    .attendance-push-nudge-content {
+      padding: 30px 28px 28px;
+      text-align: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .attendance-push-nudge-content::before {
+      content: '';
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      border-radius: 999px;
+      background: rgba(0,102,204,0.12);
+      filter: blur(36px);
+      top: -72px;
+      right: -66px;
+      pointer-events: none;
+    }
+    .attendance-push-nudge-icon {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto 16px;
+      display: grid;
+      place-items: center;
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(255,255,255,1), rgba(255,255,255,0.58));
+      box-shadow: 0 16px 34px rgba(0,102,204,0.14), inset 0 1px 0 rgba(255,255,255,1);
+      border: 1px solid rgba(255,255,255,0.86);
+      font-size: 34px;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      color: var(--primary-blue);
+      background: rgba(0,102,204,0.08);
+      border: 1px solid rgba(0,102,204,0.08);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-title {
+      margin: 0;
+      color: var(--text-main);
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      line-height: 1.22;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-copy {
+      margin: 12px auto 0;
+      max-width: 330px;
+      color: var(--text-main);
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.75;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-subcopy {
+      margin: 10px auto 0;
+      max-width: 320px;
+      color: var(--text-sub);
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.65;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-benefits {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0 0;
+      text-align: left;
+      position: relative;
+      z-index: 1;
+    }
+    .attendance-push-nudge-benefit {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 13px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(255,255,255,0.85);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.45;
+    }
+    .attendance-push-nudge-benefit span:first-child {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(0,102,204,0.08);
+      font-size: 16px;
+    }
+    .attendance-push-nudge-actions {
+      position: relative;
+      z-index: 1;
+      margin-top: 20px;
+    }
+
     .push-device-summary {
       margin-top: 14px;
       padding: 14px 14px 12px;
@@ -542,11 +667,11 @@
         <img src="/assets/logo.webp" id="student-avatar" class="student-avatar-img">
         <h1 id="student-name" class="student-name">-</h1>
         <div id="student-attendance-status" class="student-attendance-status hidden"></div>
-        <div class="points-container">
+        <div id="dashboard-points-summary" class="points-container">
           <div id="current-points" class="points">0</div>
           <div class="points-label">Total Points</div>
         </div>
-        <span class="history-btn" onclick="toggleLogs(true)">📋 查看點數明細</span>
+        <span id="dashboard-points-history-btn" class="history-btn" onclick="toggleLogs(true)">📋 查看點數明細</span>
       </div>
 
       <div class="glass-panel home-notification-zone">
@@ -633,39 +758,42 @@
         </div>
       </div>
 
-      <div class="glass-panel mission-container">
-        <h3 class="section-title">🚩 口說挑戰任務</h3>
-        <div class="mission-status-box">
-          <div class="status-group">
-            <span class="status-label">目前進度</span>
-            <span id="mission-count" class="status-value" style="color:var(--primary-blue);">0 次</span>
+      <div id="mission-route-panel" class="glass-panel mission-route-panel">
+        <div class="mission-route-head">
+          <div>
+            <div class="mission-route-eyebrow">CLASS SPEAKING ROUTE</div>
+            <h3 class="mission-route-title">口說挑戰路線</h3>
           </div>
-          <div class="status-group" style="text-align: right;">
-            <span class="status-label">預計結算</span>
-            <span id="mission-est" class="status-value" style="color: var(--marian-red);">-250 點</span>
+          <div class="mission-route-current">
+            <span class="mission-route-current-label">我的進度</span>
+            <strong id="mission-count">0 次</strong>
           </div>
         </div>
-        <div class="mission-bar-bg">
-          <div id="node-1" class="mission-node" style="left: 33.33%;">
-              <span class="node-icon">⚠️</span>
-              <span id="node-1-label" class="node-label">5次</span>
+
+        <div class="mission-route-summary">
+          <div class="mission-route-summary-item">
+            <span>目前單元</span>
+            <strong id="mission-route-unit">-</strong>
           </div>
-          <div id="node-2" class="mission-node" style="left: 66.66%;">
-              <span class="node-icon">🚩</span>
-              <span id="node-2-label" class="node-label">10次</span>
+          <div class="mission-route-summary-item align-right">
+            <span>預計結算</span>
+            <strong id="mission-est">-250 點</strong>
           </div>
-          <div id="node-3" class="mission-node" style="left: 100%;">
-              <span class="node-icon">🔥</span>
-              <span id="node-3-label" class="node-label">15次</span>
-          </div>
-          <div id="mission-fill" class="mission-bar-fill" style="width: 0%;"></div>
         </div>
-        <div id="mission-reward-bar" class="reward-bar">
-          <div class="reward-unit">⚠️ <span class="reward-val">免扣點</span></div>
-          <div class="reward-unit">🚩 <span class="reward-val">+100</span></div>
-          <div class="reward-unit">🔥 <span class="reward-val">+200</span></div>
+
+        <div class="mission-route-key" id="mission-route-key"></div>
+
+        <div id="mission-route-scroll" class="mission-route-scroll" aria-label="班級口說挑戰進度路線">
+          <div id="mission-route-stage" class="mission-route-stage">
+            <svg id="mission-route-svg" class="mission-route-svg" aria-hidden="true"></svg>
+            <div id="mission-route-nodes" class="mission-route-nodes"></div>
+          </div>
         </div>
-        <div style="font-size:12px; color:var(--text-sub); text-align: center; margin-top:20px; font-weight:900; letter-spacing:1px;">⏳ 結算日：<span class="end-date-display">-</span></div>
+
+        <div class="mission-route-footer">
+          <span>結算日 <strong class="end-date-display">-</strong></span>
+          <button type="button" id="mission-route-back-to-me" class="mission-route-locate-btn">回到我的位置</button>
+        </div>
       </div>
 
       <div class="glass-panel leaderboard">
@@ -886,6 +1014,24 @@
     </div>
   </div>
 
+  <div id="attendance-push-nudge-overlay" class="modal-overlay" onclick="dismissAttendancePushNudge()">
+    <div class="modal-content attendance-push-nudge-content" onclick="event.stopPropagation()">
+      <div class="attendance-push-nudge-icon">🔔</div>
+      <div class="attendance-push-nudge-eyebrow">主畫面 App 已就緒</div>
+      <h3 class="attendance-push-nudge-title">開啟上放學通知</h3>
+      <p class="attendance-push-nudge-copy">開啟後，老師完成到校或離校登記時，這台手機就能收到提醒。</p>
+      <div class="attendance-push-nudge-benefits" aria-label="開啟上放學通知的好處">
+        <div class="attendance-push-nudge-benefit"><span>🏫</span><span>即時知道孩子到校、離校狀態。</span></div>
+        <div class="attendance-push-nudge-benefit"><span>📱</span><span>只綁定這台手機，方便家長辨識裝置。</span></div>
+      </div>
+      <p class="attendance-push-nudge-subcopy">系統通知授權會在你點選「開啟通知」後才出現。</p>
+      <div class="pwa-required-actions attendance-push-nudge-actions">
+        <button class="pwa-required-btn cancel" onclick="dismissAttendancePushNudge()">稍後再說</button>
+        <button class="pwa-required-btn primary" onclick="acceptAttendancePushNudge()">開啟通知</button>
+      </div>
+    </div>
+  </div>
+
   <div id="logModal" class="modal-overlay" onclick="toggleLogs(false)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <h3 style="text-align:center; color:var(--text-main); margin-top:0; font-weight:900; letter-spacing:2px;">📝 最近點數紀錄</h3>
@@ -919,87 +1065,168 @@
     }
 
     function installPWA() {
-        toggleSettingsModal(false); // 先關閉設定視窗
-        
+        toggleSettingsModal(false);
+
         const ua = navigator.userAgent || navigator.vendor || window.opera;
         const isLineOrFB = /Line|FBAN|FBAV|Instagram/i.test(ua);
-        const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-        const isIOSChrome = isIOS && /CriOS/i.test(ua);
 
-        // 🛡️ 狀況 A：社群軟體內建瀏覽器
         if (isLineOrFB) {
-            alert("⚠️ 目前在 LINE/FB 內部瀏覽器中。\n\n請點擊右上角「...」或「⋮」，選擇『以預設瀏覽器開啟』(Safari/Chrome) 後，才能將 Tappie 安裝到桌面喔！");
+            alert("⚠️ 目前在 LINE/FB 內部瀏覽器中。\n\n請點擊右上角「...」或「⋮」，選擇『以預設瀏覽器開啟』(Safari/Chrome) 後，再建立 Tappie 主畫面捷徑。");
             return;
         }
 
-        const pwaOverlay = document.getElementById('ios-pwa-overlay');
-        const pwaText = pwaOverlay.querySelector('p');
-        const pwaArrow = pwaOverlay.querySelector('.arrow-down');
-
-        // 🍏 狀況 B：iOS 設備
-        if (isIOS) {
-            if (window.navigator.standalone === true) {
-                alert("✅ Tappie 已經在您的主畫面囉！");
-            } else {
-                if (isIOSChrome) {
-                    pwaText.innerHTML = "1. 點擊右上角網址列的 <b style='font-size: 18px;'>📤 分享</b> 圖示<br>2. 向下滑動，選擇 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>➕ 加入主畫面</b>";
-                    if(pwaArrow) pwaArrow.style.animation = "bounce-up 1s infinite";
-                    pwaOverlay.style.alignItems = "center"; 
-                } else {
-                    pwaText.innerHTML = "1. 點擊 Safari 工具列的 <b style='font-size: 18px;'>📤 分享</b> 圖示<br>2. 向下滑動，選擇 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>➕ 加入主畫面</b>";
-                    if(pwaArrow) pwaArrow.style.animation = "bounce 1s infinite";
-                    pwaOverlay.style.alignItems = "flex-end"; 
-                }
-                pwaOverlay.classList.add('show');
-            }
+        if (typeof isTappieStandaloneMode === "function" && isTappieStandaloneMode()) {
+            alert("✅ Tappie 已經在您的主畫面囉！");
             return;
         }
 
-        // 🤖 狀況 C：Android 設備 (Chrome / Samsung Internet 等)
-        if (deferredPrompt) {
-            // ✅ API 存活：直接觸發原生的完美安裝跳窗！
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                deferredPrompt = null; // 只能用一次
-            });
-        } else {
-            // ❌ API 死亡 (被瀏覽器限制、未達標、或已安裝)：
-            // 啟動終極防護網！動態將教學視窗改成 Android Chrome 版本
-            
-            // 判斷是否為全螢幕模式 (Android 判斷已安裝的方法之一)
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                alert("✅ Tappie 已經在您的主畫面囉！");
-                return;
-            }
+        const activeUid = STUDENT_ID || (
+          window.TappieStudentSession && typeof TappieStudentSession.getActiveUid === "function"
+            ? TappieStudentSession.getActiveUid({ touch: false })
+            : ""
+        );
 
-            // 彈出 Android 手動安裝教學
-            pwaOverlay.querySelector('h3').innerHTML = "🤖 安裝 Tappie (Android)";
-            pwaText.innerHTML = "系統無法自動安裝，請手動加入：<br><br>1. 點擊右上角的 <b style='font-size: 18px;'>⋮ (三個點)</b> 選單<br>2. 選擇 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>📱 加到主畫面</b> 或 <b style='background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px;'>安裝應用程式</b>";
-            
-            // 箭頭朝上彈跳 (指向右上角的選單)
-            if(pwaArrow) pwaArrow.style.animation = "bounce-up 1s infinite";
-            pwaOverlay.style.alignItems = "center"; // 視窗置中
-            
-            pwaOverlay.classList.add('show');
+        if (!activeUid) {
+            alert("找不到學生資料，請重新感應卡片或回到官網登入。");
+            return;
         }
+
+        window.location.href = `student-app.html?uid=${encodeURIComponent(activeUid)}#install`;
     }
-    
+
     const params = new URLSearchParams(window.location.search);
-    const STUDENT_ID = params.get('id');
+    const STUDENT_ID = window.TappieStudentSession
+      ? TappieStudentSession.getUidFromUrlOrSession({
+          source: 'dashboard',
+          preserveParams: ['view']
+        })
+      : params.get('id');
     let currentParentEmail = ""; 
     let weeklyReportAvailable = false;
     const TAPPIE_VAPID_PUBLIC_KEY = window.TAPPIE_VAPID_PUBLIC_KEY || "BMv4zZ4lFP0InS2c5BQJTtVUZ7WedDUf3Rqz9v3bDZe3mlpuROiwTwbP1FGHYyJ6cbH6D0gNX5aQvUhjqE5qNhw";
 
     const TAPPIE_PUSH_DEVICE_LIMIT = 3;
+    const TAPPIE_PUSH_NUDGE_SNOOZE_MS = 24 * 60 * 60 * 1000;
     let cachedPushDevices = [];
     let pendingPushSubscription = null;
+    let lastAttendancePushStatusSnapshot = null;
+    let dashboardContentVisible = false;
+    let attendancePushNudgeShownThisLoad = false;
+    let attendancePushNudgeTimer = null;
+
+    // Feature Gate F4｜Dashboard 入口閥門（預設全開，只有明確 false 才關閉）
+    const DEFAULT_DASHBOARD_FEATURES = {
+      attendance_enabled: true,
+      manual_points_enabled: true,
+      practice_enabled: true,
+      battle_enabled: true,
+      weekly_report_enabled: true,
+      newsletter_enabled: true,
+      station_enabled: true
+    };
+    let dashboardEffectiveFeatures = { ...DEFAULT_DASHBOARD_FEATURES };
+
+    function normalizeDashboardFeatures(value) {
+      const raw = value && typeof value === 'object' ? value : {};
+      const out = {};
+      Object.keys(DEFAULT_DASHBOARD_FEATURES).forEach(key => {
+        out[key] = raw[key] === false ? false : true;
+      });
+      return out;
+    }
+
+    function saveEffectiveFeaturesCache(uid, features) {
+      if (!uid || !features) return;
+      try {
+        sessionStorage.setItem(
+          `tappie_effective_features_${uid}`,
+          JSON.stringify({ features: normalizeDashboardFeatures(features) })
+        );
+      } catch (_) {}
+    }
+
+    function isDashboardFeatureEnabled(key) {
+      return dashboardEffectiveFeatures?.[key] !== false;
+    }
+
+    function getNavFeatureKey(tabId) {
+      if (['challenge', 'practice', 'learning'].includes(tabId)) return 'practice_enabled';
+      if (tabId === 'arena') return 'battle_enabled';
+      return '';
+    }
+
+    function isClassBasedStudent(data) {
+      return ["有班級", "美語資優生", "elite"].includes(String(data?.studentType || "").trim());
+    }
+
+    function setBottomNavLock(tabId, locked, message = "") {
+      const nav = document.querySelector(`.nav-item[onclick*="'${tabId}'"]`);
+      if (!nav) return;
+      nav.classList.toggle('locked', !!locked);
+      if (locked && message) nav.dataset.lockMessage = message;
+      else delete nav.dataset.lockMessage;
+    }
+
+    function shouldShowDashboardPointsSummary() {
+      // Points are meaningful only when at least one point-affecting student feature is active.
+      // When manual points, practice, and battle are all disabled, hide both Total Points and detail history.
+      return isDashboardFeatureEnabled('manual_points_enabled') ||
+             isDashboardFeatureEnabled('practice_enabled') ||
+             isDashboardFeatureEnabled('battle_enabled');
+    }
+
+    function applyDashboardPointsVisibility() {
+      const showPoints = shouldShowDashboardPointsSummary();
+      document.getElementById('dashboard-points-summary')?.classList.toggle('hidden', !showPoints);
+      document.getElementById('dashboard-points-history-btn')?.classList.toggle('hidden', !showPoints);
+    }
+
+    function applyDashboardFeatureLocks(data) {
+      const isClassStudent = isClassBasedStudent(data);
+      const classLockMessage = "🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。";
+      const practiceLockMessage = "🔒 此校區尚未啟用【今日挑戰 / 一般練習】功能。\n請聯繫老師或校區主管確認。";
+      const battleLockMessage = "🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。";
+
+      [
+        { tab: 'challenge', feature: 'practice_enabled', message: practiceLockMessage },
+        { tab: 'practice', feature: 'practice_enabled', message: practiceLockMessage },
+        { tab: 'learning', feature: 'practice_enabled', message: practiceLockMessage },
+        { tab: 'arena', feature: 'battle_enabled', message: battleLockMessage },
+      ].forEach(item => {
+        if (!isDashboardFeatureEnabled(item.feature)) {
+          setBottomNavLock(item.tab, true, item.message);
+        } else if (!isClassStudent) {
+          setBottomNavLock(item.tab, true, classLockMessage);
+        } else {
+          setBottomNavLock(item.tab, false);
+        }
+      });
+      applyDashboardPointsVisibility();
+    }
+
+    function applyDashboardNotificationFeatureVisibility() {
+      const attendanceEnabled = isDashboardFeatureEnabled('attendance_enabled');
+      const weeklyEnabled = isDashboardFeatureEnabled('weekly_report_enabled');
+
+      document.getElementById('attendance-push-btn')?.classList.toggle('hidden', !attendanceEnabled);
+      setPushDeviceSummaryVisible(attendanceEnabled && isTappieStandaloneMode());
+      document.getElementById('weekly-home-btn')?.classList.toggle('hidden', !weeklyEnabled);
+
+      if (!weeklyEnabled) {
+        document.getElementById('home-weekly-wrapper')?.classList.add('hidden');
+        document.getElementById('newsletter-zone')?.classList.add('hidden');
+      }
+
+      const zone = document.querySelector('.home-notification-zone');
+      if (zone) zone.classList.toggle('hidden', !attendanceEnabled && !weeklyEnabled);
+    }
 
     // 🚀 SPA 分頁切換邏輯
     function switchTab(tabId, titleText, navElement) {
       // 🔒 檢查是否被鎖定
       if (navElement.classList.contains('locked')) {
         if (window.GlobalAudio) GlobalAudio.play('click'); // 播放一下拒絕的聲音也可以用 click
-        alert("🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。");
+        alert(navElement.dataset.lockMessage || "🔒 此功能需要【有班級】學生才能使用！\n請聯繫老師確認班級設定喔。");
         return; // 終止執行，不切換分頁
       }
 
@@ -1053,7 +1280,108 @@
     }
 
     function isTappieStandaloneMode() {
-      return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+      const matchDisplayMode = mode => window.matchMedia && window.matchMedia(`(display-mode: ${mode})`).matches;
+      return window.navigator.standalone === true ||
+             matchDisplayMode('standalone') ||
+             matchDisplayMode('fullscreen') ||
+             matchDisplayMode('minimal-ui');
+    }
+
+    function setPushDeviceSummaryVisible(visible) {
+      document.getElementById('push-device-summary')?.classList.toggle('hidden', !visible);
+    }
+
+    function shouldRenderPushDeviceSummary() {
+      return isDashboardFeatureEnabled('attendance_enabled') && isTappieStandaloneMode();
+    }
+
+    function setLastAttendancePushSnapshot(snapshot) {
+      lastAttendancePushStatusSnapshot = snapshot || null;
+      return lastAttendancePushStatusSnapshot;
+    }
+
+    function getAttendancePushNudgeStorageKey() {
+      return `tappie_attendance_push_nudge_snoozed_until_${STUDENT_ID || 'unknown'}`;
+    }
+
+    function getAttendancePushNudgeSnoozedUntil() {
+      try {
+        return Number(localStorage.getItem(getAttendancePushNudgeStorageKey()) || 0) || 0;
+      } catch (_) {
+        return 0;
+      }
+    }
+
+    function isAttendancePushNudgeSnoozed() {
+      const until = getAttendancePushNudgeSnoozedUntil();
+      return until && until > Date.now();
+    }
+
+    function snoozeAttendancePushNudge(durationMs = TAPPIE_PUSH_NUDGE_SNOOZE_MS) {
+      try {
+        localStorage.setItem(getAttendancePushNudgeStorageKey(), String(Date.now() + durationMs));
+      } catch (_) {}
+    }
+
+    function clearAttendancePushNudgeSnooze() {
+      try {
+        localStorage.removeItem(getAttendancePushNudgeStorageKey());
+      } catch (_) {}
+    }
+
+    function toggleAttendancePushNudgeModal(show) {
+      const modal = document.getElementById('attendance-push-nudge-overlay');
+      if (!modal) return;
+      if (show) {
+        if (window.GlobalAudio) GlobalAudio.play('popupOpen');
+        modal.classList.add('show');
+      } else {
+        if (window.GlobalAudio) GlobalAudio.play('popupClose');
+        modal.classList.remove('show');
+      }
+    }
+
+    function dismissAttendancePushNudge() {
+      attendancePushNudgeShownThisLoad = true;
+      snoozeAttendancePushNudge();
+      toggleAttendancePushNudgeModal(false);
+    }
+
+    async function acceptAttendancePushNudge() {
+      attendancePushNudgeShownThisLoad = true;
+      toggleAttendancePushNudgeModal(false);
+      await handleAttendancePushSubscribeClick({ source: 'standalone-nudge' });
+    }
+
+    function shouldShowAttendancePushNudge(snapshot = lastAttendancePushStatusSnapshot) {
+      if (attendancePushNudgeShownThisLoad) return false;
+      if (!dashboardContentVisible) return false;
+      if (!isDashboardFeatureEnabled('attendance_enabled')) return false;
+      if (!isTappieStandaloneMode()) return false;
+      if (isAttendancePushNudgeSnoozed()) return false;
+      if (!snapshot || snapshot.error) return false;
+      if (!snapshot.standalone || !snapshot.supported) return false;
+      if (!isValidVapidPublicKey()) return false;
+      if (snapshot.permission === 'denied') return false;
+      if (snapshot.hasCurrentDevice) return false;
+      if (!snapshot.hasSubscription && snapshot.deviceCount >= snapshot.maxDevices) return false;
+      return snapshot.permission === 'default' || snapshot.permission === 'granted';
+    }
+
+    function maybeShowAttendancePushNudge(snapshot = lastAttendancePushStatusSnapshot) {
+      if (!shouldShowAttendancePushNudge(snapshot)) return false;
+      attendancePushNudgeShownThisLoad = true;
+      toggleAttendancePushNudgeModal(true);
+      return true;
+    }
+
+    function queueAttendancePushNudgeCheck(delay = 380) {
+      clearTimeout(attendancePushNudgeTimer);
+      attendancePushNudgeTimer = setTimeout(async () => {
+        if (!dashboardContentVisible || !isDashboardFeatureEnabled('attendance_enabled') || !isTappieStandaloneMode()) return;
+        const snapshot = lastAttendancePushStatusSnapshot || await refreshAttendancePushStatus();
+        maybeShowAttendancePushNudge(snapshot);
+      }, delay);
     }
 
     function togglePwaRequiredModal(show) {
@@ -1167,10 +1495,12 @@
 
       const normalized = normalizePushDevices(devices);
       cachedPushDevices = normalized;
+      const shouldShowSummary = shouldRenderPushDeviceSummary();
+      setPushDeviceSummaryVisible(shouldShowSummary);
       count.innerText = `${normalized.length} / ${maxDevices || TAPPIE_PUSH_DEVICE_LIMIT}`;
 
-      if (!isTappieStandaloneMode()) {
-        list.innerHTML = `<div class="push-device-empty">從主畫面開啟後，即可查看與新增通知裝置。</div>`;
+      if (!shouldShowSummary) {
+        list.innerHTML = '';
         return;
       }
 
@@ -1300,23 +1630,50 @@
     async function refreshAttendancePushStatus() {
       try {
         // 家長在瀏覽器中看到的第一訊息，應該是「加入主畫面」而不是「不支援」。
-        // 真正的 Web Push 支援檢查，等從主畫面開啟後再做。
+        // 真正的 Web Push 支援檢查，等從主畫面 App 開啟後再做。
         if (!isTappieStandaloneMode()) {
           setAttendancePushStatus("加入主畫面獲得通知", "warn");
-          renderPushDeviceList([], TAPPIE_PUSH_DEVICE_LIMIT);
-          return;
+          cachedPushDevices = [];
+          setPushDeviceSummaryVisible(false);
+          return setLastAttendancePushSnapshot({
+            standalone: false,
+            supported: false,
+            permission: 'browser',
+            hasSubscription: false,
+            hasCurrentDevice: false,
+            deviceCount: 0,
+            maxDevices: TAPPIE_PUSH_DEVICE_LIMIT
+          });
         }
 
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        const hasPushSupport = ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
+        if (!hasPushSupport) {
           setAttendancePushStatus("此裝置暫不支援通知", "warn");
           await refreshPushDeviceList("");
-          return;
+          return setLastAttendancePushSnapshot({
+            standalone: true,
+            supported: false,
+            permission: 'unsupported',
+            hasSubscription: false,
+            hasCurrentDevice: false,
+            deviceCount: 0,
+            maxDevices: TAPPIE_PUSH_DEVICE_LIMIT
+          });
         }
 
         if (Notification.permission === "denied") {
           setAttendancePushStatus("通知尚未開啟，可至設定允許", "warn");
-          await refreshPushDeviceList("");
-          return;
+          const deniedList = await refreshPushDeviceList("");
+          const deniedDevices = normalizePushDevices(deniedList?.devices || []);
+          return setLastAttendancePushSnapshot({
+            standalone: true,
+            supported: true,
+            permission: 'denied',
+            hasSubscription: false,
+            hasCurrentDevice: false,
+            deviceCount: deniedDevices.length,
+            maxDevices: deniedList?.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT
+          });
         }
 
         const reg = await navigator.serviceWorker.ready;
@@ -1325,6 +1682,7 @@
         const listResult = await refreshPushDeviceList(currentEndpoint);
         const devices = normalizePushDevices(listResult?.devices || []);
         const hasCurrentDevice = devices.some(device => device.isCurrent);
+        const maxDevices = listResult?.maxDevices || TAPPIE_PUSH_DEVICE_LIMIT;
 
         if (sub && hasCurrentDevice) {
           setAttendancePushStatus("已啟用上放學通知", "ok");
@@ -1335,13 +1693,34 @@
         } else {
           setAttendancePushStatus("尚未訂閱上放學通知", "");
         }
+
+        return setLastAttendancePushSnapshot({
+          standalone: true,
+          supported: true,
+          permission: Notification.permission,
+          hasSubscription: Boolean(sub),
+          hasCurrentDevice,
+          deviceCount: devices.length,
+          maxDevices,
+          currentEndpoint
+        });
       } catch (err) {
         console.warn("push status check failed", err);
         setAttendancePushStatus("通知狀態檢查失敗", "warn");
+        return setLastAttendancePushSnapshot({
+          standalone: isTappieStandaloneMode(),
+          supported: false,
+          permission: ('Notification' in window) ? Notification.permission : 'unsupported',
+          hasSubscription: false,
+          hasCurrentDevice: false,
+          deviceCount: 0,
+          maxDevices: TAPPIE_PUSH_DEVICE_LIMIT,
+          error: true
+        });
       }
     }
 
-    async function handleAttendancePushSubscribeClick() {
+    async function handleAttendancePushSubscribeClick(options = {}) {
       if (window.GlobalAudio) GlobalAudio.play('click');
 
       // 瀏覽器模式一律先引導加入主畫面，不先顯示「不支援」，避免家長卻步。
@@ -1388,9 +1767,11 @@
 
         if (permission !== "granted") {
           setAttendancePushStatus("尚未啟用，之後可再按一次訂閱", "warn");
+          snoozeAttendancePushNudge();
           return;
         }
 
+        clearAttendancePushNudgeSnooze();
         const subscription = existing || await createPushSubscription(reg);
 
         // 新增或更新時，都讓家長確認裝置名稱，避免之後不知道是哪一台。
@@ -1569,11 +1950,24 @@
     }
 
     window.onload = () => {
-      if (!STUDENT_ID) { alert("找不到學生 ID，請重新刷卡！"); logoutToPortal(); return; }
+      if (!STUDENT_ID) {
+        alert("找不到學生資料，請重新感應卡片或回到官網登入。");
+        if (window.TappieStudentSession) TappieStudentSession.clearActive('missing-student-id');
+        window.location.replace(getStationAwareHomeUrl());
+        return;
+      }
 
       TappieAPI.getDashboard(STUDENT_ID)
         .then(async rawData => {
           const data = TappieAPI.toLegacyDashboard(rawData);
+          data.effectiveFeatures = normalizeDashboardFeatures(
+            rawData?.effectiveFeatures ||
+            rawData?.data?.effectiveFeatures ||
+            data?.effectiveFeatures ||
+            data?.features ||
+            null
+          );
+          dashboardEffectiveFeatures = data.effectiveFeatures;
           // 🚀 關鍵修復：檢查後端是否回報錯誤（例如：沒這間校區、沒這個學號）
           if (data.success === false || data.error) {
               alert("⚠️ 查無此帳號！請確認學生代號或校區代碼是否正確。");
@@ -1588,18 +1982,26 @@
               if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
               if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
               if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
+              if (Array.isArray(overlay.classProgress)) data.classProgress = overlay.classProgress;
+              if (overlay.classMaxCount !== undefined) data.classMaxCount = overlay.classMaxCount;
               if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
               if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
               if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
               if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
           }
 
+          if (overlay?.effectiveFeatures || overlay?.features) {
+              data.effectiveFeatures = normalizeDashboardFeatures(overlay.effectiveFeatures || overlay.features);
+              dashboardEffectiveFeatures = data.effectiveFeatures;
+          }
           renderDashboard(data);
           
           document.getElementById('loading-screen').style.opacity = '0';
           setTimeout(() => {
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('content-viewport').classList.add('show');
+            dashboardContentVisible = true;
+            queueAttendancePushNudgeCheck();
           }, 600);
         })
         .catch(err => { alert("連線失敗，請檢查網路狀態！"); console.error(err); });
@@ -1719,7 +2121,105 @@
       })();
     }
     
+    function escapeMissionRouteHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    function buildMissionRouteMilestones(gami) {
+      const mission = gami?.mission || {};
+      return [
+        { count: Number(mission.failThreshold || 0), type: 'safe', label: '安全門檻', detail: '達成免扣' },
+        { count: Number(mission.goodThreshold || 0), type: 'good', label: '進階獎勵', detail: `+${Number(mission.goodReward || 0)} 點` },
+        { count: Number(mission.perfectThreshold || 0), type: 'perfect', label: '最高獎勵', detail: `+${Number(mission.perfectReward || 0)} 點` }
+      ].filter(item => item.count > 0);
+    }
+
+    function renderMissionClassRoute(data, gami) {
+      const scroll = document.getElementById('mission-route-scroll');
+      const stage = document.getElementById('mission-route-stage');
+      const svg = document.getElementById('mission-route-svg');
+      const nodesLayer = document.getElementById('mission-route-nodes');
+      const key = document.getElementById('mission-route-key');
+      if (!scroll || !stage || !svg || !nodesLayer || !key) return;
+
+      const classProgress = Array.isArray(data.classProgress) ? data.classProgress : [];
+      const currentCount = Math.max(0, Number(data.missionCount || 0));
+      const milestones = buildMissionRouteMilestones(gami);
+      const highestMilestone = milestones.reduce((max, item) => Math.max(max, item.count), 0);
+      const classMax = Math.max(Number(data.classMaxCount || 0), ...classProgress.map(row => Number(row.completionCount || 0)), currentCount);
+      const routeEnd = Math.max(6, highestMilestone, classMax) + 3;
+      const stepY = 108;
+      const topPad = 75;
+      const stageHeight = topPad * 2 + routeEnd * stepY;
+      const xPattern = [50, 33, 65, 40, 69, 52, 31, 61];
+      const points = [];
+
+      stage.style.height = `${stageHeight}px`;
+      svg.setAttribute('viewBox', `0 0 420 ${stageHeight}`);
+      svg.innerHTML = `
+        <defs>
+          <linearGradient id="routeProgressGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#54c7f3"/>
+            <stop offset="100%" stop-color="#0066cc"/>
+          </linearGradient>
+        </defs>`;
+
+      for (let i = 0; i <= routeEnd; i++) {
+        points.push({ count: i, x: xPattern[i % xPattern.length] * 4.2, y: topPad + i * stepY });
+      }
+      const pathD = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+      const progressPoints = points.slice(0, Math.min(points.length, currentCount + 1));
+      const progressD = progressPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+      svg.insertAdjacentHTML('beforeend', `<path class="mission-route-line-base" d="${pathD}"/>${progressPoints.length > 1 ? `<path class="mission-route-line-progress" d="${progressD}"/>` : ''}`);
+
+      const grouped = new Map();
+      classProgress.forEach(row => {
+        const count = Math.max(0, Number(row.completionCount || 0));
+        if (!grouped.has(count)) grouped.set(count, []);
+        grouped.get(count).push(row);
+      });
+      if (!classProgress.some(row => row.isCurrent || row.uid === STUDENT_ID)) {
+        if (!grouped.has(currentCount)) grouped.set(currentCount, []);
+        grouped.get(currentCount).unshift({ uid: STUDENT_ID, name: data.studentName || '我', completionCount: currentCount, isCurrent: true });
+      }
+
+      const milestoneByCount = new Map(milestones.map(item => [item.count, item]));
+      const shapePattern = ['shape-circle','shape-square','shape-circle','shape-diamond','shape-circle','shape-square','shape-pill'];
+      nodesLayer.innerHTML = points.map((point, index) => {
+        const milestone = milestoneByCount.get(point.count);
+        const people = grouped.get(point.count) || [];
+        const isCurrent = point.count === currentCount;
+        const side = point.x < 210 ? 'side-right' : 'side-left';
+        const milestoneClass = milestone ? `is-milestone-${milestone.type}` : '';
+        const completeClass = point.count <= currentCount ? 'is-complete' : '';
+        const currentClass = isCurrent ? 'is-current' : '';
+        const shape = milestone?.type === 'good' ? 'shape-diamond' : milestone?.type === 'perfect' ? 'shape-pill' : milestone?.type === 'safe' ? 'shape-square' : shapePattern[index % shapePattern.length];
+        const visiblePeople = people.slice(0, 3);
+        const peopleHtml = people.length ? `<div class="mission-route-people">${visiblePeople.map(person => `<span class="mission-route-person ${(person.isCurrent || person.uid === STUDENT_ID) ? 'is-me' : ''}">${escapeMissionRouteHtml(person.name || '學生')}</span>`).join('')}${people.length > visiblePeople.length ? `<span class="mission-route-person more">+${people.length - visiblePeople.length}</span>` : ''}</div>` : '';
+        const milestoneHtml = milestone ? `<div class="mission-route-milestone-label"><div>${escapeMissionRouteHtml(milestone.label)}</div><div style="color:var(--text-sub);font-size:9px;margin-top:2px;">${escapeMissionRouteHtml(milestone.detail)}</div></div>` : '';
+        return `<div class="mission-route-node ${side} ${completeClass} ${currentClass} ${milestoneClass}" data-route-count="${point.count}" style="left:${(point.x / 420) * 100}%;top:${point.y}px;">
+          <div class="mission-route-node-core ${shape}"><span class="mission-route-node-index">${point.count}</span></div>
+          ${peopleHtml}${milestoneHtml}
+        </div>`;
+      }).join('');
+
+      key.innerHTML = milestones.map(item => `<div class="mission-route-key-item"><span class="mission-route-key-shape ${item.type}"></span><span>${item.count} 次 · ${escapeMissionRouteHtml(item.detail)}</span></div>`).join('');
+      document.getElementById('mission-route-unit').textContent = data.currentUnit || '未排定';
+
+      const locate = () => {
+        const currentNode = nodesLayer.querySelector(`[data-route-count="${currentCount}"]`);
+        if (!currentNode) return;
+        const target = currentNode.offsetTop - (scroll.clientHeight / 2) + (currentNode.offsetHeight / 2);
+        scroll.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+      };
+      const locateBtn = document.getElementById('mission-route-back-to-me');
+      if (locateBtn) locateBtn.onclick = locate;
+      setTimeout(locate, 180);
+    }
+
     function renderDashboard(data) {
+      dashboardEffectiveFeatures = normalizeDashboardFeatures(data?.effectiveFeatures || data?.features || dashboardEffectiveFeatures);
+      saveEffectiveFeaturesCache(STUDENT_ID, dashboardEffectiveFeatures);
       // 🚀 1. 客製化視覺與動態 App 打包引擎
       if (data.logoUrl) {
           const logoEl = document.getElementById('student-avatar');
@@ -1743,7 +2243,7 @@
       const manifestJSON = {
           "name": `Tappie - ${data.studentName}`,
           "short_name": data.studentName,
-          "start_url": window.location.href, // 🚀 殺手級功能：點開直接免刷卡登入！
+          "start_url": `/student-app.html?uid=${encodeURIComponent(STUDENT_ID)}`, // 固定學生主畫面入口
           "display": "standalone",
           "background_color": "#eaeff2",
           "theme_color": "#0066cc",
@@ -1773,7 +2273,11 @@
 
       // 🚀 2. 原本的資料渲染...
       document.getElementById('student-name').innerText = data.studentName;
-      refreshStudentAttendanceStatus();
+      if (isDashboardFeatureEnabled('attendance_enabled')) {
+        refreshStudentAttendanceStatus();
+      } else {
+        document.getElementById('student-attendance-status')?.classList.add('hidden');
+      }
       document.getElementById('current-points').innerText = data.currentPoints;
 
       if (data.parentEmail && data.parentEmail.includes('@')) {
@@ -1787,7 +2291,11 @@
           document.getElementById('email-submit-btn').innerText = "訂閱";
       }
       refreshWeeklyHomeStatus();
-      refreshAttendancePushStatus();
+      if (isDashboardFeatureEnabled('attendance_enabled')) {
+        refreshAttendancePushStatus().then(snapshot => {
+          if (dashboardContentVisible) maybeShowAttendancePushNudge(snapshot);
+        });
+      }
       
       const badge = document.getElementById('honor-title');
       if (badge) {
@@ -1820,18 +2328,14 @@
         }
       }
 
-      // 👑 權限判定：拔除鎖頭與顯示專屬功能
-      if (["有班級", "美語資優生", "elite"].includes(String(data.studentType || "").trim())) {
-        // 🔓 拔掉底部導航的鎖頭，允許切換！
-        document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.remove('locked'));
-        weeklyReportAvailable = true;
-      } else {
-        // 🔒 無班級學生：確保鎖頭存在 (HTML裡已經預設有加了，這裡只是保險)
-        document.querySelectorAll('.elite-tab-btn').forEach(btn => btn.classList.add('locked'));
-        weeklyReportAvailable = false;
+      // 👑 權限判定：延伸原本底部鎖頭，功能關閉優先於無班級鎖定
+      applyDashboardFeatureLocks(data);
+      weeklyReportAvailable = isClassBasedStudent(data) && isDashboardFeatureEnabled('weekly_report_enabled');
+      if (!weeklyReportAvailable) {
         document.getElementById('home-weekly-wrapper')?.classList.add('hidden');
         document.getElementById('newsletter-zone')?.classList.add('hidden');
       }
+      applyDashboardNotificationFeatureVisibility();
       refreshWeeklyHomeStatus();
 
       // 📊 以下的數據渲染，不管是不是資優生都照常執行！
@@ -1899,7 +2403,7 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
         
       } else {
@@ -1915,73 +2419,37 @@
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
-            checkVoiceLimitAndGo(`./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=challenge`, oralBtn, "今日練習已達上限"); 
+            checkVoiceLimitAndGo(`./arena.html?mode=challenge`, oralBtn, "今日練習已達上限"); 
         };
       }
 
       // ==========================================
-      // 🏅 單元任務進度與扣點渲染 (全動態比例版)
+      // 班級口說競速路線：使用後端真實完整挑戰次數
       // ==========================================
-      const count = data.missionCount || 0;
+      const count = Number(data.missionCount || 0);
       document.getElementById('mission-count').innerText = `${count} 次`;
-      
-      let estText = ""; 
-      let estColor = ""; 
-      let barColor = "";
 
+      let estText = '';
+      let estColor = 'var(--text-main)';
       if (gami && gami.mission) {
-          if (count >= gami.mission.perfectThreshold) { 
-            estText = `+${gami.mission.perfectReward} 點`; estColor = "var(--marian-green)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
-          } else if (count >= gami.mission.goodThreshold) { 
-            estText = `+${gami.mission.goodReward} 點`; estColor = "var(--marian-green)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
-          } else if (count >= gami.mission.failThreshold) { 
-            estText = "安全 (不扣點)"; estColor = "var(--text-main)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
-          } else {
-            const penalty = gami.mission.failBasePenalty + (count * gami.mission.failPenaltyStep);
-            estText = `${penalty} 點`;
-            estColor = "var(--marian-red)";
-            barColor = "#e74c3c";
-          }
-          
-          // 動態修改底下的圖例文字
-          document.getElementById('mission-reward-bar').innerHTML = `
-            <div class="reward-unit">⚠️ <span class="reward-val">${gami.mission.failThreshold}次免扣</span></div>
-            <div class="reward-unit">🚩 <span class="reward-val">+${gami.mission.goodReward}</span></div>
-            <div class="reward-unit">🔥 <span class="reward-val">+${gami.mission.perfectReward}</span></div>
-          `;
-          
-          // 🚀 動態更新 3 個 Node 的位置與底下的文字標籤！
-          const maxScore = gami.mission.perfectThreshold > 0 ? gami.mission.perfectThreshold : 15;
-          const failPos = Math.min(100, (gami.mission.failThreshold / maxScore) * 100);
-          const goodPos = Math.min(100, (gami.mission.goodThreshold / maxScore) * 100);
-          
-          document.getElementById('node-1').style.left = `${failPos}%`;
-          document.getElementById('node-1-label').innerText = `${gami.mission.failThreshold}次`;
-          
-          document.getElementById('node-2').style.left = `${goodPos}%`;
-          document.getElementById('node-2-label').innerText = `${gami.mission.goodThreshold}次`;
-          
-          document.getElementById('node-3').style.left = `100%`;
-          document.getElementById('node-3-label').innerText = `${maxScore}次`;
-      }
-      
-      document.getElementById('mission-est').innerText = estText;
-      document.getElementById('mission-est').style.color = estColor;
-      document.querySelectorAll('.end-date-display').forEach(el => el.innerText = data.endDate);
-      
-      setTimeout(() => {
-        const fill = document.getElementById('mission-fill');
-        fill.style.background = barColor;
-        // 依照滿分標準動態計算進度條 % 數
-        const maxScore = (gami && gami.mission && gami.mission.perfectThreshold > 0) ? gami.mission.perfectThreshold : 15;
-        fill.style.width = `${Math.min(100, (count / maxScore) * 100)}%`; 
-        
-        if (gami && gami.mission) {
-            if (count >= gami.mission.failThreshold) document.getElementById('node-1').classList.add('active');
-            if (count >= gami.mission.goodThreshold) document.getElementById('node-2').classList.add('active');
-            if (count >= gami.mission.perfectThreshold) document.getElementById('node-3').classList.add('active');
+        if (count >= Number(gami.mission.perfectThreshold || 0)) {
+          estText = `+${Number(gami.mission.perfectReward || 0)} 點`;
+          estColor = 'var(--marian-green)';
+        } else if (count >= Number(gami.mission.goodThreshold || 0)) {
+          estText = `+${Number(gami.mission.goodReward || 0)} 點`;
+          estColor = 'var(--marian-green)';
+        } else if (count >= Number(gami.mission.failThreshold || 0)) {
+          estText = '安全（不扣點）';
+        } else {
+          const penalty = Number(gami.mission.failBasePenalty || 0) + (count * Number(gami.mission.failPenaltyStep || 0));
+          estText = `${penalty} 點`;
+          estColor = 'var(--marian-red)';
         }
-      }, 800);
+      }
+      document.getElementById('mission-est').innerText = estText || '-';
+      document.getElementById('mission-est').style.color = estColor;
+      document.querySelectorAll('.end-date-display').forEach(el => el.innerText = data.endDate || '-');
+      renderMissionClassRoute(data, gami);
 
       // ==========================================
       // 🏆 榮譽排行榜渲染 (動態獎勵版)
@@ -2030,7 +2498,7 @@
         reviewGrid.innerHTML = reviewUnits.map(u => {
           const unitName = (typeof u === 'string') ? u : (u.unitName || u.name || '未命名單元');
           const wordCount = (typeof u === 'object' && u.wordCount) ? ` <span style="font-size:11px;color:var(--text-sub);">(${u.wordCount})</span>` : "";
-          const targetUrl = `./arena.html?id=${encodeURIComponent(STUDENT_ID)}&mode=review&unit=${encodeURIComponent(unitName)}`;
+          const targetUrl = `./arena.html?mode=review&unit=${encodeURIComponent(unitName)}`;
           return `<button type="button" onclick="checkVoiceLimitAndGo('${targetUrl}', this, '今日練習已達上限')" class="btn-review">📖 ${escapeHtml(unitName)}${wordCount}</button>`;
         }).join('');
       } else {
@@ -2068,14 +2536,37 @@
       }
     }
 
-    function goToLobby() { window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; }
+
+    // Station-aware return helper: only affects idle/logout return target.
+    function getStationAwareHomeUrl() {
+      try {
+        const raw = localStorage.getItem('tappie_station_session');
+        if (!raw) return 'index.html';
+        const session = JSON.parse(raw);
+        if (session && session.stationAuthorized === true && session.schoolCode) return 'station.html';
+      } catch (_) {}
+      return 'index.html';
+    }
+
+    function goToLobby() {
+      if (!isDashboardFeatureEnabled('battle_enabled')) {
+        alert("🔒 此校區尚未啟用【對戰模式】功能。\n請聯繫老師或校區主管確認。");
+        return;
+      }
+      window.location.href = './lobby.html';
+    }
     function logoutToPortal() {
-      if (confirm("確定要登出並回到刷卡頁面嗎？")) {
-        window.location.href = "index.html"; 
+      if (confirm("確定要登出，並回到Tappie官網嗎？")) {
+        if (window.TappieStudentSession) TappieStudentSession.clearActive('logout');
+        window.location.replace(getStationAwareHomeUrl());
       }
     }
 
     function checkVoiceLimitAndGo(targetUrl, btnElement, disabledText) {
+        if (!isDashboardFeatureEnabled('practice_enabled') && String(targetUrl || '').includes('arena.html')) {
+            alert("🔒 此校區尚未啟用【今日挑戰 / 一般練習】功能。\n請聯繫老師或校區主管確認。");
+            return;
+        }
         const originalText = btnElement.innerText;
         btnElement.innerText = "✨ 傳送中...";
         btnElement.style.pointerEvents = "none";
@@ -2482,7 +2973,14 @@
 
     // 🚀 補回這兩行：靜置自動登出
     let idleTimer;
-    const resetIdleTimer = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => { window.location.href = "index.html"; }, 180000); };
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      if (window.TappieStudentSession) TappieStudentSession.touch();
+      idleTimer = setTimeout(() => {
+        if (window.TappieStudentSession) TappieStudentSession.clearActive('idle-timeout');
+        window.location.replace(getStationAwareHomeUrl());
+      }, 180000);
+    };
     document.addEventListener('touchstart', resetIdleTimer); 
     document.addEventListener('mousedown', resetIdleTimer); 
     resetIdleTimer();
@@ -2527,7 +3025,10 @@
 
           if (extractedUid) {
               if (adminAuth) window.location.replace(`admin.html?id=${extractedUid}`);
-              else window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
+              else {
+                if (window.TappieStudentSession) TappieStudentSession.setActive(extractedUid, 'dashboard-scan');
+                window.location.replace('./dashboard.html');
+              }
           } else {
               const loader = document.createElement('div');
               loader.style = "position:fixed;inset:0; width:100vw; height:100dvh;background:radial-gradient(circle at center, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); font-family:sans-serif; transition:opacity 0.3s;";
@@ -2538,7 +3039,126 @@
                   <div style="position:absolute; width:100%; height:100%; border-radius:50%; border:4px solid #ffd700; border-top-color: transparent; animation:spin 1s linear infinite;"></div>
                   <div style="font-size:30px; animation:blink 1.5s infinite;">🪪</div>
                 </div>
-                <style> @keyframes spin { to { transform: rotate(360deg); } } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } </style>
+                <style> @keyframes spin { to { transform: rotate(360deg); } } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } 
+
+    /* =======================================================
+       Tappie 班級口說競速路線 v1
+       - 直接顯示於挑戰分頁
+       - 真實資料來自 get-dashboard-gami-overlay.classProgress
+       ======================================================= */
+    .mission-route-panel {
+      padding: 25px 0 18px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 86% 2%, rgba(0,102,204,.11), transparent 28%),
+        linear-gradient(155deg, rgba(255,255,255,.86), rgba(248,251,255,.58));
+    }
+    .mission-route-head, .mission-route-summary, .mission-route-footer {
+      margin-inline: 24px;
+    }
+    .mission-route-head {
+      display:flex; align-items:flex-start; justify-content:space-between; gap:18px;
+    }
+    .mission-route-eyebrow {
+      color:rgba(0,102,204,.62); font-size:10px; font-weight:900; letter-spacing:.16em; margin-bottom:7px;
+    }
+    .mission-route-title {
+      margin:0; color:var(--text-main); font-size:22px; line-height:1.15; font-weight:950; letter-spacing:1px;
+    }
+    .mission-route-current {
+      min-width:92px; padding:11px 14px; border-radius:18px; text-align:right;
+      background:rgba(255,255,255,.62); border:1px solid rgba(255,255,255,.92);
+      box-shadow:inset 0 1px 0 #fff, 0 8px 20px rgba(0,102,204,.07);
+    }
+    .mission-route-current-label { display:block; color:var(--text-sub); font-size:10px; font-weight:900; margin-bottom:3px; }
+    .mission-route-current strong { color:var(--primary-blue); font-size:20px; font-weight:950; }
+    .mission-route-summary {
+      display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px;
+      padding:15px 16px; border-radius:20px; background:rgba(255,255,255,.46);
+      border:1px solid rgba(255,255,255,.8);
+    }
+    .mission-route-summary-item { min-width:0; }
+    .mission-route-summary-item.align-right { text-align:right; }
+    .mission-route-summary-item span { display:block; color:var(--text-sub); font-size:10px; font-weight:900; margin-bottom:4px; }
+    .mission-route-summary-item strong { display:block; color:var(--text-main); font-size:14px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mission-route-key {
+      display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:15px 24px 8px;
+    }
+    .mission-route-key::-webkit-scrollbar { display:none; }
+    .mission-route-key-item {
+      flex:0 0 auto; display:flex; align-items:center; gap:7px; padding:8px 10px; border-radius:14px;
+      background:rgba(255,255,255,.54); border:1px solid rgba(255,255,255,.82); color:var(--text-sub);
+      font-size:10px; font-weight:900; white-space:nowrap;
+    }
+    .mission-route-key-shape { width:11px; height:11px; display:inline-block; background:#b9c2cc; border:2px solid #fff; box-shadow:0 2px 7px rgba(0,0,0,.12); }
+    .mission-route-key-shape.safe { border-radius:50%; background:#65bfa2; }
+    .mission-route-key-shape.good { border-radius:3px; background:#4f91df; transform:rotate(45deg); }
+    .mission-route-key-shape.perfect { border-radius:50% 50% 8px 8px; background:#7569d8; }
+    .mission-route-scroll {
+      position:relative; width:100%; height:min(62vh,640px); min-height:470px; margin-top:5px; overflow-y:auto; overflow-x:hidden;
+      overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scroll-behavior:smooth;
+      mask-image:linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
+      -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 4%, #000 96%, transparent 100%);
+    }
+    .mission-route-scroll::-webkit-scrollbar { display:none; }
+    .mission-route-stage { position:relative; width:100%; min-height:520px; }
+    .mission-route-svg, .mission-route-nodes { position:absolute; inset:0; width:100%; height:100%; }
+    .mission-route-line-base { fill:none; stroke:rgba(108,126,145,.16); stroke-width:14; stroke-linecap:round; stroke-linejoin:round; }
+    .mission-route-line-progress { fill:none; stroke:url(#routeProgressGradient); stroke-width:7; stroke-linecap:round; stroke-linejoin:round; }
+    .mission-route-node {
+      position:absolute; width:58px; height:58px; transform:translate(-50%,-50%); z-index:3;
+    }
+    .mission-route-node-core {
+      position:absolute; inset:7px; display:grid; place-items:center; background:linear-gradient(145deg,#f7f9fb,#dfe5eb);
+      border:2px solid rgba(255,255,255,.96); box-shadow:0 7px 0 rgba(137,150,163,.35), 0 12px 24px rgba(48,66,83,.12), inset 0 2px 3px rgba(255,255,255,.9);
+      transition:.25s;
+    }
+    .mission-route-node-core.shape-circle { border-radius:50%; }
+    .mission-route-node-core.shape-square { border-radius:14px; }
+    .mission-route-node-core.shape-diamond { border-radius:13px; transform:rotate(45deg) scale(.88); }
+    .mission-route-node-core.shape-pill { border-radius:50% 50% 15px 15px; }
+    .mission-route-node-index { color:#8c98a4; font-size:12px; font-weight:950; }
+    .mission-route-node-core.shape-diamond .mission-route-node-index { transform:rotate(-45deg); }
+    .mission-route-node.is-complete .mission-route-node-core {
+      background:linear-gradient(145deg,#4ab6ee,#167fd0); box-shadow:0 7px 0 #0d68af, 0 13px 27px rgba(0,102,204,.24), inset 0 2px 2px rgba(255,255,255,.35);
+    }
+    .mission-route-node.is-complete .mission-route-node-index { color:#fff; }
+    .mission-route-node.is-current .mission-route-node-core {
+      background:linear-gradient(145deg,#68d0ff,#0066cc); box-shadow:0 7px 0 #064d96, 0 0 0 8px rgba(0,102,204,.11), 0 16px 32px rgba(0,102,204,.28);
+      animation:missionRoutePulse 2.2s ease-in-out infinite;
+    }
+    @keyframes missionRoutePulse { 0%,100%{box-shadow:0 7px 0 #064d96,0 0 0 7px rgba(0,102,204,.09),0 16px 32px rgba(0,102,204,.24)} 50%{box-shadow:0 7px 0 #064d96,0 0 0 12px rgba(0,102,204,.04),0 18px 36px rgba(0,102,204,.31)} }
+    .mission-route-node.is-milestone-safe .mission-route-node-core { background:linear-gradient(145deg,#75d8ba,#3ba887); box-shadow:0 7px 0 #27886b,0 14px 28px rgba(59,168,135,.23); }
+    .mission-route-node.is-milestone-good .mission-route-node-core { background:linear-gradient(145deg,#76aef3,#416dcc); box-shadow:0 7px 0 #3057aa,0 14px 28px rgba(65,109,204,.25); }
+    .mission-route-node.is-milestone-perfect .mission-route-node-core { background:linear-gradient(145deg,#9a8cf1,#6754c7); box-shadow:0 7px 0 #4f3ead,0 14px 30px rgba(103,84,199,.26); }
+    .mission-route-node.is-milestone-safe .mission-route-node-index, .mission-route-node.is-milestone-good .mission-route-node-index, .mission-route-node.is-milestone-perfect .mission-route-node-index { color:#fff; }
+    .mission-route-milestone-label {
+      position:absolute; top:50%; width:98px; transform:translateY(-50%); color:var(--text-main);
+      font-size:10px; line-height:1.35; font-weight:950;
+    }
+    .mission-route-node.side-left .mission-route-milestone-label { left:62px; text-align:left; }
+    .mission-route-node.side-right .mission-route-milestone-label { right:62px; text-align:right; }
+    .mission-route-people {
+      position:absolute; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:5px; width:112px; z-index:5;
+    }
+    .mission-route-node.side-left .mission-route-people { right:63px; align-items:flex-end; }
+    .mission-route-node.side-right .mission-route-people { left:63px; align-items:flex-start; }
+    .mission-route-person {
+      max-width:108px; padding:5px 9px; border-radius:999px; background:rgba(255,255,255,.82); border:1px solid rgba(255,255,255,.96);
+      box-shadow:0 5px 14px rgba(44,62,80,.08); color:#586573; font-size:10px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .mission-route-person.is-me { color:#fff; background:linear-gradient(135deg,#168ce0,#0066cc); box-shadow:0 7px 16px rgba(0,102,204,.23); }
+    .mission-route-person.more { color:var(--primary-blue); background:rgba(229,244,255,.9); }
+    .mission-route-empty { padding:90px 28px; color:var(--text-sub); font-size:13px; font-weight:900; text-align:center; line-height:1.7; }
+    .mission-route-footer {
+      display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:14px; border-top:1px solid rgba(123,142,160,.12);
+      color:var(--text-sub); font-size:11px; font-weight:900;
+    }
+    .mission-route-locate-btn {
+      border:1px solid rgba(0,102,204,.12); background:rgba(0,102,204,.08); color:var(--primary-blue); border-radius:999px; padding:9px 12px; font-size:11px; font-weight:950; cursor:pointer;
+    }
+    @media (prefers-reduced-motion: reduce) { .mission-route-node.is-current .mission-route-node-core { animation:none; } }
+</style>
               `;
               document.body.appendChild(loader);
 
@@ -2546,7 +3166,10 @@
                 .then(data => {
                   if (data.success) { 
                       if (adminAuth) window.location.replace(`admin.html?id=${data.uid}`);
-                      else window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                      else {
+                        if (window.TappieStudentSession) TappieStudentSession.setActive(data.uid, 'dashboard-card-scan');
+                        window.location.replace('./dashboard.html');
+                      }
                   } else { 
                       alert("❌ 查無此卡！請確認是否拿錯卡片。"); 
                       document.body.removeChild(loader); 
