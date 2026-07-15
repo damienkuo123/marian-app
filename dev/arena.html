@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <title>Tappie學美語</title>
+    <!-- TAPPIE_PRIVATE_PAGE_ROBOTS_20260627: prevent internal app/admin pages from being indexed. -->
+  <meta name="robots" content="noindex,nofollow">
+<title>Tappie學美語</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,6 +17,7 @@
   <script src="phonics-config.js"></script>
   <script src="global-audio.js"></script>
   <script src="./tappie-api.js?v=20260522-precision-v1"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <style>
     :root {
       --primary-blue: #0066cc; 
@@ -1271,6 +1274,133 @@
       .btn-finish { font-size: 26px; padding: 25px; border-radius: 20px; margin-top: 30px; }
     }
     
+  
+    /* =======================================================
+       🎙️ Speech Grace UX：非阻擋式玻璃提示與額度小字
+       ======================================================= */
+    .tappie-soft-toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(24px, calc(env(safe-area-inset-bottom) + 18px));
+      transform: translateX(-50%) translateY(18px);
+      min-width: min(86vw, 360px);
+      max-width: min(90vw, 460px);
+      padding: 13px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(255,255,255,.92);
+      box-shadow: 0 18px 45px rgba(15,23,42,.16), inset 0 1px 1px rgba(255,255,255,.95);
+      backdrop-filter: blur(22px) saturate(145%);
+      -webkit-backdrop-filter: blur(22px) saturate(145%);
+      color: #1f2937;
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 850;
+      letter-spacing: -.01em;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999999;
+      transition: opacity .22s ease, transform .22s ease;
+    }
+    .tappie-soft-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .tappie-soft-toast.grace { color: #9a5b00; background: rgba(255,248,232,.88); border-color: rgba(255,218,150,.82); }
+    .tappie-soft-toast.exhausted { color: #a33a28; background: rgba(255,241,238,.90); border-color: rgba(255,180,170,.80); }
+
+    .speech-grace-hint {
+      color: #c47a00 !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      display: block;
+      padding: 0 !important;
+      box-shadow: none !important;
+      font-weight: inherit;
+    }
+    .speech-grace-hint.exhausted {
+      color: #c0392b !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    #record-btn.speech-exhausted,
+    .unlock-btn.speech-exhausted,
+    [id^="lock-btn-"].speech-exhausted {
+      filter: grayscale(.45);
+      opacity: .72;
+      pointer-events: none !important;
+      box-shadow: none !important;
+    }
+
+    /* =======================================================
+       ⚔️ Battle Result Responsive Fix：平板/大螢幕結果卡片自適應
+       ======================================================= */
+    #impact-overlay.active {
+      min-height: 100dvh;
+    }
+    #impact-stand-stage {
+      width: min(94vw, 560px) !important;
+      height: min(86dvh, 820px) !important;
+      max-width: min(94vw, 560px) !important;
+      max-height: 86dvh !important;
+      padding: clamp(12px, 2.2dvh, 22px) clamp(10px, 2vw, 18px) !important;
+      box-sizing: border-box !important;
+      gap: clamp(6px, 1.5dvh, 14px) !important;
+      overflow: visible !important;
+    }
+    .impact-card-wrapper {
+      width: min(72vw, 330px, 40dvh) !important;
+      max-width: 330px !important;
+      min-width: 170px !important;
+      margin: clamp(4px, 1dvh, 10px) 0 !important;
+      flex: 0 1 auto !important;
+    }
+    #impact-result {
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+      max-width: 96vw !important;
+      font-size: clamp(42px, 8vw, 80px) !important;
+      letter-spacing: clamp(3px, 1.1vw, 10px) !important;
+      line-height: .96 !important;
+      margin: clamp(-12px, -1dvh, 0px) 0 0 !important;
+    }
+    .is-final #impact-result {
+      font-size: clamp(40px, 7vw, 72px) !important;
+      letter-spacing: clamp(2px, .9vw, 8px) !important;
+    }
+    #impact-subtitle {
+      font-size: clamp(12px, 2.2vw, 16px) !important;
+      letter-spacing: clamp(2px, .8vw, 8px) !important;
+      white-space: nowrap !important;
+    }
+    .impact-score-board {
+      max-width: min(92vw, 420px) !important;
+      padding: clamp(10px, 1.7dvh, 15px) clamp(16px, 4vw, 32px) !important;
+      gap: clamp(12px, 3vw, 25px) !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+    }
+    .score-number {
+      font-size: clamp(36px, 7vw, 60px) !important;
+    }
+    @media (min-width: 820px) and (min-height: 760px) {
+      .impact-card-wrapper {
+        width: min(34vw, 320px, 39dvh) !important;
+      }
+      #impact-stand-stage {
+        justify-content: center !important;
+      }
+    }
+    @media (max-height: 680px) {
+      .impact-card-wrapper {
+        width: min(60vw, 260px, 34dvh) !important;
+      }
+      .impact-score-board {
+        transform: scale(.92) translateY(30px);
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1530,7 +1660,92 @@
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwK3b9vyc9g0w_nloyltFNJNc2C8iaSxEKqH6KU3OPUJpgzP9Zz7ZUpWt-xpb5uqT4F/exec";
   const params = new URLSearchParams(window.location.search);
-  const STUDENT_ID = params.get('id') || "S001";
+  const STUDENT_ID = TappieStudentSession.getUidFromUrlOrSession({
+    source: 'arena',
+    redirectTo: 'index.html',
+    preserveParams: ['roomId','mode','unit','isEvent','eventAvatar']
+  });
+  window.STUDENT_ID = STUDENT_ID;
+
+  // Feature Gate F5｜頁面初始化 Guard：優先讀 Dashboard sessionStorage，沒有快取才 fallback get-dashboard
+  const DEFAULT_PAGE_FEATURES = {
+    attendance_enabled: true,
+    manual_points_enabled: true,
+    practice_enabled: true,
+    battle_enabled: true,
+    weekly_report_enabled: true,
+    newsletter_enabled: true,
+    station_enabled: true
+  };
+
+  function normalizePageFeatures(value) {
+    const raw = value && typeof value === 'object' ? value : {};
+    const out = {};
+    Object.keys(DEFAULT_PAGE_FEATURES).forEach(key => {
+      out[key] = raw[key] === false ? false : true;
+    });
+    return out;
+  }
+
+  function readEffectiveFeaturesCache(uid) {
+    if (!uid) return null;
+    try {
+      const raw = sessionStorage.getItem(`tappie_effective_features_${uid}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.features ? normalizePageFeatures(parsed.features) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function saveEffectiveFeaturesCache(uid, features) {
+    if (!uid || !features) return;
+    try {
+      sessionStorage.setItem(
+        `tappie_effective_features_${uid}`,
+        JSON.stringify({ features: normalizePageFeatures(features) })
+      );
+    } catch (_) {}
+  }
+
+  async function getEffectiveFeaturesForGuard(uid) {
+    const cached = readEffectiveFeaturesCache(uid);
+    if (cached) return cached;
+
+    try {
+      if (!window.TappieAPI || typeof TappieAPI.getDashboard !== 'function') return normalizePageFeatures({});
+      const data = await TappieAPI.getDashboard(uid);
+      const features =
+        data?.effectiveFeatures ||
+        data?.features ||
+        data?.data?.effectiveFeatures ||
+        data?.data?.features ||
+        null;
+      const normalized = normalizePageFeatures(features);
+      saveEffectiveFeaturesCache(uid, normalized);
+      return normalized;
+    } catch (err) {
+      console.warn('[Feature Gate] fallback get-dashboard failed:', err);
+      return normalizePageFeatures({});
+    }
+  }
+
+  function getFeatureDisabledDashboardUrl(uid) {
+    return './dashboard.html';
+  }
+
+  async function guardPageFeature(featureKey, message) {
+    const features = await getEffectiveFeaturesForGuard(STUDENT_ID);
+    if (features?.[featureKey] === false) {
+      alert(message);
+      window.location.href = getFeatureDisabledDashboardUrl(STUDENT_ID);
+      return false;
+    }
+    return true;
+  }
+
+
   let azureAuthToken = "";
   let azureRegionCode = "";
   const TARGET_UNIT = params.get('unit') || "";
@@ -1797,11 +2012,165 @@
   const MAX_TOKEN_FETCHES = 4; // 最多允許拿 4 次 (約 32 分鐘極限)
 
 
+  // =======================================================
+  // 🎙️ Speech Grace UX：後端回傳 speechUsage / overLimit 時的柔性提示
+  // =======================================================
+  const tappieVoiceGraceState = {
+    announced: false,
+    exhaustedAnnounced: false,
+    exhausted: false,
+    active: false,
+    remaining: null
+  };
+
+  function showTappieSoftToast(message, type = 'grace') {
+    let toast = document.getElementById('tappie-soft-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'tappie-soft-toast';
+      toast.className = 'tappie-soft-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.className = `tappie-soft-toast ${type}`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, type === 'exhausted' ? 4200 : 3400);
+  }
+
+  function normalizeSpeechUsage(data = {}) {
+    const usage = data.speechUsage || data.usage || data.voiceUsage || data || {};
+    const dailyLimit = Number(usage.dailyLimit ?? usage.limit ?? data.limit ?? 0);
+    const voiceCount = Number(usage.voiceCount ?? usage.count ?? data.count ?? 0);
+    const graceLimit = Number(usage.graceLimit ?? usage.voiceGraceLimit ?? data.graceLimit ?? 10);
+    const graceUsed = Number(usage.graceUsed ?? usage.voiceGraceCount ?? data.graceUsed ?? 0);
+    const explicitRemaining = usage.graceRemaining ?? data.graceRemaining;
+    const graceRemaining = Number.isFinite(Number(explicitRemaining))
+      ? Number(explicitRemaining)
+      : Math.max(0, graceLimit - graceUsed);
+    const status = String(usage.status || data.status || '').toLowerCase();
+    const ignoredGraceStatus = status === 'battle_unlimited' || status === 'normal' || status === 'duel';
+    const exhausted = data.error === 'speech_limit_exhausted' || status === 'exhausted' || data.success === false && data.overLimit === true;
+    const isGrace = !exhausted && !ignoredGraceStatus && (
+      usage.isUsingGrace === true ||
+      data.isUsingGrace === true ||
+      status === 'grace' ||
+      Number(graceUsed) > 0 ||
+      (data.success === true && data.overLimit === true)
+    );
+    return { dailyLimit, voiceCount, graceLimit, graceUsed, graceRemaining, status, exhausted, isGrace };
+  }
+
+  function updateSpeechGraceHint(data = {}, opts = {}) {
+    const usage = normalizeSpeechUsage(data);
+    const statusEl = opts.statusEl || document.getElementById(opts.statusId || 'status');
+    const recordBtn = opts.recordBtn || document.getElementById(opts.recordBtnId || 'record-btn');
+
+    if (usage.exhausted) {
+      tappieVoiceGraceState.exhausted = true;
+      tappieVoiceGraceState.active = false;
+      tappieVoiceGraceState.remaining = 0;
+      if (!tappieVoiceGraceState.exhaustedAnnounced) {
+        showTappieSoftToast('今日語音額度已使用完畢，你仍可以查看送出目前結果。', 'exhausted');
+        tappieVoiceGraceState.exhaustedAnnounced = true;
+      }
+      if (statusEl) {
+        statusEl.innerText = '已抵達今日語音上限';
+        statusEl.classList.add('speech-grace-hint', 'exhausted');
+      }
+      if (recordBtn) {
+        recordBtn.classList.add('speech-exhausted');
+        recordBtn.disabled = true;
+        recordBtn.setAttribute('aria-disabled', 'true');
+      }
+      applySpeechGraceToIdleHints();
+      setTimeout(applySpeechGraceToIdleHints, 0);
+      setTimeout(applySpeechGraceToIdleHints, 250);
+      return { allowed: false, usage };
+    }
+
+    if (usage.isGrace) {
+      tappieVoiceGraceState.active = true;
+      tappieVoiceGraceState.exhausted = false;
+      tappieVoiceGraceState.remaining = Math.max(0, usage.graceRemaining);
+      if (!tappieVoiceGraceState.announced) {
+        showTappieSoftToast('✨ 已到達本日使用上限，系統贈送你額外練習 10 次。', 'grace');
+        tappieVoiceGraceState.announced = true;
+      }
+      if (statusEl) {
+        applySpeechGraceLabelTo(statusEl);
+      }
+      applySpeechGraceToIdleHints();
+      setTimeout(applySpeechGraceToIdleHints, 0);
+      setTimeout(applySpeechGraceToIdleHints, 250);
+      return { allowed: true, usage };
+    }
+
+    return { allowed: true, usage };
+  }
+
+  function applySpeechGraceLabelTo(el) {
+    if (!el) return false;
+
+    if (tappieVoiceGraceState.exhausted) {
+      el.innerText = '已抵達今日語音上限';
+      el.classList.add('speech-grace-hint', 'exhausted');
+      return true;
+    }
+
+    if (tappieVoiceGraceState.active) {
+      const remain = Math.max(0, Number(tappieVoiceGraceState.remaining ?? 0));
+      el.innerText = `剩餘贈送 ${remain} 次`;
+      el.classList.add('speech-grace-hint');
+      el.classList.remove('exhausted');
+      return true;
+    }
+
+    return false;
+  }
+
+  function clearSpeechGraceLabelFrom(el, defaultText = '') {
+    if (!el) return;
+    el.classList.remove('speech-grace-hint', 'exhausted');
+    if (defaultText) el.innerText = defaultText;
+  }
+
+  function applySpeechGraceToIdleHints() {
+    const mainStatus = document.getElementById('status');
+    if (mainStatus && (
+      mainStatus.classList.contains('speech-grace-hint') ||
+      mainStatus.innerText.includes('點擊開始錄音') ||
+      mainStatus.innerText.includes('剩餘贈送') ||
+      mainStatus.innerText.includes('已抵達今日語音上限')
+    )) {
+      applySpeechGraceLabelTo(mainStatus);
+    }
+
+    document.querySelectorAll('.voice-status').forEach((el) => {
+      if (
+        el.classList.contains('speech-grace-hint') ||
+        el.innerText.includes('點擊開始解鎖') ||
+        el.innerText.includes('剩餘贈送') ||
+        el.innerText.includes('已抵達今日語音上限')
+      ) {
+        applySpeechGraceLabelTo(el);
+      }
+    });
+  }
+
+  function isSpeechExhausted() {
+    return tappieVoiceGraceState.exhausted === true;
+  }
+
+
+
 
   // =======================================================
   // 🎙️ Voice Usage Guard：每次真正進入 Azure 評分前，先累加 daily_usage.voice_count
   // =======================================================
-  async function incrementVoiceUsageOrBlock(source = 'unknown') {
+  async function incrementVoiceUsageOrBlock(source = 'unknown', opts = {}) {
     try {
       const res = await fetch('https://diptahklguohjtjnwnbf.supabase.co/functions/v1/increment-voice-usage', {
         method: 'POST',
@@ -1809,18 +2178,18 @@
         body: JSON.stringify({ uid: STUDENT_ID, source })
       });
       const data = await res.json().catch(() => ({}));
+      const usageState = updateSpeechGraceHint(data, opts);
+
       if (!data.success) {
-        if (data.overLimit) {
-          alert(`🎙️ 今日的口說額度已用完 (${data.count}/${data.limit})
-請明天再來練習喔！`);
+        if (data.overLimit || data.error === 'speech_limit_exhausted') {
           return false;
         }
         throw new Error(data.message || data.error || 'voice usage failed');
       }
-      return true;
+      return usageState.allowed !== false;
     } catch (err) {
       console.error('voice usage check failed:', err);
-      alert('⚠️ 今日口說額度檢查失敗，請稍後再試。');
+      showTappieSoftToast('⚠️ 今日口說額度檢查失敗，請稍後再試。', 'exhausted');
       return false;
     }
   }
@@ -1831,7 +2200,7 @@
         clearInterval(azureTokenInterval); // 停止輪詢
         if (window.GlobalAudio) window.GlobalAudio.play('popupClose'); // 警告音
         alert("⏱️ 你在練習區停留太久囉！\n請重新挑戰吧！");
-        window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`; // 踢回大廳
+        window.location.href = `./dashboard.html`; // 踢回大廳
         return;
     }
 
@@ -1888,7 +2257,7 @@
             alert("⚠️ 系統偵測到重新整理或異常離開！\n\n對戰中離開視同放棄比賽，系統已判定您敗北！");
             // 發送投降電報給 GAS，讓對手獲勝
             fetch(`${GAS_URL}?action=surrender_battle&id=${STUDENT_ID}&roomId=${ROOM_ID}`);
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; // 踢回大廳
+            window.location.href = `./lobby.html`; // 踢回大廳
             return; // 終止後續載入
         }
 
@@ -1904,7 +2273,7 @@
                 } else {
                     alert("⚠️ 由於您剛剛網路不穩或離開戰場，對手已取得上一場的勝利囉！");
                 }
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
                 return; 
             }
             
@@ -1979,22 +2348,30 @@
       if (quizData.length === 0) { alert("題目為空"); return; }
       ACTIVE_UNIT_NAME = data.unit?.unitName || TARGET_UNIT || "";
 
-      // ✅ 精修：今日挑戰門檻與給點階梯，優先讀 Supabase school_settings.Gamification_Config
+      // ✅ 今日挑戰門檻與給點階梯：優先讀該學生所屬校區的 Supabase school_settings.Gamification_Config
+      // 這裡不要只依賴 getPracticeData 回傳，因為 console 的校區設定可能由 overlay / setting value 形式回傳。
       const freshGami = await fetchStudentGamiConfig(STUDENT_ID);
-      const effectiveGami = freshGami || normalizeTappieGamiConfig(data.gamification || {});
+      const effectiveGami = freshGami || normalizeTappieGamiConfig(data.gamification || data.gamificationConfig || data.Gamification_Config || {});
       window.gamiConfig = effectiveGami;
-      // ✅ 今日挑戰通關門檻：以「最低階獎勵門檻」為準。
-      // 例：tiers = 90 / 60 / 10，平均 15 分應可通關並領取最低階獎勵。
-      // 注意：只調整今日挑戰通關判斷，不影響對戰、抽卡、錄音或其他流程。
+
       systemRewardTiers = (effectiveGami?.dailyChallenge?.tiers || data.rewardTiers || [{min: 80, pts: 30}, {min: 70, pts: 20}, {min: 60, pts: 10}])
-        .map(t => ({ min: Number(t.min ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
+        .map(t => ({ min: Number(t.min ?? t.score ?? 0), pts: Number(t.pts ?? t.points ?? 0) }))
         .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts))
         .sort((a, b) => b.min - a.min);
+
+      // ✅ 今日挑戰送出門檻：以 console「最低通過」那一階為準。
+      // 若最低通過設成 10，就應該 10 分可送出；設成 0 也要尊重 0，不可 fallback 回 60。
       const lowestRewardTierMin = systemRewardTiers.length ? Number(systemRewardTiers[systemRewardTiers.length - 1].min) : NaN;
       const explicitPassScore = Number(effectiveGami?.dailyChallenge?.passScore ?? data.systemPassScore ?? NaN);
-      systemPassScore = (Number.isFinite(lowestRewardTierMin) && lowestRewardTierMin > 0)
+      systemPassScore = Number.isFinite(lowestRewardTierMin)
         ? lowestRewardTierMin
         : (Number.isFinite(explicitPassScore) ? explicitPassScore : 60);
+
+      console.log('[Arena Gami] dailyChallenge config applied', {
+        uid: STUDENT_ID,
+        passScore: systemPassScore,
+        tiers: systemRewardTiers
+      });
 
       scores = new Array(quizData.length).fill(null);
       document.getElementById('total-display').innerText = quizData.length;
@@ -2042,10 +2419,64 @@
   // =======================================================
   // 🎮 Supabase Gamification Config Helper
   // - 讀 school_settings.key = Gamification_Config
+  // - 相容 console / edge function 可能回傳的多種 payload 形狀
   // - 相容 pts / points、中文 battle key
   // =======================================================
+  function parseMaybeJsonConfig(value) {
+    if (!value) return null;
+    if (typeof value === 'object') return value;
+    if (typeof value === 'string') {
+      try { return JSON.parse(value); } catch (_) { return null; }
+    }
+    return null;
+  }
+
+  function looksLikeGamificationConfig(value) {
+    const cfg = parseMaybeJsonConfig(value);
+    if (!cfg || typeof cfg !== 'object') return false;
+    return !!(
+      cfg.dailyChallenge ||
+      cfg.mission ||
+      cfg.gachaPicks ||
+      cfg.gachaItems ||
+      cfg.leaderboard
+    );
+  }
+
+  function extractGamificationConfigPayload(payload) {
+    const root = parseMaybeJsonConfig(payload);
+    if (!root || typeof root !== 'object') return null;
+
+    const candidates = [
+      root.config,
+      root.gamification,
+      root.gamificationConfig,
+      root.Gamification_Config,
+      root.value,
+      root.setting?.value,
+      root.setting?.config,
+      root.settings?.Gamification_Config,
+      root.settings?.gamification,
+      root.data?.config,
+      root.data?.gamification,
+      root.data?.gamificationConfig,
+      root.data?.Gamification_Config,
+      root.data?.value,
+      root.data?.setting?.value,
+      root.data?.setting?.config,
+      root.data?.settings?.Gamification_Config,
+      root
+    ];
+
+    for (const item of candidates) {
+      const cfg = parseMaybeJsonConfig(item);
+      if (looksLikeGamificationConfig(cfg)) return cfg;
+    }
+    return null;
+  }
+
   function normalizeTappieGamiConfig(raw) {
-    const cfg = raw || {};
+    const cfg = extractGamificationConfigPayload(raw) || {};
     const daily = cfg.dailyChallenge || {};
     const tiers = Array.isArray(daily.tiers) ? daily.tiers : [];
     const normalizedTiers = tiers
@@ -2074,23 +2505,42 @@
         "玩家對戰": Number(cfg.gachaPicks?.["玩家對戰"] ?? cfg.gachaPicks?.pvp ?? 3),
         "活動Boss": Number(cfg.gachaPicks?.["活動Boss"] ?? cfg.gachaPicks?.eventBoss ?? 1)
       },
-      leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30]
+      leaderboard: Array.isArray(cfg.leaderboard) ? cfg.leaderboard.map(x => Number(x || 0)) : [100, 50, 30],
+      gachaItems: Array.isArray(cfg.gachaItems) ? cfg.gachaItems : []
     };
   }
 
   async function fetchStudentGamiConfig(uid) {
-    try {
-      const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
-        ? TappieAPI.supabaseBaseUrl
-        : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
-      const res = await fetch(`${base}/get-student-gamification?uid=${encodeURIComponent(uid)}&t=${Date.now()}`);
-      const data = await res.json();
-      if (!data || !data.success) throw new Error(data?.message || data?.error || 'get-student-gamification failed');
-      return normalizeTappieGamiConfig(data.config || data.gamification || {});
-    } catch (err) {
-      console.warn('Gamification config 載入失敗，沿用頁面既有設定：', err);
-      return null;
+    const base = (window.TappieAPI && TappieAPI.supabaseBaseUrl)
+      ? TappieAPI.supabaseBaseUrl.replace(/\/$/, '')
+      : 'https://diptahklguohjtjnwnbf.supabase.co/functions/v1';
+
+    const endpoints = [
+      { name: 'get-student-gamification', url: `${base}/get-student-gamification?uid=${encodeURIComponent(uid)}&t=${Date.now()}` },
+      { name: 'get-dashboard-gami-overlay', url: `${base}/get-dashboard-gami-overlay?uid=${encodeURIComponent(uid)}&t=${Date.now()}` }
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const res = await fetch(endpoint.url);
+        const data = await res.json();
+        if (!data || data.success === false) throw new Error(data?.message || data?.error || `${endpoint.name} failed`);
+
+        const rawConfig = extractGamificationConfigPayload(data);
+        if (rawConfig) {
+          const normalized = normalizeTappieGamiConfig(rawConfig);
+          console.log(`[Arena Gami] loaded from ${endpoint.name}`, normalized.dailyChallenge);
+          return normalized;
+        }
+
+        console.warn(`[Arena Gami] ${endpoint.name} succeeded but no recognizable Gamification_Config payload found`, data);
+      } catch (err) {
+        console.warn(`[Arena Gami] ${endpoint.name} 載入失敗，嘗試下一個來源：`, err);
+      }
     }
+
+    console.warn('[Arena Gami] 校區 Gamification_Config 載入失敗，沿用題目 API 或預設設定。');
+    return null;
   }
 
   window.onload = async () => {
@@ -2161,6 +2611,8 @@
 
     // --- 原本的正常載入邏輯 ---
     // ... (以下維持不變) ...
+
+    if (!(await guardPageFeature('practice_enabled', "🔒 此校區尚未啟用【今日挑戰 / 一般練習】功能。\n請聯繫老師或校區主管確認。"))) return;
 
     if (MODE === 'battle' && ROOM_ID) {
       document.getElementById('main-card').style.display = 'none';
@@ -2426,8 +2878,11 @@
 
     isGrading = false;
     isRecording = false;
-    document.getElementById('status').innerText = "點擊開始錄音";
-    document.getElementById('status').style.color = "#636e72"; 
+    const idleStatus = document.getElementById('status');
+    if (!applySpeechGraceLabelTo(idleStatus)) {
+      clearSpeechGraceLabelFrom(idleStatus, "點擊開始錄音");
+      idleStatus.style.color = "#636e72";
+    }
   }
   
   let isGrading = false; 
@@ -2447,6 +2902,15 @@
 
         // 🔵 狀態 A：如果目前沒有在錄音 -> 啟動錄音
         if (!isRecording) {
+            if (isSpeechExhausted()) {
+                updateSpeechGraceHint({
+                  success: false,
+                  overLimit: true,
+                  error: 'speech_limit_exhausted',
+                  speechUsage: { status: 'exhausted', graceRemaining: 0 }
+                }, { statusId: 'status', recordBtnId: 'record-btn' });
+                return;
+            }
             isRecording = true;
             rb.classList.add('recording-active'); // 變藍色
             
@@ -2517,7 +2981,7 @@
                 }
                 
                 try {
-                    const voiceOk = await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge' : 'arena_review');
+                    const voiceOk = await incrementVoiceUsageOrBlock(MODE === 'challenge' ? 'arena_challenge' : 'arena_review', { statusId: 'status', recordBtnId: 'record-btn' });
                     if (!voiceOk) {
                         isGrading = false;
                         rb.classList.remove('processing-locked');
@@ -2569,6 +3033,7 @@
                                     clearTimeout(fetchTimeout); // ✅ 平安歸來，拆除炸彈
                                     return data;
                                 }).then(data => {
+                                    updateSpeechGraceHint(data, { statusId: 'status', recordBtnId: 'record-btn' });
                                     const practiceResult = data.practice || data.attempt || data;
                                     const scoreValue = Number(
                                       practiceResult.score ??
@@ -2753,7 +3218,7 @@
     if (MODE === 'review') {
       console.log('Supabase review details already saved:', detailArr);
       alert("👍 練習辛苦了！");
-      window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+      window.location.href = `./dashboard.html`;
       return;
     }
 
@@ -2781,7 +3246,7 @@
       } else {
         alert(`🎉 今日挑戰完成！本次已記錄，但沒有新增點數。`);
       }
-      window.location.href = `./dashboard.html?id=${encodeURIComponent(STUDENT_ID)}`;
+      window.location.href = `./dashboard.html`;
     } catch (err) {
       console.error('今日挑戰送出失敗:', err);
       alert('⚠️ 今日挑戰送出失敗：' + String(err.message || err));
@@ -2810,7 +3275,7 @@
         if(data.status === "NotFound") { 
             alert("房間失效"); 
             // 🚀 房間失效時，也送回大廳
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`; 
+            window.location.href = `./lobby.html`; 
             return; 
         }
         battleQuizArr = data.quiz; 
@@ -3297,7 +3762,7 @@
             showImpactOverlay(0, 5, true, null, null); 
             
             setTimeout(() => {
-                window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                window.location.href = `./lobby.html`;
             }, 4500); // 讓他看完敗北動畫再踢回大廳
             return;
         }
@@ -3380,7 +3845,7 @@
        setTimeout(() => { 
            showImpactOverlay(myTotalWins, opTotalWins, true); 
            setTimeout(() => {
-               window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+               window.location.href = `./lobby.html`;
            }, 5000); 
        }, 1000);
        return; 
@@ -3692,7 +4157,7 @@
                       } else {
                           // 我方敗北... 延遲一下再回大廳，讓玩家看清楚結果
                           setTimeout(() => {
-                              window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+                              window.location.href = `./lobby.html`;
                           }, 4500);
                       }
                   } 
@@ -3840,7 +4305,8 @@
               if (adminAuth) {
                   window.location.replace(`admin.html?id=${extractedUid}`);
               } else {
-                  window.location.href = `./dashboard.html?id=${encodeURIComponent(extractedUid)}`;
+                  TappieStudentSession.setActive(extractedUid, 'arena-scan');
+                  window.location.replace('./dashboard.html');
               }
           } else {
               // 🌟 狀況 B：這是舊版純數字卡，顯示戰鬥強制中斷動畫，並去問 GAS
@@ -3866,7 +4332,8 @@
                       if (adminAuth) {
                           window.location.replace(`admin.html?id=${data.uid}`);
                       } else {
-                          window.location.href = `./dashboard.html?id=${encodeURIComponent(data.uid)}`;
+                          TappieStudentSession.setActive(data.uid, 'arena-card-scan');
+                          window.location.replace('./dashboard.html');
                       }
                   } 
                   else { 
@@ -3888,11 +4355,23 @@
   // =======================================================
     // 🚀 升級 1：靜置 3 分鐘自動登出回首頁 (Portal)
     // =======================================================
+
+    // Station-aware return helper: only affects idle/logout return target.
+    function getStationAwareHomeUrl() {
+      try {
+        const raw = localStorage.getItem('tappie_station_session');
+        if (!raw) return 'index.html';
+        const session = JSON.parse(raw);
+        if (session && session.stationAuthorized === true && session.schoolCode) return 'station.html';
+      } catch (_) {}
+      return 'index.html';
+    }
+
     let idleTimer;
     const resetIdleTimer = () => {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        window.location.href = "index.html"; 
+        window.location.href = getStationAwareHomeUrl(); 
       }, 180000); // 3 分鐘無動作就踢回大門
     };
     document.addEventListener('touchstart', resetIdleTimer);
@@ -4175,7 +4654,10 @@
       document.getElementById(`gacha-card-${focusedCardIndex}`).classList.remove('focused');
       document.getElementById(`wrapper-${focusedCardIndex}`).classList.remove('has-focus');
       document.getElementById('gacha-overlay').classList.remove('focus-mode');
-      document.getElementById(`lock-status-${focusedCardIndex}`).innerText = "點擊開始解鎖";
+      const resetStatus = document.getElementById(`lock-status-${focusedCardIndex}`);
+      if (resetStatus && !applySpeechGraceLabelTo(resetStatus)) {
+        clearSpeechGraceLabelFrom(resetStatus, "點擊開始解鎖");
+      }
       focusedCardIndex = -1;
   }
 
@@ -4195,6 +4677,15 @@
 
           // 🔵 狀態 A：如果目前沒有在錄音 -> 啟動錄音
           if (!isGachaRecording) {
+              if (isSpeechExhausted()) {
+                updateSpeechGraceHint({
+                  success: false,
+                  overLimit: true,
+                  error: 'speech_limit_exhausted',
+                  speechUsage: { status: 'exhausted', graceRemaining: 0 }
+                }, { statusId: 'status', recordBtnId: 'record-btn' });
+                return;
+            }
               isGachaRecording = true;
               
               // 強制切斷所有正在播放的讀音
@@ -4280,6 +4771,13 @@
                       const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
                       pronConfig.applyTo(recognizer);
 
+                      const voiceOk = await incrementVoiceUsageOrBlock('arena_gacha_phrase', { statusEl: status, recordBtn: btn });
+                      if (!voiceOk) {
+                          btn.style.pointerEvents = "none";
+                          btn.classList.add('speech-exhausted');
+                          return;
+                      }
+
                       recognizer.recognizeOnceAsync((result) => {
                           btn.style.pointerEvents = "auto"; // 判定完成，解開按鈕封印
                           if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
@@ -4291,21 +4789,33 @@
                               } else {
                                   status.innerText = "密語不夠準確，請重唸";
                                   status.style.color = "#e74c3c";
+                                  if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                                      setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                                  }
                               }
                           } else {
                               status.innerText = "未辨識到密語";
                               status.style.color = "#e74c3c";
+                              if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                                  setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                              }
                           }
                           recognizer.close();
                       }, (err) => {
                           console.error("Azure 辨識錯誤:", err);
                           status.innerText = "🚨 引擎連線錯誤，請重試";
                           status.style.color = "#e74c3c";
+                          if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                              setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                          }
                           btn.style.pointerEvents = "auto"; // 必須解開按鈕，否則卡死
                           recognizer.close();
                       });
                   } catch(err) {
                       status.innerText = "判定失敗，請重試";
+                      if (tappieVoiceGraceState.active || tappieVoiceGraceState.exhausted) {
+                          setTimeout(() => applySpeechGraceLabelTo(status), 1400);
+                      }
                       btn.style.pointerEvents = "auto";
                   }
               };
@@ -4456,9 +4966,9 @@
         
         // 成功發送獎勵後，跳轉回對戰大廳
         fetch(finalUrl, { mode: 'no-cors' }).then(() => {
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+            window.location.href = `./lobby.html`;
         }).catch(() => {
-            window.location.href = `./lobby.html?id=${encodeURIComponent(STUDENT_ID)}`;
+            window.location.href = `./lobby.html`;
         });
     };
   }
