@@ -7,6 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
 <title>Tappie學美語</title>
   <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
+  <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1037,6 +1038,133 @@
       .single-route-panel { border-radius: 38px; margin-top: 10px; }
       .single-route-header { padding-inline: 38px; }
     }
+
+
+    /* =======================================================
+       TAPPIE_SINGLE_ROUTE_V6_4 — simplified visual hierarchy
+       - ordinary nodes stay white
+       - current position uses glow only
+       - milestone nodes own the reward colors
+       - one fixed action below the route
+       ======================================================= */
+    #tab-challenge { padding-bottom: 112px; }
+
+    .single-route-node:not(.is-milestone) .single-route-core,
+    .single-route-node.is-complete:not(.is-milestone) .single-route-core {
+      width: 54px;
+      height: 54px;
+      color: #627283;
+      background: linear-gradient(145deg,#ffffff,#eef3f8);
+      border: 3px solid rgba(190,203,216,.78);
+      box-shadow: 0 9px 20px rgba(42,63,84,.11), inset 0 2px 0 #fff;
+      font-size: 16px;
+      animation: none;
+    }
+    .single-route-node.is-complete:not(.is-milestone) .single-route-core {
+      color: #31475c;
+      border-color: rgba(166,190,211,.88);
+    }
+    .single-route-node.is-current:not(.is-milestone) .single-route-core {
+      width: 54px;
+      height: 54px;
+      color: #0066cc;
+      background: linear-gradient(145deg,#ffffff,#f2f7fb);
+      border: 3px solid rgba(32,151,232,.90);
+      box-shadow: 0 0 0 7px rgba(0,102,204,.10), 0 12px 28px rgba(0,102,204,.19), inset 0 2px 0 #fff;
+      font-size: 17px;
+      animation: singleRouteCurrentGlow 2.7s ease-in-out infinite;
+    }
+    .single-route-node.is-current.is-milestone .single-route-core {
+      box-shadow: 0 0 0 7px rgba(0,102,204,.10), 0 15px 32px rgba(0,102,204,.19), inset 0 2px 0 rgba(255,255,255,.44);
+      animation: singleRouteCurrentGlowMilestone 2.7s ease-in-out infinite;
+    }
+    @keyframes singleRouteCurrentGlow {
+      0%,100% { box-shadow:0 0 0 6px rgba(0,102,204,.09),0 12px 27px rgba(0,102,204,.17),inset 0 2px 0 #fff; }
+      50% { box-shadow:0 0 0 11px rgba(0,102,204,.035),0 14px 31px rgba(0,102,204,.22),inset 0 2px 0 #fff; }
+    }
+    @keyframes singleRouteCurrentGlowMilestone {
+      0%,100% { box-shadow:0 0 0 6px rgba(0,102,204,.09),0 15px 31px rgba(0,102,204,.18),inset 0 2px 0 rgba(255,255,255,.44); }
+      50% { box-shadow:0 0 0 11px rgba(0,102,204,.035),0 17px 36px rgba(0,102,204,.23),inset 0 2px 0 rgba(255,255,255,.44); }
+    }
+    .single-route-current-label {
+      left: 43px;
+      top: -20px;
+      padding: 8px 11px;
+      border-radius: 14px;
+      font-size: 11px;
+      box-shadow: 0 8px 20px rgba(0,102,204,.10);
+    }
+
+    .single-route-action-dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(max(80px, env(safe-area-inset-bottom) + 70px) + 10px);
+      z-index: 1200;
+      display: flex;
+      justify-content: center;
+      padding: 20px 20px 4px;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+    .single-route-action-dock::before {
+      content: '';
+      position: absolute;
+      inset: -24px 0 -4px;
+      z-index: -1;
+      background: linear-gradient(180deg, rgba(240,246,253,0), rgba(240,246,253,.82) 44%, rgba(240,246,253,.97));
+      pointer-events: none;
+    }
+    .single-route-action-dock.hidden,
+    .single-route-action-dock.tab-hidden { display: none !important; }
+
+    .single-route-start {
+      position: relative;
+      left: auto;
+      top: auto;
+      width: min(340px, calc(100vw - 48px));
+      transform: none;
+      pointer-events: auto;
+    }
+    .single-route-start:active { transform: scale(.97); }
+    .single-route-start-card {
+      min-height: 58px;
+      display: grid;
+      place-items: center;
+      padding: 13px 22px 14px;
+      border-radius: 20px;
+      background: linear-gradient(145deg,#2eb6ff,#006bd7);
+      border: 2px solid rgba(255,255,255,.76);
+      box-shadow: 0 14px 30px rgba(0,102,204,.26), inset 0 2px 0 rgba(255,255,255,.30);
+    }
+    .single-route-start-card::after { display: none; }
+    .single-route-start-small { display: none !important; }
+    .single-route-start-main {
+      font-size: 18px;
+      line-height: 1.25;
+      letter-spacing: 1.6px;
+    }
+    .single-route-start.is-repeat .single-route-start-card {
+      background: linear-gradient(145deg,#6c79ed,#3f51c7);
+      box-shadow: 0 14px 30px rgba(63,81,199,.25), inset 0 2px 0 rgba(255,255,255,.28);
+    }
+    .single-route-start.is-loading .single-route-start-card {
+      background: linear-gradient(145deg,#38aaf7,#176dcc);
+      opacity: .96;
+    }
+    .single-route-start.is-disabled .single-route-start-card {
+      color: #6f7d89;
+      background: linear-gradient(145deg,#eef2f6,#dce4ec);
+      border-color: rgba(255,255,255,.90);
+      box-shadow: 0 10px 22px rgba(62,78,95,.11), inset 0 2px 0 rgba(255,255,255,.72);
+    }
+    @media (max-width: 360px) {
+      .single-route-action-dock { padding-inline: 16px; }
+      .single-route-start { width: calc(100vw - 38px); }
+      .single-route-start-main { font-size: 16px; }
+      .single-route-current-label { left: 41px; }
+    }
+
 </style>
 </head>
 
@@ -1162,12 +1290,6 @@
         <div id="single-route-stage" class="single-route-stage" aria-label="口說挑戰路線">
           <svg id="single-route-svg" class="single-route-svg" aria-hidden="true"></svg>
           <div id="single-route-nodes"></div>
-          <a id="oral-btn" href="#" class="single-route-start">
-            <span class="single-route-start-card">
-              <span id="single-route-start-small" class="single-route-start-small">下一站</span>
-              <span id="single-route-start-main" class="single-route-start-main">開始挑戰</span>
-            </span>
-          </a>
         </div>
 
         <div id="single-route-leaderboard" class="single-route-leaderboard" onclick="if (event.target === this) toggleSingleRouteLeaderboard(false)">
@@ -1308,6 +1430,15 @@
     </section>
 
   </main>
+
+  <div id="single-route-action-dock" class="single-route-action-dock tab-hidden">
+    <a id="oral-btn" href="#" class="single-route-start">
+      <span class="single-route-start-card">
+        <span id="single-route-start-small" class="single-route-start-small" aria-hidden="true"></span>
+        <span id="single-route-start-main" class="single-route-start-main">開始挑戰</span>
+      </span>
+    </a>
+  </div>
 
   <nav id="bottom-nav">
     <div class="nav-item active" onclick="switchTab('student', '首頁', this)">
@@ -1618,6 +1749,7 @@
       // 3. 切換 Content Viewport 內容
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
+      document.getElementById('single-route-action-dock')?.classList.toggle('tab-hidden', tabId !== 'challenge');
 
       // 4. 挑戰頁定位目前節點；其他分頁回到頂部
       if (tabId === 'challenge') {
@@ -2567,23 +2699,12 @@
       return points.filter(point => point.count >= minCount && point.count <= maxCount);
     }
 
-    function buildSingleRouteCompletedPaths(points, currentCount, milestones) {
+    function buildSingleRouteCompletedPaths(points, currentCount) {
       if (currentCount <= 0) return '';
-      const safe = milestones.find(item => item.type === 'safe')?.count ?? currentCount;
-      const good = milestones.find(item => item.type === 'good')?.count ?? Math.max(safe, currentCount);
-      const perfect = milestones.find(item => item.type === 'perfect')?.count ?? Math.max(good, currentCount);
-      const specs = [
-        { min: 0, max: Math.min(currentCount, safe), gradient: 'singleRouteRisk', shadow: 'rgba(207,61,70,.18)' },
-        { min: safe, max: Math.min(currentCount, good), gradient: 'singleRouteGrowth', shadow: 'rgba(32,168,126,.17)' },
-        { min: good, max: Math.min(currentCount, perfect), gradient: 'singleRouteReward', shadow: 'rgba(242,142,25,.18)' },
-        { min: perfect, max: currentCount, gradient: 'singleRouteBeyond', shadow: 'rgba(211,139,22,.18)' }
-      ];
-      return specs.map(spec => {
-        const segment = getSingleRouteSegment(points, spec.min, spec.max);
-        if (segment.length < 2) return '';
-        const path = buildSingleRoutePath(segment);
-        return `<path d="${path}" fill="none" stroke="${spec.shadow}" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 7)"/><path d="${path}" fill="none" stroke="url(#${spec.gradient})" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/><path d="${path}" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
-      }).join('');
+      const segment = points.filter(point => point.count >= 0 && point.count <= currentCount);
+      if (segment.length < 2) return '';
+      const path = buildSingleRoutePath(segment);
+      return `<path d="${path}" fill="none" stroke="rgba(0,91,184,.18)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 7)"/><path d="${path}" fill="none" stroke="url(#singleRouteComplete)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/><path d="${path}" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
 
     function locateSingleRouteCurrent(smooth = false) {
@@ -2595,15 +2716,19 @@
       const topBar = document.getElementById('top-bar');
       const bottomNav = document.getElementById('bottom-nav');
       const routeHeader = document.querySelector('.single-route-header');
+      const actionDock = document.getElementById('single-route-action-dock');
 
       const viewportRect = viewport.getBoundingClientRect();
       const coreRect = core.getBoundingClientRect();
       const topBarBottom = topBar ? topBar.getBoundingClientRect().bottom : viewportRect.top;
       const headerBottom = routeHeader ? routeHeader.getBoundingClientRect().bottom : topBarBottom;
       const bottomNavTop = bottomNav ? bottomNav.getBoundingClientRect().top : viewportRect.bottom;
+      const actionDockTop = actionDock && !actionDock.classList.contains('hidden') && !actionDock.classList.contains('tab-hidden')
+        ? actionDock.getBoundingClientRect().top - 12
+        : bottomNavTop;
 
       const visibleTop = Math.max(viewportRect.top, topBarBottom, headerBottom);
-      const visibleBottom = Math.min(viewportRect.bottom, bottomNavTop);
+      const visibleBottom = Math.min(viewportRect.bottom, bottomNavTop, actionDockTop);
       const usableHeight = Math.max(260, visibleBottom - visibleTop);
       /* Current node sits slightly below center, leaving room for the next node and action above. */
       const desiredScreenY = visibleTop + usableHeight * 0.63;
@@ -2676,14 +2801,11 @@
       svg.setAttribute('viewBox',`0 0 420 ${stageHeight}`);
       svg.setAttribute('preserveAspectRatio','none');
       const path=buildSingleRoutePath(points);
-      const completedPaths = buildSingleRouteCompletedPaths(points, currentCount, milestones);
+      const completedPaths = buildSingleRouteCompletedPaths(points, currentCount);
       svg.innerHTML=`
         <defs>
           <linearGradient id="singleRouteBase" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dbe5ef"/><stop offset="1" stop-color="#c5d3e0"/></linearGradient>
-          <linearGradient id="singleRouteRisk" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffaaa2"/><stop offset="1" stop-color="#d94349"/></linearGradient>
-          <linearGradient id="singleRouteGrowth" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#85e8cb"/><stop offset="1" stop-color="#20a97f"/></linearGradient>
-          <linearGradient id="singleRouteReward" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffd37a"/><stop offset="1" stop-color="#f18b18"/></linearGradient>
-          <linearGradient id="singleRouteBeyond" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffc85b"/><stop offset="1" stop-color="#d89316"/></linearGradient>
+          <linearGradient id="singleRouteComplete" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#55c6ff"/><stop offset=".52" stop-color="#168ee8"/><stop offset="1" stop-color="#0066cc"/></linearGradient>
         </defs>
         <path d="${path}" fill="none" stroke="rgba(111,139,166,.18)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 8)"/>
         <path d="${path}" fill="none" stroke="url(#singleRouteBase)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2698,13 +2820,8 @@
       }).join('');
 
       const nextCount = currentCount + 1;
-      const nextNode = nodes.querySelector(`[data-route-count="${nextCount}"]`);
-      if (nextNode) {
-        oralBtn.style.left = '';
-        oralBtn.style.top = '';
-        nextNode.appendChild(oralBtn);
-      }
-      document.getElementById('single-route-start-small').textContent = `下一站：${nextCount} 次`;
+      oralBtn.dataset.nextCount = String(nextCount);
+      document.getElementById('single-route-start-small').textContent = '';
       document.getElementById('single-route-unit').textContent = data.currentUnit || '未排定';
       updateSingleRouteCountdown(data.endDate);
       scheduleSingleRouteLocate(false);
@@ -2857,6 +2974,7 @@
         hwScoreInfo.classList.add('hidden');
         
         oralBtn.className = "single-route-start hidden";
+        document.getElementById('single-route-action-dock')?.classList.add('hidden');
         document.getElementById("single-route-start-main").innerText = "尚未開放";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => e.preventDefault(); 
@@ -2891,7 +3009,8 @@
         document.getElementById('last-score').innerText = bestScore;
         document.getElementById('awarded-points').innerText = calculatedPoints;
         
-        oralBtn.className = "single-route-start";
+        oralBtn.className = "single-route-start is-repeat";
+        document.getElementById('single-route-action-dock')?.classList.remove('hidden');
         oralBtn.style.pointerEvents = "auto";
         document.getElementById("single-route-start-main").innerText = "再次練習";
         oralBtn.href = "#";
@@ -2909,6 +3028,7 @@
         hwScoreInfo.classList.add('hidden');
         
         oralBtn.className = "single-route-start";
+        document.getElementById('single-route-action-dock')?.classList.remove('hidden');
         oralBtn.style.pointerEvents = "auto";
         document.getElementById("single-route-start-main").innerText = "開始挑戰";
         oralBtn.href = "#";
@@ -3064,12 +3184,12 @@
       btnElement.classList.remove('is-loading','is-disabled');
       if (state === 'loading') {
         btnElement.classList.add('is-loading');
-        if (small) small.textContent = '正在準備挑戰';
-        if (main) main.textContent = '請稍候';
+        if (small) small.textContent = '';
+        if (main) main.textContent = '正在準備挑戰';
         btnElement.style.pointerEvents = 'none';
       } else if (state === 'disabled') {
         btnElement.classList.add('is-disabled');
-        if (small) small.textContent = '今日次數已用完';
+        if (small) small.textContent = '';
         if (main) main.textContent = '明天再來挑戰';
         btnElement.style.pointerEvents = 'none';
       } else {
