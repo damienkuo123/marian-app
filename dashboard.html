@@ -635,7 +635,101 @@
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
     /* Chrome 專用：箭頭朝上彈跳 */
     @keyframes bounce-up { 0%, 100% { transform: translateY(0) rotate(180deg); } 50% { transform: translateY(-10px) rotate(180deg); } }
-  </style>
+  
+
+    /* =======================================================
+       TAPPIE_SINGLE_SPEAKING_ROUTE_V6
+       Child-first single-player route: one page, one scroll layer.
+       ======================================================= */
+    #tab-challenge { align-items: stretch; }
+    .single-route-panel {
+      position: relative;
+      width: 100%;
+      max-width: 680px;
+      margin: -4px auto 0;
+      box-sizing: border-box;
+      overflow: visible;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(71,166,255,.12), transparent 32%),
+        linear-gradient(180deg, #f8fbff 0%, #eef6ff 48%, #f8fbff 100%);
+    }
+    .single-route-header {
+      position: sticky;
+      top: max(60px, env(safe-area-inset-top) + 60px);
+      z-index: 20;
+      padding: 22px 24px 16px;
+      background: linear-gradient(180deg, rgba(248,251,255,.97) 0%, rgba(248,251,255,.91) 78%, rgba(248,251,255,0) 100%);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    }
+    .single-route-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+    .single-route-title { margin:0; color:var(--text-main); font-size:27px; line-height:1.12; font-weight:950; letter-spacing:.5px; }
+    .single-route-sub { margin-top:8px; color:#667585; font-size:13px; font-weight:900; letter-spacing:.3px; }
+    .single-route-rank-btn {
+      flex:0 0 auto; width:54px; height:54px; border:1px solid rgba(255,255,255,.96); border-radius:20px;
+      display:grid; place-items:center; background:rgba(255,255,255,.76); box-shadow:0 12px 28px rgba(36,69,104,.09), inset 0 1px 0 #fff;
+      font-size:24px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+    }
+    .single-route-rank-btn:active { transform:scale(.95); }
+    .single-route-next-copy {
+      display:inline-flex; align-items:center; gap:9px; margin-top:14px; padding:11px 15px; border-radius:17px;
+      color:#135faf; background:rgba(255,255,255,.78); border:1px solid rgba(255,255,255,.96);
+      box-shadow:0 8px 18px rgba(0,102,204,.07); font-size:13px; font-weight:950;
+    }
+    .single-route-next-copy::before { content:''; width:9px; height:9px; border-radius:50%; background:#1f91f2; box-shadow:0 0 0 5px rgba(31,145,242,.12); }
+    .single-route-stage { position:relative; width:100%; min-height:1000px; overflow:hidden; }
+    .single-route-stage::before {
+      content:''; position:absolute; inset:0; pointer-events:none;
+      background-image:radial-gradient(circle, rgba(78,139,201,.09) 1px, transparent 1px);
+      background-size:26px 26px; opacity:.22;
+      mask-image:linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
+      -webkit-mask-image:linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
+    }
+    .single-route-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+    .single-route-node { position:absolute; width:0; height:0; transform:translate(-50%,-50%); z-index:3; }
+    .single-route-core {
+      position:absolute; left:0; top:0; transform:translate(-50%,-50%); width:52px; height:52px; border-radius:50%;
+      display:grid; place-items:center; color:#8493a2; background:linear-gradient(145deg,#fff,#eef3f8);
+      border:3px solid rgba(193,205,218,.72); box-shadow:0 10px 22px rgba(42,63,84,.12), inset 0 2px 0 #fff;
+      font-size:16px; font-weight:950;
+    }
+    .single-route-node.is-complete .single-route-core {
+      color:#fff; border-color:rgba(255,255,255,.93); background:linear-gradient(145deg,#43c1ff,#0874d4);
+      box-shadow:0 12px 26px rgba(0,102,204,.24), inset 0 2px 0 rgba(255,255,255,.42);
+    }
+    .single-route-node.is-current .single-route-core {
+      width:78px; height:78px; font-size:23px; border-width:5px; background:linear-gradient(145deg,#32bdff,#0066cc);
+      box-shadow:0 0 0 10px rgba(0,102,204,.10), 0 18px 38px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.48);
+      animation:singleRoutePulse 2.6s ease-in-out infinite;
+    }
+    @keyframes singleRoutePulse { 0%,100%{box-shadow:0 0 0 8px rgba(0,102,204,.09),0 18px 38px rgba(0,102,204,.28),inset 0 2px 0 rgba(255,255,255,.48)} 50%{box-shadow:0 0 0 15px rgba(0,102,204,.035),0 20px 42px rgba(0,102,204,.34),inset 0 2px 0 rgba(255,255,255,.48)} }
+    .single-route-node.is-milestone .single-route-core { width:74px; height:74px; border-radius:24px; color:#fff; font-size:21px; border:5px solid rgba(255,255,255,.90); }
+    .single-route-node.is-safe .single-route-core { background:linear-gradient(145deg,#66baff,#287bdc); }
+    .single-route-node.is-good .single-route-core { background:linear-gradient(145deg,#69dfbd,#22a887); }
+    .single-route-node.is-perfect .single-route-core { width:82px; height:82px; background:linear-gradient(145deg,#ffc45d,#f18b18); box-shadow:0 16px 34px rgba(243,156,18,.27), inset 0 2px 0 rgba(255,255,255,.48); }
+    .single-route-label { position:absolute; top:43px; width:132px; color:var(--text-main); font-size:13px; font-weight:950; line-height:1.35; text-align:center; transform:translateX(-50%); left:0; }
+    .single-route-label small { display:block; margin-top:3px; color:#718090; font-size:11px; font-weight:850; }
+    .single-route-current-label {
+      position:absolute; left:54px; top:-25px; width:max-content; padding:10px 13px; border-radius:16px;
+      color:#0066cc; background:rgba(255,255,255,.92); border:1px solid #fff; box-shadow:0 10px 24px rgba(0,102,204,.12);
+      font-size:12px; font-weight:950; line-height:1.4;
+    }
+    .single-route-start { position:absolute; z-index:9; transform:translate(-50%,-100%); width:220px; text-decoration:none; -webkit-tap-highlight-color:transparent; }
+    .single-route-start-card {
+      position:relative; padding:12px 16px 14px; border-radius:22px; color:#fff; text-align:center;
+      background:linear-gradient(145deg,#31aaff,#0666df); border:2px solid rgba(255,255,255,.72);
+      box-shadow:0 15px 32px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.30);
+    }
+    .single-route-start-card::after { content:''; position:absolute; left:50%; bottom:-10px; width:18px; height:18px; transform:translateX(-50%) rotate(45deg); background:#096ce0; border-right:2px solid rgba(255,255,255,.45); border-bottom:2px solid rgba(255,255,255,.45); }
+    .single-route-start-small { display:block; margin-bottom:2px; font-size:11px; font-weight:900; opacity:.85; letter-spacing:.4px; }
+    .single-route-start-main { display:block; font-size:19px; font-weight:950; letter-spacing:2px; }
+    .single-route-start:active { transform:translate(-50%,-100%) scale(.96); }
+    .single-route-end-note { padding:20px 24px 34px; color:#718090; font-size:12px; font-weight:900; text-align:center; }
+    .single-route-leaderboard { display:none; margin:0 20px 28px; padding:22px; border-radius:28px; background:rgba(255,255,255,.84); border:1px solid rgba(255,255,255,.96); box-shadow:0 18px 38px rgba(40,61,84,.09); }
+    .single-route-leaderboard.show { display:block; }
+    .single-route-leaderboard .leaderboard { width:100%; max-width:none; margin:0; padding:0; background:none; border:0; box-shadow:none; }
+    .single-route-leaderboard-close { float:right; width:36px; height:36px; border:0; border-radius:50%; background:rgba(0,0,0,.05); color:#6d7a87; font-size:20px; cursor:pointer; }
+    @media (min-width:768px) { .single-route-panel{border-radius:38px;margin-top:10px;} .single-route-header{padding-inline:38px;} }
+</style>
 </head>
 
 <body>
@@ -742,68 +836,40 @@
     </section>
 
     <section id="tab-challenge" class="tab-content">
-      <div class="glass-panel" style="padding: 0; background: transparent; border: none; box-shadow: none;">
-        <div id="hw-box" class="hw-box hw-active">
-          <div class="card-header-row">
-            <div id="hw-icon" class="icon-wrapper" style="color: #e67e22;">🎯</div>
-            <div class="text-block">
-              <div id="hw-title" class="action-title">今日口說挑戰</div>
-              <div id="current-unit" class="action-sub">-</div>
+      <div id="single-route-panel" class="single-route-panel">
+        <div style="display:none"><div id="hw-box"></div><div id="hw-icon"></div><div id="hw-title"></div><div id="hw-score-info" class="hidden"><span id="last-score"></span><span id="awarded-points"></span></div><span id="current-unit"></span></div>
+        <div class="single-route-header">
+          <div class="single-route-title-row">
+            <div>
+              <h3 class="single-route-title">口說挑戰之路</h3>
+              <div class="single-route-sub"><span id="single-route-unit">-</span> ・ 結算 <span class="end-date-display">-</span></div>
             </div>
+            <button type="button" class="single-route-rank-btn" onclick="toggleSingleRouteLeaderboard()" aria-label="查看高分排行榜">🏆</button>
           </div>
-          <div id="hw-score-info" class="hidden hw-score-badge">
-            最佳 <span id="last-score">0</span> 分 | 獲得 <span id="awarded-points">0</span> 點
-          </div>
-          <a id="oral-btn" href="#" class="btn btn-yellow">開啟挑戰</a>
+          <div id="single-route-next-copy" class="single-route-next-copy">準備開始第一個挑戰</div>
         </div>
-      </div>
 
-      <div class="glass-panel mission-container">
-        <h3 class="section-title">🚩 口說挑戰任務</h3>
-        <div class="mission-status-box">
-          <div class="status-group">
-            <span class="status-label">目前進度</span>
-            <span id="mission-count" class="status-value" style="color:var(--primary-blue);">0 次</span>
-          </div>
-          <div class="status-group" style="text-align: right;">
-            <span class="status-label">預計結算</span>
-            <span id="mission-est" class="status-value" style="color: var(--marian-red);">-250 點</span>
-          </div>
+        <div id="single-route-stage" class="single-route-stage" aria-label="口說挑戰路線">
+          <svg id="single-route-svg" class="single-route-svg" aria-hidden="true"></svg>
+          <div id="single-route-nodes"></div>
+          <a id="oral-btn" href="#" class="single-route-start">
+            <span class="single-route-start-card">
+              <span id="single-route-start-small" class="single-route-start-small">下一站</span>
+              <span id="single-route-start-main" class="single-route-start-main">開始挑戰</span>
+            </span>
+          </a>
         </div>
-        <div class="mission-bar-bg">
-          <div id="node-1" class="mission-node" style="left: 33.33%;">
-              <span class="node-icon">⚠️</span>
-              <span id="node-1-label" class="node-label">5次</span>
-          </div>
-          <div id="node-2" class="mission-node" style="left: 66.66%;">
-              <span class="node-icon">🚩</span>
-              <span id="node-2-label" class="node-label">10次</span>
-          </div>
-          <div id="node-3" class="mission-node" style="left: 100%;">
-              <span class="node-icon">🔥</span>
-              <span id="node-3-label" class="node-label">15次</span>
-          </div>
-          <div id="mission-fill" class="mission-bar-fill" style="width: 0%;"></div>
-        </div>
-        <div id="mission-reward-bar" class="reward-bar">
-          <div class="reward-unit">⚠️ <span class="reward-val">免扣點</span></div>
-          <div class="reward-unit">🚩 <span class="reward-val">+100</span></div>
-          <div class="reward-unit">🔥 <span class="reward-val">+200</span></div>
-        </div>
-        <div style="font-size:12px; color:var(--text-sub); text-align: center; margin-top:20px; font-weight:900; letter-spacing:1px;">⏳ 結算日：<span class="end-date-display">-</span></div>
-      </div>
 
-      <div class="glass-panel leaderboard">
-        <h2 style="color:var(--primary-blue); font-size: 18px; margin: 0 0 20px 0; text-align:center; font-weight:900; letter-spacing:2px;">
-          <span id="lb-unit-name"></span> 排行榜
-        </h2>
-        <div id="lb-container"></div>
-        <div id="lb-reward-hints" style="margin-top: 15px; padding: 12px 15px; background: rgba(255,255,255,0.6); border-radius: 16px; border: 1px solid rgba(255,255,255,0.6); display: flex; justify-content: center; gap: 20px; font-size: 13px; font-weight: 900; color: var(--text-sub); box-shadow: inset 0 1px 2px rgba(255,255,255,0.8);">
-          <span>🥇 +100<span style="font-size:10px; margin-left:2px;">PTS</span></span>
-          <span>🥈 +50<span style="font-size:10px; margin-left:2px;">PTS</span></span>
-          <span>🥉 +30<span style="font-size:10px; margin-left:2px;">PTS</span></span>
+        <div class="single-route-end-note">每完整完成一次單元挑戰，就會向前一格。</div>
+
+        <div id="single-route-leaderboard" class="single-route-leaderboard">
+          <button type="button" class="single-route-leaderboard-close" onclick="toggleSingleRouteLeaderboard(false)">×</button>
+          <div class="leaderboard">
+            <h2 style="color:var(--primary-blue); font-size:18px; margin:0 0 20px; text-align:center; font-weight:900; letter-spacing:2px;"><span id="lb-unit-name"></span> 高分榜</h2>
+            <div id="lb-container"></div>
+            <div id="lb-reward-hints" style="margin-top:15px;padding:12px 15px;background:rgba(255,255,255,.72);border-radius:16px;display:flex;justify-content:center;gap:20px;font-size:13px;font-weight:900;color:var(--text-sub);"></div>
+          </div>
         </div>
-        <div style="font-size:12px; color:var(--text-sub); text-align: center; margin-top:15px; font-weight:900; letter-spacing:1px;">⏳ 結算日：<span class="end-date-display">-</span></div>
       </div>
     </section>
 
@@ -1241,8 +1307,12 @@
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
 
-      // 4. 滾動回頂部
-      document.getElementById('content-viewport').scrollTo({ top: 0, behavior: 'smooth' });
+      // 4. 挑戰頁定位目前節點；其他分頁回到頂部
+      if (tabId === 'challenge') {
+        setTimeout(() => locateSingleRouteCurrent(false), 80);
+      } else {
+        document.getElementById('content-viewport').scrollTo({ top: 0, behavior: 'smooth' });
+      }
 
       // 🚀 5. 自動觸發診斷報告載入 (如果尚未載入過的話)
       if (tabId === 'learning' && !isDiagLoaded) {
@@ -1979,6 +2049,8 @@
               if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
               if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
               if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
+              if (Array.isArray(overlay.classProgress)) data.classProgress = overlay.classProgress;
+              if (overlay.classMaxCount !== undefined) data.classMaxCount = overlay.classMaxCount;
               if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
               if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
               if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
@@ -2116,6 +2188,109 @@
       })();
     }
     
+
+
+    function escapeMissionRouteHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    function getMissionRouteMilestones(gami) {
+      const m = gami?.mission || {};
+      return [
+        { count:Number(m.failThreshold||0), type:'safe', title:'安全門檻', detail:'免扣一次' },
+        { count:Number(m.goodThreshold||0), type:'good', title:'進階獎勵', detail:`+${Number(m.goodReward||0)} 點` },
+        { count:Number(m.perfectThreshold||0), type:'perfect', title:'最終獎勵', detail:`+${Number(m.perfectReward||0)} 點` }
+      ].filter(item => item.count > 0);
+    }
+
+    let singleRouteCurrentCount = 0;
+    function buildSingleRoutePath(points) {
+      if (!points.length) return '';
+      if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+      let d = `M ${points[0].x} ${points[0].y}`;
+      for (let i=1;i<points.length-1;i++) {
+        const midX=(points[i].x+points[i+1].x)/2;
+        const midY=(points[i].y+points[i+1].y)/2;
+        d += ` Q ${points[i].x} ${points[i].y} ${midX} ${midY}`;
+      }
+      const last=points[points.length-1], prev=points[points.length-2];
+      d += ` Q ${prev.x} ${prev.y} ${last.x} ${last.y}`;
+      return d;
+    }
+
+    function locateSingleRouteCurrent(smooth=false) {
+      const viewport=document.getElementById('content-viewport');
+      const panel=document.getElementById('single-route-panel');
+      const node=document.querySelector(`#single-route-nodes [data-route-count="${singleRouteCurrentCount}"]`);
+      if (!viewport || !panel || !node) return;
+      const target=panel.offsetTop + node.offsetTop - viewport.clientHeight * .64;
+      viewport.scrollTo({top:Math.max(0,target),behavior:smooth?'smooth':'auto'});
+    }
+
+    function toggleSingleRouteLeaderboard(force) {
+      const panel=document.getElementById('single-route-leaderboard');
+      if (!panel) return;
+      const show=typeof force==='boolean'?force:!panel.classList.contains('show');
+      panel.classList.toggle('show',show);
+      if (show) setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),30);
+    }
+
+    function renderMissionClassRoute(data,gami) {
+      const stage=document.getElementById('single-route-stage');
+      const svg=document.getElementById('single-route-svg');
+      const nodes=document.getElementById('single-route-nodes');
+      const oralBtn=document.getElementById('oral-btn');
+      if (!stage||!svg||!nodes||!oralBtn) return;
+
+      const currentCount=Math.max(0,Number(data.missionCount||0));
+      singleRouteCurrentCount=currentCount;
+      const milestones=getMissionRouteMilestones(gami);
+      const highest=milestones.reduce((m,x)=>Math.max(m,x.count),0);
+      const routeEnd=Math.max(highest,currentCount+5,8);
+      const step=132;
+      const pad=105;
+      const stageHeight=pad*2+routeEnd*step;
+      const pattern=[52,38,58,66,48,34,46,64,55,37];
+      const points=[];
+      for(let count=routeEnd;count>=0;count--){
+        const idx=routeEnd-count;
+        points.push({count,x:pattern[idx%pattern.length]*4.2,y:pad+idx*step});
+      }
+      stage.style.height=`${stageHeight}px`;
+      svg.setAttribute('viewBox',`0 0 420 ${stageHeight}`);
+      svg.setAttribute('preserveAspectRatio','none');
+      const path=buildSingleRoutePath(points);
+      const completed=points.filter(p=>p.count<=currentCount);
+      const completedPath=buildSingleRoutePath(completed);
+      svg.innerHTML=`
+        <defs>
+          <linearGradient id="singleRouteBase" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dbe5ef"/><stop offset="1" stop-color="#c5d3e0"/></linearGradient>
+          <linearGradient id="singleRouteDone" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#36b8ff"/><stop offset="1" stop-color="#0668d5"/></linearGradient>
+        </defs>
+        <path d="${path}" fill="none" stroke="rgba(111,139,166,.18)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 8)"/>
+        <path d="${path}" fill="none" stroke="url(#singleRouteBase)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${path}" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        ${completed.length>1?`<path d="${completedPath}" fill="none" stroke="rgba(0,88,190,.19)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 7)"/><path d="${completedPath}" fill="none" stroke="url(#singleRouteDone)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/><path d="${completedPath}" fill="none" stroke="rgba(255,255,255,.30)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`:''}
+      `;
+      const milestoneMap=new Map(milestones.map(x=>[x.count,x]));
+      nodes.innerHTML=points.map(p=>{
+        const ms=milestoneMap.get(p.count);
+        const cls=['single-route-node',p.count<=currentCount?'is-complete':'',p.count===currentCount?'is-current':'',ms?'is-milestone':'',ms?`is-${ms.type}`:''].filter(Boolean).join(' ');
+        return `<div class="${cls}" data-route-count="${p.count}" style="left:${(p.x/420)*100}%;top:${p.y}px"><div class="single-route-core">${p.count}</div>${ms?`<div class="single-route-label">${escapeMissionRouteHtml(ms.title)}<small>${escapeMissionRouteHtml(ms.detail)}</small></div>`:''}${p.count===currentCount?`<div class="single-route-current-label">你在這裡<br>已完成 ${currentCount} 次</div>`:''}</div>`;
+      }).join('');
+
+      const nextCount=currentCount+1;
+      const nextPoint=points.find(p=>p.count===nextCount) || points[0];
+      oralBtn.style.left=`${(nextPoint.x/420)*100}%`;
+      oralBtn.style.top=`${nextPoint.y-48}px`;
+      document.getElementById('single-route-start-small').textContent=`下一站：${nextCount} 次`;
+      const nextMilestone=milestones.find(m=>m.count>currentCount);
+      const remain=nextMilestone?nextMilestone.count-currentCount:1;
+      document.getElementById('single-route-next-copy').textContent=nextMilestone?`再完成 ${remain} 次，達成${nextMilestone.title}`:'繼續累積單元挑戰次數';
+      document.getElementById('single-route-unit').textContent=data.currentUnit||'未排定';
+      requestAnimationFrame(()=>setTimeout(()=>locateSingleRouteCurrent(false),120));
+    }
+
     function renderDashboard(data) {
       dashboardEffectiveFeatures = normalizeDashboardFeatures(data?.effectiveFeatures || data?.features || dashboardEffectiveFeatures);
       saveEffectiveFeaturesCache(STUDENT_ID, dashboardEffectiveFeatures);
@@ -2262,8 +2437,8 @@
         hwTitle.innerText = "今日無任務";
         hwScoreInfo.classList.add('hidden');
         
-        oralBtn.className = "btn btn-disabled";
-        oralBtn.innerText = "尚未開放";
+        oralBtn.className = "single-route-start hidden";
+        document.getElementById("single-route-start-main").innerText = "尚未開放";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => e.preventDefault(); 
         
@@ -2297,8 +2472,8 @@
         document.getElementById('last-score').innerText = bestScore;
         document.getElementById('awarded-points').innerText = calculatedPoints;
         
-        oralBtn.className = "btn btn-green";
-        oralBtn.innerText = "再次練習";
+        oralBtn.className = "single-route-start";
+        document.getElementById("single-route-start-main").innerText = "再次練習";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
@@ -2313,8 +2488,8 @@
         hwTitle.innerText = "今日口說挑戰";
         hwScoreInfo.classList.add('hidden');
         
-        oralBtn.className = "btn btn-yellow";
-        oralBtn.innerText = "開啟挑戰";
+        oralBtn.className = "single-route-start";
+        document.getElementById("single-route-start-main").innerText = "開始挑戰";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
@@ -2323,68 +2498,31 @@
       }
 
       // ==========================================
-      // 🏅 單元任務進度與扣點渲染 (全動態比例版)
+      // 班級口說挑戰路線：真實 classProgress + Console 動態門檻
       // ==========================================
-      const count = data.missionCount || 0;
-      document.getElementById('mission-count').innerText = `${count} 次`;
-      
-      let estText = ""; 
-      let estColor = ""; 
-      let barColor = "";
+      const count = Math.max(0, Number(data.missionCount || 0));
 
+
+      let estText = '-';
+      let estColor = 'var(--text-main)';
       if (gami && gami.mission) {
-          if (count >= gami.mission.perfectThreshold) { 
-            estText = `+${gami.mission.perfectReward} 點`; estColor = "var(--marian-green)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
-          } else if (count >= gami.mission.goodThreshold) { 
-            estText = `+${gami.mission.goodReward} 點`; estColor = "var(--marian-green)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
-          } else if (count >= gami.mission.failThreshold) { 
-            estText = "安全 (不扣點)"; estColor = "var(--text-main)"; barColor = "linear-gradient(90deg, #f1c40f, #2ecc71)"; 
-          } else {
-            const penalty = gami.mission.failBasePenalty + (count * gami.mission.failPenaltyStep);
-            estText = `${penalty} 點`;
-            estColor = "var(--marian-red)";
-            barColor = "#e74c3c";
-          }
-          
-          // 動態修改底下的圖例文字
-          document.getElementById('mission-reward-bar').innerHTML = `
-            <div class="reward-unit">⚠️ <span class="reward-val">${gami.mission.failThreshold}次免扣</span></div>
-            <div class="reward-unit">🚩 <span class="reward-val">+${gami.mission.goodReward}</span></div>
-            <div class="reward-unit">🔥 <span class="reward-val">+${gami.mission.perfectReward}</span></div>
-          `;
-          
-          // 🚀 動態更新 3 個 Node 的位置與底下的文字標籤！
-          const maxScore = gami.mission.perfectThreshold > 0 ? gami.mission.perfectThreshold : 15;
-          const failPos = Math.min(100, (gami.mission.failThreshold / maxScore) * 100);
-          const goodPos = Math.min(100, (gami.mission.goodThreshold / maxScore) * 100);
-          
-          document.getElementById('node-1').style.left = `${failPos}%`;
-          document.getElementById('node-1-label').innerText = `${gami.mission.failThreshold}次`;
-          
-          document.getElementById('node-2').style.left = `${goodPos}%`;
-          document.getElementById('node-2-label').innerText = `${gami.mission.goodThreshold}次`;
-          
-          document.getElementById('node-3').style.left = `100%`;
-          document.getElementById('node-3-label').innerText = `${maxScore}次`;
-      }
-      
-      document.getElementById('mission-est').innerText = estText;
-      document.getElementById('mission-est').style.color = estColor;
-      document.querySelectorAll('.end-date-display').forEach(el => el.innerText = data.endDate);
-      
-      setTimeout(() => {
-        const fill = document.getElementById('mission-fill');
-        fill.style.background = barColor;
-        // 依照滿分標準動態計算進度條 % 數
-        const maxScore = (gami && gami.mission && gami.mission.perfectThreshold > 0) ? gami.mission.perfectThreshold : 15;
-        fill.style.width = `${Math.min(100, (count / maxScore) * 100)}%`; 
-        
-        if (gami && gami.mission) {
-            if (count >= gami.mission.failThreshold) document.getElementById('node-1').classList.add('active');
-            if (count >= gami.mission.goodThreshold) document.getElementById('node-2').classList.add('active');
-            if (count >= gami.mission.perfectThreshold) document.getElementById('node-3').classList.add('active');
+        if (count >= Number(gami.mission.perfectThreshold || 0)) {
+          estText = `+${Number(gami.mission.perfectReward || 0)} 點`;
+          estColor = 'var(--marian-green)';
+        } else if (count >= Number(gami.mission.goodThreshold || 0)) {
+          estText = `+${Number(gami.mission.goodReward || 0)} 點`;
+          estColor = 'var(--marian-green)';
+        } else if (count >= Number(gami.mission.failThreshold || 0)) {
+          estText = '安全（不扣點）';
+        } else {
+          const penalty = Number(gami.mission.failBasePenalty || 0) + count * Number(gami.mission.failPenaltyStep || 0);
+          estText = `${penalty} 點`;
+          estColor = 'var(--marian-red)';
         }
-      }, 800);
+      }
+
+      document.querySelectorAll('.end-date-display').forEach(el => el.innerText = data.endDate || '-');
+      renderMissionClassRoute(data, gami);
 
       // ==========================================
       // 🏆 榮譽排行榜渲染 (動態獎勵版)
