@@ -637,15 +637,17 @@
     @keyframes bounce-up { 0%, 100% { transform: translateY(0) rotate(180deg); } 50% { transform: translateY(-10px) rotate(180deg); } }
   
 
+
     /* =======================================================
-       TAPPIE_SINGLE_SPEAKING_ROUTE_V6_2
-       Rebuilt geometry: one scroll layer, measured positioning,
-       stable next-node action and Safari-safe scroll runway.
+       TAPPIE_SINGLE_SPEAKING_ROUTE_V6_3
+       Clearer header, countdown, stage gradients, fixed leaderboard modal,
+       compact route tail and stable action states.
        ======================================================= */
     #tab-challenge {
       align-items: stretch;
-      background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 52%, #f8fbff 100%);
+      background: linear-gradient(180deg, #f8fbff 0%, #edf6ff 54%, #f8fbff 100%);
     }
+    body.single-route-modal-open #content-viewport { overflow-y: hidden !important; }
     .single-route-panel {
       position: relative;
       width: 100%;
@@ -654,22 +656,21 @@
       box-sizing: border-box;
       overflow: visible;
       background:
-        radial-gradient(circle at 50% 22%, rgba(71,166,255,.10), transparent 34%),
-        linear-gradient(180deg, #f8fbff 0%, #eef6ff 52%, #f8fbff 100%);
+        radial-gradient(circle at 50% 18%, rgba(71,166,255,.09), transparent 34%),
+        linear-gradient(180deg, #f8fbff 0%, #edf6ff 54%, #f8fbff 100%);
     }
     .single-route-header {
       position: sticky;
       top: 0;
       z-index: 30;
-      padding: 16px 22px 14px;
+      padding: 15px 22px 13px;
       background: rgba(248,251,255,.992);
       backdrop-filter: blur(18px) saturate(145%);
       -webkit-backdrop-filter: blur(18px) saturate(145%);
-      border-bottom: 1px solid rgba(205,220,235,.68);
-      box-shadow: 0 10px 22px rgba(49,83,118,.045);
+      border-bottom: 1px solid rgba(205,220,235,.64);
+      box-shadow: 0 9px 20px rgba(49,83,118,.038);
       isolation: isolate;
     }
-    /* Cover the scroll viewport's top padding so the route never leaks above the header. */
     .single-route-header::before {
       content: '';
       position: absolute;
@@ -686,14 +687,14 @@
       position: absolute;
       left: 0;
       right: 0;
-      bottom: -14px;
-      height: 14px;
+      bottom: -13px;
+      height: 13px;
       pointer-events: none;
-      background: linear-gradient(180deg, rgba(248,251,255,.90), rgba(248,251,255,0));
+      background: linear-gradient(180deg, rgba(248,251,255,.86), rgba(248,251,255,0));
     }
     .single-route-title-row {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 14px;
     }
@@ -705,12 +706,48 @@
       font-weight: 950;
       letter-spacing: .4px;
     }
-    .single-route-sub {
-      margin-top: 7px;
+    .single-route-sub-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .single-route-unit {
       color: #667585;
       font-size: 12px;
       font-weight: 900;
       letter-spacing: .25px;
+    }
+    .single-route-countdown {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: #1467b8;
+      background: rgba(224,241,255,.90);
+      border: 1px solid rgba(116,187,244,.20);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.92);
+      font-size: 11px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .single-route-countdown::before { content: '◷'; font-size: 12px; }
+    .single-route-countdown.is-urgent {
+      color: #d97706;
+      background: rgba(255,243,214,.94);
+      border-color: rgba(245,158,11,.18);
+    }
+    .single-route-countdown.is-today {
+      color: #d84343;
+      background: rgba(255,232,232,.96);
+      border-color: rgba(231,76,60,.18);
+    }
+    .single-route-countdown.is-settled {
+      color: #788693;
+      background: rgba(235,239,243,.96);
+      border-color: rgba(127,140,141,.14);
     }
     .single-route-rank-btn {
       flex: 0 0 auto;
@@ -720,39 +757,17 @@
       border-radius: 18px;
       display: grid;
       place-items: center;
-      background: rgba(255,255,255,.78);
+      background: rgba(255,255,255,.80);
       box-shadow: 0 10px 24px rgba(36,69,104,.08), inset 0 1px 0 #fff;
       font-size: 22px;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
     .single-route-rank-btn:active { transform: scale(.95); }
-    .single-route-next-copy {
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      margin-top: 11px;
-      padding: 9px 13px;
-      border-radius: 16px;
-      color: #135faf;
-      background: rgba(255,255,255,.80);
-      border: 1px solid rgba(255,255,255,.96);
-      box-shadow: 0 7px 16px rgba(0,102,204,.06);
-      font-size: 12px;
-      font-weight: 950;
-    }
-    .single-route-next-copy::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #1f91f2;
-      box-shadow: 0 0 0 5px rgba(31,145,242,.12);
-    }
     .single-route-stage {
       position: relative;
       width: 100%;
-      min-height: 1200px;
+      min-height: 1040px;
       overflow: hidden;
       box-sizing: border-box;
     }
@@ -761,11 +776,7 @@
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background-image: radial-gradient(circle, rgba(78,139,201,.085) 1px, transparent 1px);
-      background-size: 27px 27px;
-      opacity: .18;
-      mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
-      -webkit-mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
+      background: radial-gradient(circle at 50% 52%, rgba(55,151,246,.035), transparent 54%);
     }
     .single-route-svg {
       position: absolute;
@@ -827,7 +838,10 @@
       font-size: 21px;
       border: 5px solid rgba(255,255,255,.90);
     }
-    .single-route-node.is-safe .single-route-core { background: linear-gradient(145deg,#66baff,#287bdc); }
+    .single-route-node.is-safe .single-route-core {
+      background: linear-gradient(145deg,#ff7d73,#dc3f45);
+      box-shadow: 0 15px 32px rgba(220,63,69,.25), inset 0 2px 0 rgba(255,255,255,.44);
+    }
     .single-route-node.is-good .single-route-core { background: linear-gradient(145deg,#69dfbd,#22a887); }
     .single-route-node.is-perfect .single-route-core {
       width: 82px;
@@ -869,13 +883,12 @@
       font-weight: 950;
       line-height: 1.4;
     }
-    /* The action lives inside the next node, so its coordinate system can no longer drift. */
     .single-route-start {
       position: absolute;
       left: 0;
       top: -50px;
       z-index: 12;
-      width: 202px;
+      width: min(202px, calc(100vw - 64px));
       transform: translate(-50%,-100%);
       text-decoration: none;
       -webkit-tap-highlight-color: transparent;
@@ -892,6 +905,7 @@
       background: linear-gradient(145deg,#31aaff,#0666df);
       border: 2px solid rgba(255,255,255,.72);
       box-shadow: 0 15px 32px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.30);
+      transition: background .22s ease, opacity .22s ease, box-shadow .22s ease;
     }
     .single-route-start-card::after {
       content: '';
@@ -910,47 +924,114 @@
       margin-bottom: 2px;
       font-size: 10px;
       font-weight: 900;
-      opacity: .86;
+      opacity: .88;
       letter-spacing: .35px;
+      line-height: 1.3;
+      white-space: normal;
     }
     .single-route-start-main {
       display: block;
       font-size: 18px;
       font-weight: 950;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
+      line-height: 1.28;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     .single-route-start:active { transform: translate(-50%,-100%) scale(.96); }
-    .single-route-end-note {
-      padding: 18px 24px 38px;
-      color: #718090;
-      font-size: 12px;
-      font-weight: 900;
-      text-align: center;
+    .single-route-start.is-loading .single-route-start-card {
+      background: linear-gradient(145deg,#38aaf7,#176dcc);
+      opacity: .94;
+    }
+    .single-route-start.is-loading .single-route-start-main::before {
+      content: '';
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      margin-right: 8px;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      vertical-align: -2px;
+      animation: singleRouteSpin .8s linear infinite;
+    }
+    @keyframes singleRouteSpin { to { transform: rotate(360deg); } }
+    .single-route-start.is-disabled { cursor: default; pointer-events: none; }
+    .single-route-start.is-disabled .single-route-start-card {
+      color: #667585;
+      background: linear-gradient(145deg,#eef2f6,#dce4ec);
+      border-color: rgba(255,255,255,.88);
+      box-shadow: 0 10px 22px rgba(62,78,95,.12), inset 0 2px 0 rgba(255,255,255,.70);
+    }
+    .single-route-start.is-disabled .single-route-start-card::after {
+      background: #dce4ec;
+      border-color: rgba(255,255,255,.58);
     }
     .single-route-leaderboard {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
       display: none;
-      margin: 0 20px 28px;
-      padding: 22px;
-      border-radius: 28px;
-      background: rgba(255,255,255,.84);
-      border: 1px solid rgba(255,255,255,.96);
-      box-shadow: 0 18px 38px rgba(40,61,84,.09);
+      align-items: center;
+      justify-content: center;
+      padding: max(22px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+      box-sizing: border-box;
+      background: rgba(22,35,49,.38);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      opacity: 0;
+      transition: opacity .22s ease;
     }
-    .single-route-leaderboard.show { display: block; }
+    .single-route-leaderboard.show { display: flex; opacity: 1; }
+    .single-route-leaderboard-dialog {
+      position: relative;
+      width: min(92vw, 480px);
+      max-height: min(78vh, 720px);
+      overflow: hidden;
+      padding: 24px 18px 18px;
+      border-radius: 30px;
+      background: rgba(248,251,255,.97);
+      border: 1px solid rgba(255,255,255,.95);
+      box-shadow: 0 30px 70px rgba(20,39,60,.24), inset 0 1px 0 #fff;
+      transform: translateY(12px) scale(.98);
+      transition: transform .24s cubic-bezier(.2,.8,.2,1);
+    }
+    .single-route-leaderboard.show .single-route-leaderboard-dialog { transform: translateY(0) scale(1); }
+    .single-route-leaderboard-scroll {
+      max-height: calc(min(78vh, 720px) - 58px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 2px 2px 8px;
+    }
     .single-route-leaderboard .leaderboard { width:100%; max-width:none; margin:0; padding:0; background:none; border:0; box-shadow:none; }
-    .single-route-leaderboard-close { float:right; width:36px; height:36px; border:0; border-radius:50%; background:rgba(0,0,0,.05); color:#6d7a87; font-size:20px; cursor:pointer; }
-
+    .single-route-leaderboard-close {
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      z-index: 2;
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(0,0,0,.055);
+      color: #6d7a87;
+      font-size: 21px;
+      cursor: pointer;
+    }
     @media (max-width: 430px) {
-      .single-route-header { padding: 15px 20px 13px; }
+      .single-route-header { padding: 14px 20px 12px; }
       .single-route-title { font-size: 24px; }
       .single-route-rank-btn { width: 48px; height: 48px; border-radius: 17px; }
-      .single-route-next-copy { margin-top: 10px; padding: 9px 12px; font-size: 12px; }
-      .single-route-start { width: 194px; }
       .single-route-current-label { left: 50px; }
+      .single-route-leaderboard-dialog { width: 94vw; border-radius: 27px; }
     }
     @media (max-width: 360px) {
-      .single-route-start { width: 184px; }
       .single-route-current-label { left: 46px; font-size: 11px; }
+      .single-route-title { font-size: 22px; }
+      .single-route-start-main { font-size: 16px; }
     }
     @media (min-width:768px) {
       .single-route-panel { border-radius: 38px; margin-top: 10px; }
@@ -1069,11 +1150,13 @@
           <div class="single-route-title-row">
             <div>
               <h3 class="single-route-title">口說挑戰之路</h3>
-              <div class="single-route-sub"><span id="single-route-unit">-</span> ・ 結算 <span class="end-date-display">-</span></div>
+              <div class="single-route-sub-row">
+                <span id="single-route-unit" class="single-route-unit">-</span>
+                <span id="single-route-countdown" class="single-route-countdown">倒數 -- 天</span>
+              </div>
             </div>
             <button type="button" class="single-route-rank-btn" onclick="toggleSingleRouteLeaderboard()" aria-label="查看高分排行榜">🏆</button>
           </div>
-          <div id="single-route-next-copy" class="single-route-next-copy">準備開始第一個挑戰</div>
         </div>
 
         <div id="single-route-stage" class="single-route-stage" aria-label="口說挑戰路線">
@@ -1087,14 +1170,16 @@
           </a>
         </div>
 
-        <div class="single-route-end-note">每完整完成一次單元挑戰，就會向前一格。</div>
-
-        <div id="single-route-leaderboard" class="single-route-leaderboard">
-          <button type="button" class="single-route-leaderboard-close" onclick="toggleSingleRouteLeaderboard(false)">×</button>
-          <div class="leaderboard">
-            <h2 style="color:var(--primary-blue); font-size:18px; margin:0 0 20px; text-align:center; font-weight:900; letter-spacing:2px;"><span id="lb-unit-name"></span> 高分榜</h2>
-            <div id="lb-container"></div>
-            <div id="lb-reward-hints" style="margin-top:15px;padding:12px 15px;background:rgba(255,255,255,.72);border-radius:16px;display:flex;justify-content:center;gap:20px;font-size:13px;font-weight:900;color:var(--text-sub);"></div>
+        <div id="single-route-leaderboard" class="single-route-leaderboard" onclick="if (event.target === this) toggleSingleRouteLeaderboard(false)">
+          <div class="single-route-leaderboard-dialog" role="dialog" aria-modal="true" aria-label="單元高分排行榜">
+            <button type="button" class="single-route-leaderboard-close" onclick="toggleSingleRouteLeaderboard(false)" aria-label="關閉排行榜">×</button>
+            <div class="single-route-leaderboard-scroll">
+              <div class="leaderboard">
+                <h2 style="color:var(--primary-blue); font-size:18px; margin:2px 44px 20px; text-align:center; font-weight:900; letter-spacing:2px;"><span id="lb-unit-name"></span> 高分榜</h2>
+                <div id="lb-container"></div>
+                <div id="lb-reward-hints" style="margin-top:15px;padding:12px 15px;background:rgba(255,255,255,.72);border-radius:16px;display:flex;justify-content:center;gap:20px;font-size:13px;font-weight:900;color:var(--text-sub);"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2448,6 +2533,59 @@
       return d;
     }
 
+
+    function updateSingleRouteCountdown(endDate) {
+      const el = document.getElementById('single-route-countdown');
+      if (!el) return;
+      el.classList.remove('is-urgent','is-today','is-settled');
+      const raw = String(endDate || '').trim();
+      const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!match) {
+        el.textContent = '尚未設定結算';
+        el.classList.add('is-settled');
+        return;
+      }
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const target = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      const days = Math.round((target - today) / 86400000);
+      if (days < 0) {
+        el.textContent = '已結算';
+        el.classList.add('is-settled');
+      } else if (days === 0) {
+        el.textContent = '今天結算';
+        el.classList.add('is-today');
+      } else {
+        el.textContent = `倒數 ${days} 天`;
+        if (days <= 3) el.classList.add('is-urgent');
+      }
+      el.title = raw;
+    }
+
+    function getSingleRouteSegment(points, minCount, maxCount) {
+      if (!Number.isFinite(minCount) || !Number.isFinite(maxCount) || maxCount <= minCount) return [];
+      return points.filter(point => point.count >= minCount && point.count <= maxCount);
+    }
+
+    function buildSingleRouteCompletedPaths(points, currentCount, milestones) {
+      if (currentCount <= 0) return '';
+      const safe = milestones.find(item => item.type === 'safe')?.count ?? currentCount;
+      const good = milestones.find(item => item.type === 'good')?.count ?? Math.max(safe, currentCount);
+      const perfect = milestones.find(item => item.type === 'perfect')?.count ?? Math.max(good, currentCount);
+      const specs = [
+        { min: 0, max: Math.min(currentCount, safe), gradient: 'singleRouteRisk', shadow: 'rgba(207,61,70,.18)' },
+        { min: safe, max: Math.min(currentCount, good), gradient: 'singleRouteGrowth', shadow: 'rgba(32,168,126,.17)' },
+        { min: good, max: Math.min(currentCount, perfect), gradient: 'singleRouteReward', shadow: 'rgba(242,142,25,.18)' },
+        { min: perfect, max: currentCount, gradient: 'singleRouteBeyond', shadow: 'rgba(211,139,22,.18)' }
+      ];
+      return specs.map(spec => {
+        const segment = getSingleRouteSegment(points, spec.min, spec.max);
+        if (segment.length < 2) return '';
+        const path = buildSingleRoutePath(segment);
+        return `<path d="${path}" fill="none" stroke="${spec.shadow}" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 7)"/><path d="${path}" fill="none" stroke="url(#${spec.gradient})" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/><path d="${path}" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }).join('');
+    }
+
     function locateSingleRouteCurrent(smooth = false) {
       const viewport = document.getElementById('content-viewport');
       const node = document.querySelector(`#single-route-nodes [data-route-count="${singleRouteCurrentCount}"]`);
@@ -2495,11 +2633,21 @@
     }, { passive: true });
 
     function toggleSingleRouteLeaderboard(force) {
-      const panel=document.getElementById('single-route-leaderboard');
+      const panel = document.getElementById('single-route-leaderboard');
       if (!panel) return;
-      const show=typeof force==='boolean'?force:!panel.classList.contains('show');
-      panel.classList.toggle('show',show);
-      if (show) setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),30);
+      if (panel.parentElement !== document.body) document.body.appendChild(panel);
+      const show = typeof force === 'boolean' ? force : !panel.classList.contains('show');
+      if (show) {
+        panel.style.display = 'flex';
+        requestAnimationFrame(() => panel.classList.add('show'));
+        document.body.classList.add('single-route-modal-open');
+      } else {
+        panel.classList.remove('show');
+        document.body.classList.remove('single-route-modal-open');
+        setTimeout(() => {
+          if (!panel.classList.contains('show')) panel.style.display = 'none';
+        }, 230);
+      }
     }
 
     function renderMissionClassRoute(data,gami) {
@@ -2516,7 +2664,7 @@
       const routeEnd=Math.max(highest,currentCount+5,8);
       const step = 132;
       const topPad = 150;
-      const bottomPad = 390;
+      const bottomPad = 110;
       const stageHeight = topPad + routeEnd * step + bottomPad;
       const pattern=[52,38,58,66,48,34,46,64,55,37];
       const points=[];
@@ -2528,17 +2676,19 @@
       svg.setAttribute('viewBox',`0 0 420 ${stageHeight}`);
       svg.setAttribute('preserveAspectRatio','none');
       const path=buildSingleRoutePath(points);
-      const completed=points.filter(p=>p.count<=currentCount);
-      const completedPath=buildSingleRoutePath(completed);
+      const completedPaths = buildSingleRouteCompletedPaths(points, currentCount, milestones);
       svg.innerHTML=`
         <defs>
           <linearGradient id="singleRouteBase" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dbe5ef"/><stop offset="1" stop-color="#c5d3e0"/></linearGradient>
-          <linearGradient id="singleRouteDone" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#36b8ff"/><stop offset="1" stop-color="#0668d5"/></linearGradient>
+          <linearGradient id="singleRouteRisk" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffaaa2"/><stop offset="1" stop-color="#d94349"/></linearGradient>
+          <linearGradient id="singleRouteGrowth" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#85e8cb"/><stop offset="1" stop-color="#20a97f"/></linearGradient>
+          <linearGradient id="singleRouteReward" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffd37a"/><stop offset="1" stop-color="#f18b18"/></linearGradient>
+          <linearGradient id="singleRouteBeyond" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffc85b"/><stop offset="1" stop-color="#d89316"/></linearGradient>
         </defs>
         <path d="${path}" fill="none" stroke="rgba(111,139,166,.18)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 8)"/>
         <path d="${path}" fill="none" stroke="url(#singleRouteBase)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="${path}" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        ${completed.length>1?`<path d="${completedPath}" fill="none" stroke="rgba(0,88,190,.19)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 7)"/><path d="${completedPath}" fill="none" stroke="url(#singleRouteDone)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/><path d="${completedPath}" fill="none" stroke="rgba(255,255,255,.30)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`:''}
+        ${completedPaths}
       `;
       const milestoneMap=new Map(milestones.map(x=>[x.count,x]));
       nodes.innerHTML=points.map(p=>{
@@ -2555,12 +2705,8 @@
         nextNode.appendChild(oralBtn);
       }
       document.getElementById('single-route-start-small').textContent = `下一站：${nextCount} 次`;
-      const nextMilestone = milestones.find(m => m.count > currentCount);
-      const remain = nextMilestone ? nextMilestone.count - currentCount : 1;
-      document.getElementById('single-route-next-copy').textContent = nextMilestone
-        ? `再完成 ${remain} 次，達成${nextMilestone.title}`
-        : '繼續累積單元挑戰次數';
       document.getElementById('single-route-unit').textContent = data.currentUnit || '未排定';
+      updateSingleRouteCountdown(data.endDate);
       scheduleSingleRouteLocate(false);
     }
 
@@ -2746,6 +2892,7 @@
         document.getElementById('awarded-points').innerText = calculatedPoints;
         
         oralBtn.className = "single-route-start";
+        oralBtn.style.pointerEvents = "auto";
         document.getElementById("single-route-start-main").innerText = "再次練習";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
@@ -2762,6 +2909,7 @@
         hwScoreInfo.classList.add('hidden');
         
         oralBtn.className = "single-route-start";
+        oralBtn.style.pointerEvents = "auto";
         document.getElementById("single-route-start-main").innerText = "開始挑戰";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
@@ -2794,7 +2942,7 @@
         }
       }
 
-      document.querySelectorAll('.end-date-display').forEach(el => el.innerText = data.endDate || '-');
+      updateSingleRouteCountdown(data.endDate);
       renderMissionClassRoute(data, gami);
 
       // ==========================================
@@ -2908,14 +3056,47 @@
       }
     }
 
+    function setSingleRouteActionState(btnElement, state, options = {}) {
+      const isRouteAction = btnElement?.classList?.contains('single-route-start');
+      if (!isRouteAction) return false;
+      const small = btnElement.querySelector('#single-route-start-small');
+      const main = btnElement.querySelector('#single-route-start-main');
+      btnElement.classList.remove('is-loading','is-disabled');
+      if (state === 'loading') {
+        btnElement.classList.add('is-loading');
+        if (small) small.textContent = '正在準備挑戰';
+        if (main) main.textContent = '請稍候';
+        btnElement.style.pointerEvents = 'none';
+      } else if (state === 'disabled') {
+        btnElement.classList.add('is-disabled');
+        if (small) small.textContent = '今日次數已用完';
+        if (main) main.textContent = '明天再來挑戰';
+        btnElement.style.pointerEvents = 'none';
+      } else {
+        if (small) small.textContent = options.small || btnElement.dataset.routeSmall || '下一站';
+        if (main) main.textContent = options.main || btnElement.dataset.routeMain || '開始挑戰';
+        btnElement.style.pointerEvents = 'auto';
+      }
+      return true;
+    }
+
     function checkVoiceLimitAndGo(targetUrl, btnElement, disabledText) {
         if (!isDashboardFeatureEnabled('practice_enabled') && String(targetUrl || '').includes('arena.html')) {
             alert("🔒 此校區尚未啟用【今日挑戰 / 一般練習】功能。\n請聯繫老師或校區主管確認。");
             return;
         }
+        const isRouteAction = btnElement?.classList?.contains('single-route-start');
         const originalText = btnElement.innerText;
-        btnElement.innerText = "✨ 傳送中...";
-        btnElement.style.pointerEvents = "none";
+        const routeSmall = isRouteAction ? btnElement.querySelector('#single-route-start-small')?.textContent : '';
+        const routeMain = isRouteAction ? btnElement.querySelector('#single-route-start-main')?.textContent : '';
+        if (isRouteAction) {
+          btnElement.dataset.routeSmall = routeSmall || '下一站';
+          btnElement.dataset.routeMain = routeMain || '開始挑戰';
+          setSingleRouteActionState(btnElement, 'loading');
+        } else {
+          btnElement.innerText = "✨ 傳送中...";
+          btnElement.style.pointerEvents = "none";
+        }
 
         TappieAPI.getDashboard(STUDENT_ID)
             .then(dash => {
@@ -2924,22 +3105,28 @@
                 const limit = Number(usage.voiceLimit ?? usage.voice_limit ?? usage.speechLimit ?? usage.speech_limit ?? 80);
                 const canPlay = usage.canPracticeVoice ?? usage.can_practice_voice ?? (count < limit);
                 const status = { canPlay, count, limit };
-                btnElement.innerText = originalText;
-                btnElement.style.pointerEvents = "auto";
-                if (!status.canPlay) { 
+                if (!status.canPlay) {
                     alert(`⚠️ 今日語音練習已達上限 (${status.count}/${status.limit}次)\n為了保護喉嚨，請明天再來練習吧！`);
-                    if (disabledText) {
-                        btnElement.className = "btn btn-disabled";
-                        btnElement.innerText = disabledText;
-                        btnElement.onclick = (e) => e.preventDefault();
+                    if (isRouteAction) {
+                      setSingleRouteActionState(btnElement, 'disabled');
+                      btnElement.onclick = (e) => e.preventDefault();
+                    } else {
+                      btnElement.innerText = disabledText || originalText;
+                      btnElement.className = "btn btn-disabled";
+                      btnElement.style.pointerEvents = "none";
+                      btnElement.onclick = (e) => e.preventDefault();
                     }
                 } else {
                     window.location.href = targetUrl;
                 }
             })
             .catch(err => {
-                btnElement.innerText = originalText;
-                btnElement.style.pointerEvents = "auto";
+                if (isRouteAction) {
+                  setSingleRouteActionState(btnElement, 'normal', { small: routeSmall, main: routeMain });
+                } else {
+                  btnElement.innerText = originalText;
+                  btnElement.style.pointerEvents = "auto";
+                }
                 alert("網路連線異常，無法進入練習！");
             });
     }
