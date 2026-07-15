@@ -1358,227 +1358,294 @@
 
 
     /* =======================================================
-       TAPPIE_SINGLE_ROUTE_V6_6 — sourced 3D node assets + split action dock
-       - deployable CC0 3Dicons assets replace CSS-looking node art
-       - ordinary count nodes share one subtle 3D base
-       - reward stations use three distinct real image assets
-       - countdown becomes a separate urgency band inside the action control
+       TAPPIE_SINGLE_ROUTE_V6_7 — refined inline-SVG nodes + improved action dock
+       - keeps the approved minimal map style
+       - removes external node-image dependency so nothing breaks on deploy
        ======================================================= */
+
     .single-route-node.is-count .single-route-core,
-    .single-route-node.is-count.is-complete .single-route-core,
-    .single-route-node.is-count.is-current .single-route-core {
-      width: 70px;
-      height: 70px;
-      border: 0;
-      border-radius: 50%;
-      color: #5a6b7d;
-      background: transparent;
-      box-shadow: none;
-      animation: none;
-      font-size: 17px;
-      overflow: visible;
-    }
-    .single-route-node.is-count .single-route-node-image {
+    .single-route-node.is-count.is-complete .single-route-core {
       position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 78px;
-      height: 78px;
-      object-fit: contain;
-      transform: translate(-50%,-50%);
+      width: 62px;
+      height: 62px;
+      border: 0 !important;
+      border-radius: 50%;
+      background: transparent !important;
+      box-shadow: none !important;
+      overflow: visible;
+      isolation: isolate;
+    }
+    .single-route-count-asset {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 8px 11px rgba(48,71,92,.14));
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
-      filter: drop-shadow(0 8px 10px rgba(39,62,84,.08));
     }
-    .single-route-count-number {
-      position: relative;
+    .single-route-node.is-count .single-route-number {
+      position: absolute;
+      inset: 0;
       z-index: 2;
-      transform: translateY(-1px);
-      color: inherit;
-      font: inherit;
-      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #617182;
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: .2px;
       text-shadow: 0 1px 0 rgba(255,255,255,.85);
+      transform: translateY(-1px);
     }
-    .single-route-node.is-count.is-complete .single-route-core {
-      color: #334b60;
+    .single-route-node.is-count.is-complete .single-route-number {
+      color: #445365;
     }
     .single-route-node.is-count.is-current .single-route-core {
-      color: #0066cc;
-      box-shadow: 0 0 0 3px rgba(40,158,231,.88), 0 0 0 10px rgba(0,102,204,.08), 0 12px 26px rgba(0,102,204,.14);
-      animation: singleRouteAssetGlow 2.7s ease-in-out infinite;
+      filter: drop-shadow(0 9px 15px rgba(0,102,204,.16));
+    }
+    .single-route-node.is-count.is-current .single-route-number {
+      color: #1266c3;
+    }
+    .single-route-node.is-count.is-current .single-route-core::before {
+      content: '';
+      position: absolute;
+      inset: -7px;
+      z-index: -1;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(54,157,242,.16) 0%, rgba(54,157,242,.10) 42%, rgba(54,157,242,0) 74%);
+      animation: singleRouteAssetGlow 2.8s ease-in-out infinite;
+    }
+    .single-route-node.is-count.is-current .single-route-core::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border-radius: 50%;
+      border: 3px solid rgba(55,150,236,.92);
+      box-shadow: 0 0 0 6px rgba(55,150,236,.08);
+      pointer-events: none;
     }
     @keyframes singleRouteAssetGlow {
-      0%,100% { box-shadow:0 0 0 3px rgba(40,158,231,.88),0 0 0 8px rgba(0,102,204,.075),0 12px 25px rgba(0,102,204,.13); }
-      50% { box-shadow:0 0 0 3px rgba(40,158,231,.94),0 0 0 13px rgba(0,102,204,.025),0 15px 30px rgba(0,102,204,.18); }
+      0%,100% { transform: scale(1); opacity: .92; }
+      50% { transform: scale(1.05); opacity: .60; }
     }
 
     .single-route-node.is-reward .single-route-core,
     .single-route-node.is-reward.is-safe .single-route-core,
     .single-route-node.is-reward.is-good .single-route-core,
     .single-route-node.is-reward.is-perfect .single-route-core {
-      width: 106px;
-      height: 106px;
-      border: 0;
+      width: 88px;
+      height: 88px;
+      border: 0 !important;
       border-radius: 0;
-      color: transparent;
-      background: transparent;
-      box-shadow: none;
+      background: transparent !important;
+      box-shadow: none !important;
       overflow: visible;
+      color: transparent;
     }
-    .single-route-node.is-reward.is-perfect .single-route-core {
-      width: 114px;
-      height: 114px;
-    }
-    .single-route-reward-image {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+    .single-route-reward-svg {
+      display: block;
+      width: 88px;
+      height: 88px;
+      overflow: visible;
+      filter: drop-shadow(0 12px 16px rgba(37,58,79,.16));
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
-      filter: drop-shadow(0 10px 12px rgba(37,59,81,.14));
     }
-    .single-route-node.is-current.is-milestone .single-route-core,
+    .single-route-node.is-reward.is-safe .single-route-reward-svg {
+      filter: drop-shadow(0 12px 16px rgba(185,78,76,.18));
+    }
+    .single-route-node.is-reward.is-good .single-route-reward-svg {
+      filter: drop-shadow(0 12px 16px rgba(44,139,118,.18));
+    }
+    .single-route-node.is-reward.is-perfect .single-route-reward-svg {
+      filter: drop-shadow(0 13px 17px rgba(182,138,47,.20));
+    }
     .single-route-node.is-reward.is-current .single-route-core {
-      background: transparent;
-      border: 0;
-      box-shadow: none;
-      animation: singleRouteRewardAssetGlow 2.7s ease-in-out infinite;
+      animation: singleRouteRewardNodePulse 2.9s ease-in-out infinite !important;
     }
-    @keyframes singleRouteRewardAssetGlow {
-      0%,100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); transform:translate(-50%,-50%) scale(1); }
-      50% { filter: drop-shadow(0 0 13px rgba(255,255,255,.70)); transform:translate(-50%,-50%) scale(1.035); }
-    }
-    .single-route-node.is-reward .single-route-label,
-    .single-route-node.is-reward.is-perfect .single-route-label {
-      top: 55px;
-      width: max-content;
-      min-width: 88px;
-      max-width: 154px;
-      padding: 5px 10px 6px;
-      border-radius: 13px;
-      color: #26384a;
-      background: rgba(255,255,255,.90);
-      border: 1px solid rgba(255,255,255,.96);
-      box-shadow: 0 7px 18px rgba(39,62,84,.10), inset 0 1px 0 #fff;
-      font-size: 12px;
-      line-height: 1.25;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-    .single-route-node.is-reward .single-route-label small {
-      margin-top: 2px;
-      font-size: 10px;
-      line-height: 1.2;
-    }
-    .single-route-node.is-reward.is-safe .single-route-label small { color:#c84a53; }
-    .single-route-node.is-reward.is-good .single-route-label small { color:#158e73; }
-    .single-route-node.is-reward.is-perfect .single-route-label small { color:#c87612; }
-    .single-route-node.is-reward .single-route-current-label {
-      left: 56px;
-      top: -15px;
+    @keyframes singleRouteRewardNodePulse {
+      0%,100% { transform: translate(-50%,-50%) scale(1); }
+      50% { transform: translate(-50%,-50%) scale(1.035); }
     }
 
-    /* One control, two clearly separated information levels. */
+    .single-route-node.is-reward .single-route-label,
+    .single-route-node.is-reward.is-perfect .single-route-label {
+      top: 54px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: 168px;
+      padding: 8px 12px 9px;
+      border-radius: 16px;
+      color: #223447;
+      background: rgba(255,255,255,.95);
+      border: 1px solid rgba(255,255,255,.98);
+      box-shadow: 0 12px 20px rgba(49,71,92,.10);
+      font-size: 14px;
+      font-weight: 950;
+      line-height: 1.15;
+      text-align: center;
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .single-route-node.is-reward .single-route-label small {
+      margin-top: 4px;
+      color: #5e9f87;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: .2px;
+    }
+    .single-route-node.is-reward.is-safe .single-route-label small { color: #c45d57; }
+    .single-route-node.is-reward.is-perfect .single-route-label small { color: #bf8d2a; }
+    .single-route-node.is-reward .single-route-current-label {
+      left: 54px;
+      top: -16px;
+      padding: 7px 10px;
+      border-radius: 12px;
+      font-size: 10px;
+      box-shadow: 0 8px 18px rgba(49,71,92,.10);
+    }
+
     .single-route-action-dock {
-      padding: 12px 18px 5px;
+      padding: 10px 12px 6px;
     }
     .single-route-start {
-      width: min(366px, calc(100vw - 34px));
+      width: min(388px, calc(100vw - 24px));
     }
-    .single-route-start-card {
-      min-height: 88px;
-      display: flex;
-      flex-direction: column;
-      justify-content: stretch;
-      gap: 0;
+    .single-route-start-card,
+    .single-route-start.is-repeat .single-route-start-card,
+    .single-route-start.is-loading .single-route-start-card,
+    .single-route-start.is-disabled .single-route-start-card {
+      min-height: 0;
       padding: 0;
+      gap: 0;
       overflow: hidden;
       border-radius: 24px;
-      background: linear-gradient(145deg,#2eb6ff,#006bd7);
-      border: 2px solid rgba(255,255,255,.78);
-      box-shadow: 0 15px 32px rgba(0,102,204,.25), inset 0 2px 0 rgba(255,255,255,.26);
+      background: #ffffff !important;
+      border: 2px solid rgba(255,255,255,.94);
+      box-shadow: 0 14px 30px rgba(34,76,120,.18), inset 0 1px 0 rgba(255,255,255,.94);
     }
     .single-route-dock-meta {
       box-sizing: border-box;
       width: 100%;
-      min-height: 31px;
-      flex: 0 0 31px;
-      display: flex;
+      min-height: 40px;
+      padding: 8px 14px 8px;
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      align-items: center;
+      gap: 10px;
+      color: #0a5f88;
+      background: linear-gradient(180deg,#e9f9fd 0%, #d3f1f8 100%);
+      border-bottom: 1px solid rgba(40,133,168,.12);
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: .12px;
+      line-height: 1.1;
+      overflow: hidden;
+    }
+    .single-route-unit {
+      max-width: none;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: inherit;
+    }
+    .single-route-countdown {
+      flex: none;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 7px;
-      padding: 6px 15px 5px;
-      color: #176b85;
-      background: linear-gradient(180deg,rgba(222,249,255,.98),rgba(190,238,248,.97));
-      border-bottom: 1px solid rgba(255,255,255,.72);
-      box-shadow: inset 0 -1px 0 rgba(50,142,169,.10), inset 0 1px 0 rgba(255,255,255,.88);
-      font-size: 11px;
+      min-height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
       font-weight: 950;
-      line-height: 1.1;
-      letter-spacing: .2px;
+      background: rgba(255,255,255,.56);
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+      color: inherit;
+      white-space: nowrap;
     }
+    .single-route-countdown::before { content: '◷ '; font-size: inherit; }
+    .single-route-dock-separator { display: none; }
     .single-route-start-main {
       box-sizing: border-box;
       width: 100%;
-      min-height: 55px;
-      flex: 1 1 auto;
+      min-height: 54px;
+      padding: 13px 18px 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
-      padding: 12px 42px 14px;
-      font-size: 19px;
+      color: #fff;
+      background: linear-gradient(135deg,#2bb8f5 0%,#0a7edc 54%,#005ec7 100%);
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: 1.2px;
       line-height: 1.2;
-      letter-spacing: 1.8px;
+      text-shadow: 0 1px 0 rgba(0,57,126,.28);
     }
-    .single-route-start:not(.is-loading):not(.is-disabled) .single-route-start-main::after {
-      content: '›';
-      position: absolute;
-      right: 21px;
-      top: 50%;
-      transform: translateY(-52%);
-      color: rgba(255,255,255,.94);
-      font-size: 30px;
-      font-weight: 500;
-      line-height: 1;
+    .single-route-start.is-repeat .single-route-start-main {
+      background: linear-gradient(135deg,#7a77f7 0%,#5957df 48%,#4047ca 100%);
     }
-    .single-route-start.countdown-urgent .single-route-dock-meta {
-      color: #936300;
-      background: linear-gradient(180deg,#fff4c9,#ffe49b);
-      box-shadow: inset 0 -1px 0 rgba(190,132,0,.13), inset 0 1px 0 rgba(255,255,255,.86);
+    .single-route-start.is-loading .single-route-start-main {
+      background: linear-gradient(135deg,#30acef 0%,#167fd8 56%,#0c67c3 100%);
     }
-    .single-route-start.countdown-today .single-route-dock-meta {
-      color: #b33e42;
-      background: linear-gradient(180deg,#ffe5e1,#ffc9c2);
-      box-shadow: inset 0 -1px 0 rgba(190,63,70,.14), inset 0 1px 0 rgba(255,255,255,.88);
-    }
-    .single-route-start.countdown-settled .single-route-dock-meta,
     .single-route-start.is-disabled .single-route-dock-meta {
-      color: #6f7d89;
-      background: linear-gradient(180deg,#f2f5f8,#e2e8ee);
-      box-shadow: inset 0 -1px 0 rgba(80,98,116,.08), inset 0 1px 0 rgba(255,255,255,.86);
+      color: #72808d;
+      background: linear-gradient(180deg,#f1f4f7 0%,#e6ebf1 100%);
+      border-bottom-color: rgba(104,121,139,.10);
     }
-    .single-route-start.is-repeat .single-route-start-card {
-      background: linear-gradient(145deg,#6c79ed,#3f51c7);
-      box-shadow: 0 15px 32px rgba(63,81,199,.24), inset 0 2px 0 rgba(255,255,255,.25);
+    .single-route-start.is-disabled .single-route-countdown {
+      background: rgba(255,255,255,.7);
+      border-color: rgba(255,255,255,.85);
     }
-    .single-route-start.is-loading .single-route-start-card {
-      background: linear-gradient(145deg,#38aaf7,#176dcc);
+    .single-route-start.is-disabled .single-route-start-main {
+      color: #75818e;
+      background: linear-gradient(135deg,#eaedf2,#dbe2e8);
+      text-shadow: none;
     }
-    .single-route-start.is-disabled .single-route-start-card {
-      background: linear-gradient(145deg,#eef2f6,#dce4ec);
-      border-color: rgba(255,255,255,.90);
-      box-shadow: 0 10px 22px rgba(62,78,95,.11), inset 0 2px 0 rgba(255,255,255,.72);
+
+    .single-route-action-dock.countdown-urgent .single-route-dock-meta {
+      color: #895000;
+      background: linear-gradient(180deg,#fff2cb 0%,#ffe0aa 100%);
+      border-bottom-color: rgba(218,135,30,.18);
     }
-    .single-route-start.is-disabled .single-route-start-main { color:#6f7d89; }
-    .single-route-start.is-loading .single-route-start-main::before { margin-right:10px; }
+    .single-route-action-dock.countdown-urgent .single-route-countdown {
+      background: rgba(255,250,231,.86);
+      border-color: rgba(255,235,179,.95);
+      color: #895000;
+    }
+    .single-route-action-dock.countdown-today .single-route-dock-meta {
+      color: #9d3438;
+      background: linear-gradient(180deg,#ffe4e0 0%,#ffcfc8 100%);
+      border-bottom-color: rgba(205,59,67,.18);
+    }
+    .single-route-action-dock.countdown-today .single-route-countdown {
+      background: rgba(255,244,243,.86);
+      border-color: rgba(255,219,214,.94);
+      color: #9d3438;
+    }
+    .single-route-action-dock.countdown-settled .single-route-dock-meta {
+      color: #6f7c89;
+      background: linear-gradient(180deg,#f0f3f7 0%,#e4e9ef 100%);
+      border-bottom-color: rgba(104,121,139,.10);
+    }
+    .single-route-action-dock.countdown-settled .single-route-countdown {
+      background: rgba(255,255,255,.7);
+      border-color: rgba(255,255,255,.82);
+      color: #6f7c89;
+    }
 
     @media (max-width: 360px) {
-      .single-route-start { width: calc(100vw - 26px); }
-      .single-route-dock-meta { font-size: 10px; gap: 5px; padding-inline: 10px; }
-      .single-route-start-main { font-size: 17px; }
+      .single-route-start { width: calc(100vw - 18px); }
+      .single-route-dock-meta { padding-inline: 12px; font-size: 11px; gap: 8px; }
+      .single-route-start-main { min-height: 52px; font-size: 16px; }
+      .single-route-node.is-reward .single-route-label { max-width: 154px; font-size: 13px; }
     }
 
 </style>
@@ -3053,7 +3120,7 @@
       return [
         { count:Number(m.failThreshold||0), type:'safe', title:'安全門檻', detail:'免扣一次' },
         { count:Number(m.goodThreshold||0), type:'good', title:'進階獎勵', detail:`+${Number(m.goodReward||0)} 點` },
-        { count:Number(m.perfectThreshold||0), type:'perfect', title:'最終獎勵', detail:`+${Number(m.perfectReward||0)} 點` }
+        { count:Number(m.perfectThreshold||0), type:'perfect', title:'最高獎勵', detail:`+${Number(m.perfectReward||0)} 點` }
       ].filter(item => item.count > 0);
     }
 
@@ -3079,35 +3146,43 @@
 
     function updateSingleRouteCountdown(endDate) {
       const el = document.getElementById('single-route-countdown');
+      const dock = document.getElementById('single-route-action-dock');
       if (!el) return;
       el.classList.remove('is-urgent','is-today','is-settled');
-      const action = document.getElementById('oral-btn');
-      action?.classList.remove('countdown-urgent','countdown-today','countdown-settled');
+      dock?.classList.remove('countdown-normal','countdown-urgent','countdown-today','countdown-settled');
+
+      const setDockState = (state) => {
+        dock?.classList.add(`countdown-${state}`);
+      };
+
       const raw = String(endDate || '').trim();
       const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (!match) {
         el.textContent = '尚未設定結算';
         el.classList.add('is-settled');
-        action?.classList.add('countdown-settled');
+        setDockState('settled');
         return;
       }
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const target = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
       const days = Math.round((target - today) / 86400000);
+
       if (days < 0) {
         el.textContent = '已結算';
         el.classList.add('is-settled');
-        action?.classList.add('countdown-settled');
+        setDockState('settled');
       } else if (days === 0) {
         el.textContent = '今天結算';
         el.classList.add('is-today');
-        action?.classList.add('countdown-today');
+        setDockState('today');
       } else {
         el.textContent = `倒數 ${days} 天`;
         if (days <= 3) {
           el.classList.add('is-urgent');
-          action?.classList.add('countdown-urgent');
+          setDockState('urgent');
+        } else {
+          setDockState('normal');
         }
       }
       el.title = raw;
@@ -3218,7 +3293,107 @@
       }
     }
 
+
+    function getSingleRouteCountDiscSvg() {
+      const uid = Math.random().toString(36).slice(2, 8);
+      const outer = `countOuterGrad_${uid}`;
+      const inner = `countInnerGrad_${uid}`;
+      const hi = `countHighlight_${uid}`;
+      return `
+        <svg class="single-route-count-asset" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="${outer}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#e2e7ee"/>
+              <stop offset="1" stop-color="#bcc7d4"/>
+            </linearGradient>
+            <linearGradient id="${inner}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff"/>
+              <stop offset="1" stop-color="#f8fafc"/>
+            </linearGradient>
+            <radialGradient id="${hi}" cx="30%" cy="24%" r="70%">
+              <stop offset="0" stop-color="#ffffff" stop-opacity=".88"/>
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="32" cy="32" r="31" fill="url(#${outer})"/>
+          <circle cx="32" cy="32" r="26.5" fill="url(#${inner})"/>
+          <circle cx="32" cy="32" r="26.5" fill="url(#${hi})"/>
+          <circle cx="32" cy="32" r="26.5" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="1.2"/>
+        </svg>`;
+    }
+
+    function getSingleRouteRewardSvg(type) {
+      const uid = Math.random().toString(36).slice(2, 8);
+      const safeBadge = `safeBadgeGrad_${uid}`;
+      const safeShield = `safeShieldGrad_${uid}`;
+      const goodHex = `goodHexGrad_${uid}`;
+      const goodMedal = `goodMedalGrad_${uid}`;
+      const perfectBadge = `perfectBadgeGrad_${uid}`;
+      const perfectCoin = `perfectCoinGrad_${uid}`;
+      const safe = `
+        <svg class="single-route-reward-svg" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="${safeBadge}" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f28d89"/>
+              <stop offset="1" stop-color="#d85850"/>
+            </linearGradient>
+            <linearGradient id="${safeShield}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff"/>
+              <stop offset="1" stop-color="#ffeae8"/>
+            </linearGradient>
+          </defs>
+          <path d="M22 10h52c7 0 12 5 12 12v52c0 7-5 12-12 12H22c-7 0-12-5-12-12V22c0-7 5-12 12-12z" fill="#fff5f4"/>
+          <path d="M24 14h48c7 0 10 4 10 10v48c0 7-3 10-10 10H24c-7 0-10-3-10-10V24c0-6 3-10 10-10z" fill="url(#${safeBadge})"/>
+          <path d="M24 14h48c7 0 10 4 10 10v11c-10 7-22 11-34 11-15 0-25-5-34-12V24c0-6 3-10 10-10z" fill="rgba(255,255,255,.14)"/>
+          <path d="M48 28c6 5 10 6 16 7v10c0 10-6 17-16 22-10-5-16-12-16-22V35c6-1 10-2 16-7z" fill="url(#${safeShield})"/>
+          <path d="M40 47l5 5 11-12" fill="none" stroke="#d55f58" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+      const good = `
+        <svg class="single-route-reward-svg" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="${goodHex}" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#73dfc0"/>
+              <stop offset="1" stop-color="#35ad8f"/>
+            </linearGradient>
+            <linearGradient id="${goodMedal}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffe58a"/>
+              <stop offset="1" stop-color="#d39b1d"/>
+            </linearGradient>
+          </defs>
+          <path d="M48 6l34 19v38L48 82 14 63V25L48 6z" fill="#ffffff"/>
+          <path d="M48 11l29 16v34L48 77 19 61V27l29-16z" fill="url(#${goodHex})"/>
+          <path d="M48 11l29 16v9c-9 6-18 8-29 8s-20-2-29-8v-9l29-16z" fill="rgba(255,255,255,.12)"/>
+          <circle cx="48" cy="38" r="14" fill="url(#${goodMedal})" stroke="#f7d56b" stroke-width="1.6"/>
+          <path d="M48 29l2.8 5.7 6.2.9-4.5 4.3 1.1 6.1L48 43l-5.6 3 1.1-6.1-4.5-4.3 6.2-.9L48 29z" fill="#fff5cf"/>
+          <path d="M40 51l5.5-4.2L48 56l2.5-9.2L56 51v10.5c-2 2-4.8 3.3-8 3.3s-6-.9-8-3.3V51z" fill="#ce5f7f"/>
+        </svg>`;
+      const perfect = `
+        <svg class="single-route-reward-svg" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="${perfectBadge}" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#ffd66e"/>
+              <stop offset="1" stop-color="#e7ad2f"/>
+            </linearGradient>
+            <linearGradient id="${perfectCoin}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#fff2ad"/>
+              <stop offset="1" stop-color="#f0b93c"/>
+            </linearGradient>
+          </defs>
+          <path d="M22 10h52c7 0 12 5 12 12v52c0 7-5 12-12 12H22c-7 0-12-5-12-12V22c0-7 5-12 12-12z" fill="#fff8e9"/>
+          <path d="M24 14h48c7 0 10 4 10 10v48c0 7-3 10-10 10H24c-7 0-10-3-10-10V24c0-6 3-10 10-10z" fill="url(#${perfectBadge})"/>
+          <path d="M24 14h48c7 0 10 4 10 10v12c-10 6-21 9-34 9-14 0-24-3-34-10V24c0-6 3-10 10-10z" fill="rgba(255,255,255,.16)"/>
+          <circle cx="48" cy="49" r="16" fill="url(#${perfectCoin})" stroke="#f6d16a" stroke-width="1.8"/>
+          <path d="M36 39l6 5 6-7 6 7 6-5-1 10H37l-1-10z" fill="#d08a18"/>
+          <path d="M41 49h14l-1.6 9c-1.8 1.4-3.6 2.1-5.4 2.1-1.9 0-3.7-.7-5.4-2.1L41 49z" fill="#f8e39d"/>
+          <circle cx="42" cy="38" r="2.2" fill="#fff8da"/>
+          <circle cx="48" cy="34.5" r="2.2" fill="#fff8da"/>
+          <circle cx="54" cy="38" r="2.2" fill="#fff8da"/>
+        </svg>`;
+      return ({ safe, good, perfect }[type] || good);
+    }
+
     function renderMissionClassRoute(data,gami) {
+
       const stage=document.getElementById('single-route-stage');
       const svg=document.getElementById('single-route-svg');
       const nodes=document.getElementById('single-route-nodes');
@@ -3240,8 +3415,8 @@
       const currentOrder=ascendingItems.find(item=>item.key===singleRouteCurrentKey)?.order ?? 0;
       const visualItems=[...ascendingItems].reverse();
 
-      const topPad=126;
-      const bottomPad=118;
+      const topPad=138;
+      const bottomPad=126;
       const pattern=[52,38,58,66,48,34,46,64,55,37];
       const points=[];
       let y=topPad;
@@ -3251,7 +3426,7 @@
           x:pattern[index%pattern.length]*4.2,
           y
         });
-        y += item.kind==='reward' ? 142 : 116;
+        y += item.kind==='reward' ? 154 : 118;
       });
       const stageHeight=y+bottomPad;
       stage.style.height=`${stageHeight}px`;
@@ -3282,14 +3457,9 @@
           isCurrent?'is-current':'',
           milestone?`is-${milestone.type}`:''
         ].filter(Boolean).join(' ');
-        const rewardAsset = milestone ? ({
-          safe: '/assets/route-icons/reward-safe.png',
-          good: '/assets/route-icons/reward-good.png',
-          perfect: '/assets/route-icons/reward-perfect.png'
-        }[milestone.type] || '/assets/route-icons/reward-good.png') : '';
-        const coreContent = point.kind === 'reward'
-          ? `<img class="single-route-reward-image" src="${rewardAsset}" alt="" aria-hidden="true">`
-          : `<img class="single-route-node-image" src="/assets/route-icons/node-base.png" alt="" aria-hidden="true"><span class="single-route-count-number">${point.count}</span>`;
+        const coreContent=point.kind==='reward'
+          ? getSingleRouteRewardSvg(milestone?.type)
+          : `${getSingleRouteCountDiscSvg()}<span class="single-route-number">${point.count}</span>`;
         const rewardLabel=milestone
           ? `<div class="single-route-label">${escapeMissionRouteHtml(milestone.title)}<small>${escapeMissionRouteHtml(milestone.detail)}</small></div>`
           : '';
