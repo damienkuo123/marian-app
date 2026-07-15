@@ -1830,6 +1830,23 @@
       <div id="single-route-panel" class="single-route-panel">
         <div style="display:none"><div id="hw-box"></div><div id="hw-icon"></div><div id="hw-title"></div><div id="hw-score-info" class="hidden"><span id="last-score"></span><span id="awarded-points"></span></div><span id="current-unit"></span></div>
         <button type="button" class="single-route-rank-btn" onclick="toggleSingleRouteLeaderboard()" aria-label="查看高分排行榜">🏆</button>
+        <button type="button" id="single-route-daily-btn" class="single-route-daily-btn hidden" onclick="toggleSingleRouteDailyRewards()" aria-label="查看每日獎勵">
+          <svg viewBox="0 0 56 56" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="dailyIconLid" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7de0c4"/><stop offset="1" stop-color="#27aa8a"/></linearGradient>
+              <linearGradient id="dailyIconBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#65d6b8"/><stop offset="1" stop-color="#239c82"/></linearGradient>
+              <linearGradient id="dailyIconGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe59a"/><stop offset="1" stop-color="#e4a72d"/></linearGradient>
+            </defs>
+            <path d="M9 25h38v21c0 4-3 7-7 7H16c-4 0-7-3-7-7V25z" fill="#197d6c" opacity=".28" transform="translate(0 2)"/>
+            <path d="M9 24h38v21c0 4-3 7-7 7H16c-4 0-7-3-7-7V24z" fill="url(#dailyIconBody)"/>
+            <path d="M7 16c0-4 3-7 7-7h28c4 0 7 3 7 7v11H7V16z" fill="url(#dailyIconLid)"/>
+            <path d="M7 22h42v7H7z" fill="url(#dailyIconGold)"/>
+            <path d="M24 20h8v32h-8z" fill="url(#dailyIconGold)"/>
+            <rect x="21" y="29" width="14" height="12" rx="4" fill="#fff3bf"/>
+            <path d="M28 31l1.6 3.2 3.5.5-2.5 2.4.6 3.4-3.2-1.7-3.2 1.7.6-3.4-2.5-2.4 3.5-.5L28 31z" fill="#d99820"/>
+            <path d="M12 13c8-3 24-3 32 0" fill="none" stroke="rgba(255,255,255,.34)" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </button>
 
         <div id="single-route-stage" class="single-route-stage" aria-label="口說挑戰路線">
           <svg id="single-route-svg" class="single-route-svg" aria-hidden="true"></svg>
@@ -1845,7 +1862,10 @@
                 <span id="single-route-countdown" class="single-route-countdown">倒數 -- 天</span>
               </span>
               <span id="single-route-start-small" class="single-route-start-small" aria-hidden="true"></span>
-              <span id="single-route-start-main" class="single-route-start-main">開始挑戰</span>
+              <span class="single-route-start-action">
+                <span id="single-route-start-main" class="single-route-start-main">開始挑戰</span>
+                <span id="single-route-start-sub" class="single-route-start-sub">完成後前進一格</span>
+              </span>
             </span>
           </a>
         </div>
@@ -1860,6 +1880,18 @@
                 <div id="lb-reward-hints" style="margin-top:15px;padding:12px 15px;background:rgba(255,255,255,.72);border-radius:16px;display:flex;justify-content:center;gap:20px;font-size:13px;font-weight:900;color:var(--text-sub);"></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div id="single-route-daily-modal" class="single-route-daily-modal" onclick="if (event.target === this) toggleSingleRouteDailyRewards(false)">
+          <div class="single-route-daily-dialog" role="dialog" aria-modal="true" aria-labelledby="single-route-daily-title">
+            <button type="button" class="single-route-daily-close" onclick="toggleSingleRouteDailyRewards(false)" aria-label="關閉每日獎勵">×</button>
+            <div class="single-route-daily-heading">
+              <div class="single-route-daily-kicker">TODAY'S REWARDS</div>
+              <h2 id="single-route-daily-title">每日獎勵</h2>
+            </div>
+            <div id="single-route-daily-list" class="single-route-daily-list"></div>
+            <p class="single-route-daily-note">獎勵依今日最高分升級，再次挑戰可換發更高階獎勵。</p>
           </div>
         </div>
       </div>
@@ -3268,7 +3300,7 @@
     function buildSingleRouteCompletedPaths(points, currentKey) {
       const currentIndex = points.findIndex(point => point.key === currentKey);
       if (currentIndex < 0) return '';
-      const segment = points.slice(currentIndex);
+      const segment = points.slice(0, currentIndex + 1);
       if (segment.length < 2) return '';
       const path = buildSingleRoutePath(segment);
       return `<path d="${path}" fill="none" stroke="rgba(0,91,184,.18)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 7)"/><path d="${path}" fill="none" stroke="url(#singleRouteComplete)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/><path d="${path}" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -3320,8 +3352,8 @@
       const visibleTop = Math.max(viewportRect.top, topBarBottom);
       const visibleBottom = Math.min(viewportRect.bottom, bottomNavTop, actionDockTop);
       const usableHeight = Math.max(260, visibleBottom - visibleTop);
-      /* Current node sits slightly below center, leaving room for the next node and action above. */
-      const desiredScreenY = visibleTop + usableHeight * 0.63;
+      /* Downward route: keep the current node around the visual center so upcoming nodes remain visible below. */
+      const desiredScreenY = visibleTop + usableHeight * 0.48;
       const currentScreenY = coreRect.top + coreRect.height / 2;
       const maxScroll = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
       const target = Math.min(maxScroll, Math.max(0, viewport.scrollTop + currentScreenY - desiredScreenY));
@@ -3347,12 +3379,118 @@
       }
     }, { passive: true });
 
+    let singleRouteDailyRewardState = { tiers: [], bestScore: 0, available: false };
+
+    function getSingleRouteDailyChestSvg(index) {
+      const palettes = [
+        { body1:'#ef8b78', body2:'#c95a50', lid1:'#f7a28e', lid2:'#d86c5e', trim1:'#ffd99a', trim2:'#c99031', gem:'#fff0cf' },
+        { body1:'#65d7bb', body2:'#239d83', lid1:'#7be3c6', lid2:'#36b296', trim1:'#ffe39a', trim2:'#d49d2c', gem:'#e9fff7' },
+        { body1:'#ffd56a', body2:'#e2a62d', lid1:'#ffe38d', lid2:'#efbd45', trim1:'#fff1b7', trim2:'#c9881e', gem:'#fff8dc' }
+      ];
+      const p = palettes[Math.max(0, Math.min(2, index))];
+      const uid = Math.random().toString(36).slice(2,8);
+      const body=`dailyChestBody_${uid}`, lid=`dailyChestLid_${uid}`, trim=`dailyChestTrim_${uid}`;
+      const symbol = index === 0
+        ? `<path d="M32 29c5 4 8 5 13 6v8c0 8-5 14-13 18-8-4-13-10-13-18v-8c5-1 8-2 13-6z" fill="${p.gem}"/><path d="M26 43l4 4 8-9" fill="none" stroke="${p.body2}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`
+        : index === 1
+          ? `<circle cx="32" cy="43" r="10" fill="${p.gem}"/><path d="M32 35l2.1 4.3 4.8.7-3.5 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.5-3.3 4.8-.7L32 35z" fill="${p.trim2}"/>`
+          : `<path d="M22 39l5 4 5-7 5 7 5-4-1 10H23l-1-10z" fill="${p.gem}"/><path d="M25 49h14l-2 8H27l-2-8z" fill="${p.trim2}"/>`;
+      return `<svg class="daily-tier-chest" viewBox="0 0 64 68" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="${body}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.body1}"/><stop offset="1" stop-color="${p.body2}"/></linearGradient>
+          <linearGradient id="${lid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${p.lid1}"/><stop offset="1" stop-color="${p.lid2}"/></linearGradient>
+          <linearGradient id="${trim}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.trim1}"/><stop offset="1" stop-color="${p.trim2}"/></linearGradient>
+        </defs>
+        <path d="M8 27h48v28c0 6-4 10-10 10H18C12 65 8 61 8 55V27z" fill="${p.body2}" opacity=".3" transform="translate(0 2)"/>
+        <path d="M8 25h48v28c0 6-4 10-10 10H18C12 63 8 59 8 53V25z" fill="url(#${body})"/>
+        <path d="M6 13c0-5 4-9 9-9h34c5 0 9 4 9 9v16H6V13z" fill="url(#${lid})"/>
+        <path d="M6 24h52v8H6z" fill="url(#${trim})"/>
+        <path d="M27 20h10v43H27z" fill="url(#${trim})"/>
+        ${symbol}
+        <path d="M13 10c10-4 28-4 38 0" fill="none" stroke="rgba(255,255,255,.34)" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>`;
+    }
+
+    function getSingleRouteDailyLockSvg() {
+      return `<svg class="daily-tier-lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="10" width="14" height="11" rx="4" fill="currentColor" opacity=".18"/><path d="M12 14v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+
+    function normalizeSingleRouteDailyTiers(gami) {
+      return [...(gami?.dailyChallenge?.tiers || [])]
+        .map(t => ({ min:Number(t.min ?? t.score ?? 0), pts:Number(t.pts ?? t.points ?? 0) }))
+        .filter(t => Number.isFinite(t.min) && Number.isFinite(t.pts) && t.min > 0)
+        .sort((a,b) => a.min - b.min)
+        .slice(0,3);
+    }
+
+    function renderSingleRouteDailyRewards(data, gami) {
+      const btn = document.getElementById('single-route-daily-btn');
+      const list = document.getElementById('single-route-daily-list');
+      if (!btn || !list) return;
+      const tiers = normalizeSingleRouteDailyTiers(gami);
+      const bestScore = Math.max(0, Number(data?.lastScore || 0));
+      const available = String(data?.currentUnit || '').trim() && String(data?.currentUnit || '').trim() !== '未排定' && tiers.length > 0;
+      singleRouteDailyRewardState = { tiers, bestScore, available };
+      btn.classList.toggle('hidden', !available);
+      if (!available) { list.innerHTML=''; return; }
+
+      let reachedIndex = -1;
+      tiers.forEach((tier,index) => { if (bestScore >= tier.min) reachedIndex = index; });
+      list.innerHTML = tiers.map((tier,index) => {
+        let state = 'locked';
+        if (reachedIndex < 0 && index === 0) state = 'active';
+        else if (index < reachedIndex) state = 'upgraded';
+        else if (index === reachedIndex) state = 'claimed';
+        else if (index === reachedIndex + 1) state = 'active';
+        const action = state === 'active'
+          ? `<button type="button" class="daily-tier-go" onclick="startSingleRouteDailyChallenge()">前往</button>`
+          : state === 'claimed'
+            ? `<span class="daily-tier-status is-claimed">已領取</span>`
+            : state === 'upgraded'
+              ? `<span class="daily-tier-status is-upgraded">已升級</span>`
+              : `<span class="daily-tier-status is-locked">${getSingleRouteDailyLockSvg()}</span>`;
+        return `<div class="daily-tier-row is-${state}" data-tier-index="${index}">
+          <div class="daily-tier-icon">${getSingleRouteDailyChestSvg(index)}</div>
+          <div class="daily-tier-copy"><strong>達到 ${tier.min} 分</strong><span>獎勵 ${tier.pts} 點</span></div>
+          <div class="daily-tier-action">${action}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleSingleRouteDailyRewards(force) {
+      const panel = document.getElementById('single-route-daily-modal');
+      if (!panel || !singleRouteDailyRewardState.available) return;
+      if (panel.parentElement !== document.body) document.body.appendChild(panel);
+      const leaderboard = document.getElementById('single-route-leaderboard');
+      const show = typeof force === 'boolean' ? force : !panel.classList.contains('show');
+      if (show) {
+        if (leaderboard?.classList.contains('show')) toggleSingleRouteLeaderboard(false);
+        panel.style.display='flex';
+        requestAnimationFrame(() => panel.classList.add('show'));
+        document.body.classList.add('single-route-modal-open');
+      } else {
+        panel.classList.remove('show');
+        document.body.classList.remove('single-route-modal-open');
+        setTimeout(() => { if (!panel.classList.contains('show')) panel.style.display='none'; },230);
+      }
+    }
+
+    function startSingleRouteDailyChallenge() {
+      toggleSingleRouteDailyRewards(false);
+      setTimeout(() => {
+        const btn = document.getElementById('oral-btn');
+        if (btn && !btn.classList.contains('is-disabled') && !btn.classList.contains('hidden')) btn.click();
+      }, 180);
+    }
+
     function toggleSingleRouteLeaderboard(force) {
       const panel = document.getElementById('single-route-leaderboard');
       if (!panel) return;
       if (panel.parentElement !== document.body) document.body.appendChild(panel);
       const show = typeof force === 'boolean' ? force : !panel.classList.contains('show');
       if (show) {
+        const dailyPanel = document.getElementById('single-route-daily-modal');
+        if (dailyPanel?.classList.contains('show')) toggleSingleRouteDailyRewards(false);
         panel.style.display = 'flex';
         requestAnimationFrame(() => panel.classList.add('show'));
         document.body.classList.add('single-route-modal-open');
@@ -3506,9 +3644,11 @@
       const oralBtn=document.getElementById('oral-btn');
       const actionDock=document.getElementById('single-route-action-dock');
       const rankBtn=document.querySelector('.single-route-rank-btn');
-      if (!stage||!svg||!nodes||!oralBtn||!actionDock||!rankBtn) return;
+      const dailyBtn=document.getElementById('single-route-daily-btn');
+      if (!stage||!svg||!nodes||!oralBtn||!actionDock||!rankBtn||!dailyBtn) return;
       if (actionDock.parentElement !== document.body) document.body.appendChild(actionDock);
       if (rankBtn.parentElement !== document.body) document.body.appendChild(rankBtn);
+      if (dailyBtn.parentElement !== document.body) document.body.appendChild(dailyBtn);
 
       const currentCount=Math.max(0,Number(data.missionCount||0));
       singleRouteCurrentCount=currentCount;
@@ -3519,9 +3659,9 @@
       const milestoneAtCurrent=milestones.find(item=>item.count===currentCount);
       singleRouteCurrentKey=milestoneAtCurrent ? `reward-${currentCount}` : `count-${currentCount}`;
       const currentOrder=ascendingItems.find(item=>item.key===singleRouteCurrentKey)?.order ?? 0;
-      const visualItems=[...ascendingItems].reverse();
+      const visualItems=[...ascendingItems];
 
-      const topPad=138;
+      const topPad=252;
       const bottomPad=126;
       const pattern=[52,38,58,66,48,34,46,64,55,37];
       const points=[];
@@ -3731,6 +3871,7 @@
         oralBtn.className = "single-route-start hidden";
         document.getElementById('single-route-action-dock')?.classList.add('hidden');
         document.getElementById("single-route-start-main").innerText = "尚未開放";
+        document.getElementById("single-route-start-sub").innerText = "目前沒有可挑戰的單元";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => e.preventDefault(); 
         
@@ -3767,7 +3908,8 @@
         oralBtn.className = "single-route-start is-repeat";
         document.getElementById('single-route-action-dock')?.classList.remove('hidden');
         oralBtn.style.pointerEvents = "auto";
-        document.getElementById("single-route-start-main").innerText = "再次練習";
+        document.getElementById("single-route-start-main").innerText = "再次挑戰";
+        document.getElementById("single-route-start-sub").innerText = "完成後再前進一格";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
@@ -3786,6 +3928,7 @@
         document.getElementById('single-route-action-dock')?.classList.remove('hidden');
         oralBtn.style.pointerEvents = "auto";
         document.getElementById("single-route-start-main").innerText = "開始挑戰";
+        document.getElementById("single-route-start-sub").innerText = "完成後前進一格";
         oralBtn.href = "#";
         oralBtn.onclick = (e) => { 
             e.preventDefault(); 
@@ -3819,6 +3962,7 @@
 
       updateSingleRouteCountdown(data.endDate);
       renderMissionClassRoute(data, gami);
+      renderSingleRouteDailyRewards(data, gami);
 
       // ==========================================
       // 🏆 榮譽排行榜渲染 (動態獎勵版)
@@ -3936,20 +4080,24 @@
       if (!isRouteAction) return false;
       const small = btnElement.querySelector('#single-route-start-small');
       const main = btnElement.querySelector('#single-route-start-main');
+      const sub = btnElement.querySelector('#single-route-start-sub');
       btnElement.classList.remove('is-loading','is-disabled');
       if (state === 'loading') {
         btnElement.classList.add('is-loading');
         if (small) small.textContent = '';
         if (main) main.textContent = '正在準備挑戰';
+        if (sub) sub.textContent = '即將前往今日口說挑戰';
         btnElement.style.pointerEvents = 'none';
       } else if (state === 'disabled') {
         btnElement.classList.add('is-disabled');
         if (small) small.textContent = '';
         if (main) main.textContent = '明天再來挑戰';
+        if (sub) sub.textContent = '今日挑戰次數已用完';
         btnElement.style.pointerEvents = 'none';
       } else {
-        if (small) small.textContent = options.small || btnElement.dataset.routeSmall || '下一站';
+        if (small) small.textContent = options.small || btnElement.dataset.routeSmall || '';
         if (main) main.textContent = options.main || btnElement.dataset.routeMain || '開始挑戰';
+        if (sub) sub.textContent = options.sub || btnElement.dataset.routeSub || '完成後前進一格';
         btnElement.style.pointerEvents = 'auto';
       }
       return true;
@@ -3964,9 +4112,11 @@
         const originalText = btnElement.innerText;
         const routeSmall = isRouteAction ? btnElement.querySelector('#single-route-start-small')?.textContent : '';
         const routeMain = isRouteAction ? btnElement.querySelector('#single-route-start-main')?.textContent : '';
+        const routeSub = isRouteAction ? btnElement.querySelector('#single-route-start-sub')?.textContent : '';
         if (isRouteAction) {
           btnElement.dataset.routeSmall = routeSmall || '下一站';
           btnElement.dataset.routeMain = routeMain || '開始挑戰';
+          btnElement.dataset.routeSub = routeSub || '完成後前進一格';
           setSingleRouteActionState(btnElement, 'loading');
         } else {
           btnElement.innerText = "✨ 傳送中...";
@@ -3997,7 +4147,7 @@
             })
             .catch(err => {
                 if (isRouteAction) {
-                  setSingleRouteActionState(btnElement, 'normal', { small: routeSmall, main: routeMain });
+                  setSingleRouteActionState(btnElement, 'normal', { small: routeSmall, main: routeMain, sub: routeSub });
                 } else {
                   btnElement.innerText = originalText;
                   btnElement.style.pointerEvents = "auto";
@@ -4447,7 +4597,178 @@
                   <div style="position:absolute; width:100%; height:100%; border-radius:50%; border:4px solid #ffd700; border-top-color: transparent; animation:spin 1s linear infinite;"></div>
                   <div style="font-size:30px; animation:blink 1.5s infinite;">🪪</div>
                 </div>
-                <style> @keyframes spin { to { transform: rotate(360deg); } } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } </style>
+                <style> @keyframes spin { to { transform: rotate(360deg); } } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } 
+
+    /* =======================================================
+       TAPPIE_SINGLE_ROUTE_V6_9 — downward journey + daily rewards
+       ======================================================= */
+    body:not(.challenge-route-active) .single-route-daily-btn { display:none !important; }
+    .single-route-daily-btn {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 136px);
+      right: 18px;
+      z-index: 1120;
+      width: 50px;
+      height: 50px;
+      padding: 7px;
+      border: 1px solid rgba(255,255,255,.96);
+      border-radius: 18px;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 10px 24px rgba(36,69,104,.10), inset 0 1px 0 #fff;
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .single-route-daily-btn.hidden { display:none !important; }
+    .single-route-daily-btn:active { transform:scale(.94); }
+    .single-route-daily-btn svg { width:100%; height:100%; display:block; filter:drop-shadow(0 4px 6px rgba(28,110,91,.16)); }
+
+    .single-route-start-action {
+      box-sizing:border-box;
+      width:100%;
+      min-height:62px;
+      padding:9px 18px 10px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      color:#fff;
+      background:linear-gradient(135deg,#2bb8f5 0%,#0a7edc 54%,#005ec7 100%);
+      text-align:center;
+    }
+    .single-route-start.is-repeat .single-route-start-action { background:linear-gradient(135deg,#7a77f7 0%,#5957df 48%,#4047ca 100%); }
+    .single-route-start.is-loading .single-route-start-action { background:linear-gradient(135deg,#30acef 0%,#167fd8 56%,#0c67c3 100%); }
+    .single-route-start.is-disabled .single-route-start-action { color:#75818e; background:linear-gradient(135deg,#eaedf2,#dbe2e8); }
+    .single-route-start-main {
+      min-height:0 !important;
+      padding:0 !important;
+      background:none !important;
+      color:inherit !important;
+      font-size:18px;
+      line-height:1.2;
+      text-shadow:0 1px 0 rgba(0,57,126,.24);
+    }
+    .single-route-start-sub {
+      display:block;
+      color:rgba(255,255,255,.82);
+      font-size:10px;
+      font-weight:850;
+      line-height:1.25;
+      letter-spacing:.35px;
+    }
+    .single-route-start.is-disabled .single-route-start-main,
+    .single-route-start.is-disabled .single-route-start-sub { text-shadow:none; }
+    .single-route-start.is-disabled .single-route-start-sub { color:#8a95a0; }
+
+    .single-route-daily-modal {
+      position:fixed;
+      inset:0;
+      z-index:5050;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      box-sizing:border-box;
+      padding:max(22px,env(safe-area-inset-top)) 18px max(22px,env(safe-area-inset-bottom));
+      background:rgba(22,35,49,.38);
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+      opacity:0;
+      transition:opacity .22s ease;
+    }
+    .single-route-daily-modal.show { display:flex; opacity:1; }
+    .single-route-daily-dialog {
+      position:relative;
+      width:min(92vw,460px);
+      max-height:min(82vh,720px);
+      overflow:hidden;
+      padding:24px 18px 18px;
+      border-radius:30px;
+      background:rgba(248,251,255,.98);
+      border:1px solid rgba(255,255,255,.96);
+      box-shadow:0 30px 70px rgba(20,39,60,.24),inset 0 1px 0 #fff;
+      transform:translateY(12px) scale(.98);
+      transition:transform .24s cubic-bezier(.2,.8,.2,1);
+    }
+    .single-route-daily-modal.show .single-route-daily-dialog { transform:translateY(0) scale(1); }
+    .single-route-daily-close {
+      position:absolute;
+      top:15px;
+      right:15px;
+      width:42px;
+      height:42px;
+      border:0;
+      border-radius:50%;
+      background:#e9eef4;
+      color:#6c7986;
+      font-size:25px;
+      line-height:1;
+      cursor:pointer;
+    }
+    .single-route-daily-heading { padding:1px 48px 15px 4px; }
+    .single-route-daily-kicker { color:#5a92c8; font-size:10px; font-weight:950; letter-spacing:2px; }
+    .single-route-daily-heading h2 { margin:4px 0 0; color:#172a3d; font-size:25px; font-weight:950; letter-spacing:.5px; }
+    .single-route-daily-list { display:flex; flex-direction:column; gap:10px; overflow-y:auto; overscroll-behavior:contain; }
+    .daily-tier-row {
+      min-height:82px;
+      display:grid;
+      grid-template-columns:68px minmax(0,1fr) 72px;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px 8px 8px;
+      border-radius:22px;
+      background:#eef2f6;
+      border:1px solid rgba(224,231,238,.9);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+      transition:transform .18s ease,background .18s ease,border-color .18s ease;
+    }
+    .daily-tier-row.is-active { background:#fff; border-color:rgba(71,164,234,.26); box-shadow:0 10px 22px rgba(47,97,142,.10),inset 0 1px 0 #fff; }
+    .daily-tier-row.is-claimed { background:linear-gradient(135deg,#f7fffc,#ebf8f4); border-color:rgba(57,177,142,.22); }
+    .daily-tier-row.is-upgraded { background:linear-gradient(135deg,#f8fafc,#eef3f7); border-color:rgba(191,203,214,.48); }
+    .daily-tier-icon { width:64px; height:68px; display:flex; align-items:center; justify-content:center; }
+    .daily-tier-chest { width:64px; height:68px; display:block; filter:drop-shadow(0 8px 10px rgba(48,71,92,.14)); }
+    .daily-tier-row.is-locked .daily-tier-chest { filter:grayscale(.92) saturate(.18) opacity(.42) drop-shadow(0 5px 7px rgba(65,80,96,.07)); }
+    .daily-tier-row.is-upgraded .daily-tier-chest { filter:grayscale(.38) saturate(.48) opacity(.70) drop-shadow(0 6px 8px rgba(65,80,96,.08)); }
+    .daily-tier-copy { min-width:0; display:flex; flex-direction:column; gap:4px; }
+    .daily-tier-copy strong { color:#1d3043; font-size:15px; font-weight:950; white-space:nowrap; }
+    .daily-tier-copy span { color:#657585; font-size:12px; font-weight:850; }
+    .daily-tier-row.is-locked .daily-tier-copy strong,
+    .daily-tier-row.is-locked .daily-tier-copy span { color:#9ba6b1; }
+    .daily-tier-action { display:flex; justify-content:flex-end; align-items:center; }
+    .daily-tier-go {
+      min-width:62px;
+      height:36px;
+      padding:0 14px;
+      border:0;
+      border-radius:13px;
+      color:#fff;
+      background:linear-gradient(135deg,#2eb6f3,#0878d6);
+      box-shadow:0 7px 14px rgba(12,111,205,.22),inset 0 1px 0 rgba(255,255,255,.35);
+      font-size:13px;
+      font-weight:950;
+      cursor:pointer;
+    }
+    .daily-tier-go:active { transform:scale(.95); }
+    .daily-tier-status { min-width:62px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:950; white-space:nowrap; }
+    .daily-tier-status.is-claimed { color:#16856d; }
+    .daily-tier-status.is-upgraded { color:#778593; }
+    .daily-tier-status.is-locked { min-width:34px; color:#9ca7b2; }
+    .daily-tier-lock { width:22px; height:22px; display:block; }
+    .single-route-daily-note { margin:14px 4px 0; color:#7b8793; font-size:11px; font-weight:800; line-height:1.55; text-align:center; }
+
+    @media(max-width:360px){
+      .single-route-daily-btn{right:14px;width:46px;height:46px;padding:6px;border-radius:16px;}
+      .single-route-daily-dialog{width:94vw;padding:22px 13px 16px;border-radius:27px;}
+      .daily-tier-row{grid-template-columns:58px minmax(0,1fr) 64px;gap:7px;padding-inline:6px;min-height:76px;}
+      .daily-tier-icon,.daily-tier-chest{width:56px;height:60px;}
+      .daily-tier-copy strong{font-size:14px;}
+      .daily-tier-copy span{font-size:11px;}
+      .daily-tier-go{min-width:56px;padding-inline:10px;}
+      .single-route-start-main{font-size:16px;}
+      .single-route-start-sub{font-size:9px;}
+    }
+</style>
               `;
               document.body.appendChild(loader);
 
