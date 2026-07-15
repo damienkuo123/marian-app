@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tappie 嗶卡登入中...</title>
+    <!-- TAPPIE_PRIVATE_PAGE_ROBOTS_20260627: prevent internal app/admin pages from being indexed. -->
+  <meta name="robots" content="noindex,nofollow">
+<title>Tappie 嗶卡登入中...</title>
   <style>
     body {
       display: flex;
@@ -31,16 +33,39 @@
     <h2>讀取卡片中...</h2>
   </div>
 
-  <script src="./tappie-api.js"></script>
+  <script src="./tappie-api.js?v=admin-card-f3d"></script>
+  <script src="./tappie-student-session.js?v=student-session-v1"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const uid = urlParams.get('uid') || urlParams.get('id');
     const cardId = urlParams.get('cardId') || urlParams.get('cardid');
-    const adminAuth = localStorage.getItem('tappie_admin_key');
+    const ADMIN_REDIRECT_VERSION = "admin-card-f3d";
+
+    function isAdminCardTokenActive() {
+      const token = localStorage.getItem('tappie_admin_card_token') || '';
+      const expiresAt = localStorage.getItem('tappie_admin_card_token_expires_at') || '';
+      if (!token || !expiresAt) return false;
+      const expiresMs = new Date(expiresAt).getTime();
+      return Number.isFinite(expiresMs) && expiresMs > Date.now();
+    }
+
+    function hasAdminAuth() {
+      const adminKey = localStorage.getItem('tappie_admin_key');
+      if (adminKey) return true;
+      return isAdminCardTokenActive();
+    }
 
     function go(uidValue) {
-      if (adminAuth) window.location.replace(`admin.html?id=${encodeURIComponent(uidValue)}&from=tap`);
-      else window.location.replace(`dashboard.html?id=${encodeURIComponent(uidValue)}`);
+      if (hasAdminAuth()) {
+        window.location.replace(`/admin.html?id=${encodeURIComponent(uidValue)}&v=${encodeURIComponent(ADMIN_REDIRECT_VERSION)}`);
+      } else {
+        if (window.TappieStudentSession && typeof TappieStudentSession.setActive === "function") {
+          TappieStudentSession.setActive(uidValue, "tap");
+          window.location.replace("/dashboard.html");
+        } else {
+          window.location.replace(`/dashboard.html?id=${encodeURIComponent(uidValue)}`);
+        }
+      }
     }
 
     async function initTap() {
