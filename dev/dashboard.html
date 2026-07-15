@@ -655,11 +655,25 @@
     }
     .single-route-header {
       position: sticky;
-      top: max(60px, env(safe-area-inset-top) + 60px);
+      /* #content-viewport 本身已避開 fixed top bar，sticky 必須以內容視窗頂端為 0。 */
+      top: 0;
       z-index: 20;
-      padding: 22px 24px 16px;
-      background: linear-gradient(180deg, rgba(248,251,255,.97) 0%, rgba(248,251,255,.91) 78%, rgba(248,251,255,0) 100%);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      padding: 20px 24px 18px;
+      background: rgba(248,251,255,.985);
+      backdrop-filter: blur(18px) saturate(145%); -webkit-backdrop-filter: blur(18px) saturate(145%);
+      border-bottom: 1px solid rgba(205,220,235,.72);
+      box-shadow: 0 14px 28px rgba(49,83,118,.06);
+      isolation: isolate;
+    }
+    .single-route-header::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -24px;
+      height: 24px;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(248,251,255,.94), rgba(248,251,255,0));
     }
     .single-route-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
     .single-route-title { margin:0; color:var(--text-main); font-size:27px; line-height:1.12; font-weight:950; letter-spacing:.5px; }
@@ -676,7 +690,7 @@
       box-shadow:0 8px 18px rgba(0,102,204,.07); font-size:13px; font-weight:950;
     }
     .single-route-next-copy::before { content:''; width:9px; height:9px; border-radius:50%; background:#1f91f2; box-shadow:0 0 0 5px rgba(31,145,242,.12); }
-    .single-route-stage { position:relative; width:100%; min-height:1000px; overflow:hidden; }
+    .single-route-stage { position:relative; width:100%; min-height:1000px; overflow:hidden; padding-top: 28px; box-sizing: border-box; }
     .single-route-stage::before {
       content:''; position:absolute; inset:0; pointer-events:none;
       background-image:radial-gradient(circle, rgba(78,139,201,.09) 1px, transparent 1px);
@@ -728,6 +742,16 @@
     .single-route-leaderboard.show { display:block; }
     .single-route-leaderboard .leaderboard { width:100%; max-width:none; margin:0; padding:0; background:none; border:0; box-shadow:none; }
     .single-route-leaderboard-close { float:right; width:36px; height:36px; border:0; border-radius:50%; background:rgba(0,0,0,.05); color:#6d7a87; font-size:20px; cursor:pointer; }
+
+    @media (max-width: 430px) {
+      .single-route-header { padding: 18px 20px 17px; }
+      .single-route-title { font-size: 25px; }
+      .single-route-sub { margin-top: 7px; font-size: 12px; }
+      .single-route-rank-btn { width: 50px; height: 50px; border-radius: 18px; }
+      .single-route-next-copy { margin-top: 12px; padding: 10px 13px; font-size: 12px; }
+      .single-route-start { width: min(210px, calc(100vw - 92px)); }
+    }
+
     @media (min-width:768px) { .single-route-panel{border-radius:38px;margin-top:10px;} .single-route-header{padding-inline:38px;} }
 </style>
 </head>
@@ -2223,7 +2247,11 @@
       const panel=document.getElementById('single-route-panel');
       const node=document.querySelector(`#single-route-nodes [data-route-count="${singleRouteCurrentCount}"]`);
       if (!viewport || !panel || !node) return;
-      const target=panel.offsetTop + node.offsetTop - viewport.clientHeight * .64;
+      const header=document.querySelector('.single-route-header');
+      const headerHeight=header ? header.offsetHeight : 0;
+      /* 將自己放在畫面約 72% 高度，確保下一節點與開始按鈕完整露出。 */
+      const desiredY=Math.max(headerHeight + 250, viewport.clientHeight * .72);
+      const target=panel.offsetTop + node.offsetTop - desiredY;
       viewport.scrollTo({top:Math.max(0,target),behavior:smooth?'smooth':'auto'});
     }
 
@@ -2282,7 +2310,7 @@
       const nextCount=currentCount+1;
       const nextPoint=points.find(p=>p.count===nextCount) || points[0];
       oralBtn.style.left=`${(nextPoint.x/420)*100}%`;
-      oralBtn.style.top=`${nextPoint.y-48}px`;
+      oralBtn.style.top=`${nextPoint.y-58}px`;
       document.getElementById('single-route-start-small').textContent=`下一站：${nextCount} 次`;
       const nextMilestone=milestones.find(m=>m.count>currentCount);
       const remain=nextMilestone?nextMilestone.count-currentCount:1;
