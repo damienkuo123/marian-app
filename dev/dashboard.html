@@ -1115,8 +1115,8 @@
       background: linear-gradient(180deg, rgba(240,246,253,0), rgba(240,246,253,.82) 44%, rgba(240,246,253,.97));
       pointer-events: none;
     }
-    .single-route-action-dock.hidden,
-    .single-route-action-dock.tab-hidden { display: none !important; }
+    #tab-challenge:not(.active) .single-route-action-dock,
+    .single-route-action-dock.hidden { display: none !important; }
 
     .single-route-start {
       position: relative;
@@ -1163,6 +1163,197 @@
       .single-route-start { width: calc(100vw - 38px); }
       .single-route-start-main { font-size: 16px; }
       .single-route-current-label { left: 41px; }
+    }
+
+
+
+    /* =======================================================
+       TAPPIE_SINGLE_ROUTE_V6_5 — reward stations + map-first layout
+       - milestone rewards are inserted after their numbered step
+       - route header removed; map occupies the page immediately
+       - unit/countdown live inside the fixed action dock
+       - leaderboard floats at the map's upper-right corner
+       ======================================================= */
+    #tab-challenge {
+      padding-top: 0;
+      padding-bottom: 124px;
+      min-height: 100%;
+    }
+    .single-route-panel {
+      margin-top: -4px;
+      min-height: 100%;
+    }
+    .single-route-header { display: none !important; }
+
+    .single-route-rank-btn {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 76px);
+      right: 18px;
+      z-index: 1120;
+      width: 50px;
+      height: 50px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(255,255,255,.96);
+      box-shadow: 0 10px 24px rgba(36,69,104,.10), inset 0 1px 0 #fff;
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+    }
+    #tab-challenge:not(.active) .single-route-rank-btn { display: none !important; }
+
+    body:not(.challenge-route-active) .single-route-action-dock,
+    body:not(.challenge-route-active) .single-route-rank-btn { display: none !important; }
+
+    .single-route-stage {
+      min-height: 1080px;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(71,166,255,.055), transparent 34%),
+        linear-gradient(180deg, #f8fbff 0%, #edf6ff 55%, #f8fbff 100%);
+    }
+
+    /* Numbered steps remain one consistent visual language. */
+    .single-route-node.is-count .single-route-core,
+    .single-route-node.is-count.is-complete .single-route-core {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      color: #627283;
+      background: linear-gradient(145deg,#ffffff,#eef3f8);
+      border: 3px solid rgba(190,203,216,.78);
+      box-shadow: 0 9px 20px rgba(42,63,84,.11), inset 0 2px 0 #fff;
+      font-size: 16px;
+      animation: none;
+    }
+    .single-route-node.is-count.is-complete .single-route-core {
+      color: #31475c;
+      border-color: rgba(166,190,211,.88);
+    }
+    .single-route-node.is-count.is-current .single-route-core {
+      color: #0066cc;
+      border-color: rgba(32,151,232,.92);
+      box-shadow: 0 0 0 7px rgba(0,102,204,.10), 0 12px 28px rgba(0,102,204,.18), inset 0 2px 0 #fff;
+      animation: singleRouteCurrentGlow 2.7s ease-in-out infinite;
+    }
+
+    /* Reward stations are independent stops after the required count. */
+    .single-route-node.is-reward .single-route-core {
+      width: 70px;
+      height: 70px;
+      border-radius: 23px;
+      color: #fff;
+      border: 5px solid rgba(255,255,255,.92);
+      font-size: 24px;
+      font-weight: 950;
+      line-height: 1;
+    }
+    .single-route-node.is-reward.is-safe .single-route-core {
+      background: linear-gradient(145deg,#ff7d73,#dc3f45);
+      box-shadow: 0 15px 31px rgba(220,63,69,.23), inset 0 2px 0 rgba(255,255,255,.44);
+    }
+    .single-route-node.is-reward.is-good .single-route-core {
+      background: linear-gradient(145deg,#69dfbd,#22a887);
+      box-shadow: 0 15px 31px rgba(34,168,135,.22), inset 0 2px 0 rgba(255,255,255,.44);
+    }
+    .single-route-node.is-reward.is-perfect .single-route-core {
+      width: 78px;
+      height: 78px;
+      border-radius: 26px;
+      background: linear-gradient(145deg,#ffc45d,#f18b18);
+      box-shadow: 0 16px 34px rgba(243,156,18,.26), inset 0 2px 0 rgba(255,255,255,.48);
+    }
+    .single-route-node.is-reward.is-current .single-route-core {
+      animation: singleRouteRewardGlow 2.7s ease-in-out infinite;
+    }
+    @keyframes singleRouteRewardGlow {
+      0%,100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); box-shadow:0 0 0 6px rgba(255,255,255,.52),0 16px 34px rgba(42,63,84,.20),inset 0 2px 0 rgba(255,255,255,.46); }
+      50% { filter: drop-shadow(0 0 10px rgba(255,255,255,.40)); box-shadow:0 0 0 11px rgba(255,255,255,.18),0 18px 38px rgba(42,63,84,.24),inset 0 2px 0 rgba(255,255,255,.46); }
+    }
+    .single-route-node.is-reward .single-route-label {
+      top: 44px;
+      width: 150px;
+    }
+    .single-route-node.is-reward.is-perfect .single-route-label { top: 49px; }
+    .single-route-node.is-reward .single-route-current-label {
+      left: 48px;
+      top: -18px;
+      color: #51606f;
+      padding: 8px 11px;
+    }
+
+    /* The action dock is one cohesive control: context above, action below. */
+    .single-route-action-dock {
+      padding: 10px 18px 5px;
+    }
+    .single-route-action-dock::before {
+      inset: -28px 0 -5px;
+      background: linear-gradient(180deg, rgba(240,246,253,0), rgba(240,246,253,.78) 42%, rgba(240,246,253,.98));
+    }
+    .single-route-start {
+      width: min(360px, calc(100vw - 38px));
+    }
+    .single-route-start-card {
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+      padding: 9px 22px 12px;
+      border-radius: 22px;
+    }
+    .single-route-dock-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      max-width: 100%;
+      color: rgba(255,255,255,.88);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .15px;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .single-route-dock-separator { opacity: .68; }
+    .single-route-unit {
+      color: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      letter-spacing: inherit;
+      max-width: 52%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .single-route-countdown {
+      display: inline;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      color: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      white-space: nowrap;
+    }
+    .single-route-countdown::before { content: '◷ '; font-size: inherit; }
+    .single-route-start:not(.is-disabled) .single-route-countdown.is-urgent { color: #fff0b8; }
+    .single-route-start:not(.is-disabled) .single-route-countdown.is-today { color: #ffe0dc; }
+    .single-route-start:not(.is-disabled) .single-route-countdown.is-settled { color: rgba(255,255,255,.70); }
+    .single-route-start.is-disabled .single-route-dock-meta { color: #7c8995; }
+    .single-route-start-main {
+      font-size: 18px;
+      line-height: 1.22;
+      letter-spacing: 1.5px;
+    }
+
+    @media (max-width: 360px) {
+      .single-route-rank-btn { right: 14px; width: 46px; height: 46px; border-radius: 16px; }
+      .single-route-start { width: calc(100vw - 30px); }
+      .single-route-dock-meta { font-size: 10px; gap: 5px; }
+      .single-route-start-main { font-size: 16px; }
     }
 
 </style>
@@ -1274,22 +1465,25 @@
     <section id="tab-challenge" class="tab-content">
       <div id="single-route-panel" class="single-route-panel">
         <div style="display:none"><div id="hw-box"></div><div id="hw-icon"></div><div id="hw-title"></div><div id="hw-score-info" class="hidden"><span id="last-score"></span><span id="awarded-points"></span></div><span id="current-unit"></span></div>
-        <div class="single-route-header">
-          <div class="single-route-title-row">
-            <div>
-              <h3 class="single-route-title">口說挑戰之路</h3>
-              <div class="single-route-sub-row">
-                <span id="single-route-unit" class="single-route-unit">-</span>
-                <span id="single-route-countdown" class="single-route-countdown">倒數 -- 天</span>
-              </div>
-            </div>
-            <button type="button" class="single-route-rank-btn" onclick="toggleSingleRouteLeaderboard()" aria-label="查看高分排行榜">🏆</button>
-          </div>
-        </div>
+        <button type="button" class="single-route-rank-btn" onclick="toggleSingleRouteLeaderboard()" aria-label="查看高分排行榜">🏆</button>
 
         <div id="single-route-stage" class="single-route-stage" aria-label="口說挑戰路線">
           <svg id="single-route-svg" class="single-route-svg" aria-hidden="true"></svg>
           <div id="single-route-nodes"></div>
+        </div>
+
+        <div id="single-route-action-dock" class="single-route-action-dock">
+          <a id="oral-btn" href="#" class="single-route-start">
+            <span class="single-route-start-card">
+              <span class="single-route-dock-meta">
+                <span id="single-route-unit" class="single-route-unit">-</span>
+                <span class="single-route-dock-separator" aria-hidden="true">·</span>
+                <span id="single-route-countdown" class="single-route-countdown">倒數 -- 天</span>
+              </span>
+              <span id="single-route-start-small" class="single-route-start-small" aria-hidden="true"></span>
+              <span id="single-route-start-main" class="single-route-start-main">開始挑戰</span>
+            </span>
+          </a>
         </div>
 
         <div id="single-route-leaderboard" class="single-route-leaderboard" onclick="if (event.target === this) toggleSingleRouteLeaderboard(false)">
@@ -1430,15 +1624,6 @@
     </section>
 
   </main>
-
-  <div id="single-route-action-dock" class="single-route-action-dock tab-hidden">
-    <a id="oral-btn" href="#" class="single-route-start">
-      <span class="single-route-start-card">
-        <span id="single-route-start-small" class="single-route-start-small" aria-hidden="true"></span>
-        <span id="single-route-start-main" class="single-route-start-main">開始挑戰</span>
-      </span>
-    </a>
-  </div>
 
   <nav id="bottom-nav">
     <div class="nav-item active" onclick="switchTab('student', '首頁', this)">
@@ -1749,7 +1934,7 @@
       // 3. 切換 Content Viewport 內容
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
-      document.getElementById('single-route-action-dock')?.classList.toggle('tab-hidden', tabId !== 'challenge');
+      document.body.classList.toggle('challenge-route-active', tabId === 'challenge');
 
       // 4. 挑戰頁定位目前節點；其他分頁回到頂部
       if (tabId === 'challenge') {
@@ -2648,6 +2833,7 @@
     }
 
     let singleRouteCurrentCount = 0;
+    let singleRouteCurrentKey = 'count-0';
     let singleRouteLocateToken = 0;
 
     function buildSingleRoutePath(points) {
@@ -2699,35 +2885,59 @@
       return points.filter(point => point.count >= minCount && point.count <= maxCount);
     }
 
-    function buildSingleRouteCompletedPaths(points, currentCount) {
-      if (currentCount <= 0) return '';
-      const segment = points.filter(point => point.count >= 0 && point.count <= currentCount);
+    function buildSingleRouteCompletedPaths(points, currentKey) {
+      const currentIndex = points.findIndex(point => point.key === currentKey);
+      if (currentIndex < 0) return '';
+      const segment = points.slice(currentIndex);
       if (segment.length < 2) return '';
       const path = buildSingleRoutePath(segment);
       return `<path d="${path}" fill="none" stroke="rgba(0,91,184,.18)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 7)"/><path d="${path}" fill="none" stroke="url(#singleRouteComplete)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/><path d="${path}" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
 
+    function buildSingleRouteItems(routeEnd, milestones) {
+      const milestoneMap = new Map(milestones.map(item => [item.count, item]));
+      const ascending = [];
+      let order = 0;
+      for (let count = 0; count <= routeEnd; count++) {
+        ascending.push({
+          key: `count-${count}`,
+          kind: 'count',
+          count,
+          order: order++
+        });
+        const milestone = milestoneMap.get(count);
+        if (milestone) {
+          ascending.push({
+            key: `reward-${count}`,
+            kind: 'reward',
+            count,
+            milestone,
+            order: order++
+          });
+        }
+      }
+      return ascending;
+    }
+
     function locateSingleRouteCurrent(smooth = false) {
       const viewport = document.getElementById('content-viewport');
-      const node = document.querySelector(`#single-route-nodes [data-route-count="${singleRouteCurrentCount}"]`);
+      const node = document.querySelector(`#single-route-nodes [data-route-key="${singleRouteCurrentKey}"]`);
       if (!viewport || !node || !document.getElementById('tab-challenge')?.classList.contains('active')) return;
 
       const core = node.querySelector('.single-route-core') || node;
       const topBar = document.getElementById('top-bar');
       const bottomNav = document.getElementById('bottom-nav');
-      const routeHeader = document.querySelector('.single-route-header');
       const actionDock = document.getElementById('single-route-action-dock');
 
       const viewportRect = viewport.getBoundingClientRect();
       const coreRect = core.getBoundingClientRect();
       const topBarBottom = topBar ? topBar.getBoundingClientRect().bottom : viewportRect.top;
-      const headerBottom = routeHeader ? routeHeader.getBoundingClientRect().bottom : topBarBottom;
       const bottomNavTop = bottomNav ? bottomNav.getBoundingClientRect().top : viewportRect.bottom;
-      const actionDockTop = actionDock && !actionDock.classList.contains('hidden') && !actionDock.classList.contains('tab-hidden')
+      const actionDockTop = actionDock && !actionDock.classList.contains('hidden')
         ? actionDock.getBoundingClientRect().top - 12
         : bottomNavTop;
 
-      const visibleTop = Math.max(viewportRect.top, topBarBottom, headerBottom);
+      const visibleTop = Math.max(viewportRect.top, topBarBottom);
       const visibleBottom = Math.min(viewportRect.bottom, bottomNavTop, actionDockTop);
       const usableHeight = Math.max(260, visibleBottom - visibleTop);
       /* Current node sits slightly below center, leaving room for the next node and action above. */
@@ -2780,28 +2990,43 @@
       const svg=document.getElementById('single-route-svg');
       const nodes=document.getElementById('single-route-nodes');
       const oralBtn=document.getElementById('oral-btn');
-      if (!stage||!svg||!nodes||!oralBtn) return;
+      const actionDock=document.getElementById('single-route-action-dock');
+      const rankBtn=document.querySelector('.single-route-rank-btn');
+      if (!stage||!svg||!nodes||!oralBtn||!actionDock||!rankBtn) return;
+      if (actionDock.parentElement !== document.body) document.body.appendChild(actionDock);
+      if (rankBtn.parentElement !== document.body) document.body.appendChild(rankBtn);
 
       const currentCount=Math.max(0,Number(data.missionCount||0));
       singleRouteCurrentCount=currentCount;
       const milestones=getMissionRouteMilestones(gami);
       const highest=milestones.reduce((m,x)=>Math.max(m,x.count),0);
       const routeEnd=Math.max(highest,currentCount+5,8);
-      const step = 132;
-      const topPad = 150;
-      const bottomPad = 110;
-      const stageHeight = topPad + routeEnd * step + bottomPad;
+      const ascendingItems=buildSingleRouteItems(routeEnd,milestones);
+      const milestoneAtCurrent=milestones.find(item=>item.count===currentCount);
+      singleRouteCurrentKey=milestoneAtCurrent ? `reward-${currentCount}` : `count-${currentCount}`;
+      const currentOrder=ascendingItems.find(item=>item.key===singleRouteCurrentKey)?.order ?? 0;
+      const visualItems=[...ascendingItems].reverse();
+
+      const topPad=126;
+      const bottomPad=118;
       const pattern=[52,38,58,66,48,34,46,64,55,37];
       const points=[];
-      for(let count=routeEnd;count>=0;count--){
-        const idx=routeEnd-count;
-        points.push({ count, x: pattern[idx % pattern.length] * 4.2, y: topPad + idx * step });
-      }
+      let y=topPad;
+      visualItems.forEach((item,index)=>{
+        points.push({
+          ...item,
+          x:pattern[index%pattern.length]*4.2,
+          y
+        });
+        y += item.kind==='reward' ? 142 : 116;
+      });
+      const stageHeight=y+bottomPad;
       stage.style.height=`${stageHeight}px`;
       svg.setAttribute('viewBox',`0 0 420 ${stageHeight}`);
       svg.setAttribute('preserveAspectRatio','none');
+
       const path=buildSingleRoutePath(points);
-      const completedPaths = buildSingleRouteCompletedPaths(points, currentCount);
+      const completedPaths=buildSingleRouteCompletedPaths(points,singleRouteCurrentKey);
       svg.innerHTML=`
         <defs>
           <linearGradient id="singleRouteBase" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dbe5ef"/><stop offset="1" stop-color="#c5d3e0"/></linearGradient>
@@ -2812,17 +3037,31 @@
         <path d="${path}" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
         ${completedPaths}
       `;
-      const milestoneMap=new Map(milestones.map(x=>[x.count,x]));
-      nodes.innerHTML=points.map(p=>{
-        const ms=milestoneMap.get(p.count);
-        const cls=['single-route-node',p.count<=currentCount?'is-complete':'',p.count===currentCount?'is-current':'',ms?'is-milestone':'',ms?`is-${ms.type}`:''].filter(Boolean).join(' ');
-        return `<div class="${cls}" data-route-count="${p.count}" style="left:${(p.x/420)*100}%;top:${p.y}px"><div class="single-route-core">${p.count}</div>${ms?`<div class="single-route-label">${escapeMissionRouteHtml(ms.title)}<small>${escapeMissionRouteHtml(ms.detail)}</small></div>`:''}${p.count===currentCount?`<div class="single-route-current-label">你在這裡<br>已完成 ${currentCount} 次</div>`:''}</div>`;
+
+      nodes.innerHTML=points.map(point=>{
+        const isCurrent=point.key===singleRouteCurrentKey;
+        const isComplete=point.order<=currentOrder;
+        const milestone=point.milestone;
+        const classes=[
+          'single-route-node',
+          point.kind==='reward'?'is-reward is-milestone':'is-count',
+          isComplete?'is-complete':'',
+          isCurrent?'is-current':'',
+          milestone?`is-${milestone.type}`:''
+        ].filter(Boolean).join(' ');
+        const coreContent=point.kind==='reward'?'✦':point.count;
+        const rewardLabel=milestone
+          ? `<div class="single-route-label">${escapeMissionRouteHtml(milestone.title)}<small>${escapeMissionRouteHtml(milestone.detail)}</small></div>`
+          : '';
+        const currentLabel=isCurrent
+          ? `<div class="single-route-current-label">${point.kind==='reward'?'已達成':`你在這裡<br>已完成 ${currentCount} 次`}</div>`
+          : '';
+        return `<div class="${classes}" data-route-key="${point.key}" data-route-count="${point.count}" style="left:${(point.x/420)*100}%;top:${point.y}px"><div class="single-route-core">${coreContent}</div>${rewardLabel}${currentLabel}</div>`;
       }).join('');
 
-      const nextCount = currentCount + 1;
-      oralBtn.dataset.nextCount = String(nextCount);
-      document.getElementById('single-route-start-small').textContent = '';
-      document.getElementById('single-route-unit').textContent = data.currentUnit || '未排定';
+      oralBtn.dataset.nextCount=String(currentCount+1);
+      document.getElementById('single-route-start-small').textContent='';
+      document.getElementById('single-route-unit').textContent=data.currentUnit||'未排定';
       updateSingleRouteCountdown(data.endDate);
       scheduleSingleRouteLocate(false);
     }
