@@ -638,10 +638,14 @@
   
 
     /* =======================================================
-       TAPPIE_SINGLE_SPEAKING_ROUTE_V6
-       Child-first single-player route: one page, one scroll layer.
+       TAPPIE_SINGLE_SPEAKING_ROUTE_V6_2
+       Rebuilt geometry: one scroll layer, measured positioning,
+       stable next-node action and Safari-safe scroll runway.
        ======================================================= */
-    #tab-challenge { align-items: stretch; }
+    #tab-challenge {
+      align-items: stretch;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 52%, #f8fbff 100%);
+    }
     .single-route-panel {
       position: relative;
       width: 100%;
@@ -650,109 +654,308 @@
       box-sizing: border-box;
       overflow: visible;
       background:
-        radial-gradient(circle at 50% 18%, rgba(71,166,255,.12), transparent 32%),
-        linear-gradient(180deg, #f8fbff 0%, #eef6ff 48%, #f8fbff 100%);
+        radial-gradient(circle at 50% 22%, rgba(71,166,255,.10), transparent 34%),
+        linear-gradient(180deg, #f8fbff 0%, #eef6ff 52%, #f8fbff 100%);
     }
     .single-route-header {
       position: sticky;
-      /* #content-viewport 本身已避開 fixed top bar，sticky 必須以內容視窗頂端為 0。 */
       top: 0;
-      z-index: 20;
-      padding: 20px 24px 18px;
-      background: rgba(248,251,255,.985);
-      backdrop-filter: blur(18px) saturate(145%); -webkit-backdrop-filter: blur(18px) saturate(145%);
-      border-bottom: 1px solid rgba(205,220,235,.72);
-      box-shadow: 0 14px 28px rgba(49,83,118,.06);
+      z-index: 30;
+      padding: 16px 22px 14px;
+      background: rgba(248,251,255,.992);
+      backdrop-filter: blur(18px) saturate(145%);
+      -webkit-backdrop-filter: blur(18px) saturate(145%);
+      border-bottom: 1px solid rgba(205,220,235,.68);
+      box-shadow: 0 10px 22px rgba(49,83,118,.045);
       isolation: isolate;
+    }
+    /* Cover the scroll viewport's top padding so the route never leaks above the header. */
+    .single-route-header::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -110px;
+      height: 110px;
+      background: rgba(248,251,255,.995);
+      pointer-events: none;
+      z-index: -1;
     }
     .single-route-header::after {
       content: '';
       position: absolute;
       left: 0;
       right: 0;
-      bottom: -24px;
-      height: 24px;
+      bottom: -14px;
+      height: 14px;
       pointer-events: none;
-      background: linear-gradient(180deg, rgba(248,251,255,.94), rgba(248,251,255,0));
+      background: linear-gradient(180deg, rgba(248,251,255,.90), rgba(248,251,255,0));
     }
-    .single-route-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
-    .single-route-title { margin:0; color:var(--text-main); font-size:27px; line-height:1.12; font-weight:950; letter-spacing:.5px; }
-    .single-route-sub { margin-top:8px; color:#667585; font-size:13px; font-weight:900; letter-spacing:.3px; }
+    .single-route-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .single-route-title {
+      margin: 0;
+      color: var(--text-main);
+      font-size: 25px;
+      line-height: 1.12;
+      font-weight: 950;
+      letter-spacing: .4px;
+    }
+    .single-route-sub {
+      margin-top: 7px;
+      color: #667585;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .25px;
+    }
     .single-route-rank-btn {
-      flex:0 0 auto; width:54px; height:54px; border:1px solid rgba(255,255,255,.96); border-radius:20px;
-      display:grid; place-items:center; background:rgba(255,255,255,.76); box-shadow:0 12px 28px rgba(36,69,104,.09), inset 0 1px 0 #fff;
-      font-size:24px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+      flex: 0 0 auto;
+      width: 50px;
+      height: 50px;
+      border: 1px solid rgba(255,255,255,.96);
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 10px 24px rgba(36,69,104,.08), inset 0 1px 0 #fff;
+      font-size: 22px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
     }
-    .single-route-rank-btn:active { transform:scale(.95); }
+    .single-route-rank-btn:active { transform: scale(.95); }
     .single-route-next-copy {
-      display:inline-flex; align-items:center; gap:9px; margin-top:14px; padding:11px 15px; border-radius:17px;
-      color:#135faf; background:rgba(255,255,255,.78); border:1px solid rgba(255,255,255,.96);
-      box-shadow:0 8px 18px rgba(0,102,204,.07); font-size:13px; font-weight:950;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 11px;
+      padding: 9px 13px;
+      border-radius: 16px;
+      color: #135faf;
+      background: rgba(255,255,255,.80);
+      border: 1px solid rgba(255,255,255,.96);
+      box-shadow: 0 7px 16px rgba(0,102,204,.06);
+      font-size: 12px;
+      font-weight: 950;
     }
-    .single-route-next-copy::before { content:''; width:9px; height:9px; border-radius:50%; background:#1f91f2; box-shadow:0 0 0 5px rgba(31,145,242,.12); }
-    .single-route-stage { position:relative; width:100%; min-height:1000px; overflow:hidden; padding-top: 28px; box-sizing: border-box; }
+    .single-route-next-copy::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1f91f2;
+      box-shadow: 0 0 0 5px rgba(31,145,242,.12);
+    }
+    .single-route-stage {
+      position: relative;
+      width: 100%;
+      min-height: 1200px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
     .single-route-stage::before {
-      content:''; position:absolute; inset:0; pointer-events:none;
-      background-image:radial-gradient(circle, rgba(78,139,201,.09) 1px, transparent 1px);
-      background-size:26px 26px; opacity:.22;
-      mask-image:linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
-      -webkit-mask-image:linear-gradient(180deg, transparent, #000 16%, #000 84%, transparent);
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, rgba(78,139,201,.085) 1px, transparent 1px);
+      background-size: 27px 27px;
+      opacity: .18;
+      mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
+      -webkit-mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
     }
-    .single-route-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
-    .single-route-node { position:absolute; width:0; height:0; transform:translate(-50%,-50%); z-index:3; }
+    .single-route-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .single-route-node {
+      position: absolute;
+      width: 0;
+      height: 0;
+      transform: translate(-50%,-50%);
+      z-index: 3;
+      overflow: visible;
+    }
     .single-route-core {
-      position:absolute; left:0; top:0; transform:translate(-50%,-50%); width:52px; height:52px; border-radius:50%;
-      display:grid; place-items:center; color:#8493a2; background:linear-gradient(145deg,#fff,#eef3f8);
-      border:3px solid rgba(193,205,218,.72); box-shadow:0 10px 22px rgba(42,63,84,.12), inset 0 2px 0 #fff;
-      font-size:16px; font-weight:950;
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: translate(-50%,-50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #8493a2;
+      background: linear-gradient(145deg,#fff,#eef3f8);
+      border: 3px solid rgba(193,205,218,.72);
+      box-shadow: 0 10px 22px rgba(42,63,84,.12), inset 0 2px 0 #fff;
+      font-size: 16px;
+      font-weight: 950;
     }
     .single-route-node.is-complete .single-route-core {
-      color:#fff; border-color:rgba(255,255,255,.93); background:linear-gradient(145deg,#43c1ff,#0874d4);
-      box-shadow:0 12px 26px rgba(0,102,204,.24), inset 0 2px 0 rgba(255,255,255,.42);
+      color: #fff;
+      border-color: rgba(255,255,255,.93);
+      background: linear-gradient(145deg,#43c1ff,#0874d4);
+      box-shadow: 0 12px 26px rgba(0,102,204,.24), inset 0 2px 0 rgba(255,255,255,.42);
     }
     .single-route-node.is-current .single-route-core {
-      width:78px; height:78px; font-size:23px; border-width:5px; background:linear-gradient(145deg,#32bdff,#0066cc);
-      box-shadow:0 0 0 10px rgba(0,102,204,.10), 0 18px 38px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.48);
-      animation:singleRoutePulse 2.6s ease-in-out infinite;
+      width: 78px;
+      height: 78px;
+      font-size: 23px;
+      border-width: 5px;
+      background: linear-gradient(145deg,#32bdff,#0066cc);
+      box-shadow: 0 0 0 10px rgba(0,102,204,.10), 0 18px 38px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.48);
+      animation: singleRoutePulse 2.6s ease-in-out infinite;
     }
-    @keyframes singleRoutePulse { 0%,100%{box-shadow:0 0 0 8px rgba(0,102,204,.09),0 18px 38px rgba(0,102,204,.28),inset 0 2px 0 rgba(255,255,255,.48)} 50%{box-shadow:0 0 0 15px rgba(0,102,204,.035),0 20px 42px rgba(0,102,204,.34),inset 0 2px 0 rgba(255,255,255,.48)} }
-    .single-route-node.is-milestone .single-route-core { width:74px; height:74px; border-radius:24px; color:#fff; font-size:21px; border:5px solid rgba(255,255,255,.90); }
-    .single-route-node.is-safe .single-route-core { background:linear-gradient(145deg,#66baff,#287bdc); }
-    .single-route-node.is-good .single-route-core { background:linear-gradient(145deg,#69dfbd,#22a887); }
-    .single-route-node.is-perfect .single-route-core { width:82px; height:82px; background:linear-gradient(145deg,#ffc45d,#f18b18); box-shadow:0 16px 34px rgba(243,156,18,.27), inset 0 2px 0 rgba(255,255,255,.48); }
-    .single-route-label { position:absolute; top:43px; width:132px; color:var(--text-main); font-size:13px; font-weight:950; line-height:1.35; text-align:center; transform:translateX(-50%); left:0; }
-    .single-route-label small { display:block; margin-top:3px; color:#718090; font-size:11px; font-weight:850; }
+    @keyframes singleRoutePulse {
+      0%,100% { box-shadow:0 0 0 8px rgba(0,102,204,.09),0 18px 38px rgba(0,102,204,.28),inset 0 2px 0 rgba(255,255,255,.48); }
+      50% { box-shadow:0 0 0 15px rgba(0,102,204,.035),0 20px 42px rgba(0,102,204,.34),inset 0 2px 0 rgba(255,255,255,.48); }
+    }
+    .single-route-node.is-milestone .single-route-core {
+      width: 74px;
+      height: 74px;
+      border-radius: 24px;
+      color: #fff;
+      font-size: 21px;
+      border: 5px solid rgba(255,255,255,.90);
+    }
+    .single-route-node.is-safe .single-route-core { background: linear-gradient(145deg,#66baff,#287bdc); }
+    .single-route-node.is-good .single-route-core { background: linear-gradient(145deg,#69dfbd,#22a887); }
+    .single-route-node.is-perfect .single-route-core {
+      width: 82px;
+      height: 82px;
+      background: linear-gradient(145deg,#ffc45d,#f18b18);
+      box-shadow: 0 16px 34px rgba(243,156,18,.27), inset 0 2px 0 rgba(255,255,255,.48);
+    }
+    .single-route-label {
+      position: absolute;
+      top: 43px;
+      width: 132px;
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 950;
+      line-height: 1.35;
+      text-align: center;
+      transform: translateX(-50%);
+      left: 0;
+    }
+    .single-route-label small {
+      display: block;
+      margin-top: 3px;
+      color: #718090;
+      font-size: 11px;
+      font-weight: 850;
+    }
     .single-route-current-label {
-      position:absolute; left:54px; top:-25px; width:max-content; padding:10px 13px; border-radius:16px;
-      color:#0066cc; background:rgba(255,255,255,.92); border:1px solid #fff; box-shadow:0 10px 24px rgba(0,102,204,.12);
-      font-size:12px; font-weight:950; line-height:1.4;
+      position: absolute;
+      left: 54px;
+      top: -25px;
+      width: max-content;
+      padding: 10px 13px;
+      border-radius: 16px;
+      color: #0066cc;
+      background: rgba(255,255,255,.94);
+      border: 1px solid #fff;
+      box-shadow: 0 10px 24px rgba(0,102,204,.12);
+      font-size: 12px;
+      font-weight: 950;
+      line-height: 1.4;
     }
-    .single-route-start { position:absolute; z-index:9; transform:translate(-50%,-100%); width:220px; text-decoration:none; -webkit-tap-highlight-color:transparent; }
+    /* The action lives inside the next node, so its coordinate system can no longer drift. */
+    .single-route-start {
+      position: absolute;
+      left: 0;
+      top: -50px;
+      z-index: 12;
+      width: 202px;
+      transform: translate(-50%,-100%);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
     .single-route-start-card {
-      position:relative; padding:12px 16px 14px; border-radius:22px; color:#fff; text-align:center;
-      background:linear-gradient(145deg,#31aaff,#0666df); border:2px solid rgba(255,255,255,.72);
-      box-shadow:0 15px 32px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.30);
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      position: relative;
+      padding: 11px 14px 13px;
+      border-radius: 21px;
+      color: #fff;
+      text-align: center;
+      background: linear-gradient(145deg,#31aaff,#0666df);
+      border: 2px solid rgba(255,255,255,.72);
+      box-shadow: 0 15px 32px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.30);
     }
-    .single-route-start-card::after { content:''; position:absolute; left:50%; bottom:-10px; width:18px; height:18px; transform:translateX(-50%) rotate(45deg); background:#096ce0; border-right:2px solid rgba(255,255,255,.45); border-bottom:2px solid rgba(255,255,255,.45); }
-    .single-route-start-small { display:block; margin-bottom:2px; font-size:11px; font-weight:900; opacity:.85; letter-spacing:.4px; }
-    .single-route-start-main { display:block; font-size:19px; font-weight:950; letter-spacing:2px; }
-    .single-route-start:active { transform:translate(-50%,-100%) scale(.96); }
-    .single-route-end-note { padding:20px 24px 34px; color:#718090; font-size:12px; font-weight:900; text-align:center; }
-    .single-route-leaderboard { display:none; margin:0 20px 28px; padding:22px; border-radius:28px; background:rgba(255,255,255,.84); border:1px solid rgba(255,255,255,.96); box-shadow:0 18px 38px rgba(40,61,84,.09); }
-    .single-route-leaderboard.show { display:block; }
+    .single-route-start-card::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -9px;
+      width: 16px;
+      height: 16px;
+      transform: translateX(-50%) rotate(45deg);
+      background: #096ce0;
+      border-right: 2px solid rgba(255,255,255,.45);
+      border-bottom: 2px solid rgba(255,255,255,.45);
+    }
+    .single-route-start-small {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 10px;
+      font-weight: 900;
+      opacity: .86;
+      letter-spacing: .35px;
+    }
+    .single-route-start-main {
+      display: block;
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: 2px;
+    }
+    .single-route-start:active { transform: translate(-50%,-100%) scale(.96); }
+    .single-route-end-note {
+      padding: 18px 24px 38px;
+      color: #718090;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+    }
+    .single-route-leaderboard {
+      display: none;
+      margin: 0 20px 28px;
+      padding: 22px;
+      border-radius: 28px;
+      background: rgba(255,255,255,.84);
+      border: 1px solid rgba(255,255,255,.96);
+      box-shadow: 0 18px 38px rgba(40,61,84,.09);
+    }
+    .single-route-leaderboard.show { display: block; }
     .single-route-leaderboard .leaderboard { width:100%; max-width:none; margin:0; padding:0; background:none; border:0; box-shadow:none; }
     .single-route-leaderboard-close { float:right; width:36px; height:36px; border:0; border-radius:50%; background:rgba(0,0,0,.05); color:#6d7a87; font-size:20px; cursor:pointer; }
 
     @media (max-width: 430px) {
-      .single-route-header { padding: 18px 20px 17px; }
-      .single-route-title { font-size: 25px; }
-      .single-route-sub { margin-top: 7px; font-size: 12px; }
-      .single-route-rank-btn { width: 50px; height: 50px; border-radius: 18px; }
-      .single-route-next-copy { margin-top: 12px; padding: 10px 13px; font-size: 12px; }
-      .single-route-start { width: min(210px, calc(100vw - 92px)); }
+      .single-route-header { padding: 15px 20px 13px; }
+      .single-route-title { font-size: 24px; }
+      .single-route-rank-btn { width: 48px; height: 48px; border-radius: 17px; }
+      .single-route-next-copy { margin-top: 10px; padding: 9px 12px; font-size: 12px; }
+      .single-route-start { width: 194px; }
+      .single-route-current-label { left: 50px; }
     }
-
-    @media (min-width:768px) { .single-route-panel{border-radius:38px;margin-top:10px;} .single-route-header{padding-inline:38px;} }
+    @media (max-width: 360px) {
+      .single-route-start { width: 184px; }
+      .single-route-current-label { left: 46px; font-size: 11px; }
+    }
+    @media (min-width:768px) {
+      .single-route-panel { border-radius: 38px; margin-top: 10px; }
+      .single-route-header { padding-inline: 38px; }
+    }
 </style>
 </head>
 
@@ -1333,7 +1536,7 @@
 
       // 4. 挑戰頁定位目前節點；其他分頁回到頂部
       if (tabId === 'challenge') {
-        setTimeout(() => locateSingleRouteCurrent(false), 80);
+        scheduleSingleRouteLocate(false);
       } else {
         document.getElementById('content-viewport').scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -2228,32 +2431,68 @@
     }
 
     let singleRouteCurrentCount = 0;
+    let singleRouteLocateToken = 0;
+
     function buildSingleRoutePath(points) {
       if (!points.length) return '';
       if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
       let d = `M ${points[0].x} ${points[0].y}`;
-      for (let i=1;i<points.length-1;i++) {
-        const midX=(points[i].x+points[i+1].x)/2;
-        const midY=(points[i].y+points[i+1].y)/2;
+      for (let i = 1; i < points.length - 1; i++) {
+        const midX = (points[i].x + points[i + 1].x) / 2;
+        const midY = (points[i].y + points[i + 1].y) / 2;
         d += ` Q ${points[i].x} ${points[i].y} ${midX} ${midY}`;
       }
-      const last=points[points.length-1], prev=points[points.length-2];
+      const last = points[points.length - 1];
+      const prev = points[points.length - 2];
       d += ` Q ${prev.x} ${prev.y} ${last.x} ${last.y}`;
       return d;
     }
 
-    function locateSingleRouteCurrent(smooth=false) {
-      const viewport=document.getElementById('content-viewport');
-      const panel=document.getElementById('single-route-panel');
-      const node=document.querySelector(`#single-route-nodes [data-route-count="${singleRouteCurrentCount}"]`);
-      if (!viewport || !panel || !node) return;
-      const header=document.querySelector('.single-route-header');
-      const headerHeight=header ? header.offsetHeight : 0;
-      /* 將自己放在畫面約 72% 高度，確保下一節點與開始按鈕完整露出。 */
-      const desiredY=Math.max(headerHeight + 250, viewport.clientHeight * .72);
-      const target=panel.offsetTop + node.offsetTop - desiredY;
-      viewport.scrollTo({top:Math.max(0,target),behavior:smooth?'smooth':'auto'});
+    function locateSingleRouteCurrent(smooth = false) {
+      const viewport = document.getElementById('content-viewport');
+      const node = document.querySelector(`#single-route-nodes [data-route-count="${singleRouteCurrentCount}"]`);
+      if (!viewport || !node || !document.getElementById('tab-challenge')?.classList.contains('active')) return;
+
+      const core = node.querySelector('.single-route-core') || node;
+      const topBar = document.getElementById('top-bar');
+      const bottomNav = document.getElementById('bottom-nav');
+      const routeHeader = document.querySelector('.single-route-header');
+
+      const viewportRect = viewport.getBoundingClientRect();
+      const coreRect = core.getBoundingClientRect();
+      const topBarBottom = topBar ? topBar.getBoundingClientRect().bottom : viewportRect.top;
+      const headerBottom = routeHeader ? routeHeader.getBoundingClientRect().bottom : topBarBottom;
+      const bottomNavTop = bottomNav ? bottomNav.getBoundingClientRect().top : viewportRect.bottom;
+
+      const visibleTop = Math.max(viewportRect.top, topBarBottom, headerBottom);
+      const visibleBottom = Math.min(viewportRect.bottom, bottomNavTop);
+      const usableHeight = Math.max(260, visibleBottom - visibleTop);
+      /* Current node sits slightly below center, leaving room for the next node and action above. */
+      const desiredScreenY = visibleTop + usableHeight * 0.63;
+      const currentScreenY = coreRect.top + coreRect.height / 2;
+      const maxScroll = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+      const target = Math.min(maxScroll, Math.max(0, viewport.scrollTop + currentScreenY - desiredScreenY));
+
+      viewport.style.scrollBehavior = 'auto';
+      viewport.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'auto' });
+      requestAnimationFrame(() => { viewport.style.scrollBehavior = ''; });
     }
+
+    function scheduleSingleRouteLocate(smooth = false) {
+      const token = ++singleRouteLocateToken;
+      [0, 90, 240].forEach((delay, index) => {
+        setTimeout(() => {
+          if (token !== singleRouteLocateToken) return;
+          requestAnimationFrame(() => locateSingleRouteCurrent(smooth && index === 2));
+        }, delay);
+      });
+    }
+
+    window.addEventListener('resize', () => {
+      if (document.getElementById('tab-challenge')?.classList.contains('active')) {
+        scheduleSingleRouteLocate(false);
+      }
+    }, { passive: true });
 
     function toggleSingleRouteLeaderboard(force) {
       const panel=document.getElementById('single-route-leaderboard');
@@ -2275,14 +2514,15 @@
       const milestones=getMissionRouteMilestones(gami);
       const highest=milestones.reduce((m,x)=>Math.max(m,x.count),0);
       const routeEnd=Math.max(highest,currentCount+5,8);
-      const step=132;
-      const pad=105;
-      const stageHeight=pad*2+routeEnd*step;
+      const step = 132;
+      const topPad = 150;
+      const bottomPad = 390;
+      const stageHeight = topPad + routeEnd * step + bottomPad;
       const pattern=[52,38,58,66,48,34,46,64,55,37];
       const points=[];
       for(let count=routeEnd;count>=0;count--){
         const idx=routeEnd-count;
-        points.push({count,x:pattern[idx%pattern.length]*4.2,y:pad+idx*step});
+        points.push({ count, x: pattern[idx % pattern.length] * 4.2, y: topPad + idx * step });
       }
       stage.style.height=`${stageHeight}px`;
       svg.setAttribute('viewBox',`0 0 420 ${stageHeight}`);
@@ -2307,16 +2547,21 @@
         return `<div class="${cls}" data-route-count="${p.count}" style="left:${(p.x/420)*100}%;top:${p.y}px"><div class="single-route-core">${p.count}</div>${ms?`<div class="single-route-label">${escapeMissionRouteHtml(ms.title)}<small>${escapeMissionRouteHtml(ms.detail)}</small></div>`:''}${p.count===currentCount?`<div class="single-route-current-label">你在這裡<br>已完成 ${currentCount} 次</div>`:''}</div>`;
       }).join('');
 
-      const nextCount=currentCount+1;
-      const nextPoint=points.find(p=>p.count===nextCount) || points[0];
-      oralBtn.style.left=`${(nextPoint.x/420)*100}%`;
-      oralBtn.style.top=`${nextPoint.y-58}px`;
-      document.getElementById('single-route-start-small').textContent=`下一站：${nextCount} 次`;
-      const nextMilestone=milestones.find(m=>m.count>currentCount);
-      const remain=nextMilestone?nextMilestone.count-currentCount:1;
-      document.getElementById('single-route-next-copy').textContent=nextMilestone?`再完成 ${remain} 次，達成${nextMilestone.title}`:'繼續累積單元挑戰次數';
-      document.getElementById('single-route-unit').textContent=data.currentUnit||'未排定';
-      requestAnimationFrame(()=>setTimeout(()=>locateSingleRouteCurrent(false),120));
+      const nextCount = currentCount + 1;
+      const nextNode = nodes.querySelector(`[data-route-count="${nextCount}"]`);
+      if (nextNode) {
+        oralBtn.style.left = '';
+        oralBtn.style.top = '';
+        nextNode.appendChild(oralBtn);
+      }
+      document.getElementById('single-route-start-small').textContent = `下一站：${nextCount} 次`;
+      const nextMilestone = milestones.find(m => m.count > currentCount);
+      const remain = nextMilestone ? nextMilestone.count - currentCount : 1;
+      document.getElementById('single-route-next-copy').textContent = nextMilestone
+        ? `再完成 ${remain} 次，達成${nextMilestone.title}`
+        : '繼續累積單元挑戰次數';
+      document.getElementById('single-route-unit').textContent = data.currentUnit || '未排定';
+      scheduleSingleRouteLocate(false);
     }
 
     function renderDashboard(data) {
