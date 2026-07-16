@@ -8,6 +8,7 @@
 <title>Tappie學美語</title>
   <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
   <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
+  <!-- TAPPIE_MILESTONE_BUBBLE_AND_SAFE_CELEBRATION_V1_2_20260716 -->
   <!-- TAPPIE_MILESTONE_REWARD_CELEBRATION_MODAL_UNIFICATION_20260716 -->
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2056,21 +2057,20 @@
       inset: 0;
       z-index: 10040;
       display: none;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 20px 18px calc(112px + env(safe-area-inset-bottom));
       pointer-events: none;
       opacity: 0;
-      transition: opacity .18s ease;
+      transition: opacity .16s ease;
     }
     .single-route-milestone-message.show {
-      display: flex;
+      display: block;
       opacity: 1;
-      pointer-events: auto;
     }
     .single-route-milestone-card {
-      position: relative;
+      position: fixed;
+      left: 50%;
+      bottom: calc(112px + env(safe-area-inset-bottom));
       width: min(340px, calc(100vw - 32px));
+      box-sizing: border-box;
       padding: 16px 44px 16px 17px;
       border: 1px solid rgba(146,166,185,.24);
       border-radius: 20px;
@@ -2079,13 +2079,47 @@
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       pointer-events: auto;
-      transform: translateY(14px) scale(.97);
-      transition: transform .2s ease;
+      transform: translate(-50%,14px) scale(.97);
+      transition: transform .18s ease, opacity .18s ease;
     }
-    .single-route-milestone-message.show .single-route-milestone-card { transform: translateY(0) scale(1); }
+    .single-route-milestone-message.show .single-route-milestone-card { transform: translate(-50%,0) scale(1); }
+    .single-route-milestone-message.is-anchored .single-route-milestone-card {
+      left: 0;
+      top: 0;
+      bottom: auto;
+      width: min(268px, calc(100vw - 28px));
+      padding: 12px 14px;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(37,57,75,.17), inset 0 1px 0 rgba(255,255,255,.96);
+      transform: translateY(5px) scale(.98);
+    }
+    .single-route-milestone-message.is-anchored.show .single-route-milestone-card {
+      transform: translateY(0) scale(1);
+    }
+    .single-route-milestone-message.is-anchored .single-route-milestone-card::after {
+      content: '';
+      position: absolute;
+      left: var(--bubble-arrow-left, 50%);
+      bottom: -8px;
+      width: 16px;
+      height: 16px;
+      transform: translateX(-50%) rotate(45deg);
+      background: inherit;
+      border-right: 1px solid rgba(146,166,185,.20);
+      border-bottom: 1px solid rgba(146,166,185,.20);
+      border-radius: 0 0 3px 0;
+    }
+    .single-route-milestone-message.is-anchored.is-below .single-route-milestone-card::after {
+      top: -8px;
+      bottom: auto;
+      transform: translateX(-50%) rotate(225deg);
+    }
     .single-route-milestone-card.is-success { border-color: rgba(31,174,129,.26); background: linear-gradient(145deg,rgba(238,255,249,.98),rgba(255,255,255,.98)); }
-    .single-route-milestone-card.is-warning { border-color: rgba(232,167,46,.28); background: linear-gradient(145deg,rgba(255,249,231,.98),rgba(255,255,255,.98)); }
+    .single-route-milestone-card.is-warning { border-color: rgba(232,167,46,.28); background: linear-gradient(145deg,rgba(255,249,231,.99),rgba(255,255,255,.99)); }
     .single-route-milestone-card.is-error { border-color: rgba(221,83,83,.25); background: linear-gradient(145deg,rgba(255,241,241,.98),rgba(255,255,255,.98)); }
+    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-warning::after { background: #fffdf7; }
+    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-success::after { background: #f7fffc; }
+    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-error::after { background: #fff7f7; }
     .single-route-milestone-kicker {
       color: #7c8996;
       font-size: 10px;
@@ -2093,6 +2127,9 @@
       letter-spacing: .12em;
       text-transform: uppercase;
     }
+    .single-route-milestone-message.is-anchored .single-route-milestone-kicker,
+    .single-route-milestone-message.is-anchored .single-route-milestone-close,
+    .single-route-milestone-message.is-anchored .single-route-milestone-points { display: none !important; }
     .single-route-milestone-title {
       margin-top: 4px;
       color: #25384a;
@@ -2100,12 +2137,23 @@
       font-weight: 1000;
       line-height: 1.25;
     }
+    .single-route-milestone-message.is-anchored .single-route-milestone-title {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.35;
+    }
     .single-route-milestone-copy {
       margin-top: 5px;
       color: #657585;
       font-size: 13px;
       font-weight: 760;
       line-height: 1.55;
+    }
+    .single-route-milestone-message.is-anchored .single-route-milestone-copy {
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.42;
     }
     .single-route-milestone-points {
       display: inline-flex;
@@ -2133,6 +2181,7 @@
     }
 
 
+
     /* =====================================================
        Full-screen milestone reward celebration
        ===================================================== */
@@ -2157,6 +2206,11 @@
       background:
         radial-gradient(circle at 50% 43%, rgba(190,255,236,.16), transparent 31%),
         linear-gradient(155deg,#55d4b3 0%,#24a68a 48%,#147b68 100%);
+    }
+    .single-route-reward-celebration.is-safe {
+      background:
+        radial-gradient(circle at 50% 43%, rgba(255,225,217,.18), transparent 31%),
+        linear-gradient(155deg,#ff8b82 0%,#e55c58 48%,#bd3e43 100%);
     }
     .single-route-reward-celebration.show { display: flex; opacity: 1; }
     .single-route-reward-celebration-inner {
@@ -2240,6 +2294,12 @@
       transition: transform .16s ease;
     }
     .single-route-reward-celebration.is-good .single-route-reward-celebration-confirm { color: #177d68; }
+    .single-route-reward-celebration.is-safe .single-route-reward-celebration-confirm { color: #c54749; }
+    .single-route-reward-celebration-points.is-safety-status {
+      max-width: 360px;
+      font-size: clamp(30px, 8vw, 48px);
+      line-height: 1.12;
+    }
     .single-route-reward-celebration-confirm:active { transform: scale(.97); }
     .single-route-celebration-spark {
       position: absolute;
@@ -3809,6 +3869,8 @@
     let singleRouteLastGami = null;
     let singleRouteClaimLoadingKey = '';
     let singleRouteMessageTimer = 0;
+    let singleRouteMessageAnchor = null;
+    let singleRouteMessagePositionRaf = 0;
 
     function buildSingleRoutePath(points) {
       if (!points.length) return '';
@@ -3990,7 +4052,35 @@
       };
     }
 
-    function showSingleRouteMilestoneMessage({ title = '單元里程碑', message = '', points = null, tone = 'info', kicker = '單元里程碑', autoClose = true } = {}) {
+    function positionSingleRouteMilestoneBubble(anchorEl) {
+      const overlay = document.getElementById('single-route-milestone-message');
+      const card = document.getElementById('single-route-milestone-card');
+      if (!overlay || !card || !anchorEl) return;
+      const anchor = anchorEl.querySelector?.('.single-route-core') || anchorEl;
+      const rect = anchor.getBoundingClientRect();
+      const viewportPad = 12;
+      const safeTop = Math.max(10, Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0'));
+      const cardRect = card.getBoundingClientRect();
+      const anchorCenterX = rect.left + rect.width / 2;
+      let left = anchorCenterX - cardRect.width / 2;
+      left = Math.max(viewportPad, Math.min(left, window.innerWidth - cardRect.width - viewportPad));
+      let top = rect.top - cardRect.height - 16;
+      let below = false;
+      if (top < safeTop + 8) {
+        top = rect.bottom + 16;
+        below = true;
+      }
+      const maxTop = Math.max(viewportPad, window.innerHeight - cardRect.height - viewportPad);
+      top = Math.max(viewportPad, Math.min(top, maxTop));
+      const arrowLeft = Math.max(24, Math.min(anchorCenterX - left, cardRect.width - 24));
+      card.style.left = `${Math.round(left)}px`;
+      card.style.top = `${Math.round(top)}px`;
+      card.style.bottom = 'auto';
+      card.style.setProperty('--bubble-arrow-left', `${Math.round(arrowLeft)}px`);
+      overlay.classList.toggle('is-below', below);
+    }
+
+    function showSingleRouteMilestoneMessage({ title = '單元里程碑', message = '', points = null, tone = 'info', kicker = '單元里程碑', autoClose = true, anchorEl = null } = {}) {
       const overlay = document.getElementById('single-route-milestone-message');
       const card = document.getElementById('single-route-milestone-card');
       const titleEl = document.getElementById('single-route-milestone-title');
@@ -3998,8 +4088,15 @@
       const pointsEl = document.getElementById('single-route-milestone-points');
       const kickerEl = document.getElementById('single-route-milestone-kicker');
       if (!overlay || !card || !titleEl || !copyEl || !pointsEl || !kickerEl) return;
+      if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
       clearTimeout(singleRouteMessageTimer);
+      singleRouteMessageAnchor = anchorEl || null;
+      overlay.classList.remove('show','is-anchored','is-below');
       card.classList.remove('is-success','is-warning','is-error');
+      card.style.left = '';
+      card.style.top = '';
+      card.style.bottom = '';
+      card.style.removeProperty('--bubble-arrow-left');
       if (tone === 'success') card.classList.add('is-success');
       else if (tone === 'warning') card.classList.add('is-warning');
       else if (tone === 'error') card.classList.add('is-error');
@@ -4013,19 +4110,54 @@
         pointsEl.style.display = 'none';
         pointsEl.textContent = '';
       }
-      overlay.style.display = 'flex';
-      requestAnimationFrame(() => overlay.classList.add('show'));
-      if (autoClose) singleRouteMessageTimer = setTimeout(() => hideSingleRouteMilestoneMessage(), 3200);
+      if (anchorEl) overlay.classList.add('is-anchored');
+      overlay.style.display = 'block';
+      requestAnimationFrame(() => {
+        if (anchorEl) positionSingleRouteMilestoneBubble(anchorEl);
+        overlay.classList.add('show');
+      });
+      if (autoClose) singleRouteMessageTimer = setTimeout(() => hideSingleRouteMilestoneMessage(), anchorEl ? 3600 : 3200);
     }
 
     function hideSingleRouteMilestoneMessage() {
       const overlay = document.getElementById('single-route-milestone-message');
+      const card = document.getElementById('single-route-milestone-card');
       if (!overlay) return;
       clearTimeout(singleRouteMessageTimer);
       overlay.classList.remove('show');
-      setTimeout(() => { if (!overlay.classList.contains('show')) overlay.style.display = 'none'; }, 200);
+      setTimeout(() => {
+        if (!overlay.classList.contains('show')) {
+          overlay.style.display = 'none';
+          overlay.classList.remove('is-anchored','is-below');
+          singleRouteMessageAnchor = null;
+          if (card) {
+            card.style.left = '';
+            card.style.top = '';
+            card.style.bottom = '';
+            card.style.removeProperty('--bubble-arrow-left');
+          }
+        }
+      }, 190);
     }
 
+
+    function scheduleSingleRouteMilestoneBubblePosition() {
+      if (!singleRouteMessageAnchor || singleRouteMessagePositionRaf) return;
+      const overlay = document.getElementById('single-route-milestone-message');
+      if (!overlay?.classList.contains('show') || !overlay.classList.contains('is-anchored')) return;
+      singleRouteMessagePositionRaf = requestAnimationFrame(() => {
+        singleRouteMessagePositionRaf = 0;
+        if (!singleRouteMessageAnchor?.isConnected) {
+          hideSingleRouteMilestoneMessage();
+          return;
+        }
+        positionSingleRouteMilestoneBubble(singleRouteMessageAnchor);
+      });
+    }
+
+    document.addEventListener('scroll', scheduleSingleRouteMilestoneBubblePosition, true);
+    window.addEventListener('resize', scheduleSingleRouteMilestoneBubblePosition, { passive: true });
+    window.visualViewport?.addEventListener('resize', scheduleSingleRouteMilestoneBubblePosition, { passive: true });
 
     function showSingleRouteRewardCelebration({ type = 'good', label = '進階獎勵', points = 0 } = {}) {
       const overlay = document.getElementById('single-route-reward-celebration');
@@ -4036,12 +4168,36 @@
       if (!overlay || !titleEl || !visualEl || !pointsEl || !copyEl) return;
       hideSingleRouteMilestoneMessage();
       if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
-      overlay.classList.remove('is-good', 'is-perfect');
+      overlay.classList.remove('is-good', 'is-perfect', 'is-safe');
       overlay.classList.add(type === 'perfect' ? 'is-perfect' : 'is-good');
       titleEl.textContent = `獲得${label}`;
       visualEl.innerHTML = getSingleRouteRewardSvg(type === 'perfect' ? 'perfect' : 'good');
+      pointsEl.classList.remove('is-safety-status');
       pointsEl.textContent = `+${Math.max(0, Number(points || 0))} 點`;
       copyEl.textContent = '已加入你的點數';
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('single-route-modal-open');
+      requestAnimationFrame(() => overlay.classList.add('show'));
+      setTimeout(() => overlay.querySelector('.single-route-reward-celebration-confirm')?.focus(), 260);
+    }
+
+    function showSingleRouteSafetyCelebration() {
+      const overlay = document.getElementById('single-route-reward-celebration');
+      const titleEl = document.getElementById('single-route-reward-celebration-title');
+      const visualEl = document.getElementById('single-route-reward-celebration-visual');
+      const pointsEl = document.getElementById('single-route-reward-celebration-points');
+      const copyEl = document.getElementById('single-route-reward-celebration-copy');
+      if (!overlay || !titleEl || !visualEl || !pointsEl || !copyEl) return;
+      hideSingleRouteMilestoneMessage();
+      if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
+      overlay.classList.remove('is-good', 'is-perfect', 'is-safe');
+      overlay.classList.add('is-safe');
+      titleEl.textContent = '安全門檻已達成';
+      visualEl.innerHTML = getSingleRouteRewardSvg('safe');
+      pointsEl.classList.add('is-safety-status');
+      pointsEl.textContent = '本單元不扣點';
+      copyEl.textContent = '再接再厲，繼續解鎖後續獎勵吧！';
       overlay.style.display = 'flex';
       overlay.setAttribute('aria-hidden', 'false');
       document.body.classList.add('single-route-modal-open');
@@ -4059,7 +4215,9 @@
         if (!overlay.classList.contains('show')) {
           overlay.style.display = 'none';
           const visual = document.getElementById('single-route-reward-celebration-visual');
+          const points = document.getElementById('single-route-reward-celebration-points');
           if (visual) visual.innerHTML = '';
+          if (points) points.classList.remove('is-safety-status');
         }
       }, 250);
     }
@@ -4082,7 +4240,7 @@
       renderMissionClassRoute(singleRouteLastData, singleRouteLastGami || normalizeTappieGamiConfig(singleRouteLastData.gamification || {}));
     }
 
-    async function handleSingleRouteMilestoneClick(type) {
+    async function handleSingleRouteMilestoneClick(type, anchorEl = null) {
       const milestone = getMissionRouteMilestones(singleRouteLastGami || {}).find(item => item.type === type);
       if (!milestone) return;
       const state = getSingleRouteRewardState(type, milestone.count, type === 'good' ? singleRouteLastGami?.mission?.goodReward : singleRouteLastGami?.mission?.perfectReward);
@@ -4090,16 +4248,13 @@
 
       if (type === 'safe') {
         if (state.reached) {
-          showSingleRouteMilestoneMessage({
-            title: '安全門檻已達成',
-            message: '本單元已安全不被扣點。再接再厲，繼續解鎖後續獎勵吧！',
-            tone: 'success',
-          });
+          showSingleRouteSafetyCelebration();
         } else {
           showSingleRouteMilestoneMessage({
-            title: '安全門檻',
-            message: remaining > 0 ? `再完成 ${remaining} 次，抵達後本單元結算不會被扣點。` : '抵達後，本單元結算不會被扣點。',
+            title: '抵達即可啟用安全門檻',
+            message: remaining > 0 ? `再完成 ${remaining} 次，本單元即可不扣點。` : '抵達後，本單元即可不扣點。',
             tone: 'warning',
+            anchorEl,
           });
         }
         return;
@@ -4108,13 +4263,10 @@
       const label = type === 'perfect' ? '最高獎勵' : '進階獎勵';
       if (!state.reached) {
         showSingleRouteMilestoneMessage({
-          title: `${label}尚未解鎖`,
-          message: remaining > 0
-            ? `抵達此節點即可獲得獎勵。再完成 ${remaining} 次即可抵達。`
-            : '抵達此節點即可獲得獎勵。',
-          points: state.points,
+          title: `抵達即可獲得 +${state.points} 點`,
+          message: remaining > 0 ? `再完成 ${remaining} 次即可抵達。` : '抵達此節點即可獲得獎勵。',
           tone: 'warning',
-          autoClose: false,
+          anchorEl,
         });
         return;
       }
@@ -4530,7 +4682,7 @@
         const currentLabel=isCurrent
           ? `<div class="single-route-current-label">${point.kind==='reward'?milestoneStatus:`你在這裡<br>已完成 ${currentCount} 次`}</div>`
           : '';
-        const interactive=point.kind==='reward' ? `role="button" tabindex="0" aria-label="${escapeMissionRouteHtml(milestone?.title || '單元里程碑')}，點擊查看" data-milestone-type="${milestone?.type || ''}" onclick="handleSingleRouteMilestoneClick('${milestone?.type || ''}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSingleRouteMilestoneClick('${milestone?.type || ''}')}"` : '';
+        const interactive=point.kind==='reward' ? `role="button" tabindex="0" aria-label="${escapeMissionRouteHtml(milestone?.title || '單元里程碑')}，點擊查看" data-milestone-type="${milestone?.type || ''}" onclick="handleSingleRouteMilestoneClick('${milestone?.type || ''}', this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSingleRouteMilestoneClick('${milestone?.type || ''}', this)}"` : '';
         return `<div class="${classes}" ${interactive} data-route-key="${point.key}" data-route-count="${point.count}" style="left:${(point.x/420)*100}%;top:${point.y}px"><div class="single-route-core">${coreContent}</div>${rewardLabel}${currentLabel}</div>`;
       }).join('');
 
