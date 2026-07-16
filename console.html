@@ -11,7 +11,7 @@
   <!-- FEATURE_GATE_MATRIX_V1_CONSOLE_ONLY_APPLIED -->
   <!-- FEATURE_GATE_MATRIX_V2_UI_POLISH_APPLIED -->
   <!-- CONSOLE_LOGIN_POLISH_V1_APPLIED -->
-  <script src="./tappie-api.js?v=20260615-class-pack-v6-tag-index-mobile-order"></script>
+  <script src="./tappie-api.js?v=20260716-mission-milestone-v1"></script>
   <script>
     // Mobile modal scroll guard: prevent background page from scrolling while any console modal is open.
     document.addEventListener('touchmove', function(e) {
@@ -17417,16 +17417,17 @@ ${avatarId}`)) return;
               <section id="gamiMissionSection" class="r7-gami-card">
                 <div class="r7-gami-card-head">
                   <div>
-                    <h3>單元任務結算</h3>
-                    <p>系統會在單元結束後，依學生完成次數套用未達標扣點、良好獎勵與完美獎勵。</p>
+                    <h3>單元任務與路線里程碑</h3>
+                    <p>學生抵達進階與最高節點後可立即領取；未手動領取者會在單元結算時自動補發。兩個獎勵彼此獨立累加。</p>
                   </div>
                   <span class="r7-gami-section-badge">影響自動結算</span>
                 </div>
                 <div class="gami-rule-grid gami-mission-grid">
-                  <div class="gami-rule-card mission-danger"><strong>未達標扣點</strong><div class="gami-field"><label>未達標次數</label><input id="gamiFailTh" type="number"></div><div class="gami-field"><label>基礎扣點</label><input id="gamiFailBase" type="number"></div><div class="gami-field"><label>每少一次額外扣點</label><input id="gamiFailStep" type="number"></div></div>
-                  <div class="gami-rule-card mission-good"><strong>良好任務</strong><div class="gami-field"><label>完成次數 ≥</label><input id="gamiGoodTh" type="number"></div><div class="gami-field"><label>獎勵點數</label><input id="gamiGoodPts" type="number"></div></div>
-                  <div class="gami-rule-card mission-perfect"><strong>完美任務</strong><div class="gami-field"><label>完成次數 ≥</label><input id="gamiPerfTh" type="number"></div><div class="gami-field"><label>獎勵點數</label><input id="gamiPerfPts" type="number"></div></div>
+                  <div class="gami-rule-card mission-danger"><strong>安全門檻 / 未達扣點</strong><div class="gami-field"><label>安全門檻次數</label><input id="gamiFailTh" type="number" min="0"></div><div class="gami-field"><label>基礎扣點</label><input id="gamiFailBase" type="number" max="0"></div><div class="gami-field"><label>每完成一次減少扣點</label><input id="gamiFailStep" type="number" min="0"></div></div>
+                  <div class="gami-rule-card mission-good"><strong>進階獎勵節點</strong><div class="gami-field"><label>完成次數 ≥</label><input id="gamiGoodTh" type="number" min="1"></div><div class="gami-field"><label>抵達此節點獲得</label><input id="gamiGoodPts" type="number" min="0"></div></div>
+                  <div class="gami-rule-card mission-perfect"><strong>最高獎勵節點</strong><div class="gami-field"><label>完成次數 ≥</label><input id="gamiPerfTh" type="number" min="1"></div><div class="gami-field"><label>抵達此節點再獲得</label><input id="gamiPerfPts" type="number" min="0"></div></div>
                 </div>
+                <div class="gami-inline-note"><strong>累加制：</strong>各階段獎勵獨立發放。完成最高里程碑時，任務節點最多可累計獲得 <strong id="gamiMissionCumulativeTotal">—</strong> 點；排行榜獎勵另計。進行中的排程會沿用建立時鎖定的規則，不會因修改本頁而被悄悄改變。</div>
               </section>
 
               <section id="gamiRewardSection" class="r7-gami-card">
@@ -17629,10 +17630,12 @@ ${avatarId}`)) return;
       if(preview) preview.innerHTML=`
         <div class="gami-preview-row"><span>每日挑戰最高階</span><strong>${g.dailyChallenge.tiers[0].min} 分 / +${g.dailyChallenge.tiers[0].pts} 點</strong></div>
         <div class="gami-preview-row"><span>未達標規則</span><strong>${g.mission.failThreshold} 次以下 / ${g.mission.failBasePenalty} 點</strong></div>
-        <div class="gami-preview-row"><span>良好 / 完美</span><strong>${g.mission.goodThreshold} 次 +${g.mission.goodReward}｜${g.mission.perfectThreshold} 次 +${g.mission.perfectReward}</strong></div>
+        <div class="gami-preview-row"><span>進階 / 最高節點</span><strong>${g.mission.goodThreshold} 次 +${g.mission.goodReward}｜${g.mission.perfectThreshold} 次再 +${g.mission.perfectReward}</strong></div>
+        <div class="gami-preview-row"><span>完成最高可累計</span><strong>+${Number(g.mission.goodReward||0)+Number(g.mission.perfectReward||0)} 點</strong></div>
         <div class="gami-preview-row"><span>排行榜前三</span><strong>${g.leaderboard.join(' / ')} 點</strong></div>
         <div class="gami-preview-row"><span>抽卡次數</span><strong>AI ${g.gachaPicks['初階Ai']}/${g.gachaPicks['中階Ai']}/${g.gachaPicks['高階Ai']}｜對戰 ${g.gachaPicks['玩家對戰']}</strong></div>
         <div class="gami-preview-row"><span>盲盒獎項</span><strong>${(g.gachaItems||[]).filter(x=>x.type==='points').length} 個點數｜${(g.gachaItems||[]).filter(x=>x.type==='avatar').length} 個角色</strong></div>`;
+      const cumulative=document.getElementById('gamiMissionCumulativeTotal'); if(cumulative) cumulative.textContent=String(Number(g.mission.goodReward||0)+Number(g.mission.perfectReward||0));
       const daily=document.getElementById('gamiDailyMetric'); if(daily) daily.textContent=`${g.dailyChallenge.tiers[0].min}+`;
       const mission=document.getElementById('gamiMissionMetric'); if(mission) mission.textContent=`${g.mission.failThreshold}/${g.mission.goodThreshold}/${g.mission.perfectThreshold}`;
       const lb=document.getElementById('gamiLeaderboardMetric'); if(lb) lb.textContent=g.leaderboard.join('/');
@@ -17641,6 +17644,14 @@ ${avatarId}`)) return;
     async function saveGamificationConsole(btn){
       try{
         const config=readGamificationConfigFromForm();
+        const mission=config.mission||{};
+        if(Number(mission.failThreshold)<0) throw new Error('安全門檻不可小於 0');
+        if(Number(mission.goodThreshold)<=Number(mission.failThreshold)) throw new Error('進階獎勵門檻必須高於安全門檻');
+        if(Number(mission.perfectThreshold)<=Number(mission.goodThreshold)) throw new Error('最高獎勵門檻必須高於進階獎勵門檻');
+        if(Number(mission.goodReward)<0 || Number(mission.perfectReward)<0) throw new Error('里程碑獎勵點數不可小於 0');
+        if(Number(mission.failBasePenalty)>0) throw new Error('基礎扣點必須為 0 或負數');
+        if(Number(mission.failPenaltyStep)<0) throw new Error('扣點減免值不可小於 0');
+        if(Number(mission.failThreshold)>0 && Number(mission.failBasePenalty)+(Number(mission.failThreshold)-1)*Number(mission.failPenaltyStep)>0) throw new Error('未達安全門檻時的扣點不可因減免設定變成正數');
         const sum=(config.gachaItems||[]).reduce((a,x)=>a+Number(x.prob||0),0);
         if(Math.abs(sum-100)>0.001) throw new Error(`盲盒機率總和必須等於 100%，目前為 ${sum}%`);
         if(btn){btn.disabled=true; btn.textContent='儲存中...';}
@@ -17649,7 +17660,7 @@ ${avatarId}`)) return;
         if(!data.success) throw new Error(data.message||data.error||'儲存失敗');
         gamificationConsoleCache=normalizeGamiConsole(config);
         fillGamificationForm(gamificationConsoleCache);
-        setGamificationStatus('✅ 遊戲化設定已同步至 Supabase。','ok'); toast('遊戲化設定已儲存');
+        setGamificationStatus(`✅ 設定已同步。新排程完成最高里程碑時，任務節點最多累計 ${Number(config.mission.goodReward||0)+Number(config.mission.perfectReward||0)} 點。`,'ok'); toast('遊戲化設定已儲存');
       }catch(err){ consoleNotice('儲存失敗：'+(err.message||err)); setGamificationStatus('⚠️ 儲存失敗：'+(err.message||err),'danger'); }
       finally{ if(btn){btn.disabled=false; btn.textContent='儲存遊戲化設定';} }
     }
