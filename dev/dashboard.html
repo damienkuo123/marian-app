@@ -8,6 +8,7 @@
 <title>Tappie學美語</title>
   <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
   <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
+  <!-- TAPPIE_MILESTONE_REWARD_CELEBRATION_MODAL_UNIFICATION_20260716 -->
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -971,56 +972,90 @@
     .single-route-leaderboard {
       position: fixed;
       inset: 0;
-      z-index: 5000;
+      z-index: 3400;
       display: none;
       align-items: center;
       justify-content: center;
-      padding: max(22px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+      padding: max(18px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
       box-sizing: border-box;
-      background: rgba(22,35,49,.38);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(31,47,63,.44);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       opacity: 0;
-      transition: opacity .22s ease;
+      transition: opacity .2s ease;
     }
     .single-route-leaderboard.show { display: flex; opacity: 1; }
     .single-route-leaderboard-dialog {
       position: relative;
-      width: min(92vw, 480px);
-      max-height: min(78vh, 720px);
+      box-sizing: border-box;
+      width: min(390px, 94vw);
+      max-height: min(670px, 82vh);
       overflow: hidden;
-      padding: 24px 18px 18px;
+      padding: 22px 18px 18px;
       border-radius: 30px;
-      background: rgba(248,251,255,.97);
-      border: 1px solid rgba(255,255,255,.95);
-      box-shadow: 0 30px 70px rgba(20,39,60,.24), inset 0 1px 0 #fff;
-      transform: translateY(12px) scale(.98);
-      transition: transform .24s cubic-bezier(.2,.8,.2,1);
+      background: linear-gradient(180deg,rgba(250,252,255,.99),rgba(241,247,254,.99));
+      border: 1px solid rgba(255,255,255,.96);
+      box-shadow: 0 28px 70px rgba(20,41,62,.24), inset 0 1px 0 #fff;
+      transform: translateY(16px) scale(.98);
+      transition: transform .22s ease;
     }
     .single-route-leaderboard.show .single-route-leaderboard-dialog { transform: translateY(0) scale(1); }
+    .single-route-leaderboard-title {
+      margin: 2px 48px 4px;
+      color: #172738;
+      font-size: 22px;
+      font-weight: 950;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+    .single-route-leaderboard-unit {
+      min-height: 17px;
+      margin: 0 44px 16px;
+      color: #7a8795;
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.45;
+      text-align: center;
+    }
     .single-route-leaderboard-scroll {
-      max-height: calc(min(78vh, 720px) - 58px);
+      max-height: calc(min(670px, 82vh) - 84px);
       overflow-y: auto;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
-      padding: 2px 2px 8px;
+      padding: 0 2px 3px;
     }
     .single-route-leaderboard .leaderboard { width:100%; max-width:none; margin:0; padding:0; background:none; border:0; box-shadow:none; }
     .single-route-leaderboard-close {
       position: absolute;
-      right: 14px;
       top: 14px;
+      right: 14px;
       z-index: 2;
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       border: 0;
       border-radius: 50%;
       display: grid;
       place-items: center;
-      background: rgba(0,0,0,.055);
-      color: #6d7a87;
-      font-size: 21px;
+      color: #718090;
+      background: rgba(226,232,239,.86);
+      font-size: 25px;
+      line-height: 1;
       cursor: pointer;
+    }
+    .single-route-leaderboard-rewards {
+      margin-top: 13px;
+      padding: 11px 12px;
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      border-radius: 16px;
+      color: #6f7d8a;
+      background: rgba(255,255,255,.76);
+      border: 1px solid rgba(255,255,255,.94);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
     }
     @media (max-width: 430px) {
       .single-route-header { padding: 14px 20px 12px; }
@@ -1947,6 +1982,17 @@
       cursor: pointer;
       touch-action: manipulation;
       outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .single-route-node.is-reward::before {
+      content: '';
+      position: absolute;
+      left: -62px;
+      top: -58px;
+      width: 124px;
+      height: 142px;
+      border-radius: 34px;
+      background: transparent;
     }
     .single-route-node.is-reward:focus-visible .single-route-core {
       box-shadow: 0 0 0 5px rgba(37,145,221,.18), 0 14px 28px rgba(37,74,106,.18);
@@ -2084,6 +2130,149 @@
       font-size: 18px;
       font-weight: 900;
       cursor: pointer;
+    }
+
+
+    /* =====================================================
+       Full-screen milestone reward celebration
+       ===================================================== */
+    .single-route-reward-celebration {
+      position: fixed;
+      inset: 0;
+      z-index: 12000;
+      display: none;
+      align-items: stretch;
+      justify-content: stretch;
+      opacity: 0;
+      overflow: hidden;
+      background: linear-gradient(160deg,#2aa98b 0%,#177a69 100%);
+      transition: opacity .24s ease;
+    }
+    .single-route-reward-celebration.is-perfect {
+      background:
+        radial-gradient(circle at 50% 43%, rgba(255,218,104,.18), transparent 31%),
+        linear-gradient(155deg,#a877ef 0%,#8050dc 48%,#6940c5 100%);
+    }
+    .single-route-reward-celebration.is-good {
+      background:
+        radial-gradient(circle at 50% 43%, rgba(190,255,236,.16), transparent 31%),
+        linear-gradient(155deg,#55d4b3 0%,#24a68a 48%,#147b68 100%);
+    }
+    .single-route-reward-celebration.show { display: flex; opacity: 1; }
+    .single-route-reward-celebration-inner {
+      position: relative;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 100%;
+      padding: max(56px, calc(env(safe-area-inset-top) + 30px)) 28px max(34px, calc(env(safe-area-inset-bottom) + 24px));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #fff;
+      transform: translateY(14px) scale(.985);
+      transition: transform .32s cubic-bezier(.2,.8,.2,1);
+    }
+    .single-route-reward-celebration.show .single-route-reward-celebration-inner { transform: translateY(0) scale(1); }
+    .single-route-reward-celebration-kicker {
+      margin-bottom: 9px;
+      color: rgba(255,255,255,.76);
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: .22em;
+    }
+    .single-route-reward-celebration-title {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(30px, 8vw, 44px);
+      font-weight: 1000;
+      letter-spacing: 2px;
+      line-height: 1.15;
+      text-shadow: 0 4px 18px rgba(42,19,91,.16);
+    }
+    .single-route-reward-celebration-visual {
+      width: min(58vw, 250px);
+      height: min(58vw, 250px);
+      margin: 30px auto 18px;
+      display: grid;
+      place-items: center;
+      animation: singleRouteCelebrationFloat 2.6s ease-in-out infinite;
+    }
+    .single-route-reward-celebration-visual .single-route-reward-svg {
+      width: 100%;
+      height: 100%;
+      opacity: 1 !important;
+      filter: drop-shadow(0 28px 28px rgba(36,21,70,.24));
+    }
+    @keyframes singleRouteCelebrationFloat {
+      0%,100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-8px) scale(1.025); }
+    }
+    .single-route-reward-celebration-points {
+      color: #fff7c5;
+      font-size: clamp(38px, 11vw, 62px);
+      font-weight: 1000;
+      line-height: 1;
+      letter-spacing: 1px;
+      text-shadow: 0 5px 18px rgba(70,39,0,.18);
+    }
+    .single-route-reward-celebration-copy {
+      margin: 12px 0 0;
+      color: rgba(255,255,255,.82);
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .6px;
+    }
+    .single-route-reward-celebration-confirm {
+      width: min(340px, calc(100vw - 48px));
+      min-height: 58px;
+      margin-top: 34px;
+      border: 0;
+      border-radius: 20px;
+      color: #6d46c9;
+      background: rgba(255,255,255,.97);
+      box-shadow: 0 14px 30px rgba(44,27,83,.20), inset 0 1px 0 #fff;
+      font-size: 18px;
+      font-weight: 1000;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: transform .16s ease;
+    }
+    .single-route-reward-celebration.is-good .single-route-reward-celebration-confirm { color: #177d68; }
+    .single-route-reward-celebration-confirm:active { transform: scale(.97); }
+    .single-route-celebration-spark {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      opacity: .8;
+      animation: singleRouteSpark 2.4s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .single-route-celebration-spark::before,
+    .single-route-celebration-spark::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.92);
+      transform: translate(-50%,-50%);
+    }
+    .single-route-celebration-spark::after { transform: translate(-50%,-50%) rotate(90deg); }
+    .single-route-celebration-spark.s1 { left: 14%; top: 35%; animation-delay: -.4s; }
+    .single-route-celebration-spark.s2 { right: 13%; top: 45%; transform: scale(.72); animation-delay: -1.2s; }
+    .single-route-celebration-spark.s3 { right: 19%; bottom: 24%; transform: scale(.52); animation-delay: -.8s; }
+    @keyframes singleRouteSpark {
+      0%,100% { opacity: .34; transform: scale(.72) rotate(0deg); }
+      50% { opacity: .95; transform: scale(1.08) rotate(18deg); }
+    }
+    @media (max-height: 700px) {
+      .single-route-reward-celebration-inner { padding-top: max(34px, calc(env(safe-area-inset-top) + 18px)); }
+      .single-route-reward-celebration-visual { width: min(44vw, 190px); height: min(44vw, 190px); margin: 20px auto 10px; }
+      .single-route-reward-celebration-confirm { margin-top: 24px; }
     }
 
 </style>
@@ -2230,11 +2419,12 @@
         <div id="single-route-leaderboard" class="single-route-leaderboard" onclick="if (event.target === this) toggleSingleRouteLeaderboard(false)">
           <div class="single-route-leaderboard-dialog" role="dialog" aria-modal="true" aria-label="單元高分排行榜">
             <button type="button" class="single-route-leaderboard-close" onclick="toggleSingleRouteLeaderboard(false)" aria-label="關閉排行榜">×</button>
+            <h2 class="single-route-leaderboard-title">高分排行榜</h2>
+            <div id="lb-unit-name" class="single-route-leaderboard-unit"></div>
             <div class="single-route-leaderboard-scroll">
               <div class="leaderboard">
-                <h2 style="color:var(--primary-blue); font-size:18px; margin:2px 44px 20px; text-align:center; font-weight:900; letter-spacing:2px;"><span id="lb-unit-name"></span> 高分榜</h2>
                 <div id="lb-container"></div>
-                <div id="lb-reward-hints" style="margin-top:15px;padding:12px 15px;background:rgba(255,255,255,.72);border-radius:16px;display:flex;justify-content:center;gap:20px;font-size:13px;font-weight:900;color:var(--text-sub);"></div>
+                <div id="lb-reward-hints" class="single-route-leaderboard-rewards"></div>
               </div>
             </div>
           </div>
@@ -2257,6 +2447,21 @@
             <div id="single-route-milestone-title" class="single-route-milestone-title">里程碑</div>
             <div id="single-route-milestone-copy" class="single-route-milestone-copy"></div>
             <div id="single-route-milestone-points" class="single-route-milestone-points" style="display:none"></div>
+          </div>
+        </div>
+
+
+        <div id="single-route-reward-celebration" class="single-route-reward-celebration" aria-hidden="true">
+          <div class="single-route-reward-celebration-inner" role="dialog" aria-modal="true" aria-labelledby="single-route-reward-celebration-title">
+            <span class="single-route-celebration-spark s1" aria-hidden="true"></span>
+            <span class="single-route-celebration-spark s2" aria-hidden="true"></span>
+            <span class="single-route-celebration-spark s3" aria-hidden="true"></span>
+            <div class="single-route-reward-celebration-kicker">單元里程碑</div>
+            <h2 id="single-route-reward-celebration-title" class="single-route-reward-celebration-title">獲得進階獎勵</h2>
+            <div id="single-route-reward-celebration-visual" class="single-route-reward-celebration-visual" aria-hidden="true"></div>
+            <div id="single-route-reward-celebration-points" class="single-route-reward-celebration-points">+0 點</div>
+            <p id="single-route-reward-celebration-copy" class="single-route-reward-celebration-copy">已加入你的點數</p>
+            <button type="button" class="single-route-reward-celebration-confirm" onclick="hideSingleRouteRewardCelebration()">確認</button>
           </div>
         </div>
       </div>
@@ -3821,6 +4026,44 @@
       setTimeout(() => { if (!overlay.classList.contains('show')) overlay.style.display = 'none'; }, 200);
     }
 
+
+    function showSingleRouteRewardCelebration({ type = 'good', label = '進階獎勵', points = 0 } = {}) {
+      const overlay = document.getElementById('single-route-reward-celebration');
+      const titleEl = document.getElementById('single-route-reward-celebration-title');
+      const visualEl = document.getElementById('single-route-reward-celebration-visual');
+      const pointsEl = document.getElementById('single-route-reward-celebration-points');
+      const copyEl = document.getElementById('single-route-reward-celebration-copy');
+      if (!overlay || !titleEl || !visualEl || !pointsEl || !copyEl) return;
+      hideSingleRouteMilestoneMessage();
+      if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
+      overlay.classList.remove('is-good', 'is-perfect');
+      overlay.classList.add(type === 'perfect' ? 'is-perfect' : 'is-good');
+      titleEl.textContent = `獲得${label}`;
+      visualEl.innerHTML = getSingleRouteRewardSvg(type === 'perfect' ? 'perfect' : 'good');
+      pointsEl.textContent = `+${Math.max(0, Number(points || 0))} 點`;
+      copyEl.textContent = '已加入你的點數';
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('single-route-modal-open');
+      requestAnimationFrame(() => overlay.classList.add('show'));
+      setTimeout(() => overlay.querySelector('.single-route-reward-celebration-confirm')?.focus(), 260);
+    }
+
+    function hideSingleRouteRewardCelebration() {
+      const overlay = document.getElementById('single-route-reward-celebration');
+      if (!overlay) return;
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('single-route-modal-open');
+      setTimeout(() => {
+        if (!overlay.classList.contains('show')) {
+          overlay.style.display = 'none';
+          const visual = document.getElementById('single-route-reward-celebration-visual');
+          if (visual) visual.innerHTML = '';
+        }
+      }, 250);
+    }
+
     async function refreshSingleRouteMissionRewardState() {
       const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
       if (!overlay || !singleRouteLastData) return;
@@ -3865,10 +4108,13 @@
       const label = type === 'perfect' ? '最高獎勵' : '進階獎勵';
       if (!state.reached) {
         showSingleRouteMilestoneMessage({
-          title: label,
-          message: `再完成 ${remaining} 次，抵達後可獲得 ${state.points} 點。`,
+          title: `${label}尚未解鎖`,
+          message: remaining > 0
+            ? `抵達此節點即可獲得獎勵。再完成 ${remaining} 次即可抵達。`
+            : '抵達此節點即可獲得獎勵。',
           points: state.points,
           tone: 'warning',
+          autoClose: false,
         });
         return;
       }
@@ -3917,12 +4163,20 @@
             if (pointsEl) pointsEl.textContent = Number(result.newBalance);
             if (singleRouteLastData) singleRouteLastData.currentPoints = Number(result.newBalance);
           }
-          showSingleRouteMilestoneMessage({
-            title: response.status === 'granted' ? `獲得${label}` : `${label}已領取`,
-            message: response.status === 'granted' ? `${state.points} 點已加入你的帳戶！` : `這個階段的 ${state.points} 點已經領取。`,
-            points: response.status === 'granted' ? (awarded || state.points) : state.points,
-            tone: 'success',
-          });
+          if (response.status === 'granted') {
+            showSingleRouteRewardCelebration({
+              type,
+              label,
+              points: awarded || state.points,
+            });
+          } else {
+            showSingleRouteMilestoneMessage({
+              title: `${label}已領取`,
+              message: `這個階段的 ${state.points} 點已經加入你的帳戶。`,
+              points: state.points,
+              tone: 'success',
+            });
+          }
         } else {
           showSingleRouteMilestoneMessage({
             title: '目前無法領取',
@@ -4276,7 +4530,7 @@
         const currentLabel=isCurrent
           ? `<div class="single-route-current-label">${point.kind==='reward'?milestoneStatus:`你在這裡<br>已完成 ${currentCount} 次`}</div>`
           : '';
-        const interactive=point.kind==='reward' ? `role="button" tabindex="0" data-milestone-type="${milestone?.type || ''}" onclick="handleSingleRouteMilestoneClick('${milestone?.type || ''}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSingleRouteMilestoneClick('${milestone?.type || ''}')}"` : '';
+        const interactive=point.kind==='reward' ? `role="button" tabindex="0" aria-label="${escapeMissionRouteHtml(milestone?.title || '單元里程碑')}，點擊查看" data-milestone-type="${milestone?.type || ''}" onclick="handleSingleRouteMilestoneClick('${milestone?.type || ''}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSingleRouteMilestoneClick('${milestone?.type || ''}')}"` : '';
         return `<div class="${classes}" ${interactive} data-route-key="${point.key}" data-route-count="${point.count}" style="left:${(point.x/420)*100}%;top:${point.y}px"><div class="single-route-core">${coreContent}</div>${rewardLabel}${currentLabel}</div>`;
       }).join('');
 
@@ -4532,7 +4786,7 @@
       // ==========================================
       // 🏆 榮譽排行榜渲染 (動態獎勵版)
       // ==========================================
-      document.getElementById('lb-unit-name').innerText = data.currentUnit;
+      document.getElementById('lb-unit-name').textContent = data.currentUnit || '目前單元';
       const lbContainer = document.getElementById('lb-container');
       
       if (gami && gami.leaderboard) {
