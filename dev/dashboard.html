@@ -2596,7 +2596,123 @@
       -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='black' stroke-width='2'/%3E%3Cpath d='M12 7v6l4 2' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='black' stroke-width='2'/%3E%3Cpath d='M12 7v6l4 2' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
     }
-</style>
+
+
+    /* =======================================================
+       TAPPIE_V5_2_QUICK_BUTTON_FRAME_AND_REWARD_ANCHOR_FIX_20260717
+       1) Restore white quick-action bases without shrinking SVG assets.
+       2) Keep daily chest animation on the SVG only.
+       3) Keep reward-node anchor transform immutable; animate the SVG child.
+       ======================================================= */
+    .single-route-rank-btn,
+    .single-route-daily-btn {
+      width: 64px !important;
+      height: 64px !important;
+      right: 16px !important;
+      padding: 0 !important;
+      border: 1px solid rgba(255,255,255,.98) !important;
+      border-radius: 20px !important;
+      background: rgba(255,255,255,.94) !important;
+      box-shadow:
+        0 12px 26px rgba(36,69,104,.10),
+        inset 0 1px 0 rgba(255,255,255,1) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      overflow: visible;
+    }
+    .single-route-rank-btn {
+      top: calc(env(safe-area-inset-top) + 76px) !important;
+    }
+    .single-route-daily-btn {
+      top: calc(env(safe-area-inset-top) + 144px) !important;
+    }
+    .single-route-rank-btn .tappie-ui-icon,
+    .single-route-rank-btn .tappie-ui-icon svg,
+    .single-route-daily-btn > svg {
+      width: 48px !important;
+      height: 48px !important;
+      flex: 0 0 48px;
+      display: block;
+      overflow: visible;
+    }
+    .single-route-daily-btn.is-unclaimed > svg {
+      animation: singleRouteDailyGiftNudge 3.8s ease-in-out infinite !important;
+      transform-origin: 50% 62%;
+    }
+
+    /* The node anchor must always retain translate(-50%,-50%).
+       Previous claimable/loading keyframes replaced transform and shifted
+       the entire 88px core one half-width to the right and downward. */
+    .single-route-node.is-reward.is-claimable .single-route-core,
+    .single-route-node.is-reward.is-claim-loading .single-route-core {
+      animation: none !important;
+      transform: translate(-50%,-50%) !important;
+    }
+    .single-route-node.is-reward.is-claimable .single-route-reward-svg {
+      animation: singleRouteRewardReadyAsset 1.65s ease-in-out infinite !important;
+      transform-origin: 50% 50%;
+    }
+    .single-route-node.is-reward.is-claim-loading .single-route-reward-svg {
+      animation: singleRouteRewardLoadingAsset .75s ease-in-out infinite alternate !important;
+      transform-origin: 50% 50%;
+    }
+    @keyframes singleRouteRewardReadyAsset {
+      0%,100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-2px) scale(1.035); }
+    }
+    @keyframes singleRouteRewardLoadingAsset {
+      from { transform: scale(.97); opacity: .72; }
+      to { transform: scale(1.035); opacity: 1; }
+    }
+
+    /* Claimable and normal labels use a stable box model, so state text
+       changes never alter the icon anchor or horizontal centering. */
+    .single-route-node.is-reward .single-route-label {
+      left: 0 !important;
+      top: 54px !important;
+      width: 136px !important;
+      min-width: 136px !important;
+      max-width: 136px !important;
+      min-height: 58px;
+      box-sizing: border-box;
+      transform: translateX(-50%) !important;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      white-space: normal !important;
+    }
+    .single-route-node.is-reward .single-route-label.is-claimable-label {
+      width: 136px !important;
+      min-width: 136px !important;
+      max-width: 136px !important;
+      min-height: 58px;
+      padding: 7px 11px 8px !important;
+    }
+    .single-route-node.is-reward .single-route-label.is-claimable-label small {
+      margin-top: 4px !important;
+    }
+
+    @media (max-width: 360px) {
+      .single-route-rank-btn,
+      .single-route-daily-btn {
+        width: 60px !important;
+        height: 60px !important;
+        right: 12px !important;
+        border-radius: 19px !important;
+      }
+      .single-route-daily-btn {
+        top: calc(env(safe-area-inset-top) + 140px) !important;
+      }
+      .single-route-rank-btn .tappie-ui-icon,
+      .single-route-rank-btn .tappie-ui-icon svg,
+      .single-route-daily-btn > svg {
+        width: 48px !important;
+        height: 48px !important;
+      }
+    }
+
+  </style>
 </head>
 
 <body>
