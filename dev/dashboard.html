@@ -8,6 +8,7 @@
 <title>Tappie學美語</title>
   <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
   <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
+  <!-- TAPPIE_LEADERBOARD_2_5D_REWARD_FULLSCREEN_V1_5_20260716 -->
   <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
   <!-- TAPPIE_MILESTONE_REWARD_CELEBRATION_MODAL_UNIFICATION_20260716 -->
 
@@ -197,7 +198,7 @@
 
     /* 自由練習 */
     .review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
-    .btn-review { background: rgba(255,255,255,0.8); color: var(--text-main); padding: 16px 5px; border-radius: 20px; text-decoration: none; font-size: 15px; font-weight: 900; text-align: center; border: 1px solid rgba(255,255,255,1); box-shadow: 0 5px 15px rgba(0,0,0,0.04); transition: 0.3s; box-sizing: border-box; }
+    .btn-review { background: rgba(255,255,255,0.8); color: var(--text-main); padding: 16px 5px; border-radius: 20px; text-decoration: none; font-size: 15px; font-weight: 650; line-height: 1.38; text-align: center; border: 1px solid rgba(255,255,255,1); box-shadow: 0 5px 15px rgba(0,0,0,0.04); transition: 0.3s; box-sizing: border-box; }
     .btn-review:active { transform: scale(0.95); background: #fff; }
 
     /* 對戰大廳按鈕 (原 action-card-lobby) */
@@ -1043,20 +1044,70 @@
       line-height: 1;
       cursor: pointer;
     }
-    .single-route-leaderboard-rewards {
-      margin-top: 13px;
-      padding: 11px 12px;
+    .lb-rank {
+      width: 48px;
+      min-width: 48px;
       display: flex;
+      align-items: center;
       justify-content: center;
-      gap: 14px;
-      border-radius: 16px;
-      color: #6f7d8a;
-      background: rgba(255,255,255,.76);
-      border: 1px solid rgba(255,255,255,.94);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
-      font-size: 12px;
+    }
+    .lb-medal-btn,
+    .lb-bonus-btn {
+      border: 0;
+      padding: 0;
+      font: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .lb-medal-btn {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: transparent;
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .lb-medal-btn:active,
+    .lb-bonus-btn:active { transform: scale(.94); }
+    .lb-medal-btn:focus-visible,
+    .lb-bonus-btn:focus-visible {
+      outline: 3px solid rgba(0,102,204,.24);
+      outline-offset: 2px;
+    }
+    .single-route-leaderboard-medal-svg {
+      width: 42px;
+      height: 42px;
+      display: block;
+      overflow: visible;
+      filter: drop-shadow(0 5px 6px rgba(35,50,66,.18));
+    }
+    .lb-bonus-btn {
+      min-width: 54px;
+      margin-left: 9px;
+      padding: 6px 10px 7px;
+      border-radius: 11px;
+      font-size: 11px;
       font-weight: 950;
+      line-height: 1;
       white-space: nowrap;
+      box-shadow: 0 5px 12px rgba(38,52,67,.10), inset 0 1px 0 rgba(255,255,255,.78);
+      transition: transform .16s ease, box-shadow .16s ease;
+    }
+    .lb-bonus-btn.rank-1 {
+      color: #9b5b00;
+      background: linear-gradient(145deg,#fff1a7,#ffc93f);
+      border: 1px solid rgba(232,168,23,.30);
+    }
+    .lb-bonus-btn.rank-2 {
+      color: #53677d;
+      background: linear-gradient(145deg,#f7faff,#d7e0ec);
+      border: 1px solid rgba(122,143,166,.22);
+    }
+    .lb-bonus-btn.rank-3 {
+      color: #91472b;
+      background: linear-gradient(145deg,#ffd4b7,#e89058);
+      border: 1px solid rgba(174,91,51,.20);
     }
     @media (max-width: 430px) {
       .single-route-header { padding: 14px 20px 12px; }
@@ -2222,6 +2273,21 @@
         radial-gradient(circle at 50% 43%, rgba(255,225,217,.18), transparent 31%),
         linear-gradient(155deg,#ff8b82 0%,#e55c58 48%,#bd3e43 100%);
     }
+    .single-route-reward-celebration.is-rank-1 {
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255,247,188,.25), transparent 31%),
+        linear-gradient(155deg,#ffc94f 0%,#e99b21 50%,#c97710 100%);
+    }
+    .single-route-reward-celebration.is-rank-2 {
+      background:
+        radial-gradient(circle at 50% 42%, rgba(235,245,255,.22), transparent 31%),
+        linear-gradient(155deg,#9ab4d5 0%,#718cad 50%,#506887 100%);
+    }
+    .single-route-reward-celebration.is-rank-3 {
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255,222,201,.22), transparent 31%),
+        linear-gradient(155deg,#e89a68 0%,#c56d45 50%,#924a32 100%);
+    }
     .single-route-reward-celebration.show { display: flex; opacity: 1; }
     .single-route-reward-celebration-inner {
       position: relative;
@@ -2272,6 +2338,12 @@
       opacity: 1 !important;
       filter: drop-shadow(0 28px 28px rgba(36,21,70,.24));
     }
+    .single-route-reward-celebration-visual .single-route-leaderboard-medal-svg {
+      width: 100%;
+      height: 100%;
+      opacity: 1;
+      filter: drop-shadow(0 28px 28px rgba(36,21,70,.24));
+    }
     @keyframes singleRouteCelebrationFloat {
       0%,100% { transform: translateY(0) scale(1); }
       50% { transform: translateY(-8px) scale(1.025); }
@@ -2308,6 +2380,9 @@
     }
     .single-route-reward-celebration.is-good .single-route-reward-celebration-confirm { color: #177d68; }
     .single-route-reward-celebration.is-safe .single-route-reward-celebration-confirm { color: #c54749; }
+    .single-route-reward-celebration.is-rank-1 .single-route-reward-celebration-confirm { color: #a86608; }
+    .single-route-reward-celebration.is-rank-2 .single-route-reward-celebration-confirm { color: #526c8e; }
+    .single-route-reward-celebration.is-rank-3 .single-route-reward-celebration-confirm { color: #9b5135; }
     .single-route-reward-celebration-points.is-safety-status {
       max-width: 360px;
       font-size: clamp(30px, 8vw, 48px);
@@ -2497,7 +2572,6 @@
             <div class="single-route-leaderboard-scroll">
               <div class="leaderboard">
                 <div id="lb-container"></div>
-                <div id="lb-reward-hints" class="single-route-leaderboard-rewards"></div>
               </div>
             </div>
           </div>
@@ -2529,12 +2603,12 @@
             <span class="single-route-celebration-spark s1" aria-hidden="true"></span>
             <span class="single-route-celebration-spark s2" aria-hidden="true"></span>
             <span class="single-route-celebration-spark s3" aria-hidden="true"></span>
-            <div class="single-route-reward-celebration-kicker">單元里程碑</div>
+            <div id="single-route-reward-celebration-kicker" class="single-route-reward-celebration-kicker">單元里程碑</div>
             <h2 id="single-route-reward-celebration-title" class="single-route-reward-celebration-title">獲得進階獎勵</h2>
             <div id="single-route-reward-celebration-visual" class="single-route-reward-celebration-visual" aria-hidden="true"></div>
             <div id="single-route-reward-celebration-points" class="single-route-reward-celebration-points">+0 點</div>
             <p id="single-route-reward-celebration-copy" class="single-route-reward-celebration-copy">已加入你的點數</p>
-            <button type="button" class="single-route-reward-celebration-confirm" onclick="hideSingleRouteRewardCelebration()">確認</button>
+            <button id="single-route-reward-celebration-confirm" type="button" class="single-route-reward-celebration-confirm" onclick="hideSingleRouteRewardCelebration()">確認</button>
           </div>
         </div>
       </div>
@@ -4210,17 +4284,76 @@
     window.addEventListener('resize', dismissSingleRouteBubbleOnMovement, { passive: true });
 
 
-    function showSingleRouteRewardCelebration({ type = 'good', label = '進階獎勵', points = 0 } = {}) {
+    function getSingleRouteLeaderboardMedalSvg(rank = 1) {
+      const normalizedRank = Math.min(3, Math.max(1, Number(rank || 1)));
+      const palettes = {
+        1: { ribbonA: '#FFDF65', ribbonB: '#E79A15', edge: '#B96B08', face: '#FFC943', inner: '#FFF3B5', number: '#9E5D00' },
+        2: { ribbonA: '#E9F0F8', ribbonB: '#93A7BD', edge: '#63778E', face: '#C9D5E3', inner: '#F8FBFF', number: '#586B80' },
+        3: { ribbonA: '#FFC39C', ribbonB: '#C66D43', edge: '#8F452D', face: '#E68B58', inner: '#FFE0CA', number: '#874127' }
+      };
+      const p = palettes[normalizedRank];
+      return `
+        <svg class="single-route-leaderboard-medal-svg rank-${normalizedRank}" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <path d="M31 12h24l8 39-20 9-20-9z" fill="${p.ribbonA}"/>
+          <path d="M65 12h24l8 39-20 9-20-9z" fill="${p.ribbonB}"/>
+          <path d="M31 12h24l3 14H28z" fill="rgba(255,255,255,.28)"/>
+          <path d="M65 12h24l3 14H62z" fill="rgba(255,255,255,.20)"/>
+          <circle cx="63" cy="75" r="36" fill="${p.edge}" opacity=".96"/>
+          <circle cx="59" cy="69" r="36" fill="${p.face}" stroke="rgba(255,255,255,.88)" stroke-width="5"/>
+          <path d="M31 58c9-17 37-25 56-9" fill="none" stroke="rgba(255,255,255,.38)" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="59" cy="69" r="22" fill="${p.inner}" opacity=".94"/>
+          <path d="M45 87c9 8 24 9 34 1" fill="none" stroke="rgba(85,50,15,.12)" stroke-width="5" stroke-linecap="round"/>
+          <text x="59" y="78" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif" font-size="28" font-weight="950" fill="${p.number}">${normalizedRank}</text>
+        </svg>`;
+    }
+
+    function showSingleRouteLeaderboardReward(rank = 1, points = 0) {
+      const normalizedRank = Math.min(3, Math.max(1, Number(rank || 1)));
       const overlay = document.getElementById('single-route-reward-celebration');
+      const kickerEl = document.getElementById('single-route-reward-celebration-kicker');
       const titleEl = document.getElementById('single-route-reward-celebration-title');
       const visualEl = document.getElementById('single-route-reward-celebration-visual');
       const pointsEl = document.getElementById('single-route-reward-celebration-points');
       const copyEl = document.getElementById('single-route-reward-celebration-copy');
-      if (!overlay || !titleEl || !visualEl || !pointsEl || !copyEl) return;
+      const confirmEl = document.getElementById('single-route-reward-celebration-confirm');
+      if (!overlay || !kickerEl || !titleEl || !visualEl || !pointsEl || !copyEl || !confirmEl) return;
+
+      toggleSingleRouteLeaderboard(false);
       hideSingleRouteMilestoneMessage();
       if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
-      overlay.classList.remove('is-good', 'is-perfect', 'is-safe');
+      overlay.classList.remove('is-good', 'is-perfect', 'is-safe', 'is-rank-1', 'is-rank-2', 'is-rank-3');
+      overlay.classList.add(`is-rank-${normalizedRank}`);
+      kickerEl.textContent = '單元排名獎勵';
+      titleEl.textContent = `第${normalizedRank === 1 ? '一' : normalizedRank === 2 ? '二' : '三'}名獎勵`;
+      visualEl.classList.remove('is-floating');
+      visualEl.innerHTML = getSingleRouteLeaderboardMedalSvg(normalizedRank);
+      void visualEl.offsetWidth;
+      visualEl.classList.add('is-floating');
+      pointsEl.classList.remove('is-safety-status');
+      pointsEl.textContent = `+${Math.max(0, Number(points || 0))} 點`;
+      copyEl.textContent = `單元結算時，最終排名第 ${normalizedRank} 名即可獲得。`;
+      confirmEl.textContent = '知道了';
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('single-route-modal-open');
+      requestAnimationFrame(() => overlay.classList.add('show'));
+      setTimeout(() => confirmEl.focus(), 260);
+    }
+
+    function showSingleRouteRewardCelebration({ type = 'good', label = '進階獎勵', points = 0 } = {}) {
+      const overlay = document.getElementById('single-route-reward-celebration');
+      const kickerEl = document.getElementById('single-route-reward-celebration-kicker');
+      const titleEl = document.getElementById('single-route-reward-celebration-title');
+      const visualEl = document.getElementById('single-route-reward-celebration-visual');
+      const pointsEl = document.getElementById('single-route-reward-celebration-points');
+      const copyEl = document.getElementById('single-route-reward-celebration-copy');
+      const confirmEl = document.getElementById('single-route-reward-celebration-confirm');
+      if (!overlay || !kickerEl || !titleEl || !visualEl || !pointsEl || !copyEl || !confirmEl) return;
+      hideSingleRouteMilestoneMessage();
+      if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
+      overlay.classList.remove('is-good', 'is-perfect', 'is-safe', 'is-rank-1', 'is-rank-2', 'is-rank-3');
       overlay.classList.add(type === 'perfect' ? 'is-perfect' : 'is-good');
+      kickerEl.textContent = '單元里程碑';
       titleEl.textContent = `獲得${label}`;
       visualEl.classList.remove('is-floating');
       visualEl.innerHTML = getSingleRouteRewardSvg(type === 'perfect' ? 'perfect' : 'good');
@@ -4229,6 +4362,7 @@
       pointsEl.classList.remove('is-safety-status');
       pointsEl.textContent = `+${Math.max(0, Number(points || 0))} 點`;
       copyEl.textContent = '已加入你的點數';
+      confirmEl.textContent = '確認';
       overlay.style.display = 'flex';
       overlay.setAttribute('aria-hidden', 'false');
       document.body.classList.add('single-route-modal-open');
@@ -4238,15 +4372,18 @@
 
     function showSingleRouteSafetyCelebration() {
       const overlay = document.getElementById('single-route-reward-celebration');
+      const kickerEl = document.getElementById('single-route-reward-celebration-kicker');
       const titleEl = document.getElementById('single-route-reward-celebration-title');
       const visualEl = document.getElementById('single-route-reward-celebration-visual');
       const pointsEl = document.getElementById('single-route-reward-celebration-points');
       const copyEl = document.getElementById('single-route-reward-celebration-copy');
-      if (!overlay || !titleEl || !visualEl || !pointsEl || !copyEl) return;
+      const confirmEl = document.getElementById('single-route-reward-celebration-confirm');
+      if (!overlay || !kickerEl || !titleEl || !visualEl || !pointsEl || !copyEl || !confirmEl) return;
       hideSingleRouteMilestoneMessage();
       if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
-      overlay.classList.remove('is-good', 'is-perfect', 'is-safe');
+      overlay.classList.remove('is-good', 'is-perfect', 'is-safe', 'is-rank-1', 'is-rank-2', 'is-rank-3');
       overlay.classList.add('is-safe');
+      kickerEl.textContent = '單元里程碑';
       titleEl.textContent = '安全門檻已達成';
       visualEl.classList.remove('is-floating');
       visualEl.innerHTML = getSingleRouteRewardSvg('safe');
@@ -4255,6 +4392,7 @@
       pointsEl.classList.add('is-safety-status');
       pointsEl.textContent = '本單元不扣點';
       copyEl.textContent = '再接再厲，繼續解鎖後續獎勵吧！';
+      confirmEl.textContent = '確認';
       overlay.style.display = 'flex';
       overlay.setAttribute('aria-hidden', 'false');
       document.body.classList.add('single-route-modal-open');
@@ -5001,34 +5139,29 @@
       document.getElementById('lb-unit-name').textContent = data.currentUnit || '目前單元';
       const lbContainer = document.getElementById('lb-container');
       
-      if (gami && gami.leaderboard) {
-          document.getElementById('lb-reward-hints').innerHTML = `
-            <span>🥇 +${gami.leaderboard[0]}<span style="font-size:10px; margin-left:2px;">PTS</span></span>
-            <span>🥈 +${gami.leaderboard[1]}<span style="font-size:10px; margin-left:2px;">PTS</span></span>
-            <span>🥉 +${gami.leaderboard[2]}<span style="font-size:10px; margin-left:2px;">PTS</span></span>
-          `;
-      }
-
       if (!data.leaderboard || data.leaderboard.length === 0) {
         lbContainer.innerHTML = `<p style="color:var(--text-sub); font-size: 14px; text-align:center; font-weight:bold;">單元挑戰進行中，快來搶佔榜單！</p>`;
       } else {
         let lbHtml = data.leaderboard.map((lb, index) => {
-          let isMe = lb.uid === STUDENT_ID;
-          let rankCrown = index === 0 ? "🥇" : (index === 1 ? "🥈" : (index === 2 ? "🥉" : `${index+1}`));
-          
-          let bonusPts = (gami && gami.leaderboard) ? gami.leaderboard[index] : [100, 50, 30][index];
-          let bonusTag = "";
-          if (index === 0) bonusTag = `<span style="font-size:11px; color:#d35400; background:linear-gradient(135deg, #ffeaa7, #f1c40f); padding:3px 8px; border-radius:8px; margin-left:10px; box-shadow: 0 4px 10px rgba(241,196,15,0.3); border:1px solid rgba(255,255,255,0.8);">+${bonusPts}</span>`;
-          else if (index === 1) bonusTag = `<span style="font-size:11px; color:#576574; background:linear-gradient(135deg, #f5f6fa, #dcdde1); padding:3px 8px; border-radius:8px; margin-left:10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border:1px solid rgba(255,255,255,0.8);">+${bonusPts}</span>`;
-          else if (index === 2) bonusTag = `<span style="font-size:11px; color:#b71540; background:linear-gradient(135deg, #ffda79, #e17055); padding:3px 8px; border-radius:8px; margin-left:10px; box-shadow: 0 4px 10px rgba(225,112,85,0.2); border:1px solid rgba(255,255,255,0.8);">+${bonusPts}</span>`;
-
-          let rowStyle = isMe ? 'background:linear-gradient(135deg, rgba(241,196,15,0.2), rgba(243,156,18,0.1)); border:1px solid rgba(241,196,15,0.6); box-shadow: 0 8px 20px rgba(241,196,15,0.15), inset 0 1px 2px rgba(255,255,255,0.9);' : '';
+          const isMe = lb.uid === STUDENT_ID;
+          const rank = index + 1;
+          const isRewardRank = rank <= 3;
+          const bonusPts = isRewardRank
+            ? Number((gami && gami.leaderboard) ? gami.leaderboard[index] : [100, 50, 30][index])
+            : 0;
+          const rankVisual = isRewardRank
+            ? `<button type="button" class="lb-medal-btn" aria-label="查看第 ${rank} 名獎勵" onclick="event.stopPropagation();showSingleRouteLeaderboardReward(${rank}, ${bonusPts})">${getSingleRouteLeaderboardMedalSvg(rank)}</button>`
+            : `<span>${rank}</span>`;
+          const bonusTag = isRewardRank
+            ? `<button type="button" class="lb-bonus-btn rank-${rank}" aria-label="查看第 ${rank} 名 +${bonusPts} 點獎勵" onclick="event.stopPropagation();showSingleRouteLeaderboardReward(${rank}, ${bonusPts})">+${bonusPts}</button>`
+            : '';
+          const rowStyle = isMe ? 'background:linear-gradient(135deg, rgba(241,196,15,0.2), rgba(243,156,18,0.1)); border:1px solid rgba(241,196,15,0.6); box-shadow: 0 8px 20px rgba(241,196,15,0.15), inset 0 1px 2px rgba(255,255,255,0.9);' : '';
 
           return `
             <div class="lb-row" style="${rowStyle}">
-              <span class="lb-rank">${rankCrown}</span>
-              <span class="lb-name">${lb.name}${bonusTag}</span>
-              <span class="lb-score">${lb.score} 分</span>
+              <span class="lb-rank">${rankVisual}</span>
+              <span class="lb-name">${escapeHtml(lb.name || '')}${bonusTag}</span>
+              <span class="lb-score">${Number(lb.score || 0)} 分</span>
             </div>
           `;
         }).join('');
@@ -5041,7 +5174,7 @@
       if (reviewUnits.length > 0) {
         reviewGrid.innerHTML = reviewUnits.map(u => {
           const unitName = (typeof u === 'string') ? u : (u.unitName || u.name || '未命名單元');
-          const wordCount = (typeof u === 'object' && u.wordCount) ? ` <span style="font-size:11px;color:var(--text-sub);">(${u.wordCount})</span>` : "";
+          const wordCount = (typeof u === 'object' && u.wordCount) ? ` <span style="font-size:11px;color:var(--text-sub);font-weight:600;">(${u.wordCount})</span>` : "";
           const targetUrl = `./arena.html?mode=review&unit=${encodeURIComponent(unitName)}`;
           return `<button type="button" onclick="checkVoiceLimitAndGo('${targetUrl}', this, '今日練習已達上限')" class="btn-review">📖 ${escapeHtml(unitName)}${wordCount}</button>`;
         }).join('');
