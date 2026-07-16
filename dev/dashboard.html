@@ -2117,9 +2117,15 @@
     .single-route-milestone-card.is-success { border-color: rgba(31,174,129,.26); background: linear-gradient(145deg,rgba(238,255,249,.98),rgba(255,255,255,.98)); }
     .single-route-milestone-card.is-warning { border-color: rgba(232,167,46,.28); background: linear-gradient(145deg,rgba(255,249,231,.99),rgba(255,255,255,.99)); }
     .single-route-milestone-card.is-error { border-color: rgba(221,83,83,.25); background: linear-gradient(145deg,rgba(255,241,241,.98),rgba(255,255,255,.98)); }
-    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-warning::after { background: #fffdf7; }
-    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-success::after { background: #f7fffc; }
-    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-error::after { background: #fff7f7; }
+    /* Anchored route bubbles always use a clean white surface. Tone is conveyed only by the subtle border. */
+    .single-route-milestone-message.is-anchored .single-route-milestone-card,
+    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-success,
+    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-warning,
+    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-error {
+      background: rgba(255,255,255,.985);
+      border-color: rgba(151,169,186,.28);
+      box-shadow: 0 12px 30px rgba(37,57,75,.15), inset 0 1px 0 #fff;
+    }
     .single-route-milestone-kicker {
       color: #7c8996;
       font-size: 10px;
@@ -2251,7 +2257,10 @@
       margin: 30px auto 18px;
       display: grid;
       place-items: center;
-      animation: singleRouteCelebrationFloat 2.6s ease-in-out infinite;
+      will-change: transform;
+    }
+    .single-route-reward-celebration-visual.is-floating {
+      animation: singleRouteCelebrationFloat 2.65s ease-in-out infinite;
     }
     .single-route-reward-celebration-visual .single-route-reward-svg {
       width: 100%;
@@ -2961,6 +2970,7 @@
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
       document.body.classList.toggle('challenge-route-active', tabId === 'challenge');
+      if (tabId !== 'challenge') hideSingleRouteMilestoneMessage();
 
       // 4. 挑戰頁定位目前節點；其他分頁回到頂部
       if (tabId === 'challenge') {
@@ -4052,32 +4062,78 @@
       };
     }
 
-    function positionSingleRouteMilestoneBubble(anchorEl) {
+    function getSingleRouteBubbleVisibleBounds() {
+      const viewport = document.getElementById('content-viewport');
+      const topBar = document.getElementById('top-bar');
+      const bottomNav = document.getElementById('bottom-nav');
+      const actionDock = document.getElementById('single-route-action-dock');
+      const viewportRect = viewport?.getBoundingClientRect?.() || { top: 0, bottom: window.innerHeight };
+      const topBarBottom = topBar?.getBoundingClientRect?.().bottom ?? viewportRect.top;
+      const bottomNavTop = bottomNav?.getBoundingClientRect?.().top ?? viewportRect.bottom;
+      const actionDockTop = actionDock && !actionDock.classList.contains('hidden')
+        ? actionDock.getBoundingClientRect().top
+        : bottomNavTop;
+      return {
+        top: Math.max(viewportRect.top, topBarBottom) + 4,
+        bottom: Math.min(viewportRect.bottom, bottomNavTop, actionDockTop) - 4,
+      };
+    }
+
+    function positionSingleRouteMilestoneBubble(anchorEl = singleRouteMessageAnchor) {
       const overlay = document.getElementById('single-route-milestone-message');
       const card = document.getElementById('single-route-milestone-card');
-      if (!overlay || !card || !anchorEl) return;
+      if (!overlay || !card || !anchorEl || !anchorEl.isConnected) {
+        hideSingleRouteMilestoneMessage();
+        return false;
+      }
+      if (!document.getElementById('tab-challenge')?.classList.contains('active')) {
+        hideSingleRouteMilestoneMessage();
+        return false;
+      }
       const anchor = anchorEl.querySelector?.('.single-route-core') || anchorEl;
       const rect = anchor.getBoundingClientRect();
+      const visible = getSingleRouteBubbleVisibleBounds();
+
+      // The bubble belongs to the route node. Once the node leaves the usable screen,
+      // the bubble leaves with it instead of remaining stuck to the viewport.
+      if (rect.bottom <= visible.top || rect.top >= visible.bottom) {
+        hideSingleRouteMilestoneMessage();
+        return false;
+      }
+
       const viewportPad = 12;
-      const safeTop = Math.max(10, Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0'));
       const cardRect = card.getBoundingClientRect();
       const anchorCenterX = rect.left + rect.width / 2;
       let left = anchorCenterX - cardRect.width / 2;
       left = Math.max(viewportPad, Math.min(left, window.innerWidth - cardRect.width - viewportPad));
-      let top = rect.top - cardRect.height - 16;
-      let below = false;
-      if (top < safeTop + 8) {
-        top = rect.bottom + 16;
-        below = true;
-      }
-      const maxTop = Math.max(viewportPad, window.innerHeight - cardRect.height - viewportPad);
-      top = Math.max(viewportPad, Math.min(top, maxTop));
+
+      const gap = 14;
+      const roomAbove = rect.top - visible.top;
+      const roomBelow = visible.bottom - rect.bottom;
+      let below = roomAbove < cardRect.height + gap && roomBelow > roomAbove;
+      let top = below ? rect.bottom + gap : rect.top - cardRect.height - gap;
+      const minTop = visible.top + 7;
+      const maxTop = Math.max(minTop, visible.bottom - cardRect.height - 7);
+      top = Math.max(minTop, Math.min(top, maxTop));
+
       const arrowLeft = Math.max(24, Math.min(anchorCenterX - left, cardRect.width - 24));
       card.style.left = `${Math.round(left)}px`;
       card.style.top = `${Math.round(top)}px`;
       card.style.bottom = 'auto';
       card.style.setProperty('--bubble-arrow-left', `${Math.round(arrowLeft)}px`);
       overlay.classList.toggle('is-below', below);
+      return true;
+    }
+
+    function scheduleSingleRouteMilestoneBubblePosition() {
+      if (!singleRouteMessageAnchor) return;
+      const overlay = document.getElementById('single-route-milestone-message');
+      if (!overlay?.classList.contains('show') || !overlay.classList.contains('is-anchored')) return;
+      cancelAnimationFrame(singleRouteMessagePositionRaf);
+      singleRouteMessagePositionRaf = requestAnimationFrame(() => {
+        singleRouteMessagePositionRaf = 0;
+        positionSingleRouteMilestoneBubble(singleRouteMessageAnchor);
+      });
     }
 
     function showSingleRouteMilestoneMessage({ title = '單元里程碑', message = '', points = null, tone = 'info', kicker = '單元里程碑', autoClose = true, anchorEl = null } = {}) {
@@ -4088,8 +4144,9 @@
       const pointsEl = document.getElementById('single-route-milestone-points');
       const kickerEl = document.getElementById('single-route-milestone-kicker');
       if (!overlay || !card || !titleEl || !copyEl || !pointsEl || !kickerEl) return;
-      if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
       clearTimeout(singleRouteMessageTimer);
+      cancelAnimationFrame(singleRouteMessagePositionRaf);
+      singleRouteMessagePositionRaf = 0;
       singleRouteMessageAnchor = anchorEl || null;
       overlay.classList.remove('show','is-anchored','is-below');
       card.classList.remove('is-success','is-warning','is-error');
@@ -4110,13 +4167,13 @@
         pointsEl.style.display = 'none';
         pointsEl.textContent = '';
       }
-      if (anchorEl) overlay.classList.add('is-anchored');
+      if (singleRouteMessageAnchor) overlay.classList.add('is-anchored');
       overlay.style.display = 'block';
       requestAnimationFrame(() => {
-        if (anchorEl) positionSingleRouteMilestoneBubble(anchorEl);
+        if (singleRouteMessageAnchor && !positionSingleRouteMilestoneBubble(singleRouteMessageAnchor)) return;
         overlay.classList.add('show');
       });
-      if (autoClose) singleRouteMessageTimer = setTimeout(() => hideSingleRouteMilestoneMessage(), anchorEl ? 3600 : 3200);
+      if (autoClose) singleRouteMessageTimer = setTimeout(() => hideSingleRouteMilestoneMessage(), singleRouteMessageAnchor ? 3600 : 3200);
     }
 
     function hideSingleRouteMilestoneMessage() {
@@ -4124,12 +4181,14 @@
       const card = document.getElementById('single-route-milestone-card');
       if (!overlay) return;
       clearTimeout(singleRouteMessageTimer);
+      cancelAnimationFrame(singleRouteMessagePositionRaf);
+      singleRouteMessagePositionRaf = 0;
+      singleRouteMessageAnchor = null;
       overlay.classList.remove('show');
       setTimeout(() => {
         if (!overlay.classList.contains('show')) {
           overlay.style.display = 'none';
           overlay.classList.remove('is-anchored','is-below');
-          singleRouteMessageAnchor = null;
           if (card) {
             card.style.left = '';
             card.style.top = '';
@@ -4140,24 +4199,9 @@
       }, 190);
     }
 
-
-    function scheduleSingleRouteMilestoneBubblePosition() {
-      if (!singleRouteMessageAnchor || singleRouteMessagePositionRaf) return;
-      const overlay = document.getElementById('single-route-milestone-message');
-      if (!overlay?.classList.contains('show') || !overlay.classList.contains('is-anchored')) return;
-      singleRouteMessagePositionRaf = requestAnimationFrame(() => {
-        singleRouteMessagePositionRaf = 0;
-        if (!singleRouteMessageAnchor?.isConnected) {
-          hideSingleRouteMilestoneMessage();
-          return;
-        }
-        positionSingleRouteMilestoneBubble(singleRouteMessageAnchor);
-      });
-    }
-
-    document.addEventListener('scroll', scheduleSingleRouteMilestoneBubblePosition, true);
+    document.getElementById('content-viewport')?.addEventListener('scroll', scheduleSingleRouteMilestoneBubblePosition, { passive: true });
     window.addEventListener('resize', scheduleSingleRouteMilestoneBubblePosition, { passive: true });
-    window.visualViewport?.addEventListener('resize', scheduleSingleRouteMilestoneBubblePosition, { passive: true });
+
 
     function showSingleRouteRewardCelebration({ type = 'good', label = '進階獎勵', points = 0 } = {}) {
       const overlay = document.getElementById('single-route-reward-celebration');
@@ -4171,7 +4215,10 @@
       overlay.classList.remove('is-good', 'is-perfect', 'is-safe');
       overlay.classList.add(type === 'perfect' ? 'is-perfect' : 'is-good');
       titleEl.textContent = `獲得${label}`;
+      visualEl.classList.remove('is-floating');
       visualEl.innerHTML = getSingleRouteRewardSvg(type === 'perfect' ? 'perfect' : 'good');
+      void visualEl.offsetWidth;
+      visualEl.classList.add('is-floating');
       pointsEl.classList.remove('is-safety-status');
       pointsEl.textContent = `+${Math.max(0, Number(points || 0))} 點`;
       copyEl.textContent = '已加入你的點數';
@@ -4194,7 +4241,10 @@
       overlay.classList.remove('is-good', 'is-perfect', 'is-safe');
       overlay.classList.add('is-safe');
       titleEl.textContent = '安全門檻已達成';
+      visualEl.classList.remove('is-floating');
       visualEl.innerHTML = getSingleRouteRewardSvg('safe');
+      void visualEl.offsetWidth;
+      visualEl.classList.add('is-floating');
       pointsEl.classList.add('is-safety-status');
       pointsEl.textContent = '本單元不扣點';
       copyEl.textContent = '再接再厲，繼續解鎖後續獎勵吧！';
@@ -4216,7 +4266,10 @@
           overlay.style.display = 'none';
           const visual = document.getElementById('single-route-reward-celebration-visual');
           const points = document.getElementById('single-route-reward-celebration-points');
-          if (visual) visual.innerHTML = '';
+          if (visual) {
+            visual.classList.remove('is-floating');
+            visual.innerHTML = '';
+          }
           if (points) points.classList.remove('is-safety-status');
         }
       }, 250);
@@ -4272,10 +4325,10 @@
       }
       if (state.granted) {
         showSingleRouteMilestoneMessage({
-          title: `${label}已領取`,
-          message: `這個階段的 ${state.points} 點已經加入你的帳戶。`,
-          points: state.points,
+          title: `${label}已領取 +${state.points} 點`,
+          message: '此階段獎勵已加入你的點數。',
           tone: 'success',
+          anchorEl,
         });
         return;
       }
@@ -4323,10 +4376,10 @@
             });
           } else {
             showSingleRouteMilestoneMessage({
-              title: `${label}已領取`,
-              message: `這個階段的 ${state.points} 點已經加入你的帳戶。`,
-              points: state.points,
+              title: `${label}已領取 +${state.points} 點`,
+              message: '此階段獎勵已加入你的點數。',
               tone: 'success',
+              anchorEl,
             });
           }
         } else {
