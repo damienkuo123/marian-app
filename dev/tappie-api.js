@@ -12,6 +12,7 @@ const TappieAPI = {
     getAzureToken: "/get-azure-token",
     submitPractice: "/submit-practice",
     claimPracticeChallenge: "/claim-practice-challenge",
+    claimMissionReward: "/claim-mission-reward",
     getDiagnosticReport: "/get-diagnostic-report",
     adminCardAuth: "/admin-card-auth",
     adminGetData: "/admin-get-data",
@@ -173,6 +174,13 @@ const TappieAPI = {
     }
 
     return await this._post(this.endpoints.claimPracticeChallenge, normalized);
+  },
+  async claimMissionReward({ uid = "", scheduleId = "", milestoneKey = "" } = {}) {
+    return await this._post(this.endpoints.claimMissionReward, {
+      uid: String(uid || "").trim(),
+      scheduleId: String(scheduleId || "").trim(),
+      milestoneKey: String(milestoneKey || "").trim()
+    });
   },
   async getDiagnosticReport(uid, filter = "unit", options = {}) {
     const qs = new URLSearchParams({

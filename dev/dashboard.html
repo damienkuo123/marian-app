@@ -21,7 +21,7 @@
   <script src="global-audio.js"></script>
   <script src="phonics-config.js"></script>
   <script src="phoneme-tips.js"></script>
-  <script src="./tappie-api.js?v=20260522-micro-polish-v2"></script>
+  <script src="./tappie-api.js?v=20260716-mission-milestone-v1"></script>
   <script src="./tappie-student-session.js?v=student-session-v1"></script>
 
   <style>
@@ -1939,6 +1939,153 @@
       .single-route-start-main { font-size: 16px; }
     }
 
+
+    /* =====================================================
+       Mission milestone interaction / cumulative rewards
+       ===================================================== */
+    .single-route-node.is-reward {
+      cursor: pointer;
+      touch-action: manipulation;
+      outline: none;
+    }
+    .single-route-node.is-reward:focus-visible .single-route-core {
+      box-shadow: 0 0 0 5px rgba(37,145,221,.18), 0 14px 28px rgba(37,74,106,.18);
+    }
+    .single-route-node.is-reward.is-claimable .single-route-core {
+      animation: singleRouteRewardReady 1.65s ease-in-out infinite;
+    }
+    .single-route-node.is-reward.is-claimable .single-route-label {
+      color: #126db4;
+    }
+    .single-route-node.is-reward.is-granted .single-route-core::after {
+      content: '✓';
+      position: absolute;
+      right: -5px;
+      top: -5px;
+      width: 23px;
+      height: 23px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: linear-gradient(145deg,#38c99b,#168f6e);
+      color: #fff;
+      border: 3px solid #fff;
+      box-shadow: 0 5px 12px rgba(22,143,110,.28);
+      font-size: 12px;
+      font-weight: 1000;
+      z-index: 4;
+    }
+    .single-route-node.is-reward.is-claim-loading {
+      pointer-events: none;
+    }
+    .single-route-node.is-reward.is-claim-loading .single-route-core {
+      animation: singleRouteRewardLoading .75s ease-in-out infinite alternate;
+    }
+    .single-route-claim-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 5px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #1478c9;
+      color: #fff;
+      box-shadow: 0 5px 12px rgba(20,120,201,.2);
+      font-size: 9px;
+      font-weight: 1000;
+      letter-spacing: .08em;
+      line-height: 1;
+    }
+    @keyframes singleRouteRewardReady {
+      0%,100% { transform: translateY(0) scale(1); filter: drop-shadow(0 7px 8px rgba(25,63,93,.15)); }
+      50% { transform: translateY(-4px) scale(1.035); filter: drop-shadow(0 12px 12px rgba(25,123,188,.26)); }
+    }
+    @keyframes singleRouteRewardLoading {
+      from { transform: scale(.96); opacity: .7; }
+      to { transform: scale(1.04); opacity: 1; }
+    }
+
+    .single-route-milestone-message {
+      position: fixed;
+      inset: 0;
+      z-index: 10040;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 20px 18px calc(112px + env(safe-area-inset-bottom));
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .18s ease;
+    }
+    .single-route-milestone-message.show {
+      display: flex;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .single-route-milestone-card {
+      position: relative;
+      width: min(340px, calc(100vw - 32px));
+      padding: 16px 44px 16px 17px;
+      border: 1px solid rgba(146,166,185,.24);
+      border-radius: 20px;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 18px 48px rgba(37,57,75,.22), inset 0 1px 0 rgba(255,255,255,.9);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      pointer-events: auto;
+      transform: translateY(14px) scale(.97);
+      transition: transform .2s ease;
+    }
+    .single-route-milestone-message.show .single-route-milestone-card { transform: translateY(0) scale(1); }
+    .single-route-milestone-card.is-success { border-color: rgba(31,174,129,.26); background: linear-gradient(145deg,rgba(238,255,249,.98),rgba(255,255,255,.98)); }
+    .single-route-milestone-card.is-warning { border-color: rgba(232,167,46,.28); background: linear-gradient(145deg,rgba(255,249,231,.98),rgba(255,255,255,.98)); }
+    .single-route-milestone-card.is-error { border-color: rgba(221,83,83,.25); background: linear-gradient(145deg,rgba(255,241,241,.98),rgba(255,255,255,.98)); }
+    .single-route-milestone-kicker {
+      color: #7c8996;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .single-route-milestone-title {
+      margin-top: 4px;
+      color: #25384a;
+      font-size: 16px;
+      font-weight: 1000;
+      line-height: 1.25;
+    }
+    .single-route-milestone-copy {
+      margin-top: 5px;
+      color: #657585;
+      font-size: 13px;
+      font-weight: 760;
+      line-height: 1.55;
+    }
+    .single-route-milestone-points {
+      display: inline-flex;
+      margin-top: 9px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(35,142,210,.1);
+      color: #1577bd;
+      font-size: 12px;
+      font-weight: 1000;
+    }
+    .single-route-milestone-close {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(126,143,158,.1);
+      color: #748391;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
 </style>
 </head>
 
@@ -2098,7 +2245,18 @@
             <button type="button" class="single-route-daily-close" onclick="toggleSingleRouteDailyReward(false)" aria-label="關閉每日獎勵">×</button>
             <h2 class="single-route-daily-title">每日獎勵</h2>
             <div id="single-route-daily-list" class="single-route-daily-list"></div>
-            <p class="single-route-daily-note">得到低階獎勵後，可再次挑戰並換發更高階獎勵。</p>
+            <p class="single-route-daily-note">獎勵依今日最高分升級，再次挑戰可換發更高階獎勵。</p>
+          </div>
+        </div>
+
+
+        <div id="single-route-milestone-message" class="single-route-milestone-message" aria-live="polite" onclick="if (event.target === this) hideSingleRouteMilestoneMessage()">
+          <div id="single-route-milestone-card" class="single-route-milestone-card" role="dialog" aria-modal="false" aria-label="里程碑提示">
+            <button type="button" class="single-route-milestone-close" onclick="hideSingleRouteMilestoneMessage()" aria-label="關閉提示">×</button>
+            <div id="single-route-milestone-kicker" class="single-route-milestone-kicker">單元里程碑</div>
+            <div id="single-route-milestone-title" class="single-route-milestone-title">里程碑</div>
+            <div id="single-route-milestone-copy" class="single-route-milestone-copy"></div>
+            <div id="single-route-milestone-points" class="single-route-milestone-points" style="display:none"></div>
           </div>
         </div>
       </div>
@@ -3281,6 +3439,9 @@
               if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
               if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
               if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
+              if (overlay.scheduleId !== undefined) data.scheduleId = overlay.scheduleId;
+              if (overlay.missionRewardState !== undefined) data.missionRewardState = overlay.missionRewardState;
+              if (overlay.currentPoints !== undefined) data.currentPoints = overlay.currentPoints;
               if (Array.isArray(overlay.classProgress)) data.classProgress = overlay.classProgress;
               if (overlay.classMaxCount !== undefined) data.classMaxCount = overlay.classMaxCount;
               if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
@@ -3429,7 +3590,7 @@
     function getMissionRouteMilestones(gami) {
       const m = gami?.mission || {};
       return [
-        { count:Number(m.failThreshold||0), type:'safe', title:'安全門檻', detail:'免扣一次' },
+        { count:Number(m.failThreshold||0), type:'safe', title:'安全門檻', detail:'本單元不扣點' },
         { count:Number(m.goodThreshold||0), type:'good', title:'進階獎勵', detail:`+${Number(m.goodReward||0)} 點` },
         { count:Number(m.perfectThreshold||0), type:'perfect', title:'最高獎勵', detail:`+${Number(m.perfectReward||0)} 點` }
       ].filter(item => item.count > 0);
@@ -3438,6 +3599,11 @@
     let singleRouteCurrentCount = 0;
     let singleRouteCurrentKey = 'count-0';
     let singleRouteLocateToken = 0;
+    let singleRouteMissionRewardState = null;
+    let singleRouteLastData = null;
+    let singleRouteLastGami = null;
+    let singleRouteClaimLoadingKey = '';
+    let singleRouteMessageTimer = 0;
 
     function buildSingleRoutePath(points) {
       if (!points.length) return '';
@@ -3601,6 +3767,177 @@
         setTimeout(() => {
           if (!panel.classList.contains('show')) panel.style.display = 'none';
         }, 230);
+      }
+    }
+
+
+    function getSingleRouteRewardState(type, count, points) {
+      const raw = singleRouteMissionRewardState?.[type] || {};
+      const reached = raw.reached !== undefined ? !!raw.reached : singleRouteCurrentCount >= Number(count || 0);
+      return {
+        type,
+        threshold: Number(raw.threshold ?? count ?? 0),
+        points: Number(raw.points ?? points ?? 0),
+        reached,
+        granted: !!raw.granted,
+        claimable: raw.claimable !== undefined ? !!raw.claimable : (reached && !raw.granted),
+        settled: !!singleRouteMissionRewardState?.settled,
+      };
+    }
+
+    function showSingleRouteMilestoneMessage({ title = '單元里程碑', message = '', points = null, tone = 'info', kicker = '單元里程碑', autoClose = true } = {}) {
+      const overlay = document.getElementById('single-route-milestone-message');
+      const card = document.getElementById('single-route-milestone-card');
+      const titleEl = document.getElementById('single-route-milestone-title');
+      const copyEl = document.getElementById('single-route-milestone-copy');
+      const pointsEl = document.getElementById('single-route-milestone-points');
+      const kickerEl = document.getElementById('single-route-milestone-kicker');
+      if (!overlay || !card || !titleEl || !copyEl || !pointsEl || !kickerEl) return;
+      clearTimeout(singleRouteMessageTimer);
+      card.classList.remove('is-success','is-warning','is-error');
+      if (tone === 'success') card.classList.add('is-success');
+      else if (tone === 'warning') card.classList.add('is-warning');
+      else if (tone === 'error') card.classList.add('is-error');
+      kickerEl.textContent = kicker;
+      titleEl.textContent = title;
+      copyEl.textContent = message;
+      if (points !== null && Number.isFinite(Number(points))) {
+        pointsEl.style.display = 'inline-flex';
+        pointsEl.textContent = `+${Number(points)} 點`;
+      } else {
+        pointsEl.style.display = 'none';
+        pointsEl.textContent = '';
+      }
+      overlay.style.display = 'flex';
+      requestAnimationFrame(() => overlay.classList.add('show'));
+      if (autoClose) singleRouteMessageTimer = setTimeout(() => hideSingleRouteMilestoneMessage(), 3200);
+    }
+
+    function hideSingleRouteMilestoneMessage() {
+      const overlay = document.getElementById('single-route-milestone-message');
+      if (!overlay) return;
+      clearTimeout(singleRouteMessageTimer);
+      overlay.classList.remove('show');
+      setTimeout(() => { if (!overlay.classList.contains('show')) overlay.style.display = 'none'; }, 200);
+    }
+
+    async function refreshSingleRouteMissionRewardState() {
+      const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
+      if (!overlay || !singleRouteLastData) return;
+      if (overlay.gamification) singleRouteLastGami = normalizeTappieGamiConfig(overlay.gamification);
+      if (overlay.currentUnit !== undefined) singleRouteLastData.currentUnit = overlay.currentUnit;
+      if (overlay.endDate !== undefined) singleRouteLastData.endDate = overlay.endDate;
+      if (overlay.missionCount !== undefined) singleRouteLastData.missionCount = overlay.missionCount;
+      if (overlay.scheduleId !== undefined) singleRouteLastData.scheduleId = overlay.scheduleId;
+      if (overlay.missionRewardState !== undefined) singleRouteLastData.missionRewardState = overlay.missionRewardState;
+      if (overlay.currentPoints !== undefined) {
+        singleRouteLastData.currentPoints = overlay.currentPoints;
+        const pointsEl = document.getElementById('current-points');
+        if (pointsEl) pointsEl.textContent = overlay.currentPoints;
+      }
+      if (Array.isArray(overlay.leaderboard)) singleRouteLastData.leaderboard = overlay.leaderboard;
+      renderMissionClassRoute(singleRouteLastData, singleRouteLastGami || normalizeTappieGamiConfig(singleRouteLastData.gamification || {}));
+    }
+
+    async function handleSingleRouteMilestoneClick(type) {
+      const milestone = getMissionRouteMilestones(singleRouteLastGami || {}).find(item => item.type === type);
+      if (!milestone) return;
+      const state = getSingleRouteRewardState(type, milestone.count, type === 'good' ? singleRouteLastGami?.mission?.goodReward : singleRouteLastGami?.mission?.perfectReward);
+      const remaining = Math.max(0, state.threshold - singleRouteCurrentCount);
+
+      if (type === 'safe') {
+        if (state.reached) {
+          showSingleRouteMilestoneMessage({
+            title: '安全門檻已達成',
+            message: '本單元已安全不被扣點。再接再厲，繼續解鎖後續獎勵吧！',
+            tone: 'success',
+          });
+        } else {
+          showSingleRouteMilestoneMessage({
+            title: '安全門檻',
+            message: remaining > 0 ? `再完成 ${remaining} 次，抵達後本單元結算不會被扣點。` : '抵達後，本單元結算不會被扣點。',
+            tone: 'warning',
+          });
+        }
+        return;
+      }
+
+      const label = type === 'perfect' ? '最高獎勵' : '進階獎勵';
+      if (!state.reached) {
+        showSingleRouteMilestoneMessage({
+          title: label,
+          message: `再完成 ${remaining} 次，抵達後可獲得 ${state.points} 點。`,
+          points: state.points,
+          tone: 'warning',
+        });
+        return;
+      }
+      if (state.granted) {
+        showSingleRouteMilestoneMessage({
+          title: `${label}已領取`,
+          message: `這個階段的 ${state.points} 點已經加入你的帳戶。`,
+          points: state.points,
+          tone: 'success',
+        });
+        return;
+      }
+      if (state.settled) {
+        showSingleRouteMilestoneMessage({
+          title: '本單元已結算',
+          message: '尚未手動領取的獎勵會由單元結算自動補發。',
+          tone: 'info',
+        });
+        return;
+      }
+      if (!singleRouteMissionRewardState?.scheduleId && !singleRouteLastData?.scheduleId) {
+        showSingleRouteMilestoneMessage({ title: '暫時無法領取', message: '找不到目前單元排程，請重新整理後再試。', tone: 'error' });
+        return;
+      }
+      if (singleRouteClaimLoadingKey) return;
+
+      singleRouteClaimLoadingKey = type;
+      renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
+      try {
+        if (!window.TappieAPI || typeof TappieAPI.claimMissionReward !== 'function') throw new Error('claimMissionReward 尚未載入');
+        const response = await TappieAPI.claimMissionReward({
+          uid: STUDENT_ID,
+          scheduleId: singleRouteMissionRewardState?.scheduleId || singleRouteLastData?.scheduleId || '',
+          milestoneKey: type,
+        });
+        const result = response?.result || {};
+        if (response?.success && (response.status === 'granted' || response.status === 'already_granted')) {
+          const awarded = Number(result.awardedPoints || 0);
+          if (singleRouteMissionRewardState?.[type]) {
+            singleRouteMissionRewardState[type].granted = true;
+            singleRouteMissionRewardState[type].claimable = false;
+            singleRouteMissionRewardState[type].grantedAt = result.grantedAt || new Date().toISOString();
+          }
+          if (Number.isFinite(Number(result.newBalance))) {
+            const pointsEl = document.getElementById('current-points');
+            if (pointsEl) pointsEl.textContent = Number(result.newBalance);
+            if (singleRouteLastData) singleRouteLastData.currentPoints = Number(result.newBalance);
+          }
+          showSingleRouteMilestoneMessage({
+            title: response.status === 'granted' ? `獲得${label}` : `${label}已領取`,
+            message: response.status === 'granted' ? `${state.points} 點已加入你的帳戶！` : `這個階段的 ${state.points} 點已經領取。`,
+            points: response.status === 'granted' ? (awarded || state.points) : state.points,
+            tone: 'success',
+          });
+        } else {
+          showSingleRouteMilestoneMessage({
+            title: '目前無法領取',
+            message: response?.message || '獎勵領取失敗，請稍後再試。',
+            tone: response?.status === 'not_reached' ? 'warning' : 'error',
+            autoClose: false,
+          });
+        }
+      } catch (err) {
+        console.error('claim-mission-reward failed', err);
+        showSingleRouteMilestoneMessage({ title: '領取失敗', message: '網路連線異常，請稍後再試。', tone: 'error', autoClose: false });
+      } finally {
+        singleRouteClaimLoadingKey = '';
+        if (singleRouteLastData && singleRouteLastGami) renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
+        refreshSingleRouteMissionRewardState().catch(err => console.warn('mission reward state refresh failed', err));
       }
     }
 
@@ -3853,6 +4190,15 @@
       const dailyBtn=document.getElementById('single-route-daily-btn');
       const dailyModal=document.getElementById('single-route-daily-modal');
       if (!stage||!svg||!nodes||!oralBtn||!actionDock||!rankBtn) return;
+      singleRouteLastData = data;
+      singleRouteLastGami = gami;
+      singleRouteMissionRewardState = data?.missionRewardState ?? {
+        scheduleId: data?.scheduleId || null,
+        settled: false,
+        safe: { threshold: Number(gami?.mission?.failThreshold || 0), reached: Number(data?.missionCount || 0) >= Number(gami?.mission?.failThreshold || 0) },
+        good: { threshold: Number(gami?.mission?.goodThreshold || 0), points: Number(gami?.mission?.goodReward || 0), reached: Number(data?.missionCount || 0) >= Number(gami?.mission?.goodThreshold || 0), granted: false },
+        perfect: { threshold: Number(gami?.mission?.perfectThreshold || 0), points: Number(gami?.mission?.perfectReward || 0), reached: Number(data?.missionCount || 0) >= Number(gami?.mission?.perfectThreshold || 0), granted: false }
+      };
       if (actionDock.parentElement !== document.body) document.body.appendChild(actionDock);
       if (rankBtn.parentElement !== document.body) document.body.appendChild(rankBtn);
       if (dailyBtn && dailyBtn.parentElement !== document.body) document.body.appendChild(dailyBtn);
@@ -3904,23 +4250,34 @@
         const isCurrent=point.key===singleRouteCurrentKey;
         const isComplete=point.order<=currentOrder;
         const milestone=point.milestone;
+        const rewardState=milestone ? getSingleRouteRewardState(milestone.type, milestone.count, milestone.type==='good' ? gami?.mission?.goodReward : gami?.mission?.perfectReward) : null;
+        const isClaimable=!!(milestone && milestone.type!=='safe' && rewardState?.claimable && !rewardState?.granted);
         const classes=[
           'single-route-node',
           point.kind==='reward'?'is-reward is-milestone':'is-count',
           isComplete?'is-complete':'',
           isCurrent?'is-current':'',
-          milestone?`is-${milestone.type}`:''
+          milestone?`is-${milestone.type}`:'',
+          rewardState?.reached?'is-reached':'',
+          rewardState?.granted?'is-granted':'',
+          isClaimable?'is-claimable':'',
+          singleRouteClaimLoadingKey===milestone?.type?'is-claim-loading':''
         ].filter(Boolean).join(' ');
         const coreContent=point.kind==='reward'
           ? getSingleRouteRewardSvg(milestone?.type)
           : `${getSingleRouteCountDiscSvg()}<span class="single-route-number">${point.count}</span>`;
         const rewardLabel=milestone
-          ? `<div class="single-route-label">${escapeMissionRouteHtml(milestone.title)}<small>${escapeMissionRouteHtml(milestone.detail)}</small></div>`
+          ? `<div class="single-route-label">${escapeMissionRouteHtml(milestone.title)}<small>${escapeMissionRouteHtml(milestone.detail)}</small>${isClaimable?'<span class="single-route-claim-badge">可領取</span>':''}</div>`
           : '';
+        let milestoneStatus='已達成';
+        if (milestone?.type==='safe') milestoneStatus=rewardState?.reached?'已安全':'尚未抵達';
+        else if (rewardState?.granted) milestoneStatus='已領取';
+        else if (isClaimable) milestoneStatus='點擊領取';
         const currentLabel=isCurrent
-          ? `<div class="single-route-current-label">${point.kind==='reward'?'已達成':`你在這裡<br>已完成 ${currentCount} 次`}</div>`
+          ? `<div class="single-route-current-label">${point.kind==='reward'?milestoneStatus:`你在這裡<br>已完成 ${currentCount} 次`}</div>`
           : '';
-        return `<div class="${classes}" data-route-key="${point.key}" data-route-count="${point.count}" style="left:${(point.x/420)*100}%;top:${point.y}px"><div class="single-route-core">${coreContent}</div>${rewardLabel}${currentLabel}</div>`;
+        const interactive=point.kind==='reward' ? `role="button" tabindex="0" data-milestone-type="${milestone?.type || ''}" onclick="handleSingleRouteMilestoneClick('${milestone?.type || ''}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSingleRouteMilestoneClick('${milestone?.type || ''}')}"` : '';
+        return `<div class="${classes}" ${interactive} data-route-key="${point.key}" data-route-count="${point.count}" style="left:${(point.x/420)*100}%;top:${point.y}px"><div class="single-route-core">${coreContent}</div>${rewardLabel}${currentLabel}</div>`;
       }).join('');
 
       oralBtn.dataset.nextCount=String(currentCount+1);
