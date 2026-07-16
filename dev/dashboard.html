@@ -8,7 +8,7 @@
 <title>Tappie學美語</title>
   <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
   <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
-  <!-- TAPPIE_MILESTONE_BUBBLE_AND_SAFE_CELEBRATION_V1_2_20260716 -->
+  <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
   <!-- TAPPIE_MILESTONE_REWARD_CELEBRATION_MODAL_UNIFICATION_20260716 -->
 
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2083,20 +2083,24 @@
       transition: transform .18s ease, opacity .18s ease;
     }
     .single-route-milestone-message.show .single-route-milestone-card { transform: translate(-50%,0) scale(1); }
-    .single-route-milestone-message.is-anchored .single-route-milestone-card {
+    .single-route-milestone-card.is-node-bubble {
+      position: absolute;
       left: 0;
       top: 0;
       bottom: auto;
+      z-index: 70;
       width: min(268px, calc(100vw - 28px));
       padding: 12px 14px;
       border-radius: 16px;
       box-shadow: 0 12px 30px rgba(37,57,75,.17), inset 0 1px 0 rgba(255,255,255,.96);
       transform: translateY(5px) scale(.98);
+      opacity: 0;
     }
-    .single-route-milestone-message.is-anchored.show .single-route-milestone-card {
+    .single-route-milestone-card.is-node-bubble.is-visible {
       transform: translateY(0) scale(1);
+      opacity: 1;
     }
-    .single-route-milestone-message.is-anchored .single-route-milestone-card::after {
+    .single-route-milestone-card.is-node-bubble::after {
       content: '';
       position: absolute;
       left: var(--bubble-arrow-left, 50%);
@@ -2109,7 +2113,7 @@
       border-bottom: 1px solid rgba(146,166,185,.20);
       border-radius: 0 0 3px 0;
     }
-    .single-route-milestone-message.is-anchored.is-below .single-route-milestone-card::after {
+    .single-route-milestone-card.is-node-bubble.is-below::after {
       top: -8px;
       bottom: auto;
       transform: translateX(-50%) rotate(225deg);
@@ -2118,10 +2122,10 @@
     .single-route-milestone-card.is-warning { border-color: rgba(232,167,46,.28); background: linear-gradient(145deg,rgba(255,249,231,.99),rgba(255,255,255,.99)); }
     .single-route-milestone-card.is-error { border-color: rgba(221,83,83,.25); background: linear-gradient(145deg,rgba(255,241,241,.98),rgba(255,255,255,.98)); }
     /* Anchored route bubbles always use a clean white surface. Tone is conveyed only by the subtle border. */
-    .single-route-milestone-message.is-anchored .single-route-milestone-card,
-    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-success,
-    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-warning,
-    .single-route-milestone-message.is-anchored .single-route-milestone-card.is-error {
+    .single-route-milestone-card.is-node-bubble,
+    .single-route-milestone-card.is-node-bubble.is-success,
+    .single-route-milestone-card.is-node-bubble.is-warning,
+    .single-route-milestone-card.is-node-bubble.is-error {
       background: rgba(255,255,255,.985);
       border-color: rgba(151,169,186,.28);
       box-shadow: 0 12px 30px rgba(37,57,75,.15), inset 0 1px 0 #fff;
@@ -2133,9 +2137,9 @@
       letter-spacing: .12em;
       text-transform: uppercase;
     }
-    .single-route-milestone-message.is-anchored .single-route-milestone-kicker,
-    .single-route-milestone-message.is-anchored .single-route-milestone-close,
-    .single-route-milestone-message.is-anchored .single-route-milestone-points { display: none !important; }
+    .single-route-milestone-card.is-node-bubble .single-route-milestone-kicker,
+    .single-route-milestone-card.is-node-bubble .single-route-milestone-close,
+    .single-route-milestone-card.is-node-bubble .single-route-milestone-points { display: none !important; }
     .single-route-milestone-title {
       margin-top: 4px;
       color: #25384a;
@@ -2143,7 +2147,7 @@
       font-weight: 1000;
       line-height: 1.25;
     }
-    .single-route-milestone-message.is-anchored .single-route-milestone-title {
+    .single-route-milestone-card.is-node-bubble .single-route-milestone-title {
       margin: 0;
       font-size: 14px;
       line-height: 1.35;
@@ -2155,7 +2159,7 @@
       font-weight: 760;
       line-height: 1.55;
     }
-    .single-route-milestone-message.is-anchored .single-route-milestone-copy {
+    .single-route-milestone-card.is-node-bubble .single-route-milestone-copy {
       margin-top: 3px;
       font-size: 11px;
       font-weight: 850;
@@ -3880,7 +3884,6 @@
     let singleRouteClaimLoadingKey = '';
     let singleRouteMessageTimer = 0;
     let singleRouteMessageAnchor = null;
-    let singleRouteMessagePositionRaf = 0;
 
     function buildSingleRoutePath(points) {
       if (!points.length) return '';
@@ -4062,27 +4065,23 @@
       };
     }
 
-    function getSingleRouteBubbleVisibleBounds() {
-      const viewport = document.getElementById('content-viewport');
-      const topBar = document.getElementById('top-bar');
-      const bottomNav = document.getElementById('bottom-nav');
-      const actionDock = document.getElementById('single-route-action-dock');
-      const viewportRect = viewport?.getBoundingClientRect?.() || { top: 0, bottom: window.innerHeight };
-      const topBarBottom = topBar?.getBoundingClientRect?.().bottom ?? viewportRect.top;
-      const bottomNavTop = bottomNav?.getBoundingClientRect?.().top ?? viewportRect.bottom;
-      const actionDockTop = actionDock && !actionDock.classList.contains('hidden')
-        ? actionDock.getBoundingClientRect().top
-        : bottomNavTop;
-      return {
-        top: Math.max(viewportRect.top, topBarBottom) + 4,
-        bottom: Math.min(viewportRect.bottom, bottomNavTop, actionDockTop) - 4,
-      };
-    }
-
-    function positionSingleRouteMilestoneBubble(anchorEl = singleRouteMessageAnchor) {
+    function restoreSingleRouteMilestoneCard() {
       const overlay = document.getElementById('single-route-milestone-message');
       const card = document.getElementById('single-route-milestone-card');
-      if (!overlay || !card || !anchorEl || !anchorEl.isConnected) {
+      if (!overlay || !card) return;
+      card.classList.remove('is-node-bubble', 'is-visible', 'is-below');
+      card.style.left = '';
+      card.style.top = '';
+      card.style.bottom = '';
+      card.style.removeProperty('--bubble-arrow-left');
+      if (card.parentElement !== overlay) overlay.appendChild(card);
+    }
+
+    function mountSingleRouteMilestoneBubble(anchorEl = singleRouteMessageAnchor) {
+      const overlay = document.getElementById('single-route-milestone-message');
+      const card = document.getElementById('single-route-milestone-card');
+      const stage = anchorEl?.closest?.('.single-route-stage');
+      if (!overlay || !card || !anchorEl || !anchorEl.isConnected || !stage) {
         hideSingleRouteMilestoneMessage();
         return false;
       }
@@ -4090,50 +4089,43 @@
         hideSingleRouteMilestoneMessage();
         return false;
       }
+
       const anchor = anchorEl.querySelector?.('.single-route-core') || anchorEl;
-      const rect = anchor.getBoundingClientRect();
-      const visible = getSingleRouteBubbleVisibleBounds();
-
-      // The bubble belongs to the route node. Once the node leaves the usable screen,
-      // the bubble leaves with it instead of remaining stuck to the viewport.
-      if (rect.bottom <= visible.top || rect.top >= visible.bottom) {
-        hideSingleRouteMilestoneMessage();
-        return false;
-      }
-
+      const anchorRect = anchor.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      const topBarBottom = document.getElementById('top-bar')?.getBoundingClientRect?.().bottom || 0;
       const viewportPad = 12;
-      const cardRect = card.getBoundingClientRect();
-      const anchorCenterX = rect.left + rect.width / 2;
-      let left = anchorCenterX - cardRect.width / 2;
-      left = Math.max(viewportPad, Math.min(left, window.innerWidth - cardRect.width - viewportPad));
-
       const gap = 14;
-      const roomAbove = rect.top - visible.top;
-      const roomBelow = visible.bottom - rect.bottom;
-      let below = roomAbove < cardRect.height + gap && roomBelow > roomAbove;
-      let top = below ? rect.bottom + gap : rect.top - cardRect.height - gap;
-      const minTop = visible.top + 7;
-      const maxTop = Math.max(minTop, visible.bottom - cardRect.height - 7);
-      top = Math.max(minTop, Math.min(top, maxTop));
 
-      const arrowLeft = Math.max(24, Math.min(anchorCenterX - left, cardRect.width - 24));
-      card.style.left = `${Math.round(left)}px`;
-      card.style.top = `${Math.round(top)}px`;
+      stage.appendChild(card);
+      card.classList.add('is-node-bubble');
+      card.classList.remove('is-visible', 'is-below');
+      card.style.left = '0px';
+      card.style.top = '0px';
       card.style.bottom = 'auto';
-      card.style.setProperty('--bubble-arrow-left', `${Math.round(arrowLeft)}px`);
-      overlay.classList.toggle('is-below', below);
-      return true;
-    }
 
-    function scheduleSingleRouteMilestoneBubblePosition() {
-      if (!singleRouteMessageAnchor) return;
-      const overlay = document.getElementById('single-route-milestone-message');
-      if (!overlay?.classList.contains('show') || !overlay.classList.contains('is-anchored')) return;
-      cancelAnimationFrame(singleRouteMessagePositionRaf);
-      singleRouteMessagePositionRaf = requestAnimationFrame(() => {
-        singleRouteMessagePositionRaf = 0;
-        positionSingleRouteMilestoneBubble(singleRouteMessageAnchor);
-      });
+      const cardRect = card.getBoundingClientRect();
+      const anchorCenterX = anchorRect.left + anchorRect.width / 2;
+      const desiredCenterX = Math.max(
+        viewportPad + cardRect.width / 2,
+        Math.min(anchorCenterX, window.innerWidth - viewportPad - cardRect.width / 2)
+      );
+      const cardLeftViewport = desiredCenterX - cardRect.width / 2;
+      const leftInStage = cardLeftViewport - stageRect.left;
+      const roomAbove = anchorRect.top - topBarBottom;
+      const below = roomAbove < cardRect.height + gap + 8;
+      const topViewport = below
+        ? anchorRect.bottom + gap
+        : anchorRect.top - cardRect.height - gap;
+      const topInStage = topViewport - stageRect.top;
+      const arrowLeft = Math.max(24, Math.min(anchorCenterX - cardLeftViewport, cardRect.width - 24));
+
+      card.style.left = `${Math.round(leftInStage)}px`;
+      card.style.top = `${Math.round(topInStage)}px`;
+      card.style.setProperty('--bubble-arrow-left', `${Math.round(arrowLeft)}px`);
+      card.classList.toggle('is-below', below);
+      requestAnimationFrame(() => card.classList.add('is-visible'));
+      return true;
     }
 
     function showSingleRouteMilestoneMessage({ title = '單元里程碑', message = '', points = null, tone = 'info', kicker = '單元里程碑', autoClose = true, anchorEl = null } = {}) {
@@ -4145,15 +4137,10 @@
       const kickerEl = document.getElementById('single-route-milestone-kicker');
       if (!overlay || !card || !titleEl || !copyEl || !pointsEl || !kickerEl) return;
       clearTimeout(singleRouteMessageTimer);
-      cancelAnimationFrame(singleRouteMessagePositionRaf);
-      singleRouteMessagePositionRaf = 0;
+      restoreSingleRouteMilestoneCard();
       singleRouteMessageAnchor = anchorEl || null;
       overlay.classList.remove('show','is-anchored','is-below');
       card.classList.remove('is-success','is-warning','is-error');
-      card.style.left = '';
-      card.style.top = '';
-      card.style.bottom = '';
-      card.style.removeProperty('--bubble-arrow-left');
       if (tone === 'success') card.classList.add('is-success');
       else if (tone === 'warning') card.classList.add('is-warning');
       else if (tone === 'error') card.classList.add('is-error');
@@ -4167,13 +4154,19 @@
         pointsEl.style.display = 'none';
         pointsEl.textContent = '';
       }
-      if (singleRouteMessageAnchor) overlay.classList.add('is-anchored');
+
       overlay.style.display = 'block';
-      requestAnimationFrame(() => {
-        if (singleRouteMessageAnchor && !positionSingleRouteMilestoneBubble(singleRouteMessageAnchor)) return;
-        overlay.classList.add('show');
-      });
-      if (autoClose) singleRouteMessageTimer = setTimeout(() => hideSingleRouteMilestoneMessage(), singleRouteMessageAnchor ? 3600 : 3200);
+      if (singleRouteMessageAnchor) {
+        overlay.classList.add('is-anchored', 'show');
+        requestAnimationFrame(() => mountSingleRouteMilestoneBubble(singleRouteMessageAnchor));
+      } else {
+        requestAnimationFrame(() => overlay.classList.add('show'));
+      }
+
+      // Node bubbles stay open until the user scrolls or interacts elsewhere.
+      if (autoClose && !singleRouteMessageAnchor) {
+        singleRouteMessageTimer = setTimeout(() => hideSingleRouteMilestoneMessage(), 3200);
+      }
     }
 
     function hideSingleRouteMilestoneMessage() {
@@ -4181,26 +4174,40 @@
       const card = document.getElementById('single-route-milestone-card');
       if (!overlay) return;
       clearTimeout(singleRouteMessageTimer);
-      cancelAnimationFrame(singleRouteMessagePositionRaf);
-      singleRouteMessagePositionRaf = 0;
       singleRouteMessageAnchor = null;
+      card?.classList.remove('is-visible');
       overlay.classList.remove('show');
       setTimeout(() => {
         if (!overlay.classList.contains('show')) {
+          restoreSingleRouteMilestoneCard();
           overlay.style.display = 'none';
           overlay.classList.remove('is-anchored','is-below');
-          if (card) {
-            card.style.left = '';
-            card.style.top = '';
-            card.style.bottom = '';
-            card.style.removeProperty('--bubble-arrow-left');
-          }
         }
       }, 190);
     }
 
-    document.getElementById('content-viewport')?.addEventListener('scroll', scheduleSingleRouteMilestoneBubblePosition, { passive: true });
-    window.addEventListener('resize', scheduleSingleRouteMilestoneBubblePosition, { passive: true });
+    function dismissSingleRouteBubbleOnMovement() {
+      const overlay = document.getElementById('single-route-milestone-message');
+      if (overlay?.classList.contains('show') && overlay.classList.contains('is-anchored')) {
+        hideSingleRouteMilestoneMessage();
+      }
+    }
+
+    function dismissSingleRouteBubbleOnExternalPress(event) {
+      const overlay = document.getElementById('single-route-milestone-message');
+      if (!overlay?.classList.contains('show') || !overlay.classList.contains('is-anchored')) return;
+      const card = document.getElementById('single-route-milestone-card');
+      const target = event.target;
+      if (card?.contains(target) || singleRouteMessageAnchor?.contains?.(target)) return;
+      hideSingleRouteMilestoneMessage();
+    }
+
+    const singleRouteScrollViewport = document.getElementById('content-viewport');
+    singleRouteScrollViewport?.addEventListener('scroll', dismissSingleRouteBubbleOnMovement, { passive: true });
+    singleRouteScrollViewport?.addEventListener('touchmove', dismissSingleRouteBubbleOnMovement, { passive: true });
+    singleRouteScrollViewport?.addEventListener('wheel', dismissSingleRouteBubbleOnMovement, { passive: true });
+    document.addEventListener('pointerdown', dismissSingleRouteBubbleOnExternalPress, true);
+    window.addEventListener('resize', dismissSingleRouteBubbleOnMovement, { passive: true });
 
 
     function showSingleRouteRewardCelebration({ type = 'good', label = '進階獎勵', points = 0 } = {}) {
