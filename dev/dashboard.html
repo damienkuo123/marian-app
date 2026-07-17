@@ -1190,7 +1190,7 @@
       background: linear-gradient(180deg, rgba(240,246,253,0), rgba(240,246,253,.82) 44%, rgba(240,246,253,.97));
       pointer-events: none;
     }
-    #tab-challenge:not(.active) .single-route-action-dock,
+    body:not(.challenge-route-active) .single-route-action-dock,
     .single-route-action-dock.hidden { display: none !important; }
 
     .single-route-start {
@@ -2785,7 +2785,6 @@
       width: 64px;
     }
 
-    #tab-challenge:not(.active) .single-route-utility-stack,
     body:not(.challenge-route-active) .single-route-utility-stack {
       display: none !important;
     }
@@ -3518,6 +3517,12 @@
       if (zone) zone.classList.toggle('hidden', !attendanceEnabled && !weeklyEnabled);
     }
 
+    function syncChallengeRouteChrome(tabId = null) {
+      const challengeTab = document.getElementById('tab-challenge');
+      const isChallenge = tabId === 'challenge' || (!tabId && challengeTab?.classList.contains('active'));
+      document.body.classList.toggle('challenge-route-active', !!isChallenge);
+    }
+
     // 🚀 SPA 分頁切換邏輯
     function switchTab(tabId, titleText, navElement) {
       // 🔒 檢查是否被鎖定
@@ -3540,7 +3545,7 @@
       // 3. 切換 Content Viewport 內容
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
-      document.body.classList.toggle('challenge-route-active', tabId === 'challenge');
+      syncChallengeRouteChrome(tabId);
       if (tabId !== 'challenge') hideSingleRouteMilestoneMessage();
 
       // 4. 挑戰頁定位目前節點；其他分頁回到頂部
@@ -5417,10 +5422,11 @@
       const nodes=document.getElementById('single-route-nodes');
       const oralBtn=document.getElementById('oral-btn');
       const actionDock=document.getElementById('single-route-action-dock');
+      const utilityStack=document.querySelector('.single-route-utility-stack');
       const rankBtn=document.querySelector('.single-route-rank-btn');
       const dailyBtn=document.getElementById('single-route-daily-btn');
       const dailyModal=document.getElementById('single-route-daily-modal');
-      if (!stage||!svg||!nodes||!oralBtn||!actionDock||!rankBtn) return;
+      if (!stage||!svg||!nodes||!oralBtn||!actionDock||!utilityStack||!rankBtn) return;
       singleRouteLastData = data;
       singleRouteLastGami = gami;
       singleRouteMissionRewardState = data?.missionRewardState ?? {
@@ -5430,10 +5436,12 @@
         good: { threshold: Number(gami?.mission?.goodThreshold || 0), points: Number(gami?.mission?.goodReward || 0), reached: Number(data?.missionCount || 0) >= Number(gami?.mission?.goodThreshold || 0), granted: false },
         perfect: { threshold: Number(gami?.mission?.perfectThreshold || 0), points: Number(gami?.mission?.perfectReward || 0), reached: Number(data?.missionCount || 0) >= Number(gami?.mission?.perfectThreshold || 0), granted: false }
       };
+      // Fixed challenge chrome is portaled to <body> as intact components.
+      // Never detach rank/daily buttons from their stack: the canonical CSS depends on that hierarchy.
       if (actionDock.parentElement !== document.body) document.body.appendChild(actionDock);
-      if (rankBtn.parentElement !== document.body) document.body.appendChild(rankBtn);
-      if (dailyBtn && dailyBtn.parentElement !== document.body) document.body.appendChild(dailyBtn);
+      if (utilityStack.parentElement !== document.body) document.body.appendChild(utilityStack);
       if (dailyModal && dailyModal.parentElement !== document.body) document.body.appendChild(dailyModal);
+      syncChallengeRouteChrome();
 
       const currentCount=Math.max(0,Number(data.missionCount||0));
       singleRouteCurrentCount=currentCount;
