@@ -2889,6 +2889,135 @@
       .diag-summary-helper { font-size: 10px; }
     }
 
+  
+
+    /* =======================================================
+       TAPPIE_V5_5_QUICK_ACTION_COUNTDOWN_TILES_20260717
+       - Ranking: unit settlement countdown.
+       - Daily reward: daily reset countdown / upgrade / completed.
+       - Colored 2.5D tiles with stable white labels.
+       - Only the chest artwork wiggles; the tile and label remain fixed.
+       ======================================================= */
+    .single-route-rank-btn,
+    .single-route-daily-btn {
+      box-sizing: border-box !important;
+      width: 64px !important;
+      height: 78px !important;
+      right: 14px !important;
+      padding: 3px 2px 5px !important;
+      display: grid !important;
+      grid-template-rows: 51px 17px !important;
+      align-items: center !important;
+      justify-items: center !important;
+      gap: 1px !important;
+      border: 1px solid rgba(255,255,255,.34) !important;
+      border-radius: 19px !important;
+      overflow: visible !important;
+      color: #fff !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      isolation: isolate;
+    }
+    .single-route-rank-btn {
+      top: calc(env(safe-area-inset-top) + 74px) !important;
+      background: linear-gradient(180deg,#477fe5 0%,#2f60c7 72%,#294eaa 100%) !important;
+      box-shadow:
+        0 4px 0 #203f8c,
+        0 11px 22px rgba(34,67,133,.22),
+        inset 0 1px 0 rgba(255,255,255,.46) !important;
+    }
+    .single-route-daily-btn {
+      top: calc(env(safe-area-inset-top) + 160px) !important;
+      background: linear-gradient(180deg,#8b72ea 0%,#6d53d5 70%,#563eb9 100%) !important;
+      box-shadow:
+        0 4px 0 #443095,
+        0 11px 22px rgba(69,47,150,.22),
+        inset 0 1px 0 rgba(255,255,255,.46) !important;
+    }
+    .single-route-rank-btn:active,
+    .single-route-daily-btn:active {
+      transform: translateY(2px) scale(.97) !important;
+      box-shadow:
+        0 2px 0 rgba(27,44,100,.9),
+        0 6px 13px rgba(37,57,112,.18),
+        inset 0 1px 0 rgba(255,255,255,.36) !important;
+    }
+    .single-route-utility-art {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      transform-origin: 50% 62%;
+      will-change: transform;
+    }
+    .single-route-rank-btn .single-route-utility-art .tappie-ui-icon,
+    .single-route-rank-btn .single-route-utility-art .tappie-ui-icon svg,
+    .single-route-daily-btn .single-route-utility-art > svg {
+      width: 48px !important;
+      height: 48px !important;
+      display: block !important;
+      overflow: visible !important;
+      flex: 0 0 48px !important;
+    }
+    .single-route-utility-label {
+      width: 60px;
+      min-width: 60px;
+      height: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 10.5px;
+      font-weight: 950;
+      line-height: 1;
+      letter-spacing: -.1px;
+      white-space: nowrap;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 1px 2px rgba(18,31,74,.26);
+      pointer-events: none;
+    }
+    .single-route-daily-btn.is-complete {
+      filter: saturate(.78);
+      opacity: .88;
+    }
+    .single-route-daily-btn.is-upgrade {
+      box-shadow:
+        0 4px 0 #443095,
+        0 11px 22px rgba(69,47,150,.22),
+        0 0 0 2px rgba(255,240,159,.18),
+        inset 0 1px 0 rgba(255,255,255,.46) !important;
+    }
+    /* Neutralize every legacy wiggle selector, then animate the art wrapper only. */
+    .single-route-daily-btn.is-unclaimed svg,
+    .single-route-daily-btn.is-unclaimed > svg {
+      animation: none !important;
+      transform: none !important;
+    }
+    .single-route-daily-btn.is-unclaimed .single-route-daily-art {
+      animation: singleRouteDailyGiftNudge 3.8s ease-in-out infinite !important;
+    }
+    @media (max-width: 360px) {
+      .single-route-rank-btn,
+      .single-route-daily-btn {
+        width: 60px !important;
+        height: 76px !important;
+        right: 10px !important;
+        border-radius: 18px !important;
+        grid-template-rows: 49px 17px !important;
+      }
+      .single-route-rank-btn { top: calc(env(safe-area-inset-top) + 72px) !important; }
+      .single-route-daily-btn { top: calc(env(safe-area-inset-top) + 155px) !important; }
+      .single-route-utility-art { width: 48px; height: 48px; }
+      .single-route-rank-btn .single-route-utility-art .tappie-ui-icon,
+      .single-route-rank-btn .single-route-utility-art .tappie-ui-icon svg,
+      .single-route-daily-btn .single-route-utility-art > svg {
+        width: 46px !important;
+        height: 46px !important;
+      }
+      .single-route-utility-label { width: 56px; min-width: 56px; font-size: 10px; }
+    }
+
   </style>
 </head>
 
@@ -2998,14 +3127,20 @@
     <section id="tab-challenge" class="tab-content">
       <div id="single-route-panel" class="single-route-panel">
         <div style="display:none"><div id="hw-box"></div><div id="hw-icon"></div><div id="hw-title"></div><div id="hw-score-info" class="hidden"><span id="last-score"></span><span id="awarded-points"></span></div><span id="current-unit"></span></div>
-        <button type="button" class="single-route-rank-btn" onclick="toggleSingleRouteLeaderboard()" aria-label="查看高分排行榜"><span class="tappie-ui-icon" data-tappie-icon="trophy"></span></button>
+        <button type="button" class="single-route-rank-btn" onclick="toggleSingleRouteLeaderboard()" aria-label="查看高分排行榜">
+          <span class="single-route-utility-art single-route-rank-art"><span class="tappie-ui-icon" data-tappie-icon="trophy"></span></span>
+          <span id="single-route-rank-label" class="single-route-utility-label">--</span>
+        </button>
         <button id="single-route-daily-btn" type="button" class="single-route-daily-btn hidden" onclick="toggleSingleRouteDailyReward()" aria-label="查看每日獎勵">
+          <span class="single-route-utility-art single-route-daily-art">
           <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
             <path d="M9 18h30v21H9z" fill="#42b89d"/><path d="M8 15c0-5 4-9 9-9h14c5 0 9 4 9 9v6H8v-6z" fill="#69d8bd"/>
             <path d="M8 20h32v7H8z" fill="#f4c653"/><path d="M21 18h6v22h-6z" fill="#ffd96d"/>
             <rect x="18" y="23" width="12" height="12" rx="4" fill="#fff2bc"/><path d="M24 25l1.6 3.2 3.5.5-2.5 2.4.6 3.4-3.2-1.7-3.2 1.7.6-3.4-2.5-2.4 3.5-.5L24 25z" fill="#d79a1b"/>
             <path d="M12 10c6-3 18-3 24 0" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2.5" stroke-linecap="round"/>
           </svg>
+          </span>
+          <span id="single-route-daily-label" class="single-route-utility-label">--</span>
         </button>
 
         <div id="single-route-stage" class="single-route-stage" aria-label="口說挑戰路線">
@@ -4467,7 +4602,121 @@
     }
 
 
+
+    const TAPPIE_TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
+    let singleRouteUtilityEndDate = '';
+    let singleRouteUtilityCountdownTimer = 0;
+
+    function getSingleRouteSettlementTargetMs(endDate) {
+      const raw = String(endDate || '').trim();
+      if (!raw) return NaN;
+      if (raw.includes('T')) {
+        const parsed = Date.parse(raw);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+      const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!match) return NaN;
+      const year = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const day = Number(match[3]);
+      // endDate is the final active day; settlement occurs at the next Taipei midnight.
+      return Date.UTC(year, month, day + 1, 0, 0, 0, 0) - TAPPIE_TAIPEI_OFFSET_MS;
+    }
+
+    function getMsUntilNextTaipeiMidnight(nowMs = Date.now()) {
+      const shifted = new Date(nowMs + TAPPIE_TAIPEI_OFFSET_MS);
+      const nextMidnightUtc = Date.UTC(
+        shifted.getUTCFullYear(),
+        shifted.getUTCMonth(),
+        shifted.getUTCDate() + 1,
+        0, 0, 0, 0
+      );
+      return Math.max(0, nextMidnightUtc - TAPPIE_TAIPEI_OFFSET_MS - nowMs);
+    }
+
+    function formatSingleRouteCompactCountdown(remainingMs, includeDayPrefix = false) {
+      const DAY = 86400000;
+      const HOUR = 3600000;
+      const MINUTE = 60000;
+      if (!Number.isFinite(remainingMs)) return '未排程';
+      if (remainingMs <= 0) return '即將更新';
+      if (remainingMs > DAY) {
+        const days = Math.ceil(remainingMs / DAY);
+        return includeDayPrefix ? `剩 ${days} 天` : `${days} 天`;
+      }
+      if (remainingMs >= HOUR) return `${Math.max(1, Math.floor(remainingMs / HOUR))} 小時`;
+      return `${Math.max(1, Math.floor(remainingMs / MINUTE))}分鐘`;
+    }
+
+    function updateSingleRouteRankUtilityLabel(endDate = singleRouteUtilityEndDate) {
+      singleRouteUtilityEndDate = String(endDate || singleRouteUtilityEndDate || '').trim();
+      const label = document.getElementById('single-route-rank-label');
+      const button = document.querySelector('.single-route-rank-btn');
+      if (!label) return;
+      const targetMs = getSingleRouteSettlementTargetMs(singleRouteUtilityEndDate);
+      const remainingMs = targetMs - Date.now();
+      let copy = formatSingleRouteCompactCountdown(remainingMs, true);
+      if (remainingMs > 86400000) {
+        const match = singleRouteUtilityEndDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          const taipeiNow = new Date(Date.now() + TAPPIE_TAIPEI_OFFSET_MS);
+          const todayOrdinal = Date.UTC(taipeiNow.getUTCFullYear(), taipeiNow.getUTCMonth(), taipeiNow.getUTCDate()) / 86400000;
+          const endOrdinal = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000;
+          copy = `剩 ${Math.max(1, Math.round(endOrdinal - todayOrdinal))} 天`;
+        }
+      }
+      label.textContent = copy;
+      if (button) button.setAttribute('aria-label', `查看高分排行榜，${copy}`);
+    }
+
+    function updateSingleRouteDailyUtilityLabel() {
+      const label = document.getElementById('single-route-daily-label');
+      const button = document.getElementById('single-route-daily-btn');
+      if (!label || !button) return;
+      const state = singleRouteDailyRewardState || {};
+      const tiers = Array.isArray(state.tiers) ? state.tiers : [];
+      button.classList.remove('is-countdown','is-upgrade','is-complete');
+
+      let copy = '未開放';
+      if (state.enabled && !state.hasSchedule) {
+        copy = '未排程';
+      } else if (state.enabled && tiers.length) {
+        const ascending = [...tiers].sort((a,b) => Number(a.min || 0) - Number(b.min || 0));
+        const lowest = Number(ascending[0]?.min || 0);
+        const highest = Number(ascending[ascending.length - 1]?.min || 0);
+        const score = Math.max(0, Number(state.bestScore || 0));
+        if (highest > 0 && score >= highest) {
+          copy = '已完成';
+          button.classList.add('is-complete');
+        } else if (lowest > 0 && score >= lowest) {
+          copy = '可升級';
+          button.classList.add('is-upgrade');
+        } else {
+          copy = formatSingleRouteCompactCountdown(getMsUntilNextTaipeiMidnight(), false);
+          button.classList.add('is-countdown');
+        }
+      }
+      label.textContent = copy;
+      button.setAttribute('aria-label', `查看每日獎勵，${copy}`);
+    }
+
+    function refreshSingleRouteUtilityLabels() {
+      updateSingleRouteRankUtilityLabel();
+      updateSingleRouteDailyUtilityLabel();
+    }
+
+    function ensureSingleRouteUtilityCountdownTimer() {
+      if (singleRouteUtilityCountdownTimer) return;
+      singleRouteUtilityCountdownTimer = window.setInterval(refreshSingleRouteUtilityLabels, 30000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshSingleRouteUtilityLabels();
+      });
+    }
+
     function updateSingleRouteCountdown(endDate) {
+      singleRouteUtilityEndDate = String(endDate || '').trim();
+      updateSingleRouteRankUtilityLabel(singleRouteUtilityEndDate);
+      ensureSingleRouteUtilityCountdownTimer();
       const el = document.getElementById('single-route-countdown');
       const dock = document.getElementById('single-route-action-dock');
       if (!el) return;
@@ -5095,6 +5344,8 @@
       const enabled = tiers.length > 0;
       singleRouteDailyRewardState = { tiers, bestScore, currentUnit, enabled, hasSchedule, blocked: false };
       button.classList.toggle('hidden', !enabled);
+      updateSingleRouteDailyUtilityLabel();
+      ensureSingleRouteUtilityCountdownTimer();
       button.classList.remove('is-unclaimed');
       if (!enabled) {
         list.innerHTML = '';
@@ -5116,6 +5367,7 @@
       const claimedIndex = tiers.reduce((best,tier,index) => bestScore >= tier.min ? index : best, -1);
       const activeIndex = claimedIndex + 1 < tiers.length ? claimedIndex + 1 : -1;
       button?.classList.toggle('is-unclaimed', claimedIndex < 0 && !blocked);
+      updateSingleRouteDailyUtilityLabel();
       list.innerHTML = tiers.map((tier,index) => {
         const isCurrentTarget = index === activeIndex;
         const isActive = isCurrentTarget && !blocked;
