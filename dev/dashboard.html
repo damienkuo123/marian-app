@@ -24,7 +24,7 @@
 <script src="global-audio.js"></script>
 <script src="phonics-config.js"></script>
 <script src="phoneme-tips.js"></script>
-<script src="./tappie-api.js?v=20260716-mission-milestone-v1"></script>
+<script src="./tappie-api.js?v=20260717-reward-refresh-v510"></script>
 <script src="./tappie-student-session.js?v=student-session-v1"></script>
 <style>
     :root { 
@@ -2635,7 +2635,7 @@
 <div class="points" id="current-points">0</div>
 <div class="points-label">Total Points</div>
 </div>
-<span class="history-btn tappie-icon-button" id="dashboard-points-history-btn" onclick="toggleLogs(true)"><span class="tappie-ui-icon" data-tappie-icon="history"></span><span>查看點數明細</span></span>
+<span class="history-btn tappie-icon-button" id="dashboard-points-history-btn" onclick="openPointLogs()"><span class="tappie-ui-icon" data-tappie-icon="history"></span><span>查看點數明細</span></span>
 </div>
 <div class="glass-panel home-notification-zone">
 <h3 class="home-notification-title">家長通知設定</h3>
@@ -3915,6 +3915,28 @@
       }
     }
 
+
+    function mergeDashboardGamiOverlay(data, overlay) {
+      if (!data || !overlay) return data;
+      if (overlay.gamification) data.gamification = normalizeTappieGamiConfig(overlay.gamification);
+      if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
+      if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
+      if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
+      if (overlay.scheduleId !== undefined) data.scheduleId = overlay.scheduleId;
+      if (overlay.missionRewardState !== undefined) data.missionRewardState = overlay.missionRewardState;
+      if (overlay.currentPoints !== undefined) data.currentPoints = overlay.currentPoints;
+      if (Array.isArray(overlay.classProgress)) data.classProgress = overlay.classProgress;
+      if (overlay.classMaxCount !== undefined) data.classMaxCount = overlay.classMaxCount;
+      if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
+      if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
+      if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
+      if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
+      if (overlay.effectiveFeatures || overlay.features) {
+        data.effectiveFeatures = normalizeDashboardFeatures(overlay.effectiveFeatures || overlay.features);
+      }
+      return data;
+    }
+
     window.onload = () => {
       if (!STUDENT_ID) {
         alert("找不到學生資料，請重新感應卡片或回到官網登入。");
@@ -3941,28 +3963,10 @@
               return; // 終止後續的錯誤渲染
           }
 
-          // ✅ 精修：從 Supabase 即時覆寫 gami、今日最高分、任務次數與排行榜
+          // ✅ 從 Supabase 即時覆寫 gami、今日最高分、任務次數與排行榜
           const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
-          if (overlay) {
-              if (overlay.gamification) data.gamification = normalizeTappieGamiConfig(overlay.gamification);
-              if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
-              if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
-              if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
-              if (overlay.scheduleId !== undefined) data.scheduleId = overlay.scheduleId;
-              if (overlay.missionRewardState !== undefined) data.missionRewardState = overlay.missionRewardState;
-              if (overlay.currentPoints !== undefined) data.currentPoints = overlay.currentPoints;
-              if (Array.isArray(overlay.classProgress)) data.classProgress = overlay.classProgress;
-              if (overlay.classMaxCount !== undefined) data.classMaxCount = overlay.classMaxCount;
-              if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
-              if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
-              if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
-              if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
-          }
-
-          if (overlay?.effectiveFeatures || overlay?.features) {
-              data.effectiveFeatures = normalizeDashboardFeatures(overlay.effectiveFeatures || overlay.features);
-              dashboardEffectiveFeatures = data.effectiveFeatures;
-          }
+          mergeDashboardGamiOverlay(data, overlay);
+          if (data.effectiveFeatures) dashboardEffectiveFeatures = data.effectiveFeatures;
           renderDashboard(data);
           
           document.getElementById('loading-screen').style.opacity = '0';
@@ -3992,6 +3996,130 @@
         minute: '2-digit',
         hour12: false
       });
+    }
+
+
+    function setDashboardPointBalance(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return;
+      const pointsEl = document.getElementById('current-points');
+      if (pointsEl) pointsEl.textContent = numeric;
+      if (dashboardLastData) dashboardLastData.currentPoints = numeric;
+      if (singleRouteLastData) singleRouteLastData.currentPoints = numeric;
+    }
+
+    function renderRecentPointLogs(logs) {
+      const logContainer = document.getElementById('log-container');
+      if (!logContainer) return;
+      const normalizedLogs = Array.isArray(logs) ? logs : [];
+      if (normalizedLogs.length === 0) {
+        logContainer.innerHTML = `<p style="text-align:center; color:var(--text-sub); font-weight:bold;">尚無紀錄</p>`;
+        return;
+      }
+      logContainer.innerHTML = normalizedLogs.map(log => {
+        const type = log.type || 'points';
+        const isAvatar = type === 'avatar';
+        const amount = Number(log.val ?? log.amount ?? 0);
+        const valClass = amount >= 0 ? 'log-plus' : 'log-minus';
+        const valText = isAvatar ? '角色' : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
+        const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
+        const rawTime = log.time || log.createdAt || log.created_at || log.timestamp || '';
+        const time = escapeHtml(formatLogTimestamp(rawTime));
+        const iconName = isAvatar ? 'avatar' : (amount >= 0 ? 'points' : 'penalty');
+        return `
+          <div class="log-row" style="align-items:flex-start; gap:12px;">
+            <span style="display:flex; gap:10px; align-items:flex-start; flex:1; min-width:0;">
+              <span class="log-entry-icon">${getTappieUiIconSvg(iconName)}</span>
+              <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+                <span>${title}</span>
+                ${time ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${time}</span>` : ''}
+              </span>
+            </span>
+            <span class="${valClass}" style="white-space:nowrap;">${valText}</span>
+          </div>`;
+      }).join('');
+    }
+
+    function normalizeFreshDashboardData(rawData) {
+      const data = TappieAPI.toLegacyDashboard(rawData);
+      data.effectiveFeatures = normalizeDashboardFeatures(
+        rawData?.effectiveFeatures ||
+        rawData?.data?.effectiveFeatures ||
+        data?.effectiveFeatures ||
+        data?.features ||
+        dashboardEffectiveFeatures ||
+        null
+      );
+      return data;
+    }
+
+    async function fetchFreshDashboardSnapshot({ includeOverlay = true, expectedBalance = null, retryOnStaleBalance = false } = {}) {
+      let rawData = await TappieAPI.getDashboard(STUDENT_ID);
+      let data = normalizeFreshDashboardData(rawData);
+      let overlay = includeOverlay ? await fetchDashboardGamiOverlay(STUDENT_ID) : null;
+      mergeDashboardGamiOverlay(data, overlay);
+
+      const expected = Number(expectedBalance);
+      const rawBalance = Number(TappieAPI.toLegacyDashboard(rawData)?.currentPoints);
+      if (retryOnStaleBalance && Number.isFinite(expected) && Number.isFinite(rawBalance) && rawBalance !== expected) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        rawData = await TappieAPI.getDashboard(STUDENT_ID);
+        data = normalizeFreshDashboardData(rawData);
+        if (includeOverlay) overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
+        mergeDashboardGamiOverlay(data, overlay);
+      }
+      return { data, overlay };
+    }
+
+    function applyFreshRewardSnapshot(data) {
+      if (!data) return;
+      dashboardLastData = { ...(dashboardLastData || {}), ...data };
+      dashboardLastSyncedAt = Date.now();
+      setDashboardPointBalance(data.currentPoints);
+      renderRecentPointLogs(data.recentLogs);
+
+      if (singleRouteLastData) {
+        singleRouteLastData = { ...singleRouteLastData, ...data };
+        singleRouteLastGami = normalizeTappieGamiConfig(singleRouteLastData.gamification || singleRouteLastGami || {});
+        renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
+        renderSingleRouteDailyReward(singleRouteLastData, singleRouteLastGami);
+      }
+    }
+
+    async function refreshDashboardAfterRewardClaim({ expectedBalance = null } = {}) {
+      if (dashboardSnapshotRefreshPromise) return dashboardSnapshotRefreshPromise;
+      dashboardSnapshotRefreshPromise = (async () => {
+        const { data } = await fetchFreshDashboardSnapshot({
+          includeOverlay: true,
+          expectedBalance,
+          retryOnStaleBalance: true,
+        });
+        applyFreshRewardSnapshot(data);
+        return data;
+      })().finally(() => {
+        dashboardSnapshotRefreshPromise = null;
+      });
+      return dashboardSnapshotRefreshPromise;
+    }
+
+    async function refreshRecentPointLogs({ force = false } = {}) {
+      if (!force && Date.now() - dashboardLastSyncedAt < 1500) return dashboardLastData;
+      const rawData = await TappieAPI.getDashboard(STUDENT_ID);
+      const data = normalizeFreshDashboardData(rawData);
+      dashboardLastData = { ...(dashboardLastData || {}), ...data };
+      dashboardLastSyncedAt = Date.now();
+      setDashboardPointBalance(data.currentPoints);
+      renderRecentPointLogs(data.recentLogs);
+      return data;
+    }
+
+    async function openPointLogs() {
+      toggleLogs(true);
+      try {
+        await refreshRecentPointLogs({ force: true });
+      } catch (err) {
+        console.warn('recent point logs refresh failed', err);
+      }
     }
 
     function maskEmail(email) {
@@ -4113,6 +4241,13 @@
     let singleRouteClaimLoadingKey = '';
     let singleRouteMessageTimer = 0;
     let singleRouteMessageAnchor = null;
+
+    // Canonical dashboard snapshot cache used by partial refreshes.
+    // Reward claims and point-log opens update only the data-bound regions;
+    // they do not rerun the full dashboard bootstrap or reset the active tab.
+    let dashboardLastData = null;
+    let dashboardLastSyncedAt = 0;
+    let dashboardSnapshotRefreshPromise = null;
 
     function buildSingleRoutePath(points) {
       if (!points.length) return '';
@@ -4693,24 +4828,6 @@
       }, 250);
     }
 
-    async function refreshSingleRouteMissionRewardState() {
-      const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
-      if (!overlay || !singleRouteLastData) return;
-      if (overlay.gamification) singleRouteLastGami = normalizeTappieGamiConfig(overlay.gamification);
-      if (overlay.currentUnit !== undefined) singleRouteLastData.currentUnit = overlay.currentUnit;
-      if (overlay.endDate !== undefined) singleRouteLastData.endDate = overlay.endDate;
-      if (overlay.missionCount !== undefined) singleRouteLastData.missionCount = overlay.missionCount;
-      if (overlay.scheduleId !== undefined) singleRouteLastData.scheduleId = overlay.scheduleId;
-      if (overlay.missionRewardState !== undefined) singleRouteLastData.missionRewardState = overlay.missionRewardState;
-      if (overlay.currentPoints !== undefined) {
-        singleRouteLastData.currentPoints = overlay.currentPoints;
-        const pointsEl = document.getElementById('current-points');
-        if (pointsEl) pointsEl.textContent = overlay.currentPoints;
-      }
-      if (Array.isArray(overlay.leaderboard)) singleRouteLastData.leaderboard = overlay.leaderboard;
-      renderMissionClassRoute(singleRouteLastData, singleRouteLastGami || normalizeTappieGamiConfig(singleRouteLastData.gamification || {}));
-    }
-
     async function handleSingleRouteMilestoneClick(type, anchorEl = null) {
       const milestone = getMissionRouteMilestones(singleRouteLastGami || {}).find(item => item.type === type);
       if (!milestone) return;
@@ -4765,6 +4882,7 @@
       if (singleRouteClaimLoadingKey) return;
 
       singleRouteClaimLoadingKey = type;
+      let expectedBalanceAfterClaim = null;
       renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
       try {
         if (!window.TappieAPI || typeof TappieAPI.claimMissionReward !== 'function') throw new Error('claimMissionReward 尚未載入');
@@ -4782,9 +4900,8 @@
             singleRouteMissionRewardState[type].grantedAt = result.grantedAt || new Date().toISOString();
           }
           if (Number.isFinite(Number(result.newBalance))) {
-            const pointsEl = document.getElementById('current-points');
-            if (pointsEl) pointsEl.textContent = Number(result.newBalance);
-            if (singleRouteLastData) singleRouteLastData.currentPoints = Number(result.newBalance);
+            expectedBalanceAfterClaim = Number(result.newBalance);
+            setDashboardPointBalance(expectedBalanceAfterClaim);
           }
           if (response.status === 'granted') {
             showSingleRouteRewardCelebration({
@@ -4814,7 +4931,8 @@
       } finally {
         singleRouteClaimLoadingKey = '';
         if (singleRouteLastData && singleRouteLastGami) renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
-        refreshSingleRouteMissionRewardState().catch(err => console.warn('mission reward state refresh failed', err));
+        refreshDashboardAfterRewardClaim({ expectedBalance: expectedBalanceAfterClaim })
+          .catch(err => console.warn('reward claim dashboard refresh failed', err));
       }
     }
 
@@ -5179,6 +5297,8 @@
     }
 
     function renderDashboard(data) {
+      dashboardLastData = data;
+      dashboardLastSyncedAt = Date.now();
       dashboardEffectiveFeatures = normalizeDashboardFeatures(data?.effectiveFeatures || data?.features || dashboardEffectiveFeatures);
       saveEffectiveFeaturesCache(STUDENT_ID, dashboardEffectiveFeatures);
       // 🚀 1. 客製化視覺與動態 App 打包引擎
@@ -5471,35 +5591,8 @@
         reviewGrid.innerHTML = `<div style="color:var(--text-sub);font-weight:900;text-align:center;padding:18px;">目前班級尚未建立自由練習單元</div>`;
       }
 
-      // 點數與角色明細：點數、角色解鎖依時間排序混合顯示
-      const logContainer = document.getElementById('log-container');
-      const logs = Array.isArray(data.recentLogs) ? data.recentLogs : [];
-      if (logs.length === 0) {
-        logContainer.innerHTML = `<p style="text-align:center; color:var(--text-sub); font-weight:bold;">尚無紀錄</p>`;
-      } else {
-        logContainer.innerHTML = logs.map(log => {
-          const type = log.type || 'points';
-          const isAvatar = type === 'avatar';
-          const amount = Number(log.val ?? log.amount ?? 0);
-          const valClass = amount >= 0 ? "log-plus" : "log-minus";
-          const valText = isAvatar ? "角色" : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
-          const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
-          const rawTime = log.time || log.createdAt || log.created_at || log.timestamp || '';
-          const time = escapeHtml(formatLogTimestamp(rawTime));
-          const iconName = isAvatar ? 'avatar' : (amount >= 0 ? 'points' : 'penalty');
-          return `
-            <div class="log-row" style="align-items:flex-start; gap:12px;">
-              <span style="display:flex; gap:10px; align-items:flex-start; flex:1; min-width:0;">
-                <span class="log-entry-icon">${getTappieUiIconSvg(iconName)}</span>
-                <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-                  <span>${title}</span>
-                  ${time ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${time}</span>` : ''}
-                </span>
-              </span>
-              <span class="${valClass}" style="white-space:nowrap;">${valText}</span>
-            </div>`;
-        }).join('');
-      }
+      // 點數與角色明細：共用 canonical renderer，供初次載入與領獎後刷新。
+      renderRecentPointLogs(data.recentLogs);
     }
 
 
