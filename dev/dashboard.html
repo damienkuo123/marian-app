@@ -6,7 +6,8 @@
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" name="viewport"/>
 <!-- TAPPIE_PRIVATE_PAGE_ROBOTS_20260627: prevent internal app/admin pages from being indexed. -->
 <meta content="noindex,nofollow" name="robots"/>
-<title>Tappie學美語</title>
+<title>Tappie學美語｜Challenge Hub MLP</title>
+<!-- TAPPIE_CHALLENGE_HUB_MLP_V1_20260718 -->
 <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
 <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
 <!-- TAPPIE_ICON_SYSTEM_V5_OBJECT_FIRST_20260717 -->
@@ -2603,6 +2604,566 @@
       }
     }
 
+
+
+    /* =======================================================
+       TAPPIE CHALLENGE HUB MLP v1
+       Namespace: challenge-hub-*
+       - Dashboard-only front-end prototype
+       - No battle connection, no backend persistence, no real point deduction
+       ======================================================= */
+    #tab-arena.challenge-hub-tab {
+      align-items: center;
+      min-height: 100%;
+      padding: 2px 0 34px;
+      background:
+        radial-gradient(circle at 15% 6%, rgba(75,147,217,.11), transparent 31%),
+        radial-gradient(circle at 88% 25%, rgba(139,104,229,.10), transparent 30%),
+        linear-gradient(180deg,#f6f9ff 0%,#eef4fb 52%,#f7f9fc 100%);
+    }
+    .challenge-hub-shell {
+      width: 92%;
+      max-width: 430px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-sizing: border-box;
+    }
+    .challenge-hub-stage-card {
+      position: relative;
+      min-height: 478px;
+      overflow: hidden;
+      border-radius: 36px;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(255,255,255,.96), rgba(255,255,255,.35) 38%, transparent 61%),
+        linear-gradient(145deg,#eaf5ff 0%,#dcecff 47%,#eee7ff 100%);
+      border: 1px solid rgba(255,255,255,.94);
+      box-shadow: 0 22px 48px rgba(50,76,108,.14), inset 0 2px 0 rgba(255,255,255,.86);
+      isolation: isolate;
+    }
+    .challenge-hub-stage-card::before,
+    .challenge-hub-stage-card::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(3px);
+      opacity: .65;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .challenge-hub-stage-card::before {
+      width: 250px;
+      height: 250px;
+      left: -105px;
+      bottom: -112px;
+      background: rgba(61,171,255,.20);
+    }
+    .challenge-hub-stage-card::after {
+      width: 220px;
+      height: 220px;
+      right: -100px;
+      top: 98px;
+      background: rgba(142,105,229,.18);
+    }
+    .challenge-hub-stage-topline {
+      position: absolute;
+      inset: 18px 18px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      z-index: 5;
+    }
+    .challenge-hub-wallet {
+      min-width: 88px;
+      padding: 8px 11px 9px;
+      border-radius: 17px;
+      color: #23384d;
+      background: rgba(255,255,255,.68);
+      border: 1px solid rgba(255,255,255,.88);
+      box-shadow: 0 8px 20px rgba(49,76,105,.08), inset 0 1px 0 #fff;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .challenge-hub-wallet-label {
+      display: block;
+      color: #7c8b9a;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      line-height: 1.2;
+    }
+    .challenge-hub-wallet-value {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 2px;
+      font-size: 15px;
+      font-weight: 950;
+      line-height: 1.1;
+    }
+    .challenge-hub-coin {
+      width: 17px;
+      height: 17px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff8d6;
+      background: linear-gradient(145deg,#ffd96f,#f0a916);
+      box-shadow: 0 3px 0 #c8820f, inset 0 1px 0 rgba(255,255,255,.7);
+      font-size: 9px;
+    }
+    .challenge-hub-utility-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .challenge-hub-utility-button {
+      width: 58px;
+      height: 62px;
+      border: 0;
+      border-radius: 18px;
+      padding: 4px 3px 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      color: #fff;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 4px 0 rgba(52,66,113,.42), 0 10px 20px rgba(52,66,113,.15), inset 0 1px 0 rgba(255,255,255,.42);
+      transition: transform .18s ease, filter .18s ease;
+    }
+    .challenge-hub-utility-button:active { transform: translateY(2px) scale(.96); }
+    .challenge-hub-utility-button.is-wardrobe { background: linear-gradient(160deg,#46cdb5,#169b8b); }
+    .challenge-hub-utility-button.is-shop { background: linear-gradient(160deg,#9a7df4,#674acb); }
+    .challenge-hub-utility-button svg { width: 36px; height: 36px; display: block; overflow: visible; }
+    .challenge-hub-utility-button span { font-size: 9px; font-weight: 950; line-height: 1; letter-spacing: .2px; }
+    .challenge-hub-avatar-area {
+      position: absolute;
+      inset: 60px 68px 116px 18px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .challenge-hub-avatar-wrap {
+      position: relative;
+      width: min(285px, 76vw);
+      height: 326px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      animation: challengeHubIdle 4.2s ease-in-out infinite;
+      transform-origin: 50% 92%;
+    }
+    @keyframes challengeHubIdle {
+      0%,100% { transform: translateY(0) rotate(-.25deg); }
+      50% { transform: translateY(-4px) rotate(.25deg); }
+    }
+    .challenge-hub-avatar-svg,
+    .challenge-hub-avatar-svg svg { width: 100%; height: 100%; display: block; overflow: visible; }
+    .challenge-hub-plinth {
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      width: 178px;
+      height: 27px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: linear-gradient(180deg,rgba(255,255,255,.88),rgba(148,170,196,.28));
+      box-shadow: 0 14px 22px rgba(48,73,99,.15), inset 0 2px 0 rgba(255,255,255,.9);
+      z-index: -1;
+    }
+    .challenge-hub-identity {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 66px;
+      text-align: center;
+      z-index: 4;
+    }
+    .challenge-hub-name {
+      color: #203448;
+      font-size: 24px;
+      font-weight: 950;
+      line-height: 1.18;
+      letter-spacing: 1.5px;
+      text-shadow: 0 1px 0 rgba(255,255,255,.8);
+    }
+    .challenge-hub-title-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 7px;
+      padding: 6px 13px 7px;
+      border-radius: 999px;
+      color: #5f52b5;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(255,255,255,.92);
+      box-shadow: 0 6px 16px rgba(76,65,147,.08), inset 0 1px 0 #fff;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: .8px;
+    }
+    .challenge-hub-stats {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      height: 44px;
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 5px;
+      padding: 7px 8px;
+      box-sizing: border-box;
+      border-radius: 18px;
+      background: rgba(255,255,255,.68);
+      border: 1px solid rgba(255,255,255,.9);
+      box-shadow: 0 8px 20px rgba(49,76,105,.08), inset 0 1px 0 #fff;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 5;
+    }
+    .challenge-hub-stat { text-align: center; border-right: 1px solid rgba(96,116,138,.12); }
+    .challenge-hub-stat:last-child { border-right: 0; }
+    .challenge-hub-stat strong { display: block; color: #263b50; font-size: 14px; font-weight: 950; line-height: 1; }
+    .challenge-hub-stat span { display: block; margin-top: 4px; color: #8593a1; font-size: 9px; font-weight: 900; line-height: 1; letter-spacing: .4px; }
+    .challenge-hub-primary {
+      position: relative;
+      width: 100%;
+      min-height: 78px;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,.74);
+      border-radius: 24px;
+      padding: 13px 76px 14px 22px;
+      text-align: left;
+      color: #fff;
+      background: linear-gradient(145deg,#2abaff,#086bd8 66%,#3854ca);
+      box-shadow: 0 8px 0 #1452a9, 0 18px 32px rgba(17,94,184,.22), inset 0 2px 0 rgba(255,255,255,.3);
+      cursor: pointer;
+      transition: transform .18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .challenge-hub-primary:active { transform: translateY(3px) scale(.985); }
+    .challenge-hub-primary::after {
+      content: "";
+      position: absolute;
+      inset: 0 0 48% 0;
+      background: linear-gradient(180deg,rgba(255,255,255,.22),transparent);
+      pointer-events: none;
+    }
+    .challenge-hub-primary-title { display: block; position: relative; z-index: 1; font-size: 21px; font-weight: 950; letter-spacing: 2px; }
+    .challenge-hub-primary-copy { display: block; position: relative; z-index: 1; margin-top: 4px; font-size: 11px; font-weight: 850; opacity: .88; }
+    .challenge-hub-primary-icon {
+      position: absolute;
+      right: 17px;
+      top: 50%;
+      width: 49px;
+      height: 49px;
+      transform: translateY(-50%);
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+    }
+    .challenge-hub-primary-icon svg { width: 38px; height: 38px; }
+    .challenge-hub-note-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 15px 16px;
+      border-radius: 22px;
+      color: #516375;
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(255,255,255,.9);
+      box-shadow: 0 10px 24px rgba(52,76,101,.06), inset 0 1px 0 #fff;
+      font-size: 12px;
+      font-weight: 850;
+      line-height: 1.55;
+    }
+    .challenge-hub-note-icon {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: #4e66c7;
+      background: linear-gradient(145deg,#eef3ff,#dfe8ff);
+      box-shadow: 0 4px 0 #c7d4f3, inset 0 1px 0 #fff;
+      font-size: 17px;
+    }
+    .challenge-hub-legacy-panel { margin-top: 0; padding: 18px; }
+    .challenge-hub-legacy-eyebrow {
+      display: inline-flex;
+      margin: 0 0 11px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      color: #7b8793;
+      background: rgba(108,122,137,.08);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .7px;
+    }
+    .challenge-hub-legacy-panel.hidden { display: none; }
+
+    /* Shared challenge-hub bottom sheet */
+    .challenge-hub-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 5200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding-top: max(18px,env(safe-area-inset-top));
+      background: rgba(27,43,59,.44);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+    .challenge-hub-sheet.show { display: flex; opacity: 1; }
+    .challenge-hub-sheet-dialog {
+      width: min(680px,100%);
+      max-height: calc(100dvh - max(48px,env(safe-area-inset-top)));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 32px 32px 0 0;
+      background: linear-gradient(180deg,#fbfdff,#f0f5fb);
+      border: 1px solid rgba(255,255,255,.95);
+      box-shadow: 0 -24px 70px rgba(29,47,65,.22), inset 0 1px 0 #fff;
+      transform: translateY(34px);
+      transition: transform .24s cubic-bezier(.16,1,.3,1);
+    }
+    .challenge-hub-sheet.show .challenge-hub-sheet-dialog { transform: translateY(0); }
+    .challenge-hub-sheet-header {
+      min-height: 62px;
+      display: grid;
+      grid-template-columns: 46px 1fr 46px;
+      align-items: center;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(98,117,137,.10);
+      background: rgba(255,255,255,.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 3;
+    }
+    .challenge-hub-sheet-title { margin: 0; color: #203448; font-size: 19px; font-weight: 950; text-align: center; letter-spacing: 1px; }
+    .challenge-hub-sheet-close,
+    .challenge-hub-sheet-back {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      color: #536679;
+      background: rgba(232,238,245,.86);
+      font-size: 25px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .challenge-hub-sheet-back { visibility: hidden; }
+    .challenge-hub-sheet-back.show { visibility: visible; }
+    .challenge-hub-sheet-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 16px max(24px,env(safe-area-inset-bottom));
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    body.challenge-hub-sheet-open #content-viewport { overflow-y: hidden; }
+    .challenge-hub-preview-card {
+      position: sticky;
+      top: -16px;
+      z-index: 2;
+      min-height: 214px;
+      margin: -16px -16px 14px;
+      display: grid;
+      grid-template-columns: minmax(142px,46%) 1fr;
+      align-items: center;
+      gap: 6px;
+      padding: 18px 18px 15px;
+      box-sizing: border-box;
+      background:
+        radial-gradient(circle at 22% 45%,rgba(255,255,255,.9),transparent 35%),
+        linear-gradient(145deg,#dff2ff,#e8e5ff);
+      border-bottom: 1px solid rgba(255,255,255,.92);
+      box-shadow: 0 12px 24px rgba(52,76,101,.08);
+    }
+    .challenge-hub-preview-avatar { height: 190px; min-width: 0; }
+    .challenge-hub-preview-info { min-width: 0; }
+    .challenge-hub-preview-kicker { color: #738396; font-size: 10px; font-weight: 950; letter-spacing: 1.2px; }
+    .challenge-hub-preview-name { margin-top: 5px; color: #21364b; font-size: 20px; font-weight: 950; line-height: 1.25; }
+    .challenge-hub-preview-desc { margin-top: 7px; color: #647689; font-size: 11px; font-weight: 800; line-height: 1.55; }
+    .challenge-hub-preview-wallet { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 999px; color: #3d5064; background: rgba(255,255,255,.7); font-size: 12px; font-weight: 950; }
+    .challenge-hub-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 1px 10px;
+      scrollbar-width: none;
+    }
+    .challenge-hub-tabs::-webkit-scrollbar { display: none; }
+    .challenge-hub-tab-chip {
+      flex: 0 0 auto;
+      border: 1px solid rgba(116,135,155,.12);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: #718194;
+      background: rgba(255,255,255,.65);
+      font-size: 11px;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    .challenge-hub-tab-chip.active { color: #fff; background: linear-gradient(145deg,#4ba6e8,#4766d5); border-color: transparent; box-shadow: 0 6px 14px rgba(54,105,196,.20); }
+    .challenge-hub-item-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .challenge-hub-item-card {
+      position: relative;
+      min-width: 0;
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 20px;
+      padding: 8px 7px 9px;
+      color: #304559;
+      background: rgba(255,255,255,.7);
+      box-shadow: 0 7px 17px rgba(53,75,99,.07), inset 0 1px 0 #fff;
+      cursor: pointer;
+      text-align: center;
+      transition: transform .16s ease, border-color .16s ease;
+    }
+    .challenge-hub-item-card:active { transform: scale(.97); }
+    .challenge-hub-item-card.selected { border-color: rgba(53,145,224,.82); box-shadow: 0 0 0 3px rgba(53,145,224,.11), 0 8px 18px rgba(53,75,99,.08); }
+    .challenge-hub-item-card.locked { opacity: .72; }
+    .challenge-hub-item-thumb { height: 96px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+    .challenge-hub-item-name { margin-top: 5px; font-size: 10px; font-weight: 950; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .challenge-hub-item-meta { min-height: 16px; margin-top: 4px; color: #8a98a6; font-size: 9px; font-weight: 900; }
+    .challenge-hub-item-price { color: #9b6709; }
+    .challenge-hub-item-brand { color: #6e55c8; }
+    .challenge-hub-sheet-actions {
+      position: sticky;
+      bottom: -24px;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: minmax(92px,.72fr) 1.5fr;
+      gap: 9px;
+      margin: 16px -4px -24px;
+      padding: 13px 4px calc(max(14px,env(safe-area-inset-bottom)) + 10px);
+      background: linear-gradient(180deg,rgba(241,246,251,0),#f1f6fb 28%,#f1f6fb 100%);
+    }
+    .challenge-hub-action-secondary,
+    .challenge-hub-action-primary {
+      min-height: 53px;
+      border: 0;
+      border-radius: 18px;
+      font-size: 14px;
+      font-weight: 950;
+      cursor: pointer;
+      letter-spacing: .6px;
+    }
+    .challenge-hub-action-secondary { color: #56697c; background: rgba(226,233,241,.88); }
+    .challenge-hub-action-primary { color: #fff; background: linear-gradient(145deg,#39b9ff,#116ed6); box-shadow: 0 6px 0 #1653a1, 0 12px 22px rgba(25,99,190,.18); }
+    .challenge-hub-action-primary.is-shop { background: linear-gradient(145deg,#9a7df4,#674acb); box-shadow: 0 6px 0 #4b329d, 0 12px 22px rgba(92,63,184,.18); }
+    .challenge-hub-action-primary:disabled { color: #8996a3; background: #dfe5eb; box-shadow: none; cursor: not-allowed; }
+    .challenge-hub-dev-note {
+      margin: 11px 0 0;
+      padding: 10px 12px;
+      border-radius: 15px;
+      color: #758596;
+      background: rgba(255,255,255,.54);
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.55;
+      text-align: center;
+    }
+    .challenge-hub-mode-section-title { margin: 4px 2px 10px; color: #66778a; font-size: 11px; font-weight: 950; letter-spacing: 1px; }
+    .challenge-hub-mode-list { display: grid; gap: 11px; }
+    .challenge-hub-mode-card {
+      width: 100%;
+      min-height: 86px;
+      border: 1px solid rgba(255,255,255,.92);
+      border-radius: 22px;
+      padding: 13px 14px;
+      display: grid;
+      grid-template-columns: 54px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      color: #23384d;
+      background: rgba(255,255,255,.72);
+      box-shadow: 0 9px 21px rgba(53,75,99,.07), inset 0 1px 0 #fff;
+      cursor: pointer;
+    }
+    .challenge-hub-mode-card:active { transform: scale(.985); }
+    .challenge-hub-mode-icon {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: linear-gradient(145deg,#eff7ff,#dbeaff);
+      box-shadow: 0 4px 0 #c2d5ec, inset 0 1px 0 #fff;
+    }
+    .challenge-hub-mode-icon svg { width: 43px; height: 43px; }
+    .challenge-hub-mode-card > span:nth-child(2) { display: block; min-width: 0; }
+    .challenge-hub-mode-title { display: block; font-size: 15px; font-weight: 950; line-height: 1.25; }
+    .challenge-hub-mode-copy { display: block; margin-top: 4px; color: #7a8998; font-size: 10px; font-weight: 800; line-height: 1.4; }
+    .challenge-hub-mode-meta { text-align: right; color: #6c7d8e; font-size: 9px; font-weight: 900; line-height: 1.45; white-space: nowrap; }
+    .challenge-hub-vs-stage {
+      min-height: 320px;
+      display: grid;
+      grid-template-columns: 1fr 48px 1fr;
+      align-items: center;
+      gap: 3px;
+      padding: 18px 4px 10px;
+      border-radius: 27px;
+      background:
+        radial-gradient(circle at 25% 35%,rgba(77,164,232,.20),transparent 31%),
+        radial-gradient(circle at 75% 35%,rgba(229,100,118,.17),transparent 31%),
+        linear-gradient(145deg,#eef7ff,#f2edff);
+      border: 1px solid rgba(255,255,255,.92);
+      box-shadow: inset 0 1px 0 #fff;
+    }
+    .challenge-hub-vs-player { min-width: 0; text-align: center; }
+    .challenge-hub-vs-avatar { height: 205px; }
+    .challenge-hub-vs-name { margin-top: 4px; color: #2f4459; font-size: 12px; font-weight: 950; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .challenge-hub-vs-mark { color: #fff; text-shadow: 0 4px 12px rgba(50,67,85,.22); font-size: 25px; font-weight: 950; font-style: italic; }
+    .challenge-hub-mode-summary { margin: 12px 0 0; text-align: center; }
+    .challenge-hub-mode-summary strong { color: #24394e; font-size: 18px; font-weight: 950; }
+    .challenge-hub-mode-summary p { margin: 6px auto 0; color: #758596; font-size: 11px; font-weight: 800; line-height: 1.55; }
+    .challenge-hub-toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(max(80px,env(safe-area-inset-bottom) + 70px) + 18px);
+      z-index: 5900;
+      max-width: min(330px,84vw);
+      padding: 11px 15px;
+      border-radius: 16px;
+      color: #fff;
+      background: rgba(33,50,68,.92);
+      box-shadow: 0 12px 28px rgba(20,34,49,.22);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.45;
+      text-align: center;
+      opacity: 0;
+      transform: translate(-50%,12px);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .challenge-hub-toast.show { opacity: 1; transform: translate(-50%,0); }
+    @media (max-width:360px) {
+      .challenge-hub-stage-card { min-height: 454px; }
+      .challenge-hub-avatar-area { inset-left: 8px; }
+      .challenge-hub-avatar-wrap { width: 245px; height: 296px; }
+      .challenge-hub-item-grid { grid-template-columns: repeat(2,1fr); }
+      .challenge-hub-mode-card { grid-template-columns: 48px 1fr; }
+      .challenge-hub-mode-meta { display: none; }
+    }
 </style>
 
     <!-- TAPPIE DASHBOARD v5.9 CLEAN: dead CSS/JS removed; route styles normalized without UI redesign. -->
@@ -2781,29 +3342,76 @@
 </div>
 </section>
 <section class="tab-content" id="tab-practice">
-<div class="glass-panel review-section" style="margin-top: 10px;">
-<h3 class="section-title tappie-icon-heading"><span class="tappie-ui-icon" data-tappie-icon="book"></span><span>自由練習庫</span></h3>
-<div class="review-grid" id="review-grid"></div>
-</div>
+  <div class="glass-panel review-section" style="margin-top: 10px;">
+    <h3 class="section-title tappie-icon-heading"><span class="tappie-ui-icon" data-tappie-icon="book"></span><span>自由練習庫</span></h3>
+    <div class="review-grid" id="review-grid"></div>
+  </div>
+  <div class="glass-panel challenge-hub-legacy-panel" id="legacy-speech-battle-card">
+    <div class="challenge-hub-legacy-eyebrow">此校區保留功能</div>
+    <div class="action-card-lobby" onclick="goToLobby()" style="margin:0;">
+      <div class="icon-wrapper" style="color:#0066cc;"><span class="tappie-ui-icon" data-tappie-icon="arena"></span></div>
+      <div class="text-block">
+        <div class="action-title">經典口說競技</div>
+        <div class="action-sub">1v1 真人與 AI 對戰</div>
+      </div>
+      <div aria-hidden="true" class="action-arrow">
+        <svg class="arena-go-arrow-svg" focusable="false" viewBox="0 0 96 96">
+          <ellipse cx="49" cy="80" fill="#C8D3DF" opacity=".48" rx="24" ry="5"></ellipse>
+          <path d="M18 38h39V25l23 22-23 22V56H18z" fill="#1E5A9B" transform="translate(0 6)"></path>
+          <path d="M18 32h39V19l23 22-23 22V50H18z" fill="#4B93D9"></path>
+          <path d="M25 35h35" stroke="#FFFFFF" stroke-linecap="round" stroke-opacity=".36" stroke-width="4"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
 </section>
-<section class="tab-content" id="tab-arena">
-<div class="glass-panel" style="margin-top: 10px; padding: 20px;">
-<div class="action-card-lobby" onclick="goToLobby()" style="margin: 0;">
-<div class="icon-wrapper" style="color: #0066cc;"><span class="tappie-ui-icon" data-tappie-icon="arena"></span></div>
-<div class="text-block">
-<div class="action-title">口說競技</div>
-<div class="action-sub">1v1 真人與 Ai 對戰</div>
-</div>
-<div aria-hidden="true" class="action-arrow">
-<svg class="arena-go-arrow-svg" focusable="false" viewbox="0 0 96 96">
-<ellipse cx="49" cy="80" fill="#C8D3DF" opacity=".48" rx="24" ry="5"></ellipse>
-<path d="M18 38h39V25l23 22-23 22V56H18z" fill="#1E5A9B" transform="translate(0 6)"></path>
-<path d="M18 32h39V19l23 22-23 22V50H18z" fill="#4B93D9"></path>
-<path d="M25 35h35" stroke="#FFFFFF" stroke-linecap="round" stroke-opacity=".36" stroke-width="4"></path>
-</svg>
-</div>
-</div>
-</div>
+<section class="tab-content challenge-hub-tab" id="tab-arena">
+  <div class="challenge-hub-shell">
+    <section class="challenge-hub-stage-card" aria-label="我的挑戰角色">
+      <div class="challenge-hub-stage-topline">
+        <div class="challenge-hub-wallet">
+          <span class="challenge-hub-wallet-label">MLP 體驗餘額</span>
+          <span class="challenge-hub-wallet-value"><span class="challenge-hub-coin">★</span><span id="challenge-hub-points">0</span></span>
+        </div>
+        <div class="challenge-hub-utility-stack">
+          <button class="challenge-hub-utility-button is-wardrobe" type="button" onclick="challengeHubOpenWardrobe()" aria-label="開啟更衣間">
+            <svg aria-hidden="true" viewBox="0 0 64 64"><ellipse cx="32" cy="57" rx="22" ry="4" fill="#08796E" opacity=".36"/><path d="M30 13c0-6 9-7 10-1 1 4-3 5-5 7" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M34 20 9 43c-3 3-1 8 4 8h38c5 0 7-5 4-8L34 24" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>更衣間</span>
+          </button>
+          <button class="challenge-hub-utility-button is-shop" type="button" onclick="challengeHubOpenShop()" aria-label="開啟商城">
+            <svg aria-hidden="true" viewBox="0 0 64 64"><ellipse cx="32" cy="57" rx="23" ry="4" fill="#4D2FA4" opacity=".35"/><path d="M13 20h38l-3 31H16z" fill="#fff" opacity=".92"/><path d="M23 24v-5c0-6 4-10 9-10s9 4 9 10v5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M16 29h32" stroke="#745AD1" stroke-width="4" opacity=".36"/><circle cx="32" cy="39" r="7" fill="#FFD45C"/><path d="m32 34 1.6 3.2 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#fff"/></svg>
+            <span>商城</span>
+          </button>
+        </div>
+      </div>
+      <div class="challenge-hub-avatar-area">
+        <div class="challenge-hub-avatar-wrap">
+          <div class="challenge-hub-avatar-svg" id="challenge-hub-main-avatar"></div>
+          <div class="challenge-hub-plinth"></div>
+        </div>
+      </div>
+      <div class="challenge-hub-identity">
+        <div class="challenge-hub-name" id="challenge-hub-student-name">挑戰者</div>
+        <div class="challenge-hub-title-badge" id="challenge-hub-title">新進挑戰者</div>
+      </div>
+      <div class="challenge-hub-stats" aria-label="競技數據示意">
+        <div class="challenge-hub-stat"><strong>12</strong><span>挑戰</span></div>
+        <div class="challenge-hub-stat"><strong>8</strong><span>勝利</span></div>
+        <div class="challenge-hub-stat"><strong>3</strong><span>連勝</span></div>
+      </div>
+    </section>
+    <button class="challenge-hub-primary" type="button" onclick="challengeHubOpenModes()">
+      <span class="challenge-hub-primary-title">開始挑戰</span>
+      <span class="challenge-hub-primary-copy">選擇配對、好友或 AI 訓練方式</span>
+      <span class="challenge-hub-primary-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><ellipse cx="32" cy="55" rx="21" ry="4" fill="#074F9D" opacity=".38"/><path d="M12 19 29 36M52 19 35 36" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="m10 15 9 2-7 7zM54 15l-9 2 7 7z" fill="#FFD65A"/><path d="M25 41h14" stroke="#fff" stroke-width="7" stroke-linecap="round"/></svg>
+      </span>
+    </button>
+    <div class="challenge-hub-note-card">
+      <div class="challenge-hub-note-icon">✦</div>
+      <div><strong>前端 MLP 體驗版</strong><br/>造型選擇、兌換與配對預覽只保留到重新整理前；目前不會真正扣點，也不會建立 Battle 房間。</div>
+    </div>
+  </div>
 </section>
 <section class="tab-content" id="tab-learning">
 <div class="glass-panel" id="diagnostic-dashboard" style="margin-top: 10px; width: 100%; padding: 0; display: flex; flex-direction: column;">
@@ -2890,22 +3498,33 @@
 </div>
 </section>
 </main>
+<div class="challenge-hub-sheet" id="challenge-hub-sheet" onclick="if(event.target===this) challengeHubCloseSheet()">
+  <div class="challenge-hub-sheet-dialog" role="dialog" aria-modal="true" aria-labelledby="challenge-hub-sheet-title" onclick="event.stopPropagation()">
+    <div class="challenge-hub-sheet-header">
+      <button class="challenge-hub-sheet-back" id="challenge-hub-sheet-back" type="button" onclick="challengeHubSheetBack()" aria-label="返回">‹</button>
+      <h2 class="challenge-hub-sheet-title" id="challenge-hub-sheet-title">挑戰中心</h2>
+      <button class="challenge-hub-sheet-close" type="button" onclick="challengeHubCloseSheet()" aria-label="關閉">×</button>
+    </div>
+    <div class="challenge-hub-sheet-body" id="challenge-hub-sheet-body"></div>
+  </div>
+</div>
+<div class="challenge-hub-toast" id="challenge-hub-toast" role="status" aria-live="polite"></div>
 <nav id="bottom-nav">
 <div class="nav-item active" onclick="switchTab('student', '首頁', this)">
 <div class="nav-icon"><span class="tappie-ui-icon" data-tappie-icon="student"></span></div>
 <span>學生</span>
 </div>
-<div class="nav-item elite-tab-btn locked" onclick="switchTab('challenge', '單元挑戰', this)">
+<div class="nav-item elite-tab-btn locked" onclick="switchTab('challenge', '任務', this)">
 <div class="nav-icon"><span class="tappie-ui-icon" data-tappie-icon="target"></span></div>
-<span>挑戰</span>
+<span>任務</span>
 </div>
 <div class="nav-item elite-tab-btn locked" onclick="switchTab('practice', '自由練習', this)">
 <div class="nav-icon"><span class="tappie-ui-icon" data-tappie-icon="book"></span></div>
 <span>練習</span>
 </div>
-<div class="nav-item elite-tab-btn locked" onclick="switchTab('arena', '口說競技', this)">
+<div class="nav-item elite-tab-btn locked" onclick="switchTab('arena', '挑戰', this)">
 <div class="nav-icon"><span class="tappie-ui-icon" data-tappie-icon="arena"></span></div>
-<span>競技</span>
+<span>挑戰</span>
 </div>
 <div class="nav-item elite-tab-btn locked" onclick="switchTab('learning', '學習歷程', this)">
 <div class="nav-icon"><span class="tappie-ui-icon" data-tappie-icon="chart"></span></div>
@@ -3154,7 +3773,7 @@
         { tab: 'challenge', feature: 'practice_enabled', message: practiceLockMessage },
         { tab: 'practice', feature: 'practice_enabled', message: practiceLockMessage },
         { tab: 'learning', feature: 'practice_enabled', message: practiceLockMessage },
-        { tab: 'arena', feature: 'battle_enabled', message: battleLockMessage },
+        { tab: 'arena', feature: 'practice_enabled', message: practiceLockMessage },
       ].forEach(item => {
         if (!isDashboardFeatureEnabled(item.feature)) {
           setBottomNavLock(item.tab, true, item.message);
@@ -3164,6 +3783,7 @@
           setBottomNavLock(item.tab, false);
         }
       });
+      document.getElementById('legacy-speech-battle-card')?.classList.toggle('hidden', !isDashboardFeatureEnabled('battle_enabled'));
       applyDashboardPointsVisibility();
     }
 
@@ -3938,6 +4558,10 @@
     }
 
     window.onload = () => {
+      if (challengeHubShouldUsePreviewMode()) {
+        challengeHubBootPreview();
+        return;
+      }
       if (!STUDENT_ID) {
         alert("找不到學生資料，請重新感應卡片或回到官網登入。");
         if (window.TappieStudentSession) TappieStudentSession.clearActive('missing-student-id');
@@ -5360,6 +5984,13 @@
         document.getElementById('student-attendance-status')?.classList.add('hidden');
       }
       document.getElementById('current-points').innerText = data.currentPoints;
+      challengeHubInit({
+        studentName: data.studentName,
+        currentPoints: data.currentPoints,
+        brandName: data.schoolName || data.school?.name || data.student?.schoolName || '我的校區',
+        brandInitials: data.schoolShortName || '',
+        logoUrl: data.schoolLogoUrl || data.logoUrl || ''
+      });
 
       if (data.parentEmail && data.parentEmail.includes('@')) {
           currentParentEmail = data.parentEmail;
@@ -6177,5 +6808,495 @@
     })();
     
   </script>
+
+<script>
+/* ==========================================================
+   TAPPIE CHALLENGE HUB MLP v1 — FRONT-END ONLY
+   - All state lives in memory and resets on refresh.
+   - No battle navigation, no purchase API, no avatar persistence.
+   ========================================================== */
+const CHALLENGE_HUB_MLP_VERSION = '1.0.0';
+let challengeHubAvatarSerial = 0;
+let challengeHubToastTimer = null;
+
+const CHALLENGE_HUB_BRAND_DEFAULT = {
+  name: '示範校區',
+  initials: 'S',
+  primaryColor: '#176FCC',
+  secondaryColor: '#FFD45C',
+  logoUrl: ''
+};
+
+const CHALLENGE_HUB_DEFAULT_EQUIPPED = {
+  skin: 'skin-03',
+  face: 'face-soft',
+  hair: 'hair-soft',
+  top: 'top-blue',
+  hat: 'hat-none',
+  glasses: 'glasses-none',
+  expression: 'expression-smile',
+  frame: 'frame-blue'
+};
+
+const CHALLENGE_HUB_CATALOG = [
+  { id:'skin-01', slot:'skin', category:'skin', name:'深棕膚色', price:0, free:true },
+  { id:'skin-02', slot:'skin', category:'skin', name:'暖棕膚色', price:0, free:true },
+  { id:'skin-03', slot:'skin', category:'skin', name:'自然膚色', price:0, free:true },
+  { id:'skin-04', slot:'skin', category:'skin', name:'明亮膚色', price:0, free:true },
+  { id:'face-soft', slot:'face', category:'face', name:'柔和臉型', price:0, free:true },
+  { id:'face-square', slot:'face', category:'face', name:'俐落臉型', price:0, free:true },
+  { id:'hair-soft', slot:'hair', category:'hair', name:'自然短髮', price:0, free:true },
+  { id:'hair-wave', slot:'hair', category:'hair', name:'蓬鬆波浪', price:0, free:true },
+  { id:'hair-crop', slot:'hair', category:'hair', name:'俐落短髮', price:260 },
+  { id:'hair-bun', slot:'hair', category:'hair', name:'丸子造型', price:320 },
+  { id:'top-blue', slot:'top', category:'top', name:'天空上衣', price:0, free:true },
+  { id:'top-coral', slot:'top', category:'top', name:'珊瑚上衣', price:280 },
+  { id:'top-green', slot:'top', category:'top', name:'成長上衣', price:280 },
+  { id:'top-brand', slot:'top', category:'brand', name:'校徽上衣', price:480, brand:true },
+  { id:'hat-none', slot:'hat', category:'hat', name:'不戴帽子', price:0, free:true },
+  { id:'hat-cap', slot:'hat', category:'hat', name:'挑戰棒球帽', price:360 },
+  { id:'hat-brand-cap', slot:'hat', category:'brand', name:'校徽棒球帽', price:520, brand:true },
+  { id:'glasses-none', slot:'glasses', category:'glasses', name:'不戴眼鏡', price:0, free:true },
+  { id:'glasses-round', slot:'glasses', category:'glasses', name:'圓框眼鏡', price:240 },
+  { id:'glasses-square', slot:'glasses', category:'glasses', name:'方框眼鏡', price:300 },
+  { id:'expression-smile', slot:'expression', category:'expression', name:'自信微笑', price:0, free:true },
+  { id:'expression-focus', slot:'expression', category:'expression', name:'專注表情', price:0, free:true },
+  { id:'expression-brave', slot:'expression', category:'expression', name:'勇氣滿滿', price:180 },
+  { id:'frame-none', slot:'frame', category:'frame', name:'無頭像框', price:0, free:true },
+  { id:'frame-blue', slot:'frame', category:'frame', name:'挑戰藍框', price:0, free:true },
+  { id:'frame-gold', slot:'frame', category:'frame', name:'榮耀金框', price:680 },
+  { id:'frame-brand', slot:'frame', category:'brand', name:'校區品牌框', price:580, brand:true }
+];
+
+const CHALLENGE_HUB_CATEGORIES = [
+  ['hair','髮型'], ['top','上衣'], ['hat','帽子'], ['glasses','眼鏡'],
+  ['expression','表情'], ['frame','頭像框'], ['skin','膚色'], ['face','臉型']
+];
+
+const CHALLENGE_HUB_SHOP_CATEGORIES = [
+  ['featured','精選'], ['hair','髮型'], ['top','上衣'], ['hat','帽子'], ['glasses','眼鏡'], ['frame','頭像框'], ['brand','品牌限定']
+];
+
+const CHALLENGE_HUB_MODES = [
+  { id:'instant', group:'真人挑戰', title:'即時配對', copy:'尋找程度相近的同學，進入快速配對。', meta:'約 3 分鐘', icon:'match' },
+  { id:'friend', group:'真人挑戰', title:'好友挑戰', copy:'邀請朋友加入同一個競技房間。', meta:'邀請制', icon:'friend' },
+  { id:'ai-easy', group:'AI 訓練場', title:'新手訓練', copy:'節奏較慢，適合熟悉題型與操作。', meta:'初階 AI', icon:'ai-easy' },
+  { id:'ai-normal', group:'AI 訓練場', title:'標準挑戰', copy:'接近一般對戰節奏的均衡訓練。', meta:'標準 AI', icon:'ai-normal' },
+  { id:'ai-hard', group:'AI 訓練場', title:'高手試煉', copy:'更快反應與更高正確率要求。', meta:'高階 AI', icon:'ai-hard' }
+];
+
+const challengeHubState = {
+  initialized: false,
+  studentName: '挑戰者',
+  title: '新進挑戰者',
+  points: 2350,
+  sourcePoints: 2350,
+  brand: { ...CHALLENGE_HUB_BRAND_DEFAULT },
+  owned: new Set(CHALLENGE_HUB_CATALOG.filter(item => item.free).map(item => item.id)),
+  equipped: { ...CHALLENGE_HUB_DEFAULT_EQUIPPED },
+  wardrobeCategory: 'hair',
+  shopCategory: 'featured',
+  shopSelectedId: 'hat-brand-cap',
+  currentSheet: '',
+  previousSheet: ''
+};
+
+function challengeHubEscape(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+}
+
+function challengeHubFindItem(id) {
+  return CHALLENGE_HUB_CATALOG.find(item => item.id === id) || null;
+}
+
+function challengeHubResolveBrandInitials(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return 'S';
+  const latin = clean.match(/[A-Za-z0-9]/g);
+  if (latin?.length) return latin.slice(0,2).join('').toUpperCase();
+  return clean.slice(0,1);
+}
+
+function challengeHubInit(options = {}) {
+  challengeHubState.studentName = String(options.studentName || challengeHubState.studentName || '挑戰者');
+  const numericPoints = Number(options.currentPoints);
+  if (!challengeHubState.initialized && Number.isFinite(numericPoints)) {
+    challengeHubState.points = numericPoints;
+    challengeHubState.sourcePoints = numericPoints;
+  }
+  const brandName = String(options.brandName || challengeHubState.brand.name || '示範校區');
+  challengeHubState.brand = {
+    ...challengeHubState.brand,
+    name: brandName,
+    initials: String(options.brandInitials || challengeHubResolveBrandInitials(brandName)),
+    primaryColor: String(options.primaryColor || challengeHubState.brand.primaryColor),
+    secondaryColor: String(options.secondaryColor || challengeHubState.brand.secondaryColor),
+    logoUrl: String(options.logoUrl || challengeHubState.brand.logoUrl || '')
+  };
+  challengeHubState.initialized = true;
+  challengeHubRenderMain();
+}
+
+function challengeHubAvatarSvg(config = challengeHubState.equipped, options = {}) {
+  const id = `challengeHubAvatar${++challengeHubAvatarSerial}`;
+  const brand = options.brand || challengeHubState.brand;
+  const sizeClass = options.className || '';
+  const skinMap = { 'skin-01':'#71423C','skin-02':'#9A5A42','skin-03':'#D89168','skin-04':'#F2B88D' };
+  const skin = skinMap[config.skin] || skinMap['skin-03'];
+  const skinDark = config.skin === 'skin-01' ? '#53302E' : config.skin === 'skin-02' ? '#75402F' : config.skin === 'skin-04' ? '#D88C65' : '#B8664D';
+  const topMap = { 'top-blue':['#49AEE9','#2079C7'], 'top-coral':['#FF8A7D','#E45761'], 'top-green':['#57C98D','#249666'], 'top-brand':[brand.primaryColor,'#274B8F'] };
+  const [topA,topB] = topMap[config.top] || topMap['top-blue'];
+  const faceSquare = config.face === 'face-square';
+  const headShape = faceSquare
+    ? `<path d="M87 115c0-37 25-62 73-62s73 25 73 62v92c0 38-26 62-73 62s-73-24-73-62z" fill="url(#${id}Skin)" stroke="${skinDark}" stroke-opacity=".12" stroke-width="3"/>`
+    : `<path d="M83 124c0-48 31-76 77-76s77 28 77 76v72c0 48-31 76-77 76s-77-28-77-76z" fill="url(#${id}Skin)" stroke="${skinDark}" stroke-opacity=".12" stroke-width="3"/>`;
+  const frame = config.frame === 'frame-none' ? '' : config.frame === 'frame-gold'
+    ? `<circle cx="160" cy="168" r="135" fill="none" stroke="#F4B62E" stroke-width="11"/><circle cx="160" cy="168" r="125" fill="none" stroke="#FFF2B4" stroke-width="4" opacity=".95"/>`
+    : config.frame === 'frame-brand'
+    ? `<circle cx="160" cy="168" r="134" fill="none" stroke="${brand.primaryColor}" stroke-width="11"/><circle cx="160" cy="168" r="124" fill="none" stroke="${brand.secondaryColor}" stroke-width="4"/><circle cx="255" cy="72" r="25" fill="#fff" stroke="${brand.secondaryColor}" stroke-width="5"/><text x="255" y="79" text-anchor="middle" font-size="18" font-weight="900" fill="${brand.primaryColor}" font-family="Arial,sans-serif">${challengeHubEscape(brand.initials)}</text>`
+    : `<circle cx="160" cy="168" r="134" fill="none" stroke="#3E9CE5" stroke-width="10"/><circle cx="160" cy="168" r="124" fill="none" stroke="#CDEBFF" stroke-width="4"/>`;
+
+  let hair = '';
+  if (config.hair === 'hair-wave') hair = `<path d="M88 120c-4-49 26-82 75-82 48 0 78 32 73 81-12-11-23-12-34-4-10-21-31-27-50-13-15-14-39-8-64 18z" fill="#4B2F2B"/><path d="M101 87c14-25 42-35 69-27 16 5 31 17 37 31-31-19-70-17-106-4z" fill="#6A433A" opacity=".72"/>`;
+  else if (config.hair === 'hair-crop') hair = `<path d="M91 122c-5-52 28-83 76-83 38 0 66 21 72 57-19-7-31-19-40-35-17 25-50 39-108 61z" fill="#283443"/><path d="M102 78c30-31 83-29 111 4-43-13-76-6-111 18z" fill="#43566A" opacity=".72"/>`;
+  else if (config.hair === 'hair-bun') hair = `<circle cx="196" cy="49" r="31" fill="#392C34"/><path d="M87 120c-4-50 27-81 75-81 46 0 76 29 74 77-18-11-37-22-45-45-24 24-55 37-104 49z" fill="#392C34"/><path d="M105 74c24-21 58-28 89-12-26 2-50 15-70 35z" fill="#59444C" opacity=".72"/>`;
+  else hair = `<path d="M88 121c-3-50 28-81 75-81 44 0 73 27 74 72-18-10-30-24-38-41-22 25-52 39-111 50z" fill="#333B49"/><path d="M103 76c27-24 65-27 95-7-31-4-61 7-88 28z" fill="#566173" opacity=".58"/>`;
+
+  const expression = config.expression;
+  let eyes = '';
+  let mouth = '';
+  if (expression === 'expression-focus') {
+    eyes = `<path d="M116 157q17-11 33 0" fill="none" stroke="#3A3332" stroke-width="6" stroke-linecap="round"/><path d="M174 157q17-11 33 0" fill="none" stroke="#3A3332" stroke-width="6" stroke-linecap="round"/><circle cx="134" cy="164" r="6" fill="#2D3138"/><circle cx="192" cy="164" r="6" fill="#2D3138"/>`;
+    mouth = `<path d="M145 216q17-8 34 0" fill="none" stroke="${skinDark}" stroke-width="6" stroke-linecap="round"/>`;
+  } else if (expression === 'expression-brave') {
+    eyes = `<path d="M113 151l34 8" stroke="#3A3332" stroke-width="6" stroke-linecap="round"/><path d="m176 159 34-8" stroke="#3A3332" stroke-width="6" stroke-linecap="round"/><circle cx="134" cy="165" r="7" fill="#2D3138"/><circle cx="192" cy="165" r="7" fill="#2D3138"/>`;
+    mouth = `<path d="M142 211q20 22 41 0" fill="#8D3B3C" stroke="${skinDark}" stroke-width="4"/><path d="M153 219h19" stroke="#fff" stroke-width="4" stroke-linecap="round"/>`;
+  } else {
+    eyes = `<ellipse cx="133" cy="163" rx="18" ry="24" fill="#fff"/><ellipse cx="191" cy="163" rx="18" ry="24" fill="#fff"/><ellipse cx="137" cy="166" rx="8" ry="12" fill="#2D3138"/><ellipse cx="187" cy="166" rx="8" ry="12" fill="#2D3138"/><circle cx="140" cy="161" r="3" fill="#fff"/><circle cx="190" cy="161" r="3" fill="#fff"/>`;
+    mouth = `<path d="M140 211q21 26 43 0" fill="#8E4244" stroke="${skinDark}" stroke-width="4"/><path d="M151 222q11 7 22 0" fill="#F08085"/>`;
+  }
+
+  let glasses = '';
+  if (config.glasses === 'glasses-round') glasses = `<circle cx="132" cy="165" r="25" fill="none" stroke="#31495F" stroke-width="7"/><circle cx="192" cy="165" r="25" fill="none" stroke="#31495F" stroke-width="7"/><path d="M157 165h10" stroke="#31495F" stroke-width="7" stroke-linecap="round"/><path d="M106 161 91 155M218 161l15-6" stroke="#31495F" stroke-width="6" stroke-linecap="round"/>`;
+  else if (config.glasses === 'glasses-square') glasses = `<rect x="105" y="140" width="52" height="47" rx="14" fill="none" stroke="#30465B" stroke-width="7"/><rect x="167" y="140" width="52" height="47" rx="14" fill="none" stroke="#30465B" stroke-width="7"/><path d="M157 160h10" stroke="#30465B" stroke-width="7" stroke-linecap="round"/>`;
+
+  let hat = '';
+  if (config.hat === 'hat-cap' || config.hat === 'hat-brand-cap') {
+    const isBrand = config.hat === 'hat-brand-cap';
+    const capColor = isBrand ? brand.primaryColor : '#F4B52D';
+    hat = `<path d="M94 89c7-46 35-66 70-66 39 0 67 22 72 66z" fill="${capColor}"/><path d="M93 88h145c9 0 14 8 7 13-21 14-51 17-88 12-30-4-51-10-67-18z" fill="${isBrand ? brand.secondaryColor : '#D99318'}"/><path d="M116 54c19-18 49-23 74-12" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="8" stroke-linecap="round"/>${isBrand ? `<circle cx="164" cy="67" r="20" fill="#fff" stroke="${brand.secondaryColor}" stroke-width="4"/><text x="164" y="74" text-anchor="middle" font-size="16" font-weight="900" fill="${brand.primaryColor}" font-family="Arial,sans-serif">${challengeHubEscape(brand.initials)}</text>` : ''}`;
+  }
+
+  const brandTop = config.top === 'top-brand' ? `<circle cx="205" cy="309" r="19" fill="#fff" stroke="${brand.secondaryColor}" stroke-width="4"/><text x="205" y="316" text-anchor="middle" font-size="15" font-weight="900" fill="${brand.primaryColor}" font-family="Arial,sans-serif">${challengeHubEscape(brand.initials)}</text>` : '';
+
+  return `<svg class="challenge-hub-avatar-render ${sizeClass}" viewBox="0 0 320 360" role="img" aria-label="學生挑戰角色">
+    <defs>
+      <linearGradient id="${id}Skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${skin}"/><stop offset="1" stop-color="${skinDark}" stop-opacity=".88"/></linearGradient>
+      <linearGradient id="${id}Top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${topA}"/><stop offset="1" stop-color="${topB}"/></linearGradient>
+      <filter id="${id}Shadow" x="-40%" y="-40%" width="180%" height="190%"><feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#26394d" flood-opacity=".20"/></filter>
+    </defs>
+    <ellipse cx="160" cy="339" rx="85" ry="14" fill="#526A83" opacity=".18"/>
+    ${frame}
+    <g filter="url(#${id}Shadow)">
+      <path d="M75 355c4-70 34-105 85-105s81 35 85 105z" fill="url(#${id}Top)"/>
+      <path d="M88 330c29 17 115 17 144 0v25H88z" fill="#1A527F" opacity=".18"/>
+      <path d="M107 283c20-12 86-12 106 0" fill="none" stroke="#fff" stroke-opacity=".24" stroke-width="9" stroke-linecap="round"/>
+      <rect x="139" y="234" width="42" height="47" rx="18" fill="${skinDark}"/>
+      <ellipse cx="86" cy="169" rx="21" ry="29" fill="${skin}"/><ellipse cx="234" cy="169" rx="21" ry="29" fill="${skin}"/>
+      ${headShape}
+      <path d="M104 106c22-31 91-45 116 0" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="12" stroke-linecap="round"/>
+      ${eyes}
+      <path d="M160 174c-7 15-11 28 2 30 8 1 13-4 13-10" fill="${skinDark}" opacity=".72"/>
+      ${mouth}
+      ${hair}
+      ${glasses}
+      ${hat}
+      ${brandTop}
+    </g>
+  </svg>`;
+}
+
+function challengeHubRenderAvatarInto(elementOrId, config = challengeHubState.equipped, options = {}) {
+  const element = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
+  if (!element) return;
+  element.innerHTML = challengeHubAvatarSvg(config, options);
+}
+
+function challengeHubRenderMain() {
+  challengeHubRenderAvatarInto('challenge-hub-main-avatar', challengeHubState.equipped);
+  const nameEl = document.getElementById('challenge-hub-student-name');
+  const titleEl = document.getElementById('challenge-hub-title');
+  const pointsEl = document.getElementById('challenge-hub-points');
+  if (nameEl) nameEl.textContent = challengeHubState.studentName;
+  if (titleEl) titleEl.textContent = challengeHubState.title;
+  if (pointsEl) pointsEl.textContent = Math.max(0,Math.round(challengeHubState.points)).toLocaleString('zh-TW');
+}
+
+function challengeHubOpenSheet(type, title, renderFn, backHandler = null) {
+  const sheet = document.getElementById('challenge-hub-sheet');
+  const titleEl = document.getElementById('challenge-hub-sheet-title');
+  const back = document.getElementById('challenge-hub-sheet-back');
+  if (!sheet || !titleEl) return;
+  challengeHubState.previousSheet = challengeHubState.currentSheet;
+  challengeHubState.currentSheet = type;
+  titleEl.textContent = title;
+  back?.classList.toggle('show', !!backHandler);
+  back.dataset.handler = backHandler || '';
+  renderFn?.();
+  sheet.classList.add('show');
+  document.body.classList.add('challenge-hub-sheet-open');
+  sheet.setAttribute('aria-hidden','false');
+}
+
+function challengeHubCloseSheet() {
+  const sheet = document.getElementById('challenge-hub-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('show');
+  document.body.classList.remove('challenge-hub-sheet-open');
+  sheet.setAttribute('aria-hidden','true');
+  challengeHubState.currentSheet = '';
+}
+
+function challengeHubSheetBack() {
+  const back = document.getElementById('challenge-hub-sheet-back');
+  const handler = back?.dataset?.handler;
+  if (handler && typeof window[handler] === 'function') window[handler]();
+  else challengeHubCloseSheet();
+}
+
+function challengeHubShowToast(message) {
+  const toast = document.getElementById('challenge-hub-toast');
+  if (!toast) return;
+  clearTimeout(challengeHubToastTimer);
+  toast.textContent = message;
+  toast.classList.add('show');
+  challengeHubToastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+function challengeHubConfigWithItem(base, item) {
+  return item ? { ...base, [item.slot]: item.id } : { ...base };
+}
+
+function challengeHubRenderPreviewHeader(config, title, copy) {
+  return `<div class="challenge-hub-preview-card">
+    <div class="challenge-hub-preview-avatar">${challengeHubAvatarSvg(config)}</div>
+    <div class="challenge-hub-preview-info">
+      <div class="challenge-hub-preview-kicker">${challengeHubEscape(challengeHubState.brand.name)} · MLP</div>
+      <div class="challenge-hub-preview-name">${challengeHubEscape(title)}</div>
+      <div class="challenge-hub-preview-desc">${challengeHubEscape(copy)}</div>
+      <div class="challenge-hub-preview-wallet"><span class="challenge-hub-coin">★</span><span>${Math.round(challengeHubState.points).toLocaleString('zh-TW')} 點</span></div>
+    </div>
+  </div>`;
+}
+
+function challengeHubCategoryTabs(categories, active, fnName) {
+  return `<div class="challenge-hub-tabs">${categories.map(([id,label]) => `<button type="button" class="challenge-hub-tab-chip ${active===id?'active':''}" onclick="${fnName}('${id}')">${label}</button>`).join('')}</div>`;
+}
+
+function challengeHubOpenWardrobe(category = challengeHubState.wardrobeCategory) {
+  challengeHubState.wardrobeCategory = category;
+  challengeHubOpenSheet('wardrobe','更衣間',challengeHubRenderWardrobe);
+}
+
+function challengeHubSetWardrobeCategory(category) {
+  challengeHubState.wardrobeCategory = category;
+  challengeHubRenderWardrobe();
+}
+
+function challengeHubRenderWardrobe() {
+  const body = document.getElementById('challenge-hub-sheet-body');
+  if (!body) return;
+  const items = CHALLENGE_HUB_CATALOG.filter(item => item.category === challengeHubState.wardrobeCategory && challengeHubState.owned.has(item.id));
+  body.innerHTML = `${challengeHubRenderPreviewHeader(challengeHubState.equipped,'搭配你的挑戰角色','所有選擇只保留在目前這次瀏覽，按重新整理即恢復預設。')}
+    ${challengeHubCategoryTabs(CHALLENGE_HUB_CATEGORIES,challengeHubState.wardrobeCategory,'challengeHubSetWardrobeCategory')}
+    <div class="challenge-hub-item-grid">${items.map(item => {
+      const selected = challengeHubState.equipped[item.slot] === item.id;
+      const config = challengeHubConfigWithItem(challengeHubState.equipped,item);
+      return `<button type="button" class="challenge-hub-item-card ${selected?'selected':''}" onclick="challengeHubEquip('${item.id}')">
+        <div class="challenge-hub-item-thumb">${challengeHubAvatarSvg(config)}</div>
+        <div class="challenge-hub-item-name">${challengeHubEscape(item.name)}</div>
+        <div class="challenge-hub-item-meta">${selected?'已裝備':'點擊試穿'}</div>
+      </button>`;
+    }).join('')}</div>
+    <div class="challenge-hub-sheet-actions">
+      <button class="challenge-hub-action-secondary" type="button" onclick="challengeHubResetAvatar()">恢復預設</button>
+      <button class="challenge-hub-action-primary" type="button" onclick="challengeHubApplyWardrobe()">套用造型</button>
+    </div>`;
+}
+
+function challengeHubEquip(itemId) {
+  const item = challengeHubFindItem(itemId);
+  if (!item || !challengeHubState.owned.has(item.id)) return;
+  challengeHubState.equipped[item.slot] = item.id;
+  challengeHubRenderMain();
+  challengeHubRenderWardrobe();
+}
+
+function challengeHubResetAvatar() {
+  challengeHubState.equipped = { ...CHALLENGE_HUB_DEFAULT_EQUIPPED };
+  challengeHubRenderMain();
+  challengeHubRenderWardrobe();
+  challengeHubShowToast('已恢復 MLP 預設造型');
+}
+
+function challengeHubApplyWardrobe() {
+  challengeHubRenderMain();
+  challengeHubCloseSheet();
+  challengeHubShowToast('造型已套用，本次體驗不會寫入後端');
+}
+
+function challengeHubOpenShop(category = challengeHubState.shopCategory) {
+  challengeHubState.shopCategory = category;
+  const available = challengeHubShopItems();
+  if (!available.some(item => item.id === challengeHubState.shopSelectedId)) challengeHubState.shopSelectedId = available[0]?.id || '';
+  challengeHubOpenSheet('shop','商城',challengeHubRenderShop);
+}
+
+function challengeHubSetShopCategory(category) {
+  challengeHubState.shopCategory = category;
+  const available = challengeHubShopItems();
+  challengeHubState.shopSelectedId = available[0]?.id || '';
+  challengeHubRenderShop();
+}
+
+function challengeHubShopItems() {
+  if (challengeHubState.shopCategory === 'featured') {
+    return CHALLENGE_HUB_CATALOG.filter(item => !item.free && ['hair-crop','hat-brand-cap','top-brand','frame-gold','glasses-round'].includes(item.id));
+  }
+  return CHALLENGE_HUB_CATALOG.filter(item => item.category === challengeHubState.shopCategory && !item.free);
+}
+
+function challengeHubShopSelect(itemId) {
+  challengeHubState.shopSelectedId = itemId;
+  challengeHubRenderShop();
+}
+
+function challengeHubRenderShop() {
+  const body = document.getElementById('challenge-hub-sheet-body');
+  if (!body) return;
+  const items = challengeHubShopItems();
+  const selected = challengeHubFindItem(challengeHubState.shopSelectedId) || items[0] || null;
+  const previewConfig = challengeHubConfigWithItem(challengeHubState.equipped,selected);
+  const owned = selected ? challengeHubState.owned.has(selected.id) : false;
+  const insufficient = selected ? selected.price > challengeHubState.points : true;
+  let actionLabel = '選擇商品';
+  if (selected) actionLabel = owned ? '直接裝備' : selected.price === 0 ? '免費領取' : `${selected.price.toLocaleString('zh-TW')} 點兌換`;
+  body.innerHTML = `${challengeHubRenderPreviewHeader(previewConfig,selected?.name || '挑選商品',selected?.brand ? '品牌限定商品：示範 Logo 會自動套入固定徽章槽。':'先試穿，再決定是否使用體驗點數兌換。')}
+    ${challengeHubCategoryTabs(CHALLENGE_HUB_SHOP_CATEGORIES,challengeHubState.shopCategory,'challengeHubSetShopCategory')}
+    <div class="challenge-hub-item-grid">${items.map(item => {
+      const itemOwned = challengeHubState.owned.has(item.id);
+      const itemSelected = selected?.id === item.id;
+      const config = challengeHubConfigWithItem(challengeHubState.equipped,item);
+      return `<button type="button" class="challenge-hub-item-card ${itemSelected?'selected':''} ${itemOwned?'':'locked'}" onclick="challengeHubShopSelect('${item.id}')">
+        <div class="challenge-hub-item-thumb">${challengeHubAvatarSvg(config)}</div>
+        <div class="challenge-hub-item-name">${challengeHubEscape(item.name)}</div>
+        <div class="challenge-hub-item-meta ${item.brand?'challenge-hub-item-brand':'challenge-hub-item-price'}">${itemOwned?'已擁有':item.brand?'品牌限定 · '+item.price+' 點':item.price+' 點'}</div>
+      </button>`;
+    }).join('')}</div>
+    <div class="challenge-hub-dev-note">體驗版只修改前端記憶體，不會真的扣除首頁點數，也不會建立購買紀錄。</div>
+    <div class="challenge-hub-sheet-actions">
+      <button class="challenge-hub-action-secondary" type="button" onclick="challengeHubOpenWardrobe()">前往更衣間</button>
+      <button class="challenge-hub-action-primary is-shop" type="button" onclick="challengeHubShopAction()" ${!selected || (!owned && insufficient)?'disabled':''}>${actionLabel}</button>
+    </div>`;
+}
+
+function challengeHubShopAction() {
+  const item = challengeHubFindItem(challengeHubState.shopSelectedId);
+  if (!item) return;
+  if (!challengeHubState.owned.has(item.id)) {
+    if (item.price > challengeHubState.points) {
+      challengeHubShowToast('體驗餘額不足');
+      return;
+    }
+    challengeHubState.points -= item.price;
+    challengeHubState.owned.add(item.id);
+  }
+  challengeHubState.equipped[item.slot] = item.id;
+  challengeHubRenderMain();
+  challengeHubRenderShop();
+  challengeHubShowToast(`${item.name} 已兌換並裝備（僅前端體驗）`);
+}
+
+function challengeHubModeIcon(type) {
+  if (type === 'friend') return `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="56" rx="23" ry="4" fill="#9EB1C4" opacity=".38"/><circle cx="23" cy="25" r="11" fill="#65B7EC"/><circle cx="43" cy="25" r="11" fill="#8D74E4"/><path d="M8 50c2-13 9-18 18-18s15 5 17 18" fill="#368BC8"/><path d="M26 50c2-13 9-18 18-18s15 5 17 18" fill="#6953BD"/><path d="M29 27h7" stroke="#FFD75A" stroke-width="5" stroke-linecap="round"/></svg>`;
+  if (type === 'match') return `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="56" rx="23" ry="4" fill="#9EB1C4" opacity=".38"/><path d="M10 18h18v18H10z" fill="#56BDEB"/><path d="M36 28h18v18H36z" fill="#8B6FE0"/><path d="m25 45 14-26" stroke="#F4B52D" stroke-width="6" stroke-linecap="round"/><path d="m35 18 7-2-2 7" fill="#F4B52D"/></svg>`;
+  const hard = type === 'ai-hard';
+  const normal = type === 'ai-normal';
+  const color = hard ? '#E95B63' : normal ? '#7B68DD' : '#45B98A';
+  return `<svg viewBox="0 0 64 64"><ellipse cx="32" cy="56" rx="23" ry="4" fill="#9EB1C4" opacity=".38"/><rect x="11" y="16" width="42" height="34" rx="14" fill="${color}"/><circle cx="25" cy="32" r="5" fill="#fff"/><circle cx="39" cy="32" r="5" fill="#fff"/><path d="M24 43h16" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M32 16V9" stroke="${color}" stroke-width="5" stroke-linecap="round"/><circle cx="32" cy="8" r="4" fill="#FFD65A"/></svg>`;
+}
+
+function challengeHubOpenModes() {
+  challengeHubOpenSheet('modes','選擇挑戰方式',challengeHubRenderModes);
+}
+
+function challengeHubRenderModes() {
+  const body = document.getElementById('challenge-hub-sheet-body');
+  if (!body) return;
+  const groups = [...new Set(CHALLENGE_HUB_MODES.map(mode => mode.group))];
+  body.innerHTML = `${challengeHubRenderPreviewHeader(challengeHubState.equipped,'準備進入挑戰','角色造型會出現在配對、房間與未來 Battle 對戰畫面。')}
+    ${groups.map(group => `<div class="challenge-hub-mode-section-title">${group}</div><div class="challenge-hub-mode-list">${CHALLENGE_HUB_MODES.filter(mode => mode.group===group).map(mode => `<button type="button" class="challenge-hub-mode-card" onclick="challengeHubSelectMode('${mode.id}')">
+      <span class="challenge-hub-mode-icon">${challengeHubModeIcon(mode.icon)}</span>
+      <span><span class="challenge-hub-mode-title">${mode.title}</span><span class="challenge-hub-mode-copy">${mode.copy}</span></span>
+      <span class="challenge-hub-mode-meta">${mode.meta}<br/>MLP 預覽</span>
+    </button>`).join('')}</div>`).join('')}
+    <div class="challenge-hub-dev-note">本版先驗證 Dashboard 流程，不會建立 Battle 房間或導向 battle 頁面。</div>`;
+}
+
+function challengeHubSelectMode(modeId) {
+  const mode = CHALLENGE_HUB_MODES.find(item => item.id === modeId);
+  if (!mode) return;
+  challengeHubState.selectedMode = mode.id;
+  challengeHubOpenSheet('match-preview',mode.title,() => challengeHubRenderMatchPreview(mode),'challengeHubOpenModes');
+}
+
+function challengeHubRenderMatchPreview(mode) {
+  const body = document.getElementById('challenge-hub-sheet-body');
+  if (!body) return;
+  const opponent = mode.id === 'ai-hard'
+    ? { skin:'skin-02',face:'face-square',hair:'hair-crop',top:'top-coral',hat:'hat-none',glasses:'glasses-square',expression:'expression-brave',frame:'frame-gold' }
+    : mode.id === 'friend'
+    ? { skin:'skin-04',face:'face-soft',hair:'hair-bun',top:'top-green',hat:'hat-none',glasses:'glasses-round',expression:'expression-smile',frame:'frame-blue' }
+    : { skin:'skin-01',face:'face-soft',hair:'hair-wave',top:'top-coral',hat:'hat-cap',glasses:'glasses-none',expression:'expression-focus',frame:'frame-none' };
+  const opponentName = mode.id.startsWith('ai-') ? (mode.id==='ai-hard'?'高階 AI':'訓練 AI') : mode.id==='friend' ? '好友示範' : '配對挑戰者';
+  body.innerHTML = `<div class="challenge-hub-vs-stage">
+      <div class="challenge-hub-vs-player"><div class="challenge-hub-vs-avatar">${challengeHubAvatarSvg(challengeHubState.equipped)}</div><div class="challenge-hub-vs-name">${challengeHubEscape(challengeHubState.studentName)}</div></div>
+      <div class="challenge-hub-vs-mark">VS</div>
+      <div class="challenge-hub-vs-player"><div class="challenge-hub-vs-avatar">${challengeHubAvatarSvg(opponent)}</div><div class="challenge-hub-vs-name">${opponentName}</div></div>
+    </div>
+    <div class="challenge-hub-mode-summary"><strong>${mode.title}</strong><p>${mode.copy}<br/>下一階段會在這裡建立 Battle 房間並進入對戰。</p></div>
+    <div class="challenge-hub-sheet-actions">
+      <button class="challenge-hub-action-secondary" type="button" onclick="challengeHubOpenModes()">返回模式</button>
+      <button class="challenge-hub-action-primary" type="button" onclick="challengeHubDemoStart()">確認此流程</button>
+    </div>`;
+}
+
+function challengeHubDemoStart() {
+  challengeHubShowToast('MLP 已完成流程預覽；尚未連接 Battle');
+}
+
+function challengeHubShouldUsePreviewMode() {
+  try {
+    const query = new URLSearchParams(window.location.search);
+    return window.location.protocol === 'file:' || query.get('challengeHubPreview') === '1';
+  } catch (_) { return false; }
+}
+
+function challengeHubBootPreview() {
+  dashboardEffectiveFeatures = { ...DEFAULT_DASHBOARD_FEATURES };
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('locked'));
+  document.getElementById('legacy-speech-battle-card')?.classList.remove('hidden');
+  document.getElementById('student-name').textContent = 'Brian';
+  document.getElementById('current-points').textContent = '2350';
+  challengeHubInit({ studentName:'Brian', currentPoints:2350, brandName:'Happy School', brandInitials:'HS', primaryColor:'#176FCC', secondaryColor:'#FFD45C' });
+  const loading = document.getElementById('loading-screen');
+  if (loading) loading.style.display = 'none';
+  document.getElementById('content-viewport')?.classList.add('show');
+  dashboardContentVisible = true;
+  const arenaNav = document.querySelector(`.nav-item[onclick*="'arena'"]`);
+  if (arenaNav) switchTab('arena','挑戰',arenaNav);
+}
+</script>
+
 </body>
 </html>
