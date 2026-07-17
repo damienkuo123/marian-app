@@ -24,7 +24,7 @@
 <script src="global-audio.js"></script>
 <script src="phonics-config.js"></script>
 <script src="phoneme-tips.js"></script>
-<script src="./tappie-api.js?v=20260716-mission-milestone-v1"></script>
+<script src="./tappie-api.js?v=20260717-reward-refresh-v510"></script>
 <script src="./tappie-student-session.js?v=student-session-v1"></script>
 <style>
     :root { 
@@ -74,7 +74,7 @@
       display: flex; justify-content: space-between; align-items: center; padding-left: 20px; padding-right: 20px;
     }
     #top-title { font-size: 20px; font-weight: 900; color: var(--text-main); letter-spacing: 2px; margin: 0; flex: 1; text-align: center; }
-    .top-icon-btn { width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; font-size: 22px; cursor: pointer; background: rgba(255,255,255,0.6); border-radius: 50%; border: 1px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.2s; }
+    .top-icon-btn { width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; background: rgba(255,255,255,0.6); border-radius: 50%; border: 1px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.2s; }
     .top-icon-btn:active { transform: scale(0.9); }
 
     /* 中間滑動內容區 */
@@ -101,12 +101,11 @@
       display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-left: 10px; padding-right: 10px;
     }
     .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #95a5a6; cursor: pointer; transition: 0.3s; flex: 1; padding: 10px 0; -webkit-tap-highlight-color: transparent; position: relative; } /* 👈 加上 position: relative; */
-    .nav-item .nav-icon { font-size: 24px; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); filter: grayscale(1); opacity: 0.7; }
+    .nav-item .nav-icon { transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     .nav-item span { font-size: 11px; font-weight: 900; letter-spacing: 1px; transition: 0.3s; }
     
     /* 選中狀態 */
     .nav-item.active { color: var(--primary-blue); }
-    .nav-item.active .nav-icon { transform: scale(1.3) translateY(-4px); filter: grayscale(0); opacity: 1; text-shadow: 0 4px 10px rgba(0, 102, 204, 0.3); }
     .nav-item.active span { transform: translateY(-2px); color: var(--primary-blue); }
 
     .elite-tab-btn.hidden { display: none !important; }
@@ -124,7 +123,7 @@
     /* 🚀 確保學生卡片內部完全置中 (加入呼吸感留白) */
     .profile-header { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; z-index: 10; padding-top: 35px; padding-bottom: 35px; }
     
-    .title-badge { background: linear-gradient(135deg, #fff, #fffaf0); color: #d35400; padding: 8px 24px; border-radius: 25px; font-size: 14px; font-weight: 900; display: inline-block; margin-bottom: 22px; border: 1px solid rgba(241, 196, 15, 0.6); box-shadow: 0 8px 20px rgba(241, 196, 15, 0.2); letter-spacing: 2px; }
+    .title-badge { background: linear-gradient(135deg, #fff, #fffaf0); color: #d35400; border-radius: 25px; font-size: 14px; font-weight: 900; margin-bottom: 22px; border: 1px solid rgba(241, 196, 15, 0.6); box-shadow: 0 8px 20px rgba(241, 196, 15, 0.2); }
     
     /* 新增：將原本寫在 HTML 的 style 移到這裡，更好控管 */
     .student-avatar-img { width: 105px; height: 105px; border-radius: 50%; object-fit: cover; margin-bottom: 18px; filter: drop-shadow(0 8px 15px rgba(0,0,0,0.1)); border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -152,46 +151,31 @@
     .hw-box { background: linear-gradient(145deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.45) 100%); border-radius: 36px; padding: 28px; text-align: left; box-shadow: 0 20px 40px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1); transition: transform 0.4s; display: flex; flex-direction: column; position: relative; margin: 0; width: 100%; box-sizing: border-box; border: 1px solid var(--glass-border); }
     .hw-box::after { content: ""; position: absolute; inset: 0; border-radius: 36px; padding: 2px; background: linear-gradient(135deg, var(--marian-yellow), transparent 60%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
     .hw-done::after { background: linear-gradient(135deg, var(--marian-green), transparent 60%); }
-    .card-header-row { display: flex; align-items: center; gap: 20px; margin-bottom: 25px; }
-    .icon-wrapper { width: 64px; height: 64px; border-radius: 22px; display: flex; justify-content: center; align-items: center; font-size: 34px; background: linear-gradient(135deg, rgba(255,255,255,1), rgba(255,255,255,0.5)); box-shadow: 0 10px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1); border: 1px solid rgba(255,255,255,0.8); }
+    .icon-wrapper { width: 64px; height: 64px; border-radius: 22px; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, rgba(255,255,255,1), rgba(255,255,255,0.5)); box-shadow: 0 10px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1); border: 1px solid rgba(255,255,255,0.8); }
     .text-block { flex: 1; }
     .action-title { font-size: 20px; font-weight: 900; color: var(--text-main); margin-bottom: 6px; letter-spacing: 1px; }
     .action-sub { font-size: 14px; color: var(--text-sub); font-weight: bold; margin: 0; }
-    .hw-score-badge { background: rgba(255,255,255,0.7); color: var(--marian-green); padding: 10px 18px; border-radius: 16px; font-size: 14px; font-weight: 900; margin-bottom: 20px; border: 1px solid rgba(255,255,255,1); display: inline-block; width: fit-content; box-shadow: 0 5px 15px rgba(46,204,113,0.15); }
     
     .btn { padding: 18px; margin: 0; font-size: 18px; font-weight: 900; border-radius: 20px; border: none; color: white; cursor: pointer; display: block; text-decoration: none; width: 100%; transition: 0.3s; text-align: center; letter-spacing: 3px; position: relative; overflow: hidden; box-sizing: border-box; }
     .btn::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent); pointer-events: none; }
     .btn:active { transform: scale(0.97); }
-    .btn-yellow { background: linear-gradient(135deg, #f39c12, #e67e22); box-shadow: 0 10px 25px rgba(230, 126, 34, 0.4), inset 0 -4px 0 rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.4); }
-    .btn-green { background: linear-gradient(135deg, #2ecc71, #27ae60); box-shadow: 0 10px 25px rgba(46, 204, 113, 0.4), inset 0 -4px 0 rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.4); }
     .btn-disabled { background: rgba(0, 0, 0, 0.08) !important; color: #95a5a6 !important; box-shadow: none !important; border: 1px solid rgba(0, 0, 0, 0.05) !important; cursor: not-allowed !important; pointer-events: none; }
 
     /* 任務模塊 */
-    .mission-container { padding: 30px; text-align: left; }
     .section-title { font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px; letter-spacing: 1px; }
-    .mission-status-box { background: rgba(255,255,255,0.5); border-radius: 22px; padding: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,1); margin-bottom: 15px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.02); }
     .status-group { display: flex; flex-direction: column; gap: 6px; }
     .status-label { font-size: 13px; color: var(--text-sub); font-weight: 900; letter-spacing: 1px; }
     .status-value { font-size: 22px; font-weight: 900; display: block; margin-top: 2px; text-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .mission-bar-bg { width: 100%; height: 16px; background: rgba(0,0,0,0.04); border-radius: 8px; position: relative; margin: 45px 0 35px 0; box-shadow: inset 0 4px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.8); border: 1px solid rgba(0,0,0,0.05); }
-    .mission-bar-fill { height: 100%; border-radius: 8px; background: linear-gradient(90deg, #f1c40f, #2ecc71, #00cec9); transition: 1.5s cubic-bezier(0.16, 1, 0.3, 1); width: 0%; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.5), inset 0 2px 0 rgba(255,255,255,0.4); position: relative; overflow: hidden; }
-    .mission-bar-fill::after { content: ""; position: absolute; top: 0; left: 0; width: 100px; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent); animation: shimmer 2.5s infinite linear; }
     @keyframes shimmer { 0% { transform: translateX(-120px); } 100% { transform: translateX(450px); } }
-    .mission-node { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 16px; height: 16px; background: #fff; border: 4px solid #e0e0e0; border-radius: 50%; z-index: 5; transition: 0.4s; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    .mission-node.active { border-color: var(--marian-green); box-shadow: 0 0 15px rgba(46,204,113,0.6); }
     .node-icon { position: absolute; top: -35px; left: 50%; transform: translateX(-50%); font-size: 22px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); }
     
     /* 🚀 新增：進度條下方的次數標籤 */
     .node-label { position: absolute; top: 25px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 900; color: #a4b0be; white-space: nowrap; transition: 0.3s; }
-    .mission-node.active .node-label { color: var(--marian-green); }
-    .reward-bar { display: flex; justify-content: space-between; background: rgba(255,255,255,0.7); border-radius: 18px; padding: 16px 20px; margin-top: 15px; border: 1px solid rgba(255,255,255,1); box-shadow: 0 5px 15px rgba(0,0,0,0.03); }
-    .reward-unit { font-size: 13px; font-weight: 900; color: var(--text-sub); display: flex; align-items: center; gap: 6px; letter-spacing: 1px; }
-    .reward-val { color: var(--marian-green); font-size: 15px; }
 
     /* 排行榜 */
     .leaderboard { padding: 20px 25px; }
     .lb-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; font-size: 15px; background: rgba(255, 255, 255, 0.65); border-radius: 20px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 20px rgba(0,0,0,0.04), inset 0 1px 1px rgba(255,255,255,1); }
-    .lb-rank { font-weight: 900; width: 35px; text-align: center; font-size: 18px; color: var(--text-sub); }
+    .lb-rank { font-weight: 900; text-align: center; font-size: 18px; color: var(--text-sub); }
     .lb-name { flex: 1; text-align: left; padding-left: 15px; font-weight: 900; color: var(--text-main); letter-spacing: 1px; }
     .lb-score { font-weight: 900; color: var(--marian-red); font-size: 16px; }
 
@@ -243,10 +227,7 @@
       filter: grayscale(100%);
     }
     .nav-item.locked::after {
-      content: "🔒";
       position: absolute;
-      top: 5px;
-      right: 15px;
       font-size: 10px;
     }
 
@@ -319,7 +300,6 @@
       align-items: center;
       justify-content: center;
       border-radius: 17px;
-      font-size: 22px;
       background: rgba(0,102,204,0.08);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
     }
@@ -344,7 +324,6 @@
     .home-notify-chevron {
       flex: 0 0 auto;
       color: rgba(26,37,47,0.35);
-      font-size: 22px;
       font-weight: 900;
     }
     .home-notify-status.ok { color: var(--marian-green); }
@@ -419,7 +398,6 @@
       background: linear-gradient(135deg, rgba(255,255,255,1), rgba(255,255,255,0.58));
       box-shadow: 0 16px 34px rgba(0,102,204,0.14), inset 0 1px 0 rgba(255,255,255,1);
       border: 1px solid rgba(255,255,255,0.86);
-      font-size: 34px;
       position: relative;
       z-index: 1;
     }
@@ -639,15 +617,7 @@
     .arrow-down { font-size: 40px; color: var(--primary-blue); animation: bounce 1s infinite; margin-bottom: 5px; }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
     /* Chrome 專用：箭頭朝上彈跳 */
-    @keyframes bounce-up { 0%, 100% { transform: translateY(0) rotate(180deg); } 50% { transform: translateY(-10px) rotate(180deg); } }
-  
-
-
-    /* =======================================================
-       TAPPIE_SINGLE_SPEAKING_ROUTE_V6_3
-       Clearer header, countdown, stage gradients, fixed leaderboard modal,
-       compact route tail and stable action states.
-       ======================================================= */
+    /*  TAPPIE SINGLE ROUTE — CANONICAL STYLES  */
     #tab-challenge {
       align-items: stretch;
       background: linear-gradient(180deg, #f8fbff 0%, #edf6ff 54%, #f8fbff 100%);
@@ -664,81 +634,9 @@
         radial-gradient(circle at 50% 18%, rgba(71,166,255,.09), transparent 34%),
         linear-gradient(180deg, #f8fbff 0%, #edf6ff 54%, #f8fbff 100%);
     }
-    .single-route-header {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      padding: 15px 22px 13px;
-      background: rgba(248,251,255,.992);
-      backdrop-filter: blur(18px) saturate(145%);
-      -webkit-backdrop-filter: blur(18px) saturate(145%);
-      border-bottom: 1px solid rgba(205,220,235,.64);
-      box-shadow: 0 9px 20px rgba(49,83,118,.038);
-      isolation: isolate;
-    }
-    .single-route-header::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: -110px;
-      height: 110px;
-      background: rgba(248,251,255,.995);
-      pointer-events: none;
-      z-index: -1;
-    }
-    .single-route-header::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -13px;
-      height: 13px;
-      pointer-events: none;
-      background: linear-gradient(180deg, rgba(248,251,255,.86), rgba(248,251,255,0));
-    }
-    .single-route-title-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-    }
-    .single-route-title {
-      margin: 0;
-      color: var(--text-main);
-      font-size: 25px;
-      line-height: 1.12;
-      font-weight: 950;
-      letter-spacing: .4px;
-    }
-    .single-route-sub-row {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .single-route-unit {
-      color: #667585;
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: .25px;
-    }
     .single-route-countdown {
-      display: inline-flex;
-      align-items: center;
       gap: 5px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      color: #1467b8;
-      background: rgba(224,241,255,.90);
-      border: 1px solid rgba(116,187,244,.20);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.92);
-      font-size: 11px;
-      font-weight: 950;
-      white-space: nowrap;
     }
-    .single-route-countdown::before { content: "◷"; font-size: 12px; }
     .single-route-countdown.is-urgent {
       color: #d97706;
       background: rgba(255,243,214,.94);
@@ -759,7 +657,6 @@
     .single-route-stage {
       position: relative;
       width: 100%;
-      min-height: 1040px;
       overflow: hidden;
       box-sizing: border-box;
     }
@@ -862,41 +759,24 @@
     }
     .single-route-current-label {
       position: absolute;
-      left: 54px;
-      top: -25px;
       width: max-content;
-      padding: 10px 13px;
-      border-radius: 16px;
       color: #0066cc;
       background: rgba(255,255,255,.94);
       border: 1px solid #fff;
-      box-shadow: 0 10px 24px rgba(0,102,204,.12);
-      font-size: 12px;
       font-weight: 950;
       line-height: 1.4;
     }
     .single-route-start {
-      position: absolute;
-      left: 0;
-      top: -50px;
       z-index: 12;
-      width: min(202px, calc(100vw - 64px));
-      transform: translate(-50%,-100%);
       text-decoration: none;
       -webkit-tap-highlight-color: transparent;
     }
     .single-route-start-card {
-      display: block;
       width: 100%;
       box-sizing: border-box;
       position: relative;
-      padding: 11px 14px 13px;
-      border-radius: 21px;
       color: #fff;
       text-align: center;
-      background: linear-gradient(145deg,#31aaff,#0666df);
-      border: 2px solid rgba(255,255,255,.72);
-      box-shadow: 0 15px 32px rgba(0,102,204,.30), inset 0 2px 0 rgba(255,255,255,.30);
       transition: background .22s ease, opacity .22s ease, box-shadow .22s ease;
     }
     .single-route-start-card::after {
@@ -912,7 +792,6 @@
       border-bottom: 2px solid rgba(255,255,255,.45);
     }
     .single-route-start-small {
-      display: block;
       margin-bottom: 2px;
       font-size: 10px;
       font-weight: 900;
@@ -922,18 +801,8 @@
       white-space: normal;
     }
     .single-route-start-main {
-      display: block;
-      font-size: 18px;
-      font-weight: 950;
-      letter-spacing: 1.5px;
-      line-height: 1.28;
       white-space: normal;
       overflow-wrap: anywhere;
-    }
-    .single-route-start:active { transform: translate(-50%,-100%) scale(.96); }
-    .single-route-start.is-loading .single-route-start-card {
-      background: linear-gradient(145deg,#38aaf7,#176dcc);
-      opacity: .94;
     }
     .single-route-start.is-loading .single-route-start-main::before {
       content: "";
@@ -949,12 +818,6 @@
     }
     @keyframes singleRouteSpin { to { transform: rotate(360deg); } }
     .single-route-start.is-disabled { cursor: default; pointer-events: none; }
-    .single-route-start.is-disabled .single-route-start-card {
-      color: #667585;
-      background: linear-gradient(145deg,#eef2f6,#dce4ec);
-      border-color: rgba(255,255,255,.88);
-      box-shadow: 0 10px 22px rgba(62,78,95,.12), inset 0 2px 0 rgba(255,255,255,.70);
-    }
     .single-route-start.is-disabled .single-route-start-card::after {
       background: #dce4ec;
       border-color: rgba(255,255,255,.58);
@@ -1098,31 +961,16 @@
       border: 1px solid rgba(174,91,51,.20);
     }
     @media (max-width: 430px) {
-      .single-route-header { padding: 14px 20px 12px; }
-      .single-route-title { font-size: 24px; }
       
       .single-route-current-label { left: 50px; }
       .single-route-leaderboard-dialog { width: 94vw; border-radius: 27px; }
     }
     @media (max-width: 360px) {
-      .single-route-current-label { left: 46px; font-size: 11px; }
-      .single-route-title { font-size: 22px; }
-      .single-route-start-main { font-size: 16px; }
+      .single-route-current-label { font-size: 11px; }
     }
     @media (min-width:768px) {
       .single-route-panel { border-radius: 38px; margin-top: 10px; }
-      .single-route-header { padding-inline: 38px; }
     }
-
-
-    /* =======================================================
-       TAPPIE_SINGLE_ROUTE_V6_4 — simplified visual hierarchy
-       - ordinary nodes stay white
-       - current position uses glow only
-       - milestone nodes own the reward colors
-       - one fixed action below the route
-       ======================================================= */
-    #tab-challenge { padding-bottom: 112px; }
 
     .single-route-node:not(.is-milestone) .single-route-core,
     .single-route-node.is-complete:not(.is-milestone) .single-route-core {
@@ -1178,16 +1026,13 @@
       z-index: 1200;
       display: flex;
       justify-content: center;
-      padding: 20px 20px 4px;
       box-sizing: border-box;
       pointer-events: none;
     }
     .single-route-action-dock::before {
       content: "";
       position: absolute;
-      inset: -24px 0 -4px;
       z-index: -1;
-      background: linear-gradient(180deg, rgba(240,246,253,0), rgba(240,246,253,.82) 44%, rgba(240,246,253,.97));
       pointer-events: none;
     }
     body:not(.challenge-route-active) .single-route-action-dock,
@@ -1197,28 +1042,18 @@
       position: relative;
       left: auto;
       top: auto;
-      width: min(340px, calc(100vw - 48px));
       transform: none;
       pointer-events: auto;
     }
     .single-route-start:active { transform: scale(.97); }
     .single-route-start-card {
-      min-height: 58px;
-      display: grid;
       place-items: center;
-      padding: 13px 22px 14px;
-      border-radius: 20px;
       background: linear-gradient(145deg,#2eb6ff,#006bd7);
       border: 2px solid rgba(255,255,255,.76);
       box-shadow: 0 14px 30px rgba(0,102,204,.26), inset 0 2px 0 rgba(255,255,255,.30);
     }
     .single-route-start-card::after { display: none; }
     .single-route-start-small { display: none !important; }
-    .single-route-start-main {
-      font-size: 18px;
-      line-height: 1.25;
-      letter-spacing: 1.6px;
-    }
     .single-route-start.is-repeat .single-route-start-card {
       background: linear-gradient(145deg,#6c79ed,#3f51c7);
       box-shadow: 0 14px 30px rgba(63,81,199,.25), inset 0 2px 0 rgba(255,255,255,.28);
@@ -1235,20 +1070,8 @@
     }
     @media (max-width: 360px) {
       .single-route-action-dock { padding-inline: 16px; }
-      .single-route-start { width: calc(100vw - 38px); }
-      .single-route-start-main { font-size: 16px; }
       .single-route-current-label { left: 41px; }
     }
-
-
-
-    /* =======================================================
-       TAPPIE_SINGLE_ROUTE_V6_5 — reward stations + map-first layout
-       - milestone rewards are inserted after their numbered step
-       - route header removed; map occupies the page immediately
-       - unit/countdown live inside the fixed action dock
-       - leaderboard floats at the map's upper-right corner
-       ======================================================= */
     #tab-challenge {
       padding-top: 0;
       padding-bottom: 124px;
@@ -1258,10 +1081,7 @@
       margin-top: -4px;
       min-height: 100%;
     }
-    .single-route-header { display: none !important; }
 
-    
-    
 
     
 
@@ -1275,13 +1095,7 @@
     /* Numbered steps remain one consistent visual language. */
     .single-route-node.is-count .single-route-core,
     .single-route-node.is-count.is-complete .single-route-core {
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
       color: #627283;
-      background: linear-gradient(145deg,#ffffff,#eef3f8);
-      border: 3px solid rgba(190,203,216,.78);
-      box-shadow: 0 9px 20px rgba(42,63,84,.11), inset 0 2px 0 #fff;
       font-size: 16px;
       animation: none;
     }
@@ -1322,35 +1136,19 @@
       background: linear-gradient(145deg,#ffc45d,#f18b18);
       box-shadow: 0 16px 34px rgba(243,156,18,.26), inset 0 2px 0 rgba(255,255,255,.48);
     }
-    .single-route-node.is-reward.is-current .single-route-core {
-      animation: singleRouteRewardGlow 2.7s ease-in-out infinite;
-    }
     @keyframes singleRouteRewardGlow {
       0%,100% { filter: drop-shadow(0 0 0 rgba(255,255,255,0)); box-shadow:0 0 0 6px rgba(255,255,255,.52),0 16px 34px rgba(42,63,84,.20),inset 0 2px 0 rgba(255,255,255,.46); }
       50% { filter: drop-shadow(0 0 10px rgba(255,255,255,.40)); box-shadow:0 0 0 11px rgba(255,255,255,.18),0 18px 38px rgba(42,63,84,.24),inset 0 2px 0 rgba(255,255,255,.46); }
     }
-    .single-route-node.is-reward .single-route-label {
-      top: 44px;
-      width: 150px;
-    }
     .single-route-node.is-reward.is-perfect .single-route-label { top: 49px; }
     .single-route-node.is-reward .single-route-current-label {
-      left: 48px;
-      top: -18px;
       color: #51606f;
-      padding: 8px 11px;
     }
 
     /* The action dock is one cohesive control: context above, action below. */
-    .single-route-action-dock {
-      padding: 10px 18px 5px;
-    }
     .single-route-action-dock::before {
       inset: -28px 0 -5px;
       background: linear-gradient(180deg, rgba(240,246,253,0), rgba(240,246,253,.78) 42%, rgba(240,246,253,.98));
-    }
-    .single-route-start {
-      width: min(360px, calc(100vw - 38px));
     }
     .single-route-start-card {
       min-height: 72px;
@@ -1362,67 +1160,23 @@
       border-radius: 22px;
     }
     .single-route-dock-meta {
-      display: flex;
-      align-items: center;
       justify-content: center;
-      gap: 7px;
       max-width: 100%;
-      color: rgba(255,255,255,.88);
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: .15px;
-      line-height: 1.25;
       white-space: nowrap;
-      overflow: hidden;
       text-overflow: ellipsis;
     }
     .single-route-dock-separator { opacity: .68; }
     .single-route-unit {
-      color: inherit;
       font-size: inherit;
       font-weight: inherit;
       letter-spacing: inherit;
-      max-width: 52%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
     .single-route-countdown {
-      display: inline;
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-      background: none;
-      box-shadow: none;
-      color: inherit;
       font-size: inherit;
-      font-weight: inherit;
-      white-space: nowrap;
     }
-    .single-route-countdown::before { content: "◷ "; font-size: inherit; }
     .single-route-start:not(.is-disabled) .single-route-countdown.is-urgent { color: #fff0b8; }
     .single-route-start:not(.is-disabled) .single-route-countdown.is-today { color: #ffe0dc; }
     .single-route-start:not(.is-disabled) .single-route-countdown.is-settled { color: rgba(255,255,255,.70); }
-    .single-route-start.is-disabled .single-route-dock-meta { color: #7c8995; }
-    .single-route-start-main {
-      font-size: 18px;
-      line-height: 1.22;
-      letter-spacing: 1.5px;
-    }
-
-    @media (max-width: 360px) {
-      
-      .single-route-start { width: calc(100vw - 30px); }
-      .single-route-dock-meta { font-size: 10px; gap: 5px; }
-      .single-route-start-main { font-size: 16px; }
-    }
-
-
-    /* =======================================================
-       TAPPIE_SINGLE_ROUTE_V6_7 — refined inline-SVG nodes + improved action dock
-       - keeps the approved minimal map style
-       - removes external node-image dependency so nothing breaks on deploy
-       ======================================================= */
 
     .single-route-node.is-count .single-route-core,
     .single-route-node.is-count.is-complete .single-route-core {
@@ -1459,7 +1213,6 @@
       font-weight: 950;
       letter-spacing: .2px;
       text-shadow: 0 1px 0 rgba(255,255,255,.85);
-      transform: translateY(-1px);
     }
     .single-route-node.is-count.is-complete .single-route-number {
       color: #445365;
@@ -1535,17 +1288,13 @@
 
     .single-route-node.is-reward .single-route-label,
     .single-route-node.is-reward.is-perfect .single-route-label {
-      top: 54px;
       left: 50%;
       transform: translateX(-50%);
       width: max-content;
       max-width: 168px;
-      padding: 8px 12px 9px;
-      border-radius: 16px;
       color: #223447;
       background: rgba(255,255,255,.95);
       border: 1px solid rgba(255,255,255,.98);
-      box-shadow: 0 12px 20px rgba(49,71,92,.10);
       font-size: 14px;
       font-weight: 950;
       line-height: 1.15;
@@ -1563,14 +1312,6 @@
     }
     .single-route-node.is-reward.is-safe .single-route-label small { color: #c45d57; }
     .single-route-node.is-reward.is-perfect .single-route-label small { color: #bf8d2a; }
-    .single-route-node.is-reward .single-route-current-label {
-      left: 54px;
-      top: -16px;
-      padding: 7px 10px;
-      border-radius: 12px;
-      font-size: 10px;
-      box-shadow: 0 8px 18px rgba(49,71,92,.10);
-    }
 
     .single-route-action-dock {
       padding: 10px 12px 6px;
@@ -1632,23 +1373,13 @@
       color: inherit;
       white-space: nowrap;
     }
-    .single-route-countdown::before { content: "◷ "; font-size: inherit; }
+    .single-route-countdown::before { font-size: inherit; }
     .single-route-dock-separator { display: none; }
     .single-route-start-main {
       box-sizing: border-box;
       width: 100%;
-      min-height: 54px;
-      padding: 13px 18px 14px;
-      display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
-      background: linear-gradient(135deg,#2bb8f5 0%,#0a7edc 54%,#005ec7 100%);
-      font-size: 18px;
-      font-weight: 950;
-      letter-spacing: 1.2px;
-      line-height: 1.2;
-      text-shadow: 0 1px 0 rgba(0,57,126,.28);
     }
     .single-route-start.is-repeat .single-route-start-main {
       background: linear-gradient(135deg,#7a77f7 0%,#5957df 48%,#4047ca 100%);
@@ -1711,14 +1442,9 @@
     @media (max-width: 360px) {
       .single-route-start { width: calc(100vw - 18px); }
       .single-route-dock-meta { padding-inline: 12px; font-size: 11px; gap: 8px; }
-      .single-route-start-main { min-height: 52px; font-size: 16px; }
+      .single-route-start-main { min-height: 52px; }
       .single-route-node.is-reward .single-route-label { max-width: 154px; font-size: 13px; }
     }
-
-
-    /* =======================================================
-       TAPPIE_SINGLE_ROUTE_V6_8 — 2.5D finish + locked-state hierarchy
-       ======================================================= */
     .single-route-node.is-count .single-route-number {
       transform: translateY(-4px);
     }
@@ -1781,14 +1507,7 @@
       box-shadow: 0 8px 16px rgba(49,71,92,.08);
     }
 
-    /* =======================================================
-       TAPPIE_SINGLE_ROUTE_V6_9_REBUILD
-       - rebuilt directly from stable v6.8
-       - downward route, concise CTA copy, isolated daily reward modal
-       ======================================================= */
-    
-    
-    
+
     
     
     
@@ -2030,12 +1749,7 @@
     .single-route-node.is-reward.is-claimable .single-route-label {
       color: #126db4;
     }
-    .single-route-node.is-reward .single-route-label.is-claimable-label {
-      min-width: 102px;
-      padding: 8px 12px 9px;
-    }
     .single-route-node.is-reward .single-route-label.is-claimable-label small {
-      margin-top: 5px;
       color: #1478c9 !important;
       font-size: 11px;
       letter-spacing: .04em;
@@ -2063,21 +1777,6 @@
     }
     .single-route-node.is-reward.is-claim-loading .single-route-core {
       animation: singleRouteRewardLoading .75s ease-in-out infinite alternate;
-    }
-    .single-route-claim-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 5px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #1478c9;
-      color: #fff;
-      box-shadow: 0 5px 12px rgba(20,120,201,.2);
-      font-size: 9px;
-      font-weight: 1000;
-      letter-spacing: .08em;
-      line-height: 1;
     }
     @keyframes singleRouteRewardReady {
       0%,100% { transform: translateY(0) scale(1); filter: drop-shadow(0 7px 8px rgba(25,63,93,.15)); }
@@ -2225,7 +1924,6 @@
       font-weight: 900;
       cursor: pointer;
     }
-
 
 
     /* =====================================================
@@ -2428,7 +2126,6 @@
     .tappie-ui-icon.is-md { width: 28px; height: 28px; }
     .tappie-ui-icon.is-lg { width: 38px; height: 38px; }
     .tappie-ui-icon.is-xl { width: 52px; height: 52px; }
-    .tappie-icon-label { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .tappie-icon-heading { display: flex !important; align-items: center; gap: 9px; }
     .tappie-icon-button { display: inline-flex !important; align-items: center; justify-content: center; gap: 9px; }
 
@@ -2497,8 +2194,6 @@
     .diag-icon-title { display: flex; align-items: center; gap: 8px; }
     .diag-icon-title .tappie-ui-icon { width: 25px; height: 25px; }
     .diag-icon-title[style*="font-size: 11px"] .tappie-ui-icon { width: 19px; height: 19px; }
-    .diag-stat-icon { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
-    .diag-stat-icon .tappie-ui-icon { width: 25px; height: 25px; }
 
     .settings-modal-title,
     .points-modal-title,
@@ -2523,7 +2218,6 @@
     .log-entry-icon { width: 28px; height: 28px; flex: 0 0 auto; }
 
 
-
     .home-notify-chevron { display: grid; place-items: center; font-size: 0; }
     .home-notify-chevron .tappie-ui-icon { width: 18px; height: 18px; color: rgba(26,37,47,.34); }
     .single-route-leaderboard-close, .single-route-daily-close, .single-route-milestone-close { font-size: 0 !important; }
@@ -2545,10 +2239,8 @@
 
 
     
-    
-    
-    
-    
+
+
     
 
     /* The node anchor must always retain translate(-50%,-50%).
@@ -2604,20 +2296,12 @@
       margin-top: 4px !important;
     }
 
-    @media (max-width: 360px) {
-      
-      
-      
-    }
-
-  
 
     
 
     /* Quick actions: 56px touch base + unchanged 48px asset = only 4px inset. */
-    
-    
-    
+
+
     
 
     /* The close asset already contains its own 2.5D circular face.
@@ -2735,9 +2419,8 @@
     }
 
     @media (max-width: 360px) {
-      
-      
-      
+
+
       .diag-summary-grid { gap: 8px; }
       .diag-summary-card { min-height: 126px; padding-left: 7px; padding-right: 7px; }
       .diag-summary-label { font-size: 11px; }
@@ -2745,29 +2428,16 @@
       .diag-summary-helper { font-size: 10px; }
     }
 
-  
+
+    
+
+
+    
+
 
     
     
-    
-    
-    
-    
-    
-    
-    
-    
     /* Neutralize every legacy wiggle selector, then animate the art wrapper only. */
-    
-    
-    @media (max-width: 360px) {
-      
-      
-      
-      
-      
-      
-    }
 
     /* =======================================================
        TAPPIE ROUTE STATUS TILES — CANONICAL COMPONENT
@@ -2934,6 +2604,8 @@
     }
 
 </style>
+
+    <!-- TAPPIE DASHBOARD v5.9 CLEAN: dead CSS/JS removed; route styles normalized without UI redesign. -->
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -2963,7 +2635,7 @@
 <div class="points" id="current-points">0</div>
 <div class="points-label">Total Points</div>
 </div>
-<span class="history-btn tappie-icon-button" id="dashboard-points-history-btn" onclick="toggleLogs(true)"><span class="tappie-ui-icon" data-tappie-icon="history"></span><span>查看點數明細</span></span>
+<span class="history-btn tappie-icon-button" id="dashboard-points-history-btn" onclick="openPointLogs()"><span class="tappie-ui-icon" data-tappie-icon="history"></span><span>查看點數明細</span></span>
 </div>
 <div class="glass-panel home-notification-zone">
 <h3 class="home-notification-title">家長通知設定</h3>
@@ -3445,11 +3117,6 @@
       return dashboardEffectiveFeatures?.[key] !== false;
     }
 
-    function getNavFeatureKey(tabId) {
-      if (['challenge', 'practice', 'learning'].includes(tabId)) return 'practice_enabled';
-      if (tabId === 'arena') return 'battle_enabled';
-      return '';
-    }
 
     function isClassBasedStudent(data) {
       return ["有班級", "美語資優生", "elite"].includes(String(data?.studentType || "").trim());
@@ -4091,15 +3758,6 @@
       }
     }
 
-    function escapeHtml(value) {
-      return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
     function formatAttendanceDashboardTime(value) {
       if (!value) return "";
       try {
@@ -4257,6 +3915,28 @@
       }
     }
 
+
+    function mergeDashboardGamiOverlay(data, overlay) {
+      if (!data || !overlay) return data;
+      if (overlay.gamification) data.gamification = normalizeTappieGamiConfig(overlay.gamification);
+      if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
+      if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
+      if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
+      if (overlay.scheduleId !== undefined) data.scheduleId = overlay.scheduleId;
+      if (overlay.missionRewardState !== undefined) data.missionRewardState = overlay.missionRewardState;
+      if (overlay.currentPoints !== undefined) data.currentPoints = overlay.currentPoints;
+      if (Array.isArray(overlay.classProgress)) data.classProgress = overlay.classProgress;
+      if (overlay.classMaxCount !== undefined) data.classMaxCount = overlay.classMaxCount;
+      if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
+      if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
+      if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
+      if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
+      if (overlay.effectiveFeatures || overlay.features) {
+        data.effectiveFeatures = normalizeDashboardFeatures(overlay.effectiveFeatures || overlay.features);
+      }
+      return data;
+    }
+
     window.onload = () => {
       if (!STUDENT_ID) {
         alert("找不到學生資料，請重新感應卡片或回到官網登入。");
@@ -4283,28 +3963,10 @@
               return; // 終止後續的錯誤渲染
           }
 
-          // ✅ 精修：從 Supabase 即時覆寫 gami、今日最高分、任務次數與排行榜
+          // ✅ 從 Supabase 即時覆寫 gami、今日最高分、任務次數與排行榜
           const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
-          if (overlay) {
-              if (overlay.gamification) data.gamification = normalizeTappieGamiConfig(overlay.gamification);
-              if (overlay.currentUnit !== undefined) data.currentUnit = overlay.currentUnit;
-              if (overlay.endDate !== undefined) data.endDate = overlay.endDate;
-              if (overlay.missionCount !== undefined) data.missionCount = overlay.missionCount;
-              if (overlay.scheduleId !== undefined) data.scheduleId = overlay.scheduleId;
-              if (overlay.missionRewardState !== undefined) data.missionRewardState = overlay.missionRewardState;
-              if (overlay.currentPoints !== undefined) data.currentPoints = overlay.currentPoints;
-              if (Array.isArray(overlay.classProgress)) data.classProgress = overlay.classProgress;
-              if (overlay.classMaxCount !== undefined) data.classMaxCount = overlay.classMaxCount;
-              if (overlay.isCompleted !== undefined) data.isCompleted = overlay.isCompleted;
-              if (overlay.lastScore !== undefined) data.lastScore = overlay.lastScore;
-              if (overlay.awardedPoints !== undefined) data.awardedPoints = overlay.awardedPoints;
-              if (Array.isArray(overlay.leaderboard)) data.leaderboard = overlay.leaderboard;
-          }
-
-          if (overlay?.effectiveFeatures || overlay?.features) {
-              data.effectiveFeatures = normalizeDashboardFeatures(overlay.effectiveFeatures || overlay.features);
-              dashboardEffectiveFeatures = data.effectiveFeatures;
-          }
+          mergeDashboardGamiOverlay(data, overlay);
+          if (data.effectiveFeatures) dashboardEffectiveFeatures = data.effectiveFeatures;
           renderDashboard(data);
           
           document.getElementById('loading-screen').style.opacity = '0';
@@ -4334,6 +3996,130 @@
         minute: '2-digit',
         hour12: false
       });
+    }
+
+
+    function setDashboardPointBalance(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return;
+      const pointsEl = document.getElementById('current-points');
+      if (pointsEl) pointsEl.textContent = numeric;
+      if (dashboardLastData) dashboardLastData.currentPoints = numeric;
+      if (singleRouteLastData) singleRouteLastData.currentPoints = numeric;
+    }
+
+    function renderRecentPointLogs(logs) {
+      const logContainer = document.getElementById('log-container');
+      if (!logContainer) return;
+      const normalizedLogs = Array.isArray(logs) ? logs : [];
+      if (normalizedLogs.length === 0) {
+        logContainer.innerHTML = `<p style="text-align:center; color:var(--text-sub); font-weight:bold;">尚無紀錄</p>`;
+        return;
+      }
+      logContainer.innerHTML = normalizedLogs.map(log => {
+        const type = log.type || 'points';
+        const isAvatar = type === 'avatar';
+        const amount = Number(log.val ?? log.amount ?? 0);
+        const valClass = amount >= 0 ? 'log-plus' : 'log-minus';
+        const valText = isAvatar ? '角色' : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
+        const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
+        const rawTime = log.time || log.createdAt || log.created_at || log.timestamp || '';
+        const time = escapeHtml(formatLogTimestamp(rawTime));
+        const iconName = isAvatar ? 'avatar' : (amount >= 0 ? 'points' : 'penalty');
+        return `
+          <div class="log-row" style="align-items:flex-start; gap:12px;">
+            <span style="display:flex; gap:10px; align-items:flex-start; flex:1; min-width:0;">
+              <span class="log-entry-icon">${getTappieUiIconSvg(iconName)}</span>
+              <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+                <span>${title}</span>
+                ${time ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${time}</span>` : ''}
+              </span>
+            </span>
+            <span class="${valClass}" style="white-space:nowrap;">${valText}</span>
+          </div>`;
+      }).join('');
+    }
+
+    function normalizeFreshDashboardData(rawData) {
+      const data = TappieAPI.toLegacyDashboard(rawData);
+      data.effectiveFeatures = normalizeDashboardFeatures(
+        rawData?.effectiveFeatures ||
+        rawData?.data?.effectiveFeatures ||
+        data?.effectiveFeatures ||
+        data?.features ||
+        dashboardEffectiveFeatures ||
+        null
+      );
+      return data;
+    }
+
+    async function fetchFreshDashboardSnapshot({ includeOverlay = true, expectedBalance = null, retryOnStaleBalance = false } = {}) {
+      let rawData = await TappieAPI.getDashboard(STUDENT_ID);
+      let data = normalizeFreshDashboardData(rawData);
+      let overlay = includeOverlay ? await fetchDashboardGamiOverlay(STUDENT_ID) : null;
+      mergeDashboardGamiOverlay(data, overlay);
+
+      const expected = Number(expectedBalance);
+      const rawBalance = Number(TappieAPI.toLegacyDashboard(rawData)?.currentPoints);
+      if (retryOnStaleBalance && Number.isFinite(expected) && Number.isFinite(rawBalance) && rawBalance !== expected) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        rawData = await TappieAPI.getDashboard(STUDENT_ID);
+        data = normalizeFreshDashboardData(rawData);
+        if (includeOverlay) overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
+        mergeDashboardGamiOverlay(data, overlay);
+      }
+      return { data, overlay };
+    }
+
+    function applyFreshRewardSnapshot(data) {
+      if (!data) return;
+      dashboardLastData = { ...(dashboardLastData || {}), ...data };
+      dashboardLastSyncedAt = Date.now();
+      setDashboardPointBalance(data.currentPoints);
+      renderRecentPointLogs(data.recentLogs);
+
+      if (singleRouteLastData) {
+        singleRouteLastData = { ...singleRouteLastData, ...data };
+        singleRouteLastGami = normalizeTappieGamiConfig(singleRouteLastData.gamification || singleRouteLastGami || {});
+        renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
+        renderSingleRouteDailyReward(singleRouteLastData, singleRouteLastGami);
+      }
+    }
+
+    async function refreshDashboardAfterRewardClaim({ expectedBalance = null } = {}) {
+      if (dashboardSnapshotRefreshPromise) return dashboardSnapshotRefreshPromise;
+      dashboardSnapshotRefreshPromise = (async () => {
+        const { data } = await fetchFreshDashboardSnapshot({
+          includeOverlay: true,
+          expectedBalance,
+          retryOnStaleBalance: true,
+        });
+        applyFreshRewardSnapshot(data);
+        return data;
+      })().finally(() => {
+        dashboardSnapshotRefreshPromise = null;
+      });
+      return dashboardSnapshotRefreshPromise;
+    }
+
+    async function refreshRecentPointLogs({ force = false } = {}) {
+      if (!force && Date.now() - dashboardLastSyncedAt < 1500) return dashboardLastData;
+      const rawData = await TappieAPI.getDashboard(STUDENT_ID);
+      const data = normalizeFreshDashboardData(rawData);
+      dashboardLastData = { ...(dashboardLastData || {}), ...data };
+      dashboardLastSyncedAt = Date.now();
+      setDashboardPointBalance(data.currentPoints);
+      renderRecentPointLogs(data.recentLogs);
+      return data;
+    }
+
+    async function openPointLogs() {
+      toggleLogs(true);
+      try {
+        await refreshRecentPointLogs({ force: true });
+      } catch (err) {
+        console.warn('recent point logs refresh failed', err);
+      }
     }
 
     function maskEmail(email) {
@@ -4431,7 +4217,6 @@
         }
       })();
     }
-    
 
 
     function escapeMissionRouteHtml(value) {
@@ -4457,6 +4242,13 @@
     let singleRouteMessageTimer = 0;
     let singleRouteMessageAnchor = null;
 
+    // Canonical dashboard snapshot cache used by partial refreshes.
+    // Reward claims and point-log opens update only the data-bound regions;
+    // they do not rerun the full dashboard bootstrap or reset the active tab.
+    let dashboardLastData = null;
+    let dashboardLastSyncedAt = 0;
+    let dashboardSnapshotRefreshPromise = null;
+
     function buildSingleRoutePath(points) {
       if (!points.length) return '';
       if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
@@ -4471,7 +4263,6 @@
       d += ` Q ${prev.x} ${prev.y} ${last.x} ${last.y}`;
       return d;
     }
-
 
 
     const TAPPIE_TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -4631,10 +4422,6 @@
       el.title = raw;
     }
 
-    function getSingleRouteSegment(points, minCount, maxCount) {
-      if (!Number.isFinite(minCount) || !Number.isFinite(maxCount) || maxCount <= minCount) return [];
-      return points.filter(point => point.count >= minCount && point.count <= maxCount);
-    }
 
     function buildSingleRouteCompletedPaths(points, currentKey) {
       const currentIndex = points.findIndex(point => point.key === currentKey);
@@ -5041,24 +4828,6 @@
       }, 250);
     }
 
-    async function refreshSingleRouteMissionRewardState() {
-      const overlay = await fetchDashboardGamiOverlay(STUDENT_ID);
-      if (!overlay || !singleRouteLastData) return;
-      if (overlay.gamification) singleRouteLastGami = normalizeTappieGamiConfig(overlay.gamification);
-      if (overlay.currentUnit !== undefined) singleRouteLastData.currentUnit = overlay.currentUnit;
-      if (overlay.endDate !== undefined) singleRouteLastData.endDate = overlay.endDate;
-      if (overlay.missionCount !== undefined) singleRouteLastData.missionCount = overlay.missionCount;
-      if (overlay.scheduleId !== undefined) singleRouteLastData.scheduleId = overlay.scheduleId;
-      if (overlay.missionRewardState !== undefined) singleRouteLastData.missionRewardState = overlay.missionRewardState;
-      if (overlay.currentPoints !== undefined) {
-        singleRouteLastData.currentPoints = overlay.currentPoints;
-        const pointsEl = document.getElementById('current-points');
-        if (pointsEl) pointsEl.textContent = overlay.currentPoints;
-      }
-      if (Array.isArray(overlay.leaderboard)) singleRouteLastData.leaderboard = overlay.leaderboard;
-      renderMissionClassRoute(singleRouteLastData, singleRouteLastGami || normalizeTappieGamiConfig(singleRouteLastData.gamification || {}));
-    }
-
     async function handleSingleRouteMilestoneClick(type, anchorEl = null) {
       const milestone = getMissionRouteMilestones(singleRouteLastGami || {}).find(item => item.type === type);
       if (!milestone) return;
@@ -5113,6 +4882,7 @@
       if (singleRouteClaimLoadingKey) return;
 
       singleRouteClaimLoadingKey = type;
+      let expectedBalanceAfterClaim = null;
       renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
       try {
         if (!window.TappieAPI || typeof TappieAPI.claimMissionReward !== 'function') throw new Error('claimMissionReward 尚未載入');
@@ -5130,9 +4900,8 @@
             singleRouteMissionRewardState[type].grantedAt = result.grantedAt || new Date().toISOString();
           }
           if (Number.isFinite(Number(result.newBalance))) {
-            const pointsEl = document.getElementById('current-points');
-            if (pointsEl) pointsEl.textContent = Number(result.newBalance);
-            if (singleRouteLastData) singleRouteLastData.currentPoints = Number(result.newBalance);
+            expectedBalanceAfterClaim = Number(result.newBalance);
+            setDashboardPointBalance(expectedBalanceAfterClaim);
           }
           if (response.status === 'granted') {
             showSingleRouteRewardCelebration({
@@ -5162,7 +4931,8 @@
       } finally {
         singleRouteClaimLoadingKey = '';
         if (singleRouteLastData && singleRouteLastGami) renderMissionClassRoute(singleRouteLastData, singleRouteLastGami);
-        refreshSingleRouteMissionRewardState().catch(err => console.warn('mission reward state refresh failed', err));
+        refreshDashboardAfterRewardClaim({ expectedBalance: expectedBalanceAfterClaim })
+          .catch(err => console.warn('reward claim dashboard refresh failed', err));
       }
     }
 
@@ -5527,6 +5297,8 @@
     }
 
     function renderDashboard(data) {
+      dashboardLastData = data;
+      dashboardLastSyncedAt = Date.now();
       dashboardEffectiveFeatures = normalizeDashboardFeatures(data?.effectiveFeatures || data?.features || dashboardEffectiveFeatures);
       saveEffectiveFeaturesCache(STUDENT_ID, dashboardEffectiveFeatures);
       // 🚀 1. 客製化視覺與動態 App 打包引擎
@@ -5819,35 +5591,8 @@
         reviewGrid.innerHTML = `<div style="color:var(--text-sub);font-weight:900;text-align:center;padding:18px;">目前班級尚未建立自由練習單元</div>`;
       }
 
-      // 點數與角色明細：點數、角色解鎖依時間排序混合顯示
-      const logContainer = document.getElementById('log-container');
-      const logs = Array.isArray(data.recentLogs) ? data.recentLogs : [];
-      if (logs.length === 0) {
-        logContainer.innerHTML = `<p style="text-align:center; color:var(--text-sub); font-weight:bold;">尚無紀錄</p>`;
-      } else {
-        logContainer.innerHTML = logs.map(log => {
-          const type = log.type || 'points';
-          const isAvatar = type === 'avatar';
-          const amount = Number(log.val ?? log.amount ?? 0);
-          const valClass = amount >= 0 ? "log-plus" : "log-minus";
-          const valText = isAvatar ? "角色" : (amount >= 0 ? `+${amount} 點` : `${amount} 點`);
-          const title = escapeHtml(log.title || log.reason || (isAvatar ? '獲得角色' : '點數異動'));
-          const rawTime = log.time || log.createdAt || log.created_at || log.timestamp || '';
-          const time = escapeHtml(formatLogTimestamp(rawTime));
-          const iconName = isAvatar ? 'avatar' : (amount >= 0 ? 'points' : 'penalty');
-          return `
-            <div class="log-row" style="align-items:flex-start; gap:12px;">
-              <span style="display:flex; gap:10px; align-items:flex-start; flex:1; min-width:0;">
-                <span class="log-entry-icon">${getTappieUiIconSvg(iconName)}</span>
-                <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-                  <span>${title}</span>
-                  ${time ? `<span style="font-size:12px; color:var(--text-sub); font-weight:700; line-height:1.35;">${time}</span>` : ''}
-                </span>
-              </span>
-              <span class="${valClass}" style="white-space:nowrap;">${valText}</span>
-            </div>`;
-        }).join('');
-      }
+      // 點數與角色明細：共用 canonical renderer，供初次載入與領獎後刷新。
+      renderRecentPointLogs(data.recentLogs);
     }
 
 
