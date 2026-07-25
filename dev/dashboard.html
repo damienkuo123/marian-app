@@ -14,6 +14,8 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D2_CHALLENGE_MODE_CHOOSER_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_1_GLASS_BATTLE_CARDS_REDESIGN_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_0_1_DRESSING_ROOM_OPEN_HANDLER_HOTFIX_20260725 -->
 <!-- TAPPIE_ICON_SYSTEM_V5_OBJECT_FIRST_20260717 -->
 <!-- TAPPIE_LEADERBOARD_2_5D_REWARD_FULLSCREEN_V1_5_20260716 -->
 <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
@@ -3491,6 +3493,24 @@ body.challenge-route-active .challenge-route-action-dock {
 
 </style>
 
+
+<script id="tappie-d301-dressing-open-fallback">
+(function(){
+  window.openChallengeDressingRoomV301 = window.openChallengeDressingRoomV301 || function(){
+    var el=document.getElementById('dressing-room-overlay');
+    if(!el){ console.error('[Tappie D3.0.1] dressing-room-overlay not found'); return; }
+    document.body.style.overflow='hidden';
+    el.classList.add('show');
+    el.setAttribute('aria-hidden','false');
+    var page=el.querySelector('.dressing-room-page');
+    if(page) page.scrollTo(0,0);
+    if(typeof window.renderChallengeDressingRoomV301==='function'){
+      try{ window.renderChallengeDressingRoomV301(); }catch(err){ console.error('[Tappie D3.0.1] render failed',err); }
+    }
+  };
+})();
+</script>
+
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -3698,7 +3718,7 @@ body.challenge-route-active .challenge-route-action-dock {
 </section>
 
 <div class="challenge-route-utility-stack" aria-label="挑戰快捷功能">
-<button class="challenge-route-dressing-btn" type="button" onclick="openChallengeDressingRoom()" aria-label="更衣室">
+<button class="challenge-route-dressing-btn" type="button" onclick="openChallengeDressingRoomV301()" aria-label="更衣室">
 <span class="challenge-route-dressing-art" aria-hidden="true">
 <svg viewBox="0 0 64 64">
 <defs>
@@ -7647,7 +7667,7 @@ function toast(message){
   clearTimeout(toast.timer);
   toast.timer=setTimeout(()=>el.classList.remove('show'),1800);
 }
-window.openChallengeDressingRoom=()=>toast('更衣室將於 Phase D3 接入');
+// D3.0.1: obsolete Phase-D1 dressing-room placeholder removed.
 window.openChallengeChooser=()=>toast('挑戰方式選擇將於 Phase D2 接入');
 
 function syncInitial(){
@@ -7974,6 +7994,8 @@ if(document.readyState==='loading'){
     renderPreview();
   }
 
+  window.renderChallengeDressingRoomV301=renderDressingRoom;
+
   window.setDressingCategory=function(category){
     dresserState.category=category;
     renderDressingRoom();
@@ -8001,7 +8023,7 @@ if(document.readyState==='loading'){
     renderDressingRoom();
   };
 
-  window.openChallengeDressingRoom=function(){
+  window.openChallengeDressingRoomV301=function(){
     lockBody();
     dressing()?.classList.add('show');
     dressing()?.setAttribute('aria-hidden','false');
