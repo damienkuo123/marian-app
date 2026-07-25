@@ -15,6 +15,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D2_1_GLASS_BATTLE_CARDS_REDESIGN_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_EDITOR_ARCHITECTURE_FIX_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_1_EDITOR_PORTAL_SCROLL_NAV_HOTFIX_20260726 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_2_2_LOCKED_SELECTOR_DRAWER_FINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -3651,6 +3652,38 @@ body:not(.challenge-route-active)>.challenge-route-utility-stack,body:not(.chall
 @media(min-width:768px){body>.dressing-room-overlay .dressing-room-shell{grid-template-rows:58px minmax(320px,52%) minmax(0,1fr)!important}body>.dressing-room-overlay .d32-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}body>.dressing-room-overlay .d32-grid.swatches{grid-template-columns:repeat(7,minmax(0,1fr))!important}}
 
 </style>
+<style id="tappie-d322-style">
+
+/* =========================================================
+   D3.2.2 | Locked Selector + Draggable Wardrobe Drawer
+   ========================================================= */
+body>.dressing-room-overlay .dressing-room-shell{
+  --d322-drawer-height:34%;
+  grid-template-rows:58px minmax(0,1fr) var(--d322-drawer-height)!important;
+}
+body>.dressing-room-overlay .d32-stage{min-height:0!important;}
+body>.dressing-room-overlay .d32-catalog{
+  height:100%!important;
+  grid-template-rows:24px auto auto minmax(0,1fr)!important;
+  will-change:height;
+}
+body>.dressing-room-overlay .d32-drawer-handle{
+  position:relative;z-index:50;height:24px;min-height:24px;display:grid;place-items:center;
+  cursor:ns-resize;touch-action:none;user-select:none;-webkit-user-select:none;
+  background:rgba(255,255,255,.96);
+}
+body>.dressing-room-overlay .d32-drawer-handle span{
+  display:block;width:42px;height:5px;border-radius:999px;background:#c9d0d8;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9);transition:transform .14s ease,background .14s ease;
+}
+body>.dressing-room-overlay .d32-drawer-handle.dragging span{transform:scaleX(1.18);background:#8fa2b5;}
+body>.dressing-room-overlay #d32-viewer canvas{transform:none!important;transform-origin:center!important;touch-action:pan-y!important;}
+#challenge-golden-viewer canvas{touch-action:pan-y!important;}
+/* No pinch/wheel zoom: viewport can rotate horizontally only; drawer height controls visible avatar size. */
+.d32-label{font-size:10.5px!important;}
+.d32-item[title]{-webkit-tap-highlight-color:transparent;}
+
+</style>
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -3999,6 +4032,7 @@ body:not(.challenge-route-active)>.challenge-route-utility-stack,body:not(.chall
       </section>
 
       <section class="d32-catalog" aria-label="角色造型選擇器">
+        <div class="d32-drawer-handle" id="d32-drawer-handle" role="separator" aria-label="拖曳調整選單高度" aria-orientation="horizontal" tabindex="0"><span></span></div>
         <div class="d32-tabs" id="d32-tabs"></div>
         <div class="d32-subtabs" id="d32-subtabs"></div>
         <div class="d32-grid" id="d32-grid"></div>
@@ -7480,6 +7514,9 @@ function setup(){
   camera=new THREE.PerspectiveCamera(35,1,.01,100);
   controls=new OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;
+  controls.enablePan=false;
+  controls.enableZoom=false;
+  controls.zoomSpeed=0;
   controls.minPolarAngle=Math.PI*0.40;
   controls.maxPolarAngle=Math.PI*0.60;
 
@@ -7526,15 +7563,17 @@ function dispose(g){
 }
 
 function fit(){
+  if(!group||!camera||!controls)return;
   const b=new THREE.Box3().setFromObject(group);
   const z=b.getSize(new THREE.Vector3());
   const c=b.getCenter(new THREE.Vector3());
-  const d=Math.max(z.x,z.y,z.z);
+  const d=Math.max(z.x,z.y,z.z,1e-4);
   const inEditor=currentViewerHostId==='d32-viewer';
   const distance=inEditor?d*2.22:d*2.0;
   const target=c.clone();
-  if(inEditor) target.y-=d*.035;
-  camera.position.set(c.x, c.y + (inEditor ? d*.025 : d*.06), c.z + distance);
+  // Challenge hero sits a touch higher; editor stays neutral. No user zoom is enabled.
+  target.y-=inEditor?d*.035:d*.055;
+  camera.position.set(c.x,c.y+(inEditor?d*.025:d*.035),c.z+distance);
   controls.target.copy(target);
   controls.update();
 }
@@ -7697,14 +7736,13 @@ async function loadGoldenCharacter(){
 
     // Golden 3B.6C.8.0.2.1 sequence: core -> body -> outfit -> hair
     for(const role of ['core','body','outfit','hair']){
-      const g=await loader().loadAsync(u[role]);
-      g.scene.traverse(o=>o.userData.tappieRole=role);
-      next.add(g.scene);
+      next.add(await loadRoleModule(role,u[role]));
     }
 
     dispose(group);
     group=next;
     scene.add(group);
+    rebuildRuntimeAppearance();
     fit();
     loaded=true;
     hideDiagnostic();
@@ -7760,7 +7798,7 @@ function leaveChallenge(){
 
 async function loadRoleModule(role,url){
   const g=await loader().loadAsync(url);
-  g.scene.traverse(o=>o.userData.tappieRole=role);
+  prepareRuntimeScene(g.scene,role);
   return g.scene;
 }
 
@@ -7774,6 +7812,7 @@ async function replaceRoleModule(role,url){
   const old=getRoleRoot(role);
   if(old) dispose(old);
   group.add(next);
+  rebuildRuntimeAppearance();
 }
 
 async function reloadCurrentLoadout(){
@@ -7788,6 +7827,7 @@ async function reloadCurrentLoadout(){
     dispose(group);
     group=next;
     scene.add(group);
+    rebuildRuntimeAppearance();
     fit();
     loaded=true;
     return {ok:true,selected:{...selected}};
@@ -7841,45 +7881,180 @@ function mountViewerTo(hostId){
     controls.minPolarAngle = hostId==='d32-viewer' ? Math.PI*.32 : 0;
     controls.maxPolarAngle = hostId==='d32-viewer' ? Math.PI*.66 : Math.PI;
     controls.enablePan = false;
+    controls.enableZoom = false;
+    controls.zoomSpeed = 0;
   }
   requestAnimationFrame(()=>{ resize(); fit(); });
   return true;
 }
 
+const runtimeMaterialSnapshots=new WeakMap();
+const runtimeToneState={hair:null,eye:null,skin:null};
+let runtimeFinish='base';
+
 function normSemanticText(value){return String(value||'').trim().toLowerCase();}
 function hasAny(text,tokens){return tokens.some(token=>text.includes(token));}
+function cloneRuntimeValue(v){return v?.clone?v.clone():v;}
+function snapshotRuntimeMaterial(mat){
+  if(!mat||runtimeMaterialSnapshots.has(mat))return;
+  const props=['color','metalness','roughness','map','normalMap','normalScale','roughnessMap','metalnessMap','aoMap','alphaMap','emissive','emissiveMap','emissiveIntensity','transparent','opacity','alphaTest','depthWrite','vertexColors','envMapIntensity','clearcoat','clearcoatRoughness','transmission','thickness','ior'];
+  const snap={};
+  for(const p of props){if(p in mat)snap[p]=cloneRuntimeValue(mat[p]);}
+  runtimeMaterialSnapshots.set(mat,snap);
+}
+function restoreRuntimeMaterial(mat){
+  const snap=runtimeMaterialSnapshots.get(mat);if(!snap)return;
+  for(const [p,v] of Object.entries(snap)){
+    if(mat[p]?.copy&&v?.clone)mat[p].copy(v);
+    else mat[p]=cloneRuntimeValue(v);
+  }
+  mat.needsUpdate=true;
+}
+function prepareRuntimeScene(root,role){
+  root.userData.tappieRole=role;
+  root.traverse(o=>{
+    o.userData.tappieRole=role;
+    if(!o?.material)return;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    mats.filter(Boolean).forEach(snapshotRuntimeMaterial);
+  });
+}
 function runtimeSemantic(o,mat,role){
   const obj=normSemanticText(o?.name);
   const matName=normSemanticText(mat?.name);
   const n=`${obj} ${matName}`;
-  if(obj==='sphere001' || hasAny(n,['eye white','eye_white','sclera'])) return 'eyeWhite';
-  if(obj==='sphere001_1' || hasAny(n,['iris','pupil'])) return 'iris';
-  if(hasAny(n,['eyelash','lashes'])) return 'eyelashes';
-  if(hasAny(n,['eyebrow','eyebrows','brow','brows'])) return 'eyebrow';
-  if(role==='hair' || hasAny(n,['hair','bang','fringe'])) return 'hair';
-  if(role==='outfit') return 'outfit';
-  if(hasAny(n,['screen','display','logo','badge','visor','glass','skate.005','material.063'])) return 'specialSurface';
-  if(role==='body' || hasAny(n,['skin','face','hand','arm','leg','head','ear','neck'])) return 'skin';
+  if(obj==='sphere001'||hasAny(n,['eye white','eye_white','sclera']))return 'eyeWhite';
+  if(obj==='sphere001_1'||hasAny(n,['iris','pupil']))return 'iris';
+  if(hasAny(n,['eyelash','lashes']))return 'eyelashes';
+  if(hasAny(n,['eyebrow','eyebrows','brow','brows']))return 'eyebrow';
+  if(obj==='plane036_2'||hasAny(n,['visor']))return 'helmetVisor';
+  if((obj==='cube009_1'&&matName==='material.063')||hasAny(n,['screen-display','screen display','screen','display','monitor']))return 'screenSurface';
+  if(hasAny(n,['logo','emblem','badge','print']))return 'logoOverlay';
+  if(hasAny(n,['laptop body','phone body','mobile body','keyboard','tablet back','ipad back']))return 'deviceBody';
+  if(hasAny(n,['skate.005']))return 'baseGraphicSurface';
+  if(role==='hair'||hasAny(n,['hair','bang','fringe']))return 'hair';
+  if(role==='outfit')return 'outfit';
+  if(role==='body'||hasAny(n,['skin','face','hand','arm','leg','head','ear','neck']))return 'skin';
   return 'other';
 }
-function applyRuntimeTone(kind,colorHex){
-  if(!group) return {changed:0};
-  const color=new THREE.Color(colorHex);
-  let changed=0;
+function runtimeMaterialEntries(){
+  const rows=[];
+  if(!group)return rows;
   group.traverse(o=>{
-    if(!o?.material) return;
-    const role=o.userData?.tappieRole || '';
-    const mats=Array.isArray(o.material)?o.material:[o.material];
-    mats.filter(Boolean).forEach(mat=>{
-      const semantic=runtimeSemantic(o,mat,role);
-      let hit=false;
-      if(kind==='hair') hit=(semantic==='hair'||semantic==='eyebrow');
-      if(kind==='eye') hit=(semantic==='iris');
-      if(kind==='skin') hit=(semantic==='skin');
-      if(hit && mat.color){mat.color.copy(color);mat.needsUpdate=true;changed++;}
+    if(!o?.material)return;
+    const role=o.userData?.tappieRole||'';
+    (Array.isArray(o.material)?o.material:[o.material]).filter(Boolean).forEach(mat=>{
+      snapshotRuntimeMaterial(mat);
+      rows.push({o,mat,role,semantic:runtimeSemantic(o,mat,role)});
     });
   });
-  return {changed};
+  return rows;
+}
+function applyRuntimeProductDefaults(rows){
+  // 6C.0.1 / 1D.0.6 product default: phone/laptop display remains white.
+  for(const x of rows){
+    if(x.semantic!=='screenSurface')continue;
+    const m=x.mat;
+    if(m.color)m.color.set('#ffffff');
+    if(!m.userData?.tappieCustomSurface && 'map' in m)m.map=null;
+    if('metalness'in m)m.metalness=0;
+    if('roughness'in m)m.roughness=.5;
+    if(m.emissive)m.emissive.set(0x000000);
+    if('emissiveIntensity'in m)m.emissiveIntensity=0;
+    m.transparent=false;m.opacity=1;m.depthWrite=true;m.needsUpdate=true;
+  }
+}
+function applyTonePass(rows,kind,colorHex){
+  if(!colorHex)return 0;
+  const color=new THREE.Color(colorHex);let changed=0;
+  for(const x of rows){
+    let hit=false;
+    if(kind==='hair')hit=x.semantic==='hair'||x.semantic==='eyebrow';
+    if(kind==='eye')hit=x.semantic==='iris';
+    if(kind==='skin')hit=x.semantic==='skin';
+    if(hit&&x.mat.color){x.mat.color.copy(color);x.mat.needsUpdate=true;changed++;}
+  }
+  return changed;
+}
+function runtimeMetalProfile(x){
+  if(x.semantic==='eyelashes')return {roughness:.22,detail:0,clearcoat:.08,preserveAlpha:true};
+  if(x.semantic==='deviceBody'||x.semantic==='baseGraphicSurface')return {roughness:.19,detail:.65,clearcoat:.20,forceOpaque:true};
+  if(x.semantic==='helmetVisor')return {roughness:.16,detail:0,clearcoat:.30,visor:true};
+  if(x.role==='body')return {roughness:.28,detail:.35,clearcoat:.12,forceOpaque:true};
+  if(x.role==='outfit')return {roughness:.25,detail:.18,clearcoat:.08,forceOpaque:true};
+  if(x.role==='hair'||x.semantic==='hair'||x.semantic==='eyebrow')return {roughness:.23,detail:.30,clearcoat:.10,forceOpaque:true};
+  return {roughness:.23,detail:.30,clearcoat:.10,forceOpaque:true};
+}
+function applyRuntimeMetal(rows,finish){
+  const finishColor=finish==='gold'?'#d6aa35':'#c7cdd5';
+  let changed=0;
+  for(const x of rows){
+    if(['eyeWhite','screenSurface','logoOverlay'].includes(x.semantic))continue;
+    const m=x.mat;
+    const profile=runtimeMetalProfile(x);
+    const original=runtimeMaterialSnapshots.get(m)||{};
+    const transparent=!!m.transparent||Number(m.opacity)<.98;
+    const forced=['eyelashes','helmetVisor','deviceBody','baseGraphicSurface'].includes(x.semantic);
+    if(transparent&&!forced&&!profile.preserveAlpha)continue;
+    if(m.color)m.color.set(finishColor);
+    if('map'in m)m.map=null;
+    if('roughnessMap'in m)m.roughnessMap=null;
+    if('metalnessMap'in m)m.metalnessMap=null;
+    if('emissiveMap'in m)m.emissiveMap=null;
+    if('metalness'in m)m.metalness=profile.visor?.86:1;
+    if('roughness'in m)m.roughness=profile.roughness;
+    if('envMapIntensity'in m)m.envMapIntensity=2.0;
+    if('vertexColors'in m)m.vertexColors=false;
+    if(m.emissive)m.emissive.set(0x000000);
+    if('emissiveIntensity'in m)m.emissiveIntensity=0;
+    if('clearcoat'in m)m.clearcoat=profile.clearcoat;
+    if('clearcoatRoughness'in m)m.clearcoatRoughness=Math.min(.30,profile.roughness+.02);
+    if(original.normalScale?.isVector2&&m.normalScale?.copy){
+      // Locked metal-detail control was 30%, then multiplied by semantic profile detail.
+      m.normalScale.copy(original.normalScale).multiplyScalar(.30*profile.detail);
+    }
+    if(profile.visor){
+      m.transparent=true;m.opacity=.72;m.depthWrite=false;
+      if('alphaMap'in m)m.alphaMap=null;
+      if('alphaTest'in m)m.alphaTest=0;
+      if('transmission'in m)m.transmission=.04;
+      if('thickness'in m)m.thickness=.08;
+    }else if(profile.preserveAlpha){
+      if('alphaMap'in m)m.alphaMap=original.alphaMap;
+      m.transparent=!!original.transparent;m.opacity=original.opacity??1;m.alphaTest=original.alphaTest??0;
+    }else{
+      if('alphaMap'in m)m.alphaMap=null;
+      m.transparent=false;m.opacity=1;m.depthWrite=true;
+      if('alphaTest'in m)m.alphaTest=0;
+      if('transmission'in m)m.transmission=0;
+      if('thickness'in m)m.thickness=0;
+    }
+    m.needsUpdate=true;changed++;
+  }
+  return changed;
+}
+function rebuildRuntimeAppearance(){
+  const rows=runtimeMaterialEntries();
+  for(const x of rows)restoreRuntimeMaterial(x.mat);
+  applyRuntimeProductDefaults(rows);
+  const toneCounts={
+    hair:applyTonePass(rows,'hair',runtimeToneState.hair),
+    eye:applyTonePass(rows,'eye',runtimeToneState.eye),
+    skin:applyTonePass(rows,'skin',runtimeToneState.skin)
+  };
+  const finishChanged=(runtimeFinish==='gold'||runtimeFinish==='silver')?applyRuntimeMetal(rows,runtimeFinish):0;
+  return {toneCounts,finish:runtimeFinish,finishChanged};
+}
+function applyRuntimeTone(kind,colorHex){
+  if(!['hair','eye','skin'].includes(kind))return {changed:0};
+  runtimeToneState[kind]=colorHex||null;
+  const result=rebuildRuntimeAppearance();
+  return {changed:result.toneCounts[kind]||0};
+}
+function applyRuntimeFinish(finish='base'){
+  runtimeFinish=['gold','silver'].includes(finish)?finish:'base';
+  const result=rebuildRuntimeAppearance();
+  return {finish:runtimeFinish,changed:result.finishChanged};
 }
 
 window.TappieChibizRuntime={
@@ -7887,6 +8062,9 @@ window.TappieChibizRuntime={
   setLoadout:updateRuntimeLoadout,
   mountTo:mountViewerTo,
   applyTone:applyRuntimeTone,
+  getToneState:()=>({...runtimeToneState}),
+  applyFinish:applyRuntimeFinish,
+  getFinish:()=>runtimeFinish,
   fit:()=>fit(),
   resize:()=>resize()
 };
@@ -7956,6 +8134,7 @@ if(document.readyState==='loading'){
     category:'role',toneGroup:'skin',
     originalLoadout:null,workingLoadout:null,
     originalTone:null,workingTone:null,
+    originalFinish:'base',workingFinish:'base',
     dirty:false
   };
 
@@ -7964,60 +8143,72 @@ if(document.readyState==='loading'){
     {id:'cbz_m_v1',label:'Male'},{id:'cbz_f_v1',label:'Female'}
   ];
   const hairItems=Array.from({length:11},(_,i)=>({id:`hair_${String(i).padStart(2,'0')}`,label:`Hair ${String(i).padStart(2,'0')}`}));
-  const outfitItems=Array.from({length:10},(_,i)=>({id:`outfit_${String(i).padStart(2,'0')}`,label:`Outfit ${String(i).padStart(2,'0')}`}));
-  const actionItems=[
-      {id:'pose_01',label:"Pose 01",locked:true},
-      {id:'pose_02',label:"Pose 02",locked:true},
-      {id:'pose_03',label:"Pose 03",locked:true},
-      {id:'pose_04',label:"Pose 04",locked:true},
-      {id:'pose_05',label:"Pose 05",locked:true},
-      {id:'pose_06',label:"Pose 06",locked:true},
-      {id:'pose_07',label:"Pose 07",locked:true},
-      {id:'pose_08',label:"Pose 08",locked:true},
-      {id:'pose_09',label:"Pose 09",locked:true},
-      {id:'pose_10',label:"放心交給我",locked:true},
-      {id:'pose_11',label:"Pose 11",locked:true},
-      {id:'pose_12',label:"Pose 12",locked:true},
-      {id:'pose_13',label:"Pose 13",locked:true},
-      {id:'pose_14',label:"Pose 14",locked:true},
-      {id:'pose_15',label:"Pose 15",locked:true},
-      {id:'pose_16',label:"Pose 16",locked:true},
-      {id:'pose_17',label:"Pose 17",locked:true},
-      {id:'pose_18',label:"貴賓這邊請",locked:true},
-      {id:'pose_19',label:"Pose 19",locked:true},
-      {id:'pose_20',label:"Pose 20",locked:true},
-      {id:'pose_21',label:"Pose 21",locked:true},
-      {id:'pose_22',label:"Pose 22",locked:true},
-      {id:'pose_23',label:"Pose 23",locked:true},
-      {id:'pose_24',label:"靈光一閃",locked:true},
-      {id:'pose_25',label:"Pose 25",locked:true},
-      {id:'pose_26',label:"Pose 26",locked:true},
-      {id:'pose_27',label:"Pose 27",locked:true},
-      {id:'pose_28',label:"Pose 28",locked:true},
-      {id:'pose_29',label:"Pose 29",locked:true},
-      {id:'pose_30',label:"Pose 30",locked:true},
-      {id:'pose_31',label:"Pose 31",locked:true},
-      {id:'pose_32',label:"叫我閃電",locked:false},
-      {id:'pose_33',label:"我準備好了",locked:false},
-      {id:'pose_34',label:"Pose 34",locked:true},
-      {id:'pose_35',label:"Pose 35",locked:true},
-      {id:'pose_36',label:"Pose 36",locked:true},
-      {id:'pose_37',label:"Pose 37",locked:true},
-      {id:'pose_38',label:"Pose 38",locked:true},
-      {id:'pose_39',label:"Pose 39",locked:true},
-      {id:'pose_40',label:"你聽我說",locked:true}
+  const outfitItems=[
+    {id:'outfit_00',label:"休閒帽 T／毛衣"},
+    {id:'outfit_01',label:"日常穿搭"},
+    {id:'outfit_02',label:"足球服"},
+    {id:'outfit_03',label:"美式足球服"},
+    {id:'outfit_04',label:"棒球服"},
+    {id:'outfit_05',label:"匹克球服"},
+    {id:'outfit_06',label:"網球服"},
+    {id:'outfit_07',label:"飛行外套"},
+    {id:'outfit_08',label:"冰球服"},
+    {id:'outfit_09',label:"正式西裝"}
+  ];
+  const actionCatalog=[
+    {id:'pose_01',label:"準備破陣",nameEn:"Time to Break Through"},
+    {id:'pose_02',label:"這球送得到",nameEn:"I Can Make This Throw"},
+    {id:'pose_03',label:"達陣！",nameEn:"Touchdown!"},
+    {id:'pose_04',label:"防線不能退",nameEn:"Hold the Line"},
+    {id:'pose_05',label:"撞出一條路",nameEn:"Make a Way Through"},
+    {id:'pose_06',label:"先穩住這球",nameEn:"Settle It Down"},
+    {id:'pose_07',label:"一夫當關",nameEn:"The Last Line"},
+    {id:'pose_08',label:"就是這一腳",nameEn:"This Is the One"},
+    {id:'pose_09',label:"借過一下",nameEn:"Coming Through"},
+    {id:'pose_10',label:"送進空檔",nameEn:"Into the Space"},
+    {id:'pose_11',label:"就等這一球",nameEn:"That’s the One"},
+    {id:'pose_12',label:"這次輪到我進攻",nameEn:"My Turn at the Plate"},
+    {id:'pose_13',label:"這球不會回來了",nameEn:"That One’s Not Coming Back"},
+    {id:'pose_14',label:"全部交給我",nameEn:"Leave It to Me"},
+    {id:'pose_15',label:"這球，跟得上嗎？",nameEn:"Catch Up to This"},
+    {id:'pose_16',label:"冰面讓開",nameEn:"Clear the Ice"},
+    {id:'pose_17',label:"這條路不通",nameEn:"No Way Through"},
+    {id:'pose_18',label:"這一拍剛剛好",nameEn:"Perfect Timing"},
+    {id:'pose_19',label:"紅燈亮了！",nameEn:"Light the Lamp!"},
+    {id:'pose_20',label:"一步不退",nameEn:"Standing My Ground"},
+    {id:'pose_21',label:"一拍砸下去",nameEn:"Put It Away"},
+    {id:'pose_22',label:"乾淨收下",nameEn:"Clean Winner"},
+    {id:'pose_23',label:"我早就在等了",nameEn:"I Was Ready"},
+    {id:'pose_24',label:"勝負，就在這一拍",nameEn:"This Is the Shot"},
+    {id:'pose_25',label:"球還沒落地",nameEn:"Take It in the Air"},
+    {id:'pose_26',label:"翻一圈，再接住",nameEn:"Flip It, Catch It"},
+    {id:'pose_27',label:"快讓開",nameEn:"Clear the Way"},
+    {id:'pose_28',label:"速度拉滿",nameEn:"Full Speed"},
+    {id:'pose_29',label:"腳已上弦",nameEn:"Ready to Explode"},
+    {id:'pose_30',label:"叫我閃電",nameEn:"Call Me Usain Bolt"},
+    {id:'pose_31',label:"交給我吧",nameEn:"Leave It to Me"},
+    {id:'pose_32',label:"大拇指向上",nameEn:"Thumbs Up"},
+    {id:'pose_33',label:"準備好了",nameEn:"I’m Ready"},
+    {id:'pose_34',label:"聽這個笑話",nameEn:"Listen to This One"},
+    {id:'pose_35',label:"貴賓裡面請",nameEn:"Right This Way"},
+    {id:'pose_36',label:"滑上滑下",nameEn:"Swipe Up and Down"},
+    {id:'pose_37',label:"哥哥姊姊看過來",nameEn:"Look This Way"},
+    {id:'pose_38',label:"蛤？",nameEn:"Huh?"},
+    {id:'pose_39',label:"靈光一閃",nameEn:"Aha!"},
+    {id:'pose_40',label:"你聽我說",nameEn:"Hear Me Out"}
   ];
   const collectibleItems=[
     {id:'base',label:'原始造型'},{id:'gold',label:'純金版'},{id:'silver',label:'純銀版'},{id:'jade',label:'翡翠版',locked:true},{id:'ice',label:'冰晶版',locked:true},{id:'moss',label:'苔蘚版',locked:true}
   ];
+  // Locked 6C.0.1 palettes: 10 skin / 10 hair / 10 eyes. Black eye is the product default.
   const TONES={
-    eye:[['#6f8fc7','海洋藍'],['#8893a3','霧鋼灰'],['#c99452','琥珀'],['#7fb59c','玉綠'],['#8f7cab','紫莓']],
-    skin:[['#3b2017','深棕'],['#704033','棕膚'],['#a86b55','暖棕'],['#ce9479','自然'],['#ebc0a4','柔膚'],['#f4d3b8','亮膚']],
-    hair:[['#7a5138','胡桃棕'],['#2d2e35','墨黑'],['#8d8f98','霧灰'],['#bb9052','蜂蜜金'],['#b6675e','珊瑚紅']]
+    eye:[['#232323','黑色'],['#3a241c','眼睛 02'],['#62412d','眼睛 03'],['#8b6a3f','眼睛 04'],['#2e6e68','眼睛 05'],['#3878a5','眼睛 06'],['#5a78b8','眼睛 07'],['#76944a','眼睛 08'],['#7b4d82','眼睛 09'],['#9f8b56','眼睛 10']],
+    skin:[['#3b2017','膚色 01'],['#573026','膚色 02'],['#704033','膚色 03'],['#8b5544','膚色 04'],['#a86b55','膚色 05'],['#bd8067','膚色 06'],['#ce9479','膚色 07'],['#dda98e','膚色 08'],['#ebc0a4','膚色 09'],['#f4d3b8','膚色 10']],
+    hair:[['#15110f','髮色 01'],['#2d1b15','髮色 02'],['#4a2a1e','髮色 03'],['#6b3c26','髮色 04'],['#8c5a35','髮色 05'],['#b37a45','髮色 06'],['#d2a76c','髮色 07'],['#b8492f','髮色 08'],['#263f7c','髮色 09'],['#5b39a2','髮色 10']]
   };
 
   function clone(v){return JSON.parse(JSON.stringify(v));}
-  function defaultTone(){return {eye:'#6f8fc7',skin:'#ce9479',hair:'#7a5138'};}
+  function defaultTone(){return {eye:'#232323',skin:'#ce9479',hair:'#6b3c26'};}
   function currentProvider(){return editor.workingLoadout?.provider||'cbz_m_v1';}
   function toast(message){const el=toastEl();if(!el)return;el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),1600);}
   function showLoading(text='正在更換…'){const el=loadingEl();if(el){el.textContent=text;el.classList.add('show');}}
@@ -8038,12 +8229,34 @@ if(document.readyState==='loading'){
     img.onerror=null;img.src=FALLBACK_THUMB;
   };
 
+  function normalizePoseId(value){
+    if(typeof value==='number')return `pose_${String(value).padStart(2,'0')}`;
+    const text=String(value||'').trim().toLowerCase();
+    const m=text.match(/(?:pose[_\s-]?)?(\d{1,2})$/);
+    return m?`pose_${String(Number(m[1])).padStart(2,'0')}`:text;
+  }
+  function unlockedActionIds(){
+    const ids=new Set(['pose_32','pose_33']);
+    const external=window.__TAPPIE_AVATAR_UNLOCKED_ACTIONS__;
+    if(Array.isArray(external))external.forEach(v=>ids.add(normalizePoseId(v)));
+    const current=editor.workingLoadout?.pose;if(current)ids.add(normalizePoseId(current));
+    return ids;
+  }
+  function actionItemsForDisplay(){
+    const unlocked=unlockedActionIds();
+    const rank=id=>id==='pose_32'?0:id==='pose_33'?1:unlocked.has(id)?2:3;
+    return actionCatalog.map(item=>({...item,locked:!unlocked.has(item.id)})).sort((a,b)=>{
+      const r=rank(a.id)-rank(b.id);if(r)return r;
+      return Number(a.id.slice(-2))-Number(b.id.slice(-2));
+    });
+  }
   function selectedId(category){
     const l=editor.workingLoadout||{};
     if(category==='role')return l.provider;
     if(category==='hair')return l.hair;
     if(category==='outfit')return l.outfit;
     if(category==='action')return l.pose;
+    if(category==='collectible')return editor.workingFinish||'base';
     return 'base';
   }
   function visibleHairItems(){return currentProvider()==='cbz_f_v1'?hairItems.filter(x=>x.id!=='hair_00'):hairItems;}
@@ -8051,7 +8264,7 @@ if(document.readyState==='loading'){
     if(category==='role')return roleItems;
     if(category==='hair')return visibleHairItems();
     if(category==='outfit')return outfitItems;
-    if(category==='action')return actionItems;
+    if(category==='action')return actionItemsForDisplay();
     if(category==='collectible')return collectibleItems;
     return [];
   }
@@ -8078,7 +8291,7 @@ if(document.readyState==='loading'){
     const cur=selectedId(editor.category);
     grid.innerHTML=listFor(editor.category).map(item=>{
       const url=thumbUrl(editor.category,item.id);
-      return `<button class="d32-item ${cur===item.id?'selected':''} ${item.locked?'locked':''}" type="button" onclick="selectD32Item('${editor.category}','${item.id}',${item.locked?'true':'false'})">
+      return `<button class="d32-item ${cur===item.id?'selected':''} ${item.locked?'locked':''}" type="button" title="${item.nameEn||item.label}" onclick="selectD32Item('${editor.category}','${item.id}',${item.locked?'true':'false'})">
         <img class="d32-thumb" src="${url}" alt="" loading="lazy" decoding="async" onerror="d32ThumbFallback(this)">
         <span class="d32-thumb-status">預覽待發布</span><span class="d32-label">${item.label}</span>${item.locked?'<span class="d32-lock">🔒</span>':''}
       </button>`;
@@ -8090,6 +8303,7 @@ if(document.readyState==='loading'){
     if(!editor.workingLoadout)return;
     await window.TappieChibizRuntime?.setLoadout(clone(editor.workingLoadout));
     for(const kind of ['hair','eye','skin']) window.TappieChibizRuntime?.applyTone(kind,editor.workingTone[kind]);
+    window.TappieChibizRuntime?.applyFinish(editor.workingFinish||'base');
   }
 
   window.setD32Category=function(category){editor.category=category;render();document.getElementById('d32-grid')?.scrollTo(0,0);};
@@ -8103,7 +8317,13 @@ if(document.readyState==='loading'){
 
   window.selectD32Item=async function(category,id,locked){
     if(locked){toast('尚未解鎖');return;}
-    if(category==='collectible'){toast(id==='base'?'已選原始造型':'Finish Recipe 將於下一階段接入');setDirty(true);render();return;}
+    if(category==='collectible'){
+      editor.workingFinish=id;
+      const result=window.TappieChibizRuntime?.applyFinish(id);
+      setDirty(true);render();
+      toast(id==='base'?'已切回原始造型':id==='gold'?'正在預覽純金版':'正在預覽純銀版');
+      return;
+    }
     try{
       showLoading();
       if(category==='role') editor.workingLoadout.provider=id;
@@ -8122,6 +8342,7 @@ if(document.readyState==='loading'){
     try{
       editor.workingLoadout=clone(editor.originalLoadout);
       editor.workingTone=clone(editor.originalTone||defaultTone());
+      editor.workingFinish=editor.originalFinish||'base';
       await applyWorkingToRuntime();
     }finally{hideLoading();}
   }
@@ -8131,9 +8352,10 @@ if(document.readyState==='loading'){
     const runtimeLoadout=window.TappieChibizRuntime?.getLoadout?.()||{provider:'cbz_m_v1',pose:'pose_32',outfit:'outfit_00',hair:'hair_01'};
     editor.originalLoadout=clone(runtimeLoadout);editor.workingLoadout=clone(runtimeLoadout);
     editor.originalTone=clone(window.__TAPPIE_AVATAR_TONE__||defaultTone());editor.workingTone=clone(editor.originalTone);
+    editor.originalFinish=window.TappieChibizRuntime?.getFinish?.()||window.__TAPPIE_AVATAR_FINISH__||'base';editor.workingFinish=editor.originalFinish;
     editor.category='role';setDirty(false);render();
     dressing()?.classList.add('show');dressing()?.setAttribute('aria-hidden','false');
-    requestAnimationFrame(()=>window.TappieChibizRuntime?.mountTo('d32-viewer'));
+    requestAnimationFrame(()=>{initD322Drawer(true);window.TappieChibizRuntime?.mountTo('d32-viewer');});
   };
 
   window.cancelD32DressingRoom=async function(){
@@ -8154,6 +8376,7 @@ if(document.readyState==='loading'){
       eyeTone:editor.workingTone.eye,
       skinTone:editor.workingTone.skin,
       hairTone:editor.workingTone.hair,
+      finishRecipe:editor.workingFinish||'base',
       outfitVariant:null,actionVariant:null,
       savedAt:new Date().toISOString()
     };
@@ -8162,8 +8385,9 @@ if(document.readyState==='loading'){
       if(window.TappieAvatarLoadoutAdapter?.save) await window.TappieAvatarLoadoutAdapter.save(payload);
       window.__TAPPIE_D32_SAVE_PAYLOAD__=clone(payload);
       window.__TAPPIE_AVATAR_TONE__=clone(editor.workingTone);
+      window.__TAPPIE_AVATAR_FINISH__=editor.workingFinish||'base';
       window.dispatchEvent(new CustomEvent('tappie:avatar-loadout-save',{detail:clone(payload)}));
-      editor.originalLoadout=clone(editor.workingLoadout);editor.originalTone=clone(editor.workingTone);setDirty(false);
+      editor.originalLoadout=clone(editor.workingLoadout);editor.originalTone=clone(editor.workingTone);editor.originalFinish=editor.workingFinish||'base';setDirty(false);
       const result=document.getElementById('d32-save-result');if(result){result.textContent='已儲存目前外觀';result.classList.add('show');setTimeout(()=>result.classList.remove('show'),1100);}
       setTimeout(()=>{
         dressing()?.classList.remove('show');dressing()?.setAttribute('aria-hidden','true');
@@ -8173,6 +8397,65 @@ if(document.readyState==='loading'){
     }catch(error){console.error('[D3.2 save]',error);toast('儲存失敗，請稍後再試');}
     finally{button?.classList.remove('is-saving');}
   };
+
+  // D3.2.2 draggable catalog drawer. Default is lower than D3.2.1; maximum equals roughly the former height.
+  let drawerBound=false,drawerStartY=0,drawerStartHeight=0,drawerPointer=null;
+  function drawerMetrics(){
+    const shell=document.querySelector('#dressing-room-overlay .dressing-room-shell');
+    const catalog=document.getElementById('d32-catalog')||document.querySelector('#dressing-room-overlay .d32-catalog');
+    if(!shell||!catalog)return null;
+    const shellH=shell.getBoundingClientRect().height;
+    const available=Math.max(300,shellH-58);
+    return{shell,catalog,shellH,available,min:Math.max(225,available*.24),max:Math.max(260,available*.46)};
+  }
+  function setDrawerHeight(px,refit=true){
+    const m=drawerMetrics();if(!m)return;
+    const h=Math.max(m.min,Math.min(m.max,px));
+    m.shell.style.setProperty('--d322-drawer-height',`${h}px`);
+    if(refit)requestAnimationFrame(()=>{window.TappieChibizRuntime?.resize?.();window.TappieChibizRuntime?.fit?.();});
+  }
+  function initD322Drawer(reset=false){
+    const handle=document.getElementById('d32-drawer-handle');const m=drawerMetrics();if(!handle||!m)return;
+    if(reset||!m.shell.style.getPropertyValue('--d322-drawer-height'))setDrawerHeight(m.available*.34,false);
+    if(drawerBound)return;drawerBound=true;
+    handle.addEventListener('pointerdown',event=>{
+      const now=drawerMetrics();if(!now)return;
+      drawerPointer=event.pointerId;drawerStartY=event.clientY;drawerStartHeight=now.catalog.getBoundingClientRect().height;
+      handle.classList.add('dragging');handle.setPointerCapture?.(event.pointerId);event.preventDefault();
+    });
+    handle.addEventListener('pointermove',event=>{
+      if(drawerPointer!==event.pointerId)return;
+      setDrawerHeight(drawerStartHeight-(event.clientY-drawerStartY),true);event.preventDefault();
+    });
+    const end=event=>{if(drawerPointer!==event.pointerId)return;drawerPointer=null;handle.classList.remove('dragging');try{handle.releasePointerCapture?.(event.pointerId)}catch(_){}};
+    handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+    handle.addEventListener('keydown',event=>{
+      if(!['ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+      const now=drawerMetrics();if(!now)return;event.preventDefault();
+      const current=now.catalog.getBoundingClientRect().height;
+      if(event.key==='ArrowUp')setDrawerHeight(current+36);
+      if(event.key==='ArrowDown')setDrawerHeight(current-36);
+      if(event.key==='Home')setDrawerHeight(now.min);
+      if(event.key==='End')setDrawerHeight(now.max);
+    });
+  }
+  window.initD322Drawer=initD322Drawer;
+
+  // Restore the D2.2/D3.1 Challenge chooser handlers that were accidentally dropped during D3.2 restructuring.
+  (function restoreChallengeChooser(){
+    const overlay=()=>document.getElementById('challenge-mode-overlay');
+    const modal=()=>document.getElementById('challenge-room-modal');
+    const roomList=()=>document.getElementById('challenge-room-list');
+    let chooserOverflow='',selectedClass='E1';
+    function chooserToast(message){const el=document.getElementById('challenge-d2-toast');if(!el)return;el.textContent=message;el.classList.add('show');clearTimeout(chooserToast.timer);chooserToast.timer=setTimeout(()=>el.classList.remove('show'),1600);}
+    window.openChallengeModeChooser=function(){chooserOverflow=document.body.style.overflow;document.body.style.overflow='hidden';overlay()?.classList.add('show');overlay()?.setAttribute('aria-hidden','false');overlay()?.querySelector('.challenge-mode-page')?.scrollTo(0,0);};
+    window.closeChallengeModeChooser=function(){window.closeChallengeRoomModal?.();overlay()?.classList.remove('show');overlay()?.setAttribute('aria-hidden','true');if(!dressing()?.classList.contains('show'))document.body.style.overflow=chooserOverflow||'';};
+    window.openChallengeRoomModal=function(){modal()?.classList.add('show');modal()?.setAttribute('aria-hidden','false');};
+    window.closeChallengeRoomModal=function(){modal()?.classList.remove('show');modal()?.setAttribute('aria-hidden','true');};
+    window.selectChallengeClass=function(button){selectedClass=button?.dataset?.class||'E1';document.querySelectorAll('.challenge-class-chip').forEach(el=>el.classList.toggle('selected',el===button));const cap=document.getElementById('challenge-class-caption');if(cap)cap.textContent=`已選擇 ${selectedClass}`;button?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});};
+    window.demoCreateChallengeRoom=function(){const list=roomList();if(!list)return;document.getElementById('challenge-room-empty')?.remove();const existing=list.querySelector(`[data-demo-room="${selectedClass}"]`);if(existing){chooserToast(`${selectedClass} 房間已存在`);window.closeChallengeRoomModal();return;}const item=document.createElement('div');item.className='challenge-room-item';item.dataset.demoRoom=selectedClass;item.innerHTML=`<div class="challenge-room-dot">${selectedClass}</div><div class="challenge-room-copy"><div class="challenge-room-name">${selectedClass} 挑戰房間</div><div class="challenge-room-meta">等待同學加入</div></div><button class="challenge-room-join" type="button">等待中</button>`;list.prepend(item);window.__TAPPIE_D322_ROOM__={classCode:selectedClass,status:'waiting',demoOnly:true,at:new Date().toISOString()};window.closeChallengeRoomModal();chooserToast(`${selectedClass} 房間已開啟`);};
+    window.selectChallengeAI=function(level){const labels={easy:'簡單',normal:'一般',hard:'困難'};window.__TAPPIE_D322_AI__={difficulty:level,label:labels[level]||level,at:new Date().toISOString()};chooserToast(`已選擇 ${labels[level]||level}`);};
+  })();
 
   // compatibility name
   window.closeChallengeDressingRoom=window.cancelD32DressingRoom;
