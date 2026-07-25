@@ -20,6 +20,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_4_SAFE_FRAMING_STABLE_DRAWER_STUDIO_METAL_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_5_PERSISTENT_SELECTED_ORIGINAL_METAL_STUDIOENV_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_6_COLLECTIBLE_DUALTRACK_OCEAN_80ACTIONFINISH_20260726 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_2_7_UNIFIED_AVATAR_FRAMING_CONTRACT_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -3889,6 +3890,29 @@ body > .dressing-room-overlay .d32-subtab.active{
 }
 
 </style>
+
+<style id="tappie-d327-style">
+
+/* =========================================================
+   D3.2.7｜Unified Avatar Framing Interaction Contract
+   ========================================================= */
+
+/* 3D viewers own their gesture area: no page pan / pinch zoom.
+   OrbitControls handles horizontal + small vertical inspection only. */
+body.challenge-route-active #challenge-golden-viewer,
+body.challenge-route-active #challenge-golden-viewer canvas,
+body > .dressing-room-overlay #d32-viewer,
+body > .dressing-room-overlay #d32-viewer canvas{
+  touch-action:none !important;
+  overscroll-behavior:none !important;
+}
+
+/* Catalog remains independently scrollable. */
+body > .dressing-room-overlay .d32-grid{
+  touch-action:pan-y !important;
+}
+
+</style>
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -7652,6 +7676,7 @@ let selected={
 };
 
 let scene,renderer,camera,controls,group,KTX,studioEnv;
+const AVATAR_ORBIT_VERTICAL_LIMIT=THREE.MathUtils.degToRad(9);
 let ctxLost=false,initialized=false,loaded=false,loading=false,active=false,rafId=null;
 let lastDiagnostic=null;
 let currentViewerHostId='challenge-golden-viewer';
@@ -7732,12 +7757,21 @@ function setup(){
   controls.enablePan=false;
   controls.enableZoom=false;
   controls.zoomSpeed=0;
-  controls.minPolarAngle=Math.PI*0.40;
-  controls.maxPolarAngle=Math.PI*0.60;
+  applyAvatarOrbitContract();
 
   resize();
   window.addEventListener('resize',resize,{passive:true});
   initialized=true;
+}
+
+
+function applyAvatarOrbitContract(){
+  if(!controls)return;
+  controls.enablePan=false;
+  controls.enableZoom=false;
+  controls.zoomSpeed=0;
+  controls.minPolarAngle=Math.PI*.5-AVATAR_ORBIT_VERTICAL_LIMIT;
+  controls.maxPolarAngle=Math.PI*.5+AVATAR_ORBIT_VERTICAL_LIMIT;
 }
 
 function resize(){
@@ -7777,53 +7811,266 @@ function dispose(g){
   g.parent?.remove(g);
 }
 
-function fit(){
-  if(!group||!camera||!controls)return;
-  const b=new THREE.Box3().setFromObject(group);
-  const size=b.getSize(new THREE.Vector3());
-  const center=b.getCenter(new THREE.Vector3());
 
-  // Calculate a real camera-fit distance from both vertical and horizontal FOV.
-  // This is more reliable than using max-dimension only, especially on narrow phones.
-  const vFov=THREE.MathUtils.degToRad(camera.fov);
-  const hFov=2*Math.atan(Math.tan(vFov/2)*Math.max(.01,camera.aspect));
-  const distV=(Math.max(size.y,1e-4)*.5)/Math.tan(vFov*.5);
-  const distH=(Math.max(size.x,1e-4)*.5)/Math.tan(hFov*.5);
-  const safeBase=Math.max(distV,distH)+Math.max(size.z,1e-4)*.55;
+const AVATAR_FRAMING_CONTRACT={
+  version:'1.0',
+  referencePose:'pose_32',
+  referenceOutfit:'outfit_00',
+  propRetreatMax:.12,
+  verticalOrbitDeg:9,
+  challengeMultiplier:1.34,
+  editorLargeMultiplier:1.08,
+  editorSmallMultiplier:1.40,
+  editorScaleFreezeDrawerRatio:.46,
+  characterSafeFill:.90,
+  sceneSafeFill:.95
+};
 
-  const inEditor=currentViewerHostId==='d32-viewer';
-  let distance;
-  const target=center.clone();
+const canonicalFrameCache=new Map();
+let lastFramingDiagnostic=null;
 
-  if(inEditor){
-    // Drawer down: avatar grows, but still keeps head + feet visible.
-    // Drawer up: avatar shrinks only until 46%; above that size freezes.
-    const rawRatio=Number(window.__TAPPIE_D322_DRAWER_RATIO__ ?? .34);
-    const visualRatio=Math.max(.045,Math.min(.46,rawRatio));
-    const t=Math.max(0,Math.min(1,(visualRatio-.045)/.415));
-    distance=safeBase*(1.22+(1.52-1.22)*t);
-    target.y-=size.y*.008;
-  }else{
-    // Challenge hero: deliberately a little smaller and higher than D3.2.3
-    // so neither shoes nor hair can sit behind fixed UI.
-    distance=safeBase*1.42;
-    target.y-=size.y*.075;
+function framingFiniteBox(box){
+  return box && !box.isEmpty() &&
+    [box.min.x,box.min.y,box.min.z,box.max.x,box.max.y,box.max.z].every(Number.isFinite);
+}
+
+function framingObjectSemantics(o){
+  const role=o?.userData?.tappieRole||'';
+  const mats=Array.isArray(o?.material)?o.material:[o?.material];
+  return mats.filter(Boolean).map(mat=>runtimeSemantic(o,mat,role));
+}
+
+function isCharacterMeshForFraming(o){
+  if(!(o?.isMesh||o?.isSkinnedMesh))return false;
+  if(o.visible===false)return false;
+  const role=o.userData?.tappieRole||'';
+
+  // These three modular layers are always part of the avatar body silhouette.
+  if(['body','outfit','hair'].includes(role))return true;
+
+  // Core also contains props in some poses. Only include confirmed character
+  // semantics from Core; device/screen/unknown props must not control scale.
+  if(role==='core'){
+    const semantics=framingObjectSemantics(o);
+    return semantics.some(s=>[
+      'skin','iris','eyeWhite','eyelashes','eyebrow','hair','helmetVisor'
+    ].includes(s));
+  }
+  return false;
+}
+
+function collectFramingBounds(root,predicate){
+  const box=new THREE.Box3();
+  let count=0;
+  root?.updateWorldMatrix?.(true,true);
+  root?.traverse?.(o=>{
+    if(!predicate(o))return;
+    const part=new THREE.Box3().setFromObject(o);
+    if(!framingFiniteBox(part))return;
+    box.union(part);
+    count++;
+  });
+  return {box,count};
+}
+
+function getCurrentAvatarBounds(){
+  const result=collectFramingBounds(group,isCharacterMeshForFraming);
+  if(result.count>0 && framingFiniteBox(result.box))return result.box;
+
+  // Safety fallback: should only happen if a provider naming contract changes.
+  return new THREE.Box3().setFromObject(group);
+}
+
+function getCurrentSceneBounds(){
+  return new THREE.Box3().setFromObject(group);
+}
+
+function makeCanonicalProfile(box,source='runtime'){
+  const size=box.getSize(new THREE.Vector3());
+  const center=box.getCenter(new THREE.Vector3());
+  return{
+    source,
+    height:Math.max(size.y,1e-4),
+    width:Math.max(size.x,1e-4),
+    depth:Math.max(size.z,1e-4),
+    centerY:center.y
+  };
+}
+
+function captureCanonicalFrameFromCurrentGroup(){
+  if(
+    !group ||
+    selected.pose!==AVATAR_FRAMING_CONTRACT.referencePose ||
+    selected.outfit!==AVATAR_FRAMING_CONTRACT.referenceOutfit
+  )return null;
+
+  const body=getRoleRoot('body');
+  if(!body)return null;
+  const box=new THREE.Box3().setFromObject(body);
+  if(!framingFiniteBox(box))return null;
+
+  const profile=makeCanonicalProfile(box,'current-pose32-body');
+  canonicalFrameCache.set(selected.provider,profile);
+  return profile;
+}
+
+async function ensureCanonicalFrame(provider){
+  const cached=canonicalFrameCache.get(provider);
+  if(cached)return cached;
+
+  // Fast path when the current assembled avatar already is the canonical reference.
+  if(provider===selected.provider){
+    const captured=captureCanonicalFrameFromCurrentGroup();
+    if(captured)return captured;
   }
 
-  // Keep current horizontal viewing angle where possible.
+  // Only one small Body module is needed. This is NOT another full avatar viewer.
+  const url=
+    `${BASE}providers/${provider}/poses/${AVATAR_FRAMING_CONTRACT.referencePose}`+
+    `/body/${AVATAR_FRAMING_CONTRACT.referenceOutfit}/module.glb`;
+
+  const gltf=await loader().loadAsync(url);
+  const box=new THREE.Box3().setFromObject(gltf.scene);
+  const profile=framingFiniteBox(box)
+    ? makeCanonicalProfile(box,'pose32-body-reference')
+    : null;
+  dispose(gltf.scene);
+
+  if(profile){
+    canonicalFrameCache.set(provider,profile);
+    return profile;
+  }
+  return null;
+}
+
+function currentCanonicalFrame(){
+  const cached=canonicalFrameCache.get(selected.provider);
+  if(cached)return cached;
+
+  // Provisional only. It is replaced by pose32 body reference as soon as available.
+  const body=getRoleRoot('body');
+  if(body){
+    const box=new THREE.Box3().setFromObject(body);
+    if(framingFiniteBox(box))return makeCanonicalProfile(box,'provisional-current-body');
+  }
+  const avatarBox=getCurrentAvatarBounds();
+  return makeCanonicalProfile(avatarBox,'provisional-avatar');
+}
+
+function cameraBaseDistanceFromCanonical(profile){
+  const vFov=THREE.MathUtils.degToRad(camera.fov);
+  const hFov=2*Math.atan(Math.tan(vFov*.5)*Math.max(.01,camera.aspect));
+  const distV=(profile.height*.5)/Math.tan(vFov*.5);
+  const distH=(profile.width*.5)/Math.tan(hFov*.5);
+  return Math.max(distV,distH)+profile.depth*.55;
+}
+
+function framingOverflowFactor(box,distance,safeFill){
+  if(!framingFiniteBox(box))return 1;
+  const size=box.getSize(new THREE.Vector3());
+  const vFov=THREE.MathUtils.degToRad(camera.fov);
+  const hFov=2*Math.atan(Math.tan(vFov*.5)*Math.max(.01,camera.aspect));
+  const visibleH=2*distance*Math.tan(vFov*.5);
+  const visibleW=2*distance*Math.tan(hFov*.5);
+  return Math.max(
+    1,
+    size.y/Math.max(1e-4,visibleH*safeFill),
+    size.x/Math.max(1e-4,visibleW*safeFill)
+  );
+}
+
+function fit(){
+  if(!group||!camera||!controls)return;
+
+  applyAvatarOrbitContract();
+
+  const avatarBox=getCurrentAvatarBounds();
+  const sceneBox=getCurrentSceneBounds();
+  const avatarSize=avatarBox.getSize(new THREE.Vector3());
+  const avatarCenter=avatarBox.getCenter(new THREE.Vector3());
+  const profile=currentCanonicalFrame();
+
+  const inEditor=currentViewerHostId==='d32-viewer';
+  let viewerMultiplier;
+
+  if(inEditor){
+    const rawRatio=Number(window.__TAPPIE_D322_DRAWER_RATIO__ ?? .34);
+    const visualRatio=Math.max(.045,Math.min(
+      AVATAR_FRAMING_CONTRACT.editorScaleFreezeDrawerRatio,
+      rawRatio
+    ));
+    const t=Math.max(0,Math.min(
+      1,
+      (visualRatio-.045)/
+      (AVATAR_FRAMING_CONTRACT.editorScaleFreezeDrawerRatio-.045)
+    ));
+    viewerMultiplier=
+      AVATAR_FRAMING_CONTRACT.editorLargeMultiplier+
+      (AVATAR_FRAMING_CONTRACT.editorSmallMultiplier-
+       AVATAR_FRAMING_CONTRACT.editorLargeMultiplier)*t;
+  }else{
+    viewerMultiplier=AVATAR_FRAMING_CONTRACT.challengeMultiplier;
+  }
+
+  const canonicalDistance=cameraBaseDistanceFromCanonical(profile);
+  let distance=canonicalDistance*viewerMultiplier;
+
+  // Character scale stays pose-independent. Only extreme character width or
+  // props are allowed to push the camera back, and the TOTAL retreat is capped.
+  const avatarNeed=framingOverflowFactor(
+    avatarBox,distance,AVATAR_FRAMING_CONTRACT.characterSafeFill
+  );
+  const sceneNeed=framingOverflowFactor(
+    sceneBox,distance,AVATAR_FRAMING_CONTRACT.sceneSafeFill
+  );
+  const retreat=Math.min(
+    1+AVATAR_FRAMING_CONTRACT.propRetreatMax,
+    Math.max(1,avatarNeed,sceneNeed)
+  );
+  distance*=retreat;
+
+  // Current pose controls composition center, not scale.
+  // Crouching therefore looks genuinely lower/shorter; it is not zoomed up.
+  const target=avatarCenter.clone();
+  target.y-=profile.height*(inEditor?.012:.060);
+
   const azimuth=Number.isFinite(controls.getAzimuthalAngle?.())
     ? controls.getAzimuthalAngle()
     : 0;
-  const elevation=inEditor ? size.y*.018 : size.y*.025;
+  const polarRaw=Number.isFinite(controls.getPolarAngle?.())
+    ? controls.getPolarAngle()
+    : Math.PI*.5;
+  const polar=THREE.MathUtils.clamp(
+    polarRaw,
+    controls.minPolarAngle,
+    controls.maxPolarAngle
+  );
+
+  const sinPhi=Math.sin(polar);
   camera.position.set(
-    center.x + Math.sin(azimuth)*distance,
-    center.y + elevation,
-    center.z + Math.cos(azimuth)*distance
+    target.x + Math.sin(azimuth)*sinPhi*distance,
+    target.y + Math.cos(polar)*distance,
+    target.z + Math.cos(azimuth)*sinPhi*distance
   );
 
   controls.target.copy(target);
   controls.update();
+
+  lastFramingDiagnostic={
+    provider:selected.provider,
+    pose:selected.pose,
+    outfit:selected.outfit,
+    canonical:{...profile},
+    avatarSize:{x:avatarSize.x,y:avatarSize.y,z:avatarSize.z},
+    sceneSize:(()=>{const s=sceneBox.getSize(new THREE.Vector3());return{x:s.x,y:s.y,z:s.z};})(),
+    viewer:inEditor?'editor':'challenge',
+    drawerRatio:Number(window.__TAPPIE_D322_DRAWER_RATIO__ ?? .34),
+    viewerMultiplier,
+    retreatFactor:retreat,
+    verticalOrbitDeg:AVATAR_FRAMING_CONTRACT.verticalOrbitDeg
+  };
 }
+
 
 function hexPrefix(bytes,count=16){
   return [...bytes.slice(0,count)].map(v=>v.toString(16).padStart(2,'0')).join(' ');
@@ -7990,6 +8237,7 @@ async function loadGoldenCharacter(){
     group=next;
     scene.add(group);
     rebuildRuntimeAppearance();
+    await ensureCanonicalFrame(selected.provider);
     fit();
     loaded=true;
     hideDiagnostic();
@@ -8075,6 +8323,7 @@ async function reloadCurrentLoadout(){
     group=next;
     scene.add(group);
     rebuildRuntimeAppearance();
+    await ensureCanonicalFrame(selected.provider);
     fit();
     loaded=true;
     return {ok:true,selected:{...selected}};
@@ -8108,7 +8357,10 @@ async function updateRuntimeLoadout(patch={}){
       if(hairChanged){
         await replaceRoleModule('hair',u.hair);
       }
-      if(outfitChanged || hairChanged) fit();
+      if(outfitChanged || hairChanged){
+        applyAvatarOrbitContract();
+        fit();
+      }
     }
     return {ok:true,selected:{...selected}};
   } catch(error){
@@ -8125,12 +8377,9 @@ function mountViewerTo(hostId){
   currentViewerHostId=hostId;
   host.replaceChildren(renderer.domElement);
   if(controls){
-    // D3.2.3: horizontal rotation only. No vertical orbit and no zoom.
-    controls.minPolarAngle = Math.PI * .5;
-    controls.maxPolarAngle = Math.PI * .5;
-    controls.enablePan = false;
-    controls.enableZoom = false;
-    controls.zoomSpeed = 0;
+    // D3.2.7 unified viewer interaction contract.
+    // Horizontal free rotation, small vertical inspection range, no zoom.
+    applyAvatarOrbitContract();
   }
   requestAnimationFrame(()=>{ resize(); fit(); });
   return true;
@@ -8412,7 +8661,10 @@ window.TappieChibizRuntime={
   getActionVariant:()=>runtimeActionVariant?{...runtimeActionVariant}:null,
   setVariantState:setRuntimeVariantState,
   fit:()=>fit(),
-  resize:()=>resize()
+  resize:()=>resize(),
+  getFramingContract:()=>({...AVATAR_FRAMING_CONTRACT}),
+  getFramingDiagnostic:()=>lastFramingDiagnostic?JSON.parse(JSON.stringify(lastFramingDiagnostic)):null,
+  ensureCanonicalFrame:(provider=selected.provider)=>ensureCanonicalFrame(provider)
 };
 
 window.TappieD1R1={
@@ -9065,6 +9317,22 @@ window.selectD32Item=async function(category,id,locked){
       outfit:window.TappieChibizRuntime?.getOutfitVariant?.()||null,
       action:window.TappieChibizRuntime?.getActionVariant?.()||null
     };}
+  };
+})();
+
+</script>
+
+<script id="tappie-d327-js">
+
+(function(){
+  window.TappieD327={
+    version:'D3.2.7',
+    contract(){
+      return window.TappieChibizRuntime?.getFramingContract?.()||null;
+    },
+    diagnostic(){
+      return window.TappieChibizRuntime?.getFramingDiagnostic?.()||null;
+    }
   };
 })();
 
