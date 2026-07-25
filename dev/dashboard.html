@@ -11,6 +11,7 @@
 <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D0_NAVIGATION_RESTRUCTURE_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D1R_1_ASSET_DIAGNOSTIC_UNIT_UI_RESTORE_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D2_CHALLENGE_MODE_CHOOSER_20260725 -->
 <!-- TAPPIE_ICON_SYSTEM_V5_OBJECT_FIRST_20260717 -->
 <!-- TAPPIE_LEADERBOARD_2_5D_REWARD_FULLSCREEN_V1_5_20260716 -->
 <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
@@ -2849,6 +2850,378 @@ body.challenge-route-active .challenge-route-action-dock {
 }
 </script>
 
+
+<style id="tappie-d2-challenge-mode-css">
+
+/* =========================================================
+   Phase D2｜Challenge Mode Chooser
+   Front-end UX shell only. No real room/AI backend wiring yet.
+   ========================================================= */
+
+.challenge-mode-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: none;
+  background: rgba(238,245,252,.88);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  opacity: 0;
+  transition: opacity .22s ease;
+}
+.challenge-mode-overlay.show {
+  display: block;
+  opacity: 1;
+}
+
+.challenge-mode-page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding:
+    calc(env(safe-area-inset-top) + 18px)
+    16px
+    calc(env(safe-area-inset-bottom) + 28px);
+}
+
+.challenge-mode-page::-webkit-scrollbar { display: none; }
+
+.challenge-mode-shell {
+  width: min(100%, 680px);
+  margin: 0 auto;
+}
+
+.challenge-mode-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  min-height: 58px;
+  margin: -4px 0 14px;
+  background: linear-gradient(180deg, rgba(238,245,252,.98), rgba(238,245,252,.84) 72%, transparent);
+}
+
+.challenge-mode-back {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255,255,255,.95);
+  border-radius: 16px;
+  background: rgba(255,255,255,.78);
+  color: #405468;
+  box-shadow: 0 7px 18px rgba(43,68,95,.08), inset 0 1px 0 rgba(255,255,255,1);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+.challenge-mode-back:active { transform: scale(.96); }
+
+.challenge-mode-title {
+  margin: 0;
+  text-align: center;
+  color: var(--text-main);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: 2px;
+}
+.challenge-mode-spacer { width: 42px; height: 42px; }
+
+.challenge-mode-intro {
+  margin: 2px 6px 18px;
+  color: #8190a0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.challenge-mode-section {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.94);
+  border-radius: 28px;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 14px 32px rgba(38,67,96,.07), inset 0 1px 0 rgba(255,255,255,1);
+}
+.challenge-mode-section::before {
+  content: "";
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  border-radius: 999px;
+  filter: blur(42px);
+  pointer-events: none;
+  opacity: .56;
+}
+.challenge-mode-section.friend::before {
+  top: -95px;
+  right: -70px;
+  background: rgba(46,204,113,.17);
+}
+.challenge-mode-section.ai::before {
+  bottom: -110px;
+  left: -70px;
+  background: rgba(0,102,204,.15);
+}
+
+.challenge-mode-section-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.challenge-mode-section-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  background: rgba(255,255,255,.86);
+  border: 1px solid rgba(255,255,255,.98);
+  box-shadow: 0 7px 18px rgba(41,73,105,.08);
+  font-size: 22px;
+}
+.challenge-mode-section-title {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: 1px;
+}
+.challenge-mode-section-sub {
+  margin: 3px 0 0;
+  color: #8794a2;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.challenge-friend-open {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 56px;
+  border: 0;
+  border-radius: 19px;
+  background: linear-gradient(135deg, #28b869, #40cf81);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(46,204,113,.20), inset 0 1px 0 rgba(255,255,255,.32);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+.challenge-friend-open:active { transform: scale(.98); }
+
+.challenge-room-block {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
+}
+.challenge-room-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+.challenge-room-heading strong {
+  color: #495a6d;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.challenge-room-refresh {
+  border: 0;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.035);
+  color: #8794a2;
+  font-size: 11px;
+  font-weight: 900;
+}
+.challenge-room-list {
+  display: grid;
+  gap: 9px;
+}
+.challenge-empty-state {
+  padding: 18px 14px;
+  border: 1px dashed rgba(89,111,132,.18);
+  border-radius: 17px;
+  background: rgba(248,251,254,.72);
+  color: #94a0ad;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.6;
+}
+.challenge-room-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 13px;
+  border: 1px solid rgba(255,255,255,.98);
+  border-radius: 17px;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 6px 15px rgba(43,69,96,.05);
+}
+.challenge-room-badge {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(46,204,113,.10);
+  font-size: 18px;
+}
+.challenge-room-copy {
+  min-width: 0;
+  flex: 1;
+}
+.challenge-room-name {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 950;
+}
+.challenge-room-meta {
+  margin-top: 2px;
+  color: #929eaa;
+  font-size: 11px;
+  font-weight: 800;
+}
+.challenge-room-join {
+  border: 0;
+  border-radius: 13px;
+  padding: 9px 11px;
+  background: rgba(46,204,113,.10);
+  color: #229454;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.challenge-ai-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.challenge-ai-card {
+  min-height: 96px;
+  box-sizing: border-box;
+  padding: 13px 8px 11px;
+  border: 1px solid rgba(255,255,255,.98);
+  border-radius: 20px;
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 8px 18px rgba(43,70,98,.06), inset 0 1px 0 rgba(255,255,255,1);
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+}
+.challenge-ai-card:active { transform: scale(.97); }
+.challenge-ai-icon {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 24px;
+  line-height: 1;
+}
+.challenge-ai-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: 1px;
+}
+.challenge-ai-sub {
+  display: block;
+  margin-top: 4px;
+  color: #93a0ad;
+  font-size: 10px;
+  font-weight: 850;
+}
+.challenge-ai-card.easy { box-shadow: 0 8px 18px rgba(46,204,113,.07), inset 0 1px 0 #fff; }
+.challenge-ai-card.normal { box-shadow: 0 8px 18px rgba(0,102,204,.07), inset 0 1px 0 #fff; }
+.challenge-ai-card.hard { box-shadow: 0 8px 18px rgba(231,76,60,.07), inset 0 1px 0 #fff; }
+
+.challenge-subpage {
+  position: fixed;
+  inset: 0;
+  z-index: 5200;
+  display: none;
+  background: rgba(239,246,253,.97);
+}
+.challenge-subpage.show { display: block; }
+.challenge-subpage-inner {
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding:
+    calc(env(safe-area-inset-top) + 18px)
+    16px
+    calc(env(safe-area-inset-bottom) + 28px);
+}
+.challenge-subpage-shell {
+  width: min(100%, 620px);
+  margin: 0 auto;
+}
+.challenge-subpage-card {
+  margin-top: 14px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.95);
+  border-radius: 28px;
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 14px 32px rgba(38,67,96,.07);
+}
+.challenge-class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.challenge-class-placeholder {
+  grid-column: 1 / -1;
+  padding: 22px 15px;
+  border-radius: 18px;
+  border: 1px dashed rgba(65,87,108,.18);
+  color: #8c99a6;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.7;
+}
+
+.challenge-d2-toast {
+  position: fixed;
+  z-index: 6000;
+  left: 50%;
+  bottom: max(36px, env(safe-area-inset-bottom) + 24px);
+  transform: translate(-50%, 12px);
+  width: max-content;
+  max-width: 82vw;
+  padding: 11px 16px;
+  border-radius: 15px;
+  background: rgba(25,35,46,.90);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: .22s ease;
+}
+.challenge-d2-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+</style>
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -3075,7 +3448,7 @@ body.challenge-route-active .challenge-route-action-dock {
 </div>
 
 <div class="challenge-route-action-dock">
-<button class="single-route-start challenge-route-start-button" type="button" onclick="openChallengeChooser()">
+<button class="single-route-start challenge-route-start-button" type="button" onclick="openChallengeModeChooser()">
 <div class="single-route-start-card">
 <div class="single-route-start-action">
 <span class="single-route-start-main">開始挑戰</span>
@@ -3086,6 +3459,101 @@ body.challenge-route-active .challenge-route-action-dock {
 
 <div class="challenge-runtime-diagnostic" id="challenge-runtime-diagnostic" aria-live="assertive"></div>
 <div class="challenge-phase-toast" id="challenge-phase-toast" aria-live="polite"></div>
+<div class="challenge-mode-overlay" id="challenge-mode-overlay" aria-hidden="true">
+  <div class="challenge-mode-page">
+    <div class="challenge-mode-shell">
+      <div class="challenge-mode-topbar">
+        <button class="challenge-mode-back" type="button" onclick="closeChallengeModeChooser()" aria-label="返回">‹</button>
+        <h2 class="challenge-mode-title">選擇挑戰方式</h2>
+        <div class="challenge-mode-spacer" aria-hidden="true"></div>
+      </div>
+
+      <p class="challenge-mode-intro">選一種方式開始。房間、班級與 AI 真正資料會在後續階段接入。</p>
+
+      <section class="challenge-mode-section friend">
+        <div class="challenge-mode-section-head">
+          <div class="challenge-mode-section-icon" aria-hidden="true">🤝</div>
+          <div>
+            <h3 class="challenge-mode-section-title">和朋友</h3>
+            <p class="challenge-mode-section-sub">建立房間，或加入目前正在等待的房間</p>
+          </div>
+        </div>
+
+        <button class="challenge-friend-open" type="button" onclick="openChallengeClassPicker()">開啟房間</button>
+
+        <div class="challenge-room-block">
+          <div class="challenge-room-heading">
+            <strong>目前房間</strong>
+            <button class="challenge-room-refresh" type="button" onclick="refreshChallengeRoomsDemo()">重新整理</button>
+          </div>
+          <div class="challenge-room-list" id="challenge-room-list">
+            <div class="challenge-empty-state">目前先保留房間列表位置。<br>Phase D4 再接實際校區房間資料。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="challenge-mode-section ai">
+        <div class="challenge-mode-section-head">
+          <div class="challenge-mode-section-icon" aria-hidden="true">🎯</div>
+          <div>
+            <h3 class="challenge-mode-section-title">找對手</h3>
+            <p class="challenge-mode-section-sub">先選擇對手強度，再進入真正挑戰流程</p>
+          </div>
+        </div>
+
+        <div class="challenge-ai-grid">
+          <button class="challenge-ai-card easy" type="button" onclick="selectChallengeAI('easy')">
+            <span class="challenge-ai-icon">🌱</span>
+            <span class="challenge-ai-name">簡單</span>
+            <span class="challenge-ai-sub">低階 AI</span>
+          </button>
+          <button class="challenge-ai-card normal" type="button" onclick="selectChallengeAI('normal')">
+            <span class="challenge-ai-icon">⚡</span>
+            <span class="challenge-ai-name">一般</span>
+            <span class="challenge-ai-sub">中階 AI</span>
+          </button>
+          <button class="challenge-ai-card hard" type="button" onclick="selectChallengeAI('hard')">
+            <span class="challenge-ai-icon">🔥</span>
+            <span class="challenge-ai-name">困難</span>
+            <span class="challenge-ai-sub">高階 AI</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="challenge-subpage" id="challenge-class-picker" aria-hidden="true">
+  <div class="challenge-subpage-inner">
+    <div class="challenge-subpage-shell">
+      <div class="challenge-mode-topbar">
+        <button class="challenge-mode-back" type="button" onclick="closeChallengeClassPicker()" aria-label="返回">‹</button>
+        <h2 class="challenge-mode-title">選擇班級</h2>
+        <div class="challenge-mode-spacer" aria-hidden="true"></div>
+      </div>
+
+      <div class="challenge-subpage-card">
+        <div class="challenge-mode-section-head" style="margin-bottom:16px;">
+          <div class="challenge-mode-section-icon" aria-hidden="true">🏫</div>
+          <div>
+            <h3 class="challenge-mode-section-title">開啟房間</h3>
+            <p class="challenge-mode-section-sub">正式版會列出這個校區可以選擇的班級</p>
+          </div>
+        </div>
+
+        <div class="challenge-class-grid" id="challenge-class-grid">
+          <div class="challenge-class-placeholder">
+            Phase D2 只完成 UX。<br>
+            Phase D4 再接 Console / 校區真實班級資料。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="challenge-d2-toast" id="challenge-d2-toast" aria-live="polite"></div>
+
 <section class="tab-content" id="tab-learning">
 <div class="glass-panel" id="diagnostic-dashboard" style="margin-top: 10px; width: 100%; padding: 0; display: flex; flex-direction: column;">
 <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -6863,6 +7331,88 @@ if(document.readyState==='loading'){
 }else{
   syncInitial();
 }
+
+</script>
+
+<script id="tappie-d2-challenge-mode-js">
+
+(function(){
+  const overlay = () => document.getElementById('challenge-mode-overlay');
+  const picker = () => document.getElementById('challenge-class-picker');
+  const toastEl = () => document.getElementById('challenge-d2-toast');
+
+  function setBodyLock(locked){
+    document.body.style.overflow = locked ? 'hidden' : '';
+  }
+
+  function toast(message){
+    const el = toastEl();
+    if(!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(()=>el.classList.remove('show'), 1900);
+  }
+
+  window.openChallengeModeChooser = function(){
+    const el = overlay();
+    if(!el) return;
+    el.classList.add('show');
+    el.setAttribute('aria-hidden','false');
+    setBodyLock(true);
+  };
+
+  window.closeChallengeModeChooser = function(){
+    const el = overlay();
+    if(!el) return;
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden','true');
+    picker()?.classList.remove('show');
+    picker()?.setAttribute('aria-hidden','true');
+    setBodyLock(false);
+  };
+
+  window.openChallengeClassPicker = function(){
+    const el = picker();
+    if(!el) return;
+    el.classList.add('show');
+    el.setAttribute('aria-hidden','false');
+  };
+
+  window.closeChallengeClassPicker = function(){
+    const el = picker();
+    if(!el) return;
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden','true');
+  };
+
+  window.refreshChallengeRoomsDemo = function(){
+    toast('房間資料將於 Phase D4 接入');
+  };
+
+  window.selectChallengeAI = function(level){
+    const names = {easy:'簡單', normal:'一般', hard:'困難'};
+    window.__TAPPIE_D2_SELECTION__ = {
+      type:'ai',
+      difficulty:level,
+      label:names[level] || level,
+      at:new Date().toISOString()
+    };
+    toast(`已選擇：${names[level] || level}｜真正 AI 挑戰於 Phase D4 接入`);
+  };
+
+  // Escape is useful on desktop / iPad keyboard.
+  document.addEventListener('keydown', (event)=>{
+    if(event.key !== 'Escape') return;
+    if(picker()?.classList.contains('show')){
+      closeChallengeClassPicker();
+      return;
+    }
+    if(overlay()?.classList.contains('show')){
+      closeChallengeModeChooser();
+    }
+  });
+})();
 
 </script>
 </body>
