@@ -12,6 +12,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D0_NAVIGATION_RESTRUCTURE_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D1_CLOUD_CHIBIZ_LANDING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D1_0_1_SINGLEFILE_ASSET_HOTFIX_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D1_0_2_IMPORTMAP_BACKGROUND_PRELOAD_20260725 -->
 <!-- TAPPIE_ICON_SYSTEM_V5_OBJECT_FIRST_20260717 -->
 <!-- TAPPIE_LEADERBOARD_2_5D_REWARD_FULLSCREEN_V1_5_20260716 -->
 <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
@@ -2707,20 +2708,22 @@
   position: absolute;
   z-index: 5;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 150px;
-  padding: 12px 17px;
-  border-radius: 17px;
+  bottom: 28px;
+  transform: translateX(-50%);
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
   background: rgba(255,255,255,.80);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   color: var(--text-sub);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
   text-align: center;
-  box-shadow: 0 12px 28px rgba(31,61,92,.10);
+  box-shadow: 0 8px 20px rgba(31,61,92,.08);
   transition: opacity .25s ease;
+  pointer-events: none;
+  white-space: nowrap;
 }
 .chibiz-viewer-status.hidden {
   opacity: 0;
@@ -3012,7 +3015,7 @@ body.challenge-mode-active .chibiz-challenge-dock { display: block; }
 <div class="chibiz-viewer-shell">
 <div aria-hidden="true" class="chibiz-stage-floor"></div>
 <div id="dashboard-chibiz-viewer"></div>
-<div aria-live="polite" class="chibiz-viewer-status" id="dashboard-chibiz-status">角色將在進入挑戰分頁後載入</div>
+<div aria-live="polite" class="chibiz-viewer-status" id="dashboard-chibiz-status">正在準備角色…</div>
 </div>
 </div>
 </section>
@@ -6404,13 +6407,23 @@ body.challenge-mode-active .chibiz-challenge-dock { display: block; }
     
   </script>
 
+
+<script type="importmap" id="tappie-three-importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+
 <script type="module" id="tappie-chibiz-d1-inline-js">
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/DRACOLoader.js';
-import { KTX2Loader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/KTX2Loader.js';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 
 const BASE = 'https://assets.tappieapp.com/avatars/chibiz/2026.07.25-r2-fast/';
 const CDN = 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/libs/';
@@ -6492,7 +6505,6 @@ class DashboardChibizChallenge {
     this.resize();
     this.animate();
 
-    if (this.active) await this.ensureLoaded();
   }
 
   createLoader() {
@@ -6601,7 +6613,7 @@ class DashboardChibizChallenge {
     if (!this.active) return;
     this.init().then(() => {
       this.resize();
-      this.ensureLoaded();
+      if (!this.loaded) this.ensureLoaded();
     });
   }
 
@@ -6629,12 +6641,39 @@ window.openChibizDressingRoom = () =>
 window.openChibizChallengeModeChooser = () =>
   showPhaseToast('挑戰方式選擇將於 Phase D2 接入');
 
-// Handles a direct reload while the Challenge tab is already active.
-document.addEventListener('DOMContentLoaded', () => {
+// Dashboard D1.0.2:
+ // Preload the current Chibiz in the background after the dashboard becomes interactive.
+ // The Challenge tab only controls rendering visibility; it no longer triggers the first download.
+function scheduleChibizBackgroundPreload() {
+  const start = async () => {
+    try {
+      await runtime.init();
+      await runtime.ensureLoaded();
+    } catch (error) {
+      console.error('[Tappie Chibiz preload]', error);
+    }
+  };
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(start, { timeout: 1200 });
+  } else {
+    window.setTimeout(start, 350);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    scheduleChibizBackgroundPreload();
+    if (document.getElementById('tab-challenge')?.classList.contains('active')) {
+      runtime.onTabChange('challenge');
+    }
+  }, { once: true });
+} else {
+  scheduleChibizBackgroundPreload();
   if (document.getElementById('tab-challenge')?.classList.contains('active')) {
     runtime.onTabChange('challenge');
   }
-});
+}
 
 </script>
 </body>
