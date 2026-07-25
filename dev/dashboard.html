@@ -19,6 +19,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_3_FIXED_CHALLENGE_FULLRANGE_DRAWER_BRIGHT_FINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_4_SAFE_FRAMING_STABLE_DRAWER_STUDIO_METAL_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_5_PERSISTENT_SELECTED_ORIGINAL_METAL_STUDIOENV_20260726 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_2_6_COLLECTIBLE_DUALTRACK_OCEAN_80ACTIONFINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -3868,6 +3869,23 @@ body > .dressing-room-overlay .d32-item.selected,
 body > .dressing-room-overlay .d32-swatch.selected{
   outline:none !important;
   box-shadow:0 5px 14px rgba(48,110,180,.08) !important;
+}
+
+</style>
+
+<style id="tappie-d326-style">
+
+/* D3.2.6｜Collectible dual-track */
+body > .dressing-room-overlay .d32-item .d32-label{
+  line-height:1.25;
+  white-space:normal;
+  text-align:center;
+  padding:0 6px 8px;
+}
+body > .dressing-room-overlay .d32-subtab.active{
+  color:#2d70bf;
+  border-color:rgba(45,112,191,.22);
+  background:rgba(61,130,214,.08);
 }
 
 </style>
@@ -8120,7 +8138,11 @@ function mountViewerTo(hostId){
 
 const runtimeMaterialSnapshots=new WeakMap();
 const runtimeToneState={hair:null,eye:null,skin:null};
-let runtimeFinish='base';
+// D3.2.6: two independent collectible layers.
+// Outfit variant is provider/outfit-specific; Action variant is semantic-action specific.
+let runtimeOutfitVariant=null;
+let runtimeActionVariant=null;
+let runtimeFinish='base'; // compatibility alias for current action finish
 
 function normSemanticText(value){return String(value||'').trim().toLowerCase();}
 function hasAny(text,tokens){return tokens.some(token=>text.includes(token));}
@@ -8206,6 +8228,70 @@ function applyTonePass(rows,kind,colorHex){
   }
   return changed;
 }
+
+const RUNTIME_OUTFIT_VARIANTS={
+  ocean:{
+    id:'ocean',displayNameZh:'海洋',
+    groups:{
+      primary:{color:'#1976d2',metalness:0,roughness:.56},
+      secondary:{color:'#0b2e4f',metalness:0,roughness:.62},
+      accent:{color:'#45d1c7',metalness:0,roughness:.46},
+      neutralLight:{color:'#eaf8ff',metalness:0,roughness:.60},
+      neutralDark:{color:'#11283c',metalness:0,roughness:.64},
+      logo:{color:'#ffffff',metalness:0,roughness:.50},
+      glass:{color:'#8edcff',metalness:.18,roughness:.16}
+    }
+  }
+};
+function runtimeOriginalHsl(x){
+  const original=runtimeMaterialSnapshots.get(x.mat)||{};
+  const color=original.color?.clone?.()||x.mat?.color?.clone?.()||new THREE.Color('#ffffff');
+  const h={h:0,s:0,l:0};color.getHSL(h);return h;
+}
+function runtimeOutfitGroup(x,indexRef){
+  const obj=normSemanticText(x.o?.name),mat=normSemanticText(x.mat?.name),n=`${obj} ${mat}`;
+  const h=runtimeOriginalHsl(x);
+  if(x.semantic==='helmetVisor'||x.mat?.transparent||Number(x.mat?.opacity)<.98)return 'glass';
+  if(x.semantic==='logoOverlay'||hasAny(n,['logo','emblem','badge','print']))return 'logo';
+  if(hasAny(n,['pants','trouser','short','jean','bottom']))return 'secondary';
+  if(hasAny(n,['shirt','jersey','jacket','hoodie','top','coat','suit','sweater']))return 'primary';
+  if(hasAny(n,['trim','line','stripe','accent','detail','lace']))return 'accent';
+  if(h.s<.12&&h.l>.62)return 'neutralLight';
+  if(h.s<.12&&h.l<.38)return 'neutralDark';
+  const i=indexRef.value++;
+  return i===0?'primary':i===1?'secondary':'accent';
+}
+function applyRuntimeOutfitVariant(rows,variant){
+  if(!variant?.variantId)return 0;
+  const recipe=RUNTIME_OUTFIT_VARIANTS[variant.variantId];if(!recipe)return 0;
+  // Variant product must match the currently equipped base outfit.
+  if(variant.baseOutfit&&variant.baseOutfit!==selected.outfit)return 0;
+  let changed=0;const indexRef={value:0};
+  for(const x of rows){
+    if(x.role!=='outfit')continue;
+    const groupId=runtimeOutfitGroup(x,indexRef);
+    const cfg=recipe.groups[groupId]||recipe.groups.accent;
+    const m=x.mat;
+    if(m.color)m.color.set(cfg.color);
+    if('metalness'in m)m.metalness=cfg.metalness;
+    if('roughness'in m)m.roughness=cfg.roughness;
+    if('envMapIntensity'in m)m.envMapIntensity=1;
+    // Preserve original maps/textures. Ocean is a colorway recipe, not a flat repaint.
+    if(groupId==='glass'){
+      m.transparent=true;
+      m.opacity=Math.min(1,Math.max(.72,m.opacity??1));
+    }
+    m.needsUpdate=true;changed++;
+  }
+  return changed;
+}
+function applyRuntimeActionVariant(rows,variant){
+  if(!variant?.finish||!variant?.baseAction)return 0;
+  if(variant.baseAction!==selected.pose)return 0;
+  if(!['gold','silver'].includes(variant.finish))return 0;
+  return applyRuntimeMetal(rows,variant.finish);
+}
+
 function runtimeMetalProfile(x){
   if(x.semantic==='eyelashes')return {roughness:.22,detail:0,clearcoat:.08,preserveAlpha:true};
   if(x.semantic==='deviceBody'||x.semantic==='baseGraphicSurface')return {roughness:.19,detail:.65,clearcoat:.20,forceOpaque:true};
@@ -8277,8 +8363,11 @@ function rebuildRuntimeAppearance(){
     eye:applyTonePass(rows,'eye',runtimeToneState.eye),
     skin:applyTonePass(rows,'skin',runtimeToneState.skin)
   };
-  const finishChanged=(runtimeFinish==='gold'||runtimeFinish==='silver')?applyRuntimeMetal(rows,runtimeFinish):0;
-  return {toneCounts,finish:runtimeFinish,finishChanged};
+  // Locked precedence: base tone -> base outfit -> outfit variant -> action variant -> effect.
+  const outfitVariantChanged=applyRuntimeOutfitVariant(rows,runtimeOutfitVariant);
+  const actionVariantChanged=applyRuntimeActionVariant(rows,runtimeActionVariant);
+  runtimeFinish=runtimeActionVariant?.finish||'base';
+  return {toneCounts,outfitVariantChanged,actionVariantChanged,finish:runtimeFinish};
 }
 function applyRuntimeTone(kind,colorHex){
   if(!['hair','eye','skin'].includes(kind))return {changed:0};
@@ -8286,10 +8375,27 @@ function applyRuntimeTone(kind,colorHex){
   const result=rebuildRuntimeAppearance();
   return {changed:result.toneCounts[kind]||0};
 }
-function applyRuntimeFinish(finish='base'){
-  runtimeFinish=['gold','silver'].includes(finish)?finish:'base';
+function setRuntimeVariantState(outfitVariant=null,actionVariant=null,rebuild=true){
+  runtimeOutfitVariant=outfitVariant?{...outfitVariant}:null;
+  runtimeActionVariant=actionVariant?{...actionVariant}:null;
+  runtimeFinish=runtimeActionVariant?.finish||'base';
+  return rebuild?rebuildRuntimeAppearance():{outfitVariantChanged:0,actionVariantChanged:0};
+}
+function applyRuntimeOutfitVariantState(variant=null){
+  runtimeOutfitVariant=variant?{...variant}:null;
   const result=rebuildRuntimeAppearance();
-  return {finish:runtimeFinish,changed:result.finishChanged};
+  return {variant:runtimeOutfitVariant?{...runtimeOutfitVariant}:null,changed:result.outfitVariantChanged||0};
+}
+function applyRuntimeActionVariantState(variant=null){
+  runtimeActionVariant=variant?{...variant}:null;
+  runtimeFinish=runtimeActionVariant?.finish||'base';
+  const result=rebuildRuntimeAppearance();
+  return {variant:runtimeActionVariant?{...runtimeActionVariant}:null,changed:result.actionVariantChanged||0};
+}
+// Compatibility: old applyFinish now means "current pose action finish".
+function applyRuntimeFinish(finish='base'){
+  const variant=['gold','silver'].includes(finish)?{finish,baseAction:selected.pose}:null;
+  return applyRuntimeActionVariantState(variant);
 }
 
 window.TappieChibizRuntime={
@@ -8300,6 +8406,11 @@ window.TappieChibizRuntime={
   getToneState:()=>({...runtimeToneState}),
   applyFinish:applyRuntimeFinish,
   getFinish:()=>runtimeFinish,
+  applyOutfitVariant:applyRuntimeOutfitVariantState,
+  getOutfitVariant:()=>runtimeOutfitVariant?{...runtimeOutfitVariant}:null,
+  applyActionVariant:applyRuntimeActionVariantState,
+  getActionVariant:()=>runtimeActionVariant?{...runtimeActionVariant}:null,
+  setVariantState:setRuntimeVariantState,
   fit:()=>fit(),
   resize:()=>resize()
 };
@@ -8366,10 +8477,11 @@ if(document.readyState==='loading'){
   let previousOverflow='';
 
   const editor={
-    category:'role',toneGroup:'skin',
+    category:'role',toneGroup:'skin',collectibleGroup:'outfit',
     originalLoadout:null,workingLoadout:null,
     originalTone:null,workingTone:null,
-    originalFinish:'base',workingFinish:'base',
+    originalOutfitVariant:null,workingOutfitVariant:null,
+    originalActionVariant:null,workingActionVariant:null,
     dirty:false
   };
 
@@ -8432,9 +8544,44 @@ if(document.readyState==='loading'){
     {id:'pose_39',label:"靈光一閃",nameEn:"Aha!"},
     {id:'pose_40',label:"你聽我說",nameEn:"Hear Me Out"}
   ];
-  const collectibleItems=[
-    {id:'base',label:'原始造型'},{id:'gold',label:'純金版'},{id:'silver',label:'純銀版'},{id:'jade',label:'翡翠版',locked:true},{id:'ice',label:'冰晶版',locked:true},{id:'moss',label:'苔蘚版',locked:true}
-  ];
+const OUTFIT_VARIANT_RECIPES={
+  ocean:{id:'ocean',label:'海洋'}
+};
+const ACTION_FINISH_RECIPES={
+  gold:{id:'gold',label:'純金'},
+  silver:{id:'silver',label:'純銀'}
+};
+function outfitCollectibleItems(){
+  const provider=currentProvider();
+  const items=[{id:'outfit_variant_none',label:'原始穿搭',kind:'outfit-none'}];
+  for(const [variantId,recipe] of Object.entries(OUTFIT_VARIANT_RECIPES)){
+    for(const outfit of outfitItems){
+      items.push({
+        id:`${provider}__${outfit.id}__${variantId}`,
+        label:`${outfit.label}｜${recipe.label}`,
+        kind:'outfit',variantId,baseOutfit:outfit.id,provider
+      });
+    }
+  }
+  return items;
+}
+function actionCollectibleItems(){
+  const items=[{id:'action_variant_none',label:'原始動作',kind:'action-none'}];
+  for(const [finish,recipe] of Object.entries(ACTION_FINISH_RECIPES)){
+    for(const action of actionCatalog){
+      items.push({
+        id:`${action.id}__finish_${finish}`,
+        label:`${action.label}｜${recipe.label}`,
+        nameEn:action.nameEn,
+        kind:'action',finish,baseAction:action.id
+      });
+    }
+  }
+  return items;
+}
+function collectibleItemsForDisplay(){
+  return editor.collectibleGroup==='outfit'?outfitCollectibleItems():actionCollectibleItems();
+}
   // Locked 6C.0.1 palettes: 10 skin / 10 hair / 10 eyes. Black eye is the product default.
   const TONES={
     eye:[['#232323','黑色'],['#3a241c','眼睛 02'],['#62412d','眼睛 03'],['#8b6a3f','眼睛 04'],['#2e6e68','眼睛 05'],['#3878a5','眼睛 06'],['#5a78b8','眼睛 07'],['#76944a','眼睛 08'],['#7b4d82','眼睛 09'],['#9f8b56','眼睛 10']],
@@ -8456,7 +8603,10 @@ if(document.readyState==='loading'){
     if(category==='hair') return `${THUMB_BASE}${provider}/hair/${id}.webp`;
     if(category==='outfit') return `${THUMB_BASE}${provider}/outfit/${id}.webp`;
     if(category==='action') return `${THUMB_BASE}${provider}/action/${id}.webp`;
-    if(category==='collectible') return `${THUMB_BASE}${provider}/collectible/${id}.webp`;
+    if(category==='collectible'){
+      if(editor.collectibleGroup==='outfit') return `${THUMB_BASE}${provider}/collectible/outfit/${id}.webp`;
+      return `${THUMB_BASE}${provider}/collectible/action/${id}.webp`;
+    }
     return FALLBACK_THUMB;
   }
   window.d32ThumbFallback=function(img){
@@ -8470,28 +8620,29 @@ if(document.readyState==='loading'){
     const m=text.match(/(?:pose[_\s-]?)?(\d{1,2})$/);
     return m?`pose_${String(Number(m[1])).padStart(2,'0')}`:text;
   }
-  function unlockedActionIds(){
-    const ids=new Set(['pose_32','pose_33']);
-    const external=window.__TAPPIE_AVATAR_UNLOCKED_ACTIONS__;
-    if(Array.isArray(external))external.forEach(v=>ids.add(normalizePoseId(v)));
-    const current=editor.workingLoadout?.pose;if(current)ids.add(normalizePoseId(current));
-    return ids;
-  }
-  function actionItemsForDisplay(){
-    const unlocked=unlockedActionIds();
-    const rank=id=>id==='pose_32'?0:id==='pose_33'?1:unlocked.has(id)?2:3;
-    return actionCatalog.map(item=>({...item,locked:!unlocked.has(item.id)})).sort((a,b)=>{
-      const r=rank(a.id)-rank(b.id);if(r)return r;
-      return Number(a.id.slice(-2))-Number(b.id.slice(-2));
-    });
-  }
+
+function unlockedActionIds(){
+  // D3.2.6 temporary product decision: all 40 base actions are open.
+  return new Set(actionCatalog.map(item=>item.id));
+}
+function actionItemsForDisplay(){
+  const rank=id=>id==='pose_32'?0:id==='pose_33'?1:2;
+  return actionCatalog.map(item=>({...item,locked:false})).sort((a,b)=>{
+    const r=rank(a.id)-rank(b.id);if(r)return r;
+    return Number(a.id.slice(-2))-Number(b.id.slice(-2));
+  });
+}
+
   function selectedId(category){
     const l=editor.workingLoadout||{};
     if(category==='role')return l.provider;
     if(category==='hair')return l.hair;
     if(category==='outfit')return l.outfit;
     if(category==='action')return l.pose;
-    if(category==='collectible')return editor.workingFinish||'base';
+    if(category==='collectible'){
+      if(editor.collectibleGroup==='outfit') return editor.workingOutfitVariant?.productId||'outfit_variant_none';
+      return editor.workingActionVariant?.productId||'action_variant_none';
+    }
     return 'base';
   }
   function visibleHairItems(){return currentProvider()==='cbz_f_v1'?hairItems.filter(x=>x.id!=='hair_00'):hairItems;}
@@ -8500,7 +8651,7 @@ if(document.readyState==='loading'){
     if(category==='hair')return visibleHairItems();
     if(category==='outfit')return outfitItems;
     if(category==='action')return actionItemsForDisplay();
-    if(category==='collectible')return collectibleItems;
+    if(category==='collectible')return collectibleItemsForDisplay();
     return [];
   }
 
@@ -8510,9 +8661,17 @@ if(document.readyState==='loading'){
   }
   function renderSubtabs(){
     const host=document.getElementById('d32-subtabs');if(!host)return;
-    if(editor.category!=='tone'){host.classList.remove('show');host.innerHTML='';return;}
-    host.classList.add('show');
-    host.innerHTML=[['eye','眼睛'],['skin','膚色'],['hair','髮色']].map(([id,label])=>`<button class="d32-subtab ${editor.toneGroup===id?'active':''}" type="button" onclick="setD32ToneGroup('${id}')">${label}</button>`).join('');
+    if(editor.category==='tone'){
+      host.classList.add('show');
+      host.innerHTML=[['eye','眼睛'],['skin','膚色'],['hair','髮色']].map(([id,label])=>`<button class="d32-subtab ${editor.toneGroup===id?'active':''}" type="button" onclick="setD32ToneGroup('${id}')">${label}</button>`).join('');
+      return;
+    }
+    if(editor.category==='collectible'){
+      host.classList.add('show');
+      host.innerHTML=[['outfit','穿搭'],['action','動作']].map(([id,label])=>`<button class="d32-subtab ${editor.collectibleGroup===id?'active':''}" type="button" onclick="setD32CollectibleGroup('${id}')">${label}</button>`).join('');
+      return;
+    }
+    host.classList.remove('show');host.innerHTML='';
   }
   function renderGrid(){
     const grid=document.getElementById('d32-grid');if(!grid)return;
@@ -8536,13 +8695,20 @@ if(document.readyState==='loading'){
 
   async function applyWorkingToRuntime(){
     if(!editor.workingLoadout)return;
+    // Set variant state before module replacement so every newly loaded GLB is rebuilt
+    // with the correct dual collectible state immediately.
+    window.TappieChibizRuntime?.setVariantState?.(editor.workingOutfitVariant,editor.workingActionVariant,false);
     await window.TappieChibizRuntime?.setLoadout(clone(editor.workingLoadout));
     for(const kind of ['hair','eye','skin']) window.TappieChibizRuntime?.applyTone(kind,editor.workingTone[kind]);
-    window.TappieChibizRuntime?.applyFinish(editor.workingFinish||'base');
+    window.TappieChibizRuntime?.setVariantState?.(editor.workingOutfitVariant,editor.workingActionVariant,true);
   }
 
   window.setD32Category=function(category){editor.category=category;render();document.getElementById('d32-grid')?.scrollTo(0,0);};
   window.setD32ToneGroup=function(group){editor.toneGroup=group;render();};
+  window.setD32CollectibleGroup=function(group){
+    editor.collectibleGroup=group==='action'?'action':'outfit';
+    render();document.getElementById('d32-grid')?.scrollTo(0,0);
+  };
   window.selectD32Tone=function(kind,color){
     editor.workingTone[kind]=color;
     const result=window.TappieChibizRuntime?.applyTone(kind,color);
@@ -8550,26 +8716,66 @@ if(document.readyState==='loading'){
     if(kind==='skin' && result && result.changed===0) toast('找不到可套用的膚色材質');
   };
 
-  window.selectD32Item=async function(category,id,locked){
-    if(locked){toast('尚未解鎖');return;}
-    if(category==='collectible'){
-      editor.workingFinish=id;
-      const result=window.TappieChibizRuntime?.applyFinish(id);
-      setDirty(true);render();
-      toast(id==='base'?'已切回原始造型':id==='gold'?'正在預覽純金版':'正在預覽純銀版');
-      return;
-    }
+
+window.selectD32Item=async function(category,id,locked){
+  if(locked){toast('尚未解鎖');return;}
+  if(category==='collectible'){
+    const item=collectibleItemsForDisplay().find(x=>x.id===id);if(!item)return;
     try{
-      showLoading();
-      if(category==='role') editor.workingLoadout.provider=id;
-      if(category==='hair') editor.workingLoadout.hair=id;
-      if(category==='outfit') editor.workingLoadout.outfit=id;
-      if(category==='action') editor.workingLoadout.pose=id;
+      showLoading('正在套用收藏款…');
+      if(item.kind==='outfit-none'){
+        editor.workingOutfitVariant=null;
+        window.TappieChibizRuntime?.applyOutfitVariant?.(null);
+        setDirty(true);render();toast('已切回原始穿搭');return;
+      }
+      if(item.kind==='action-none'){
+        editor.workingActionVariant=null;
+        window.TappieChibizRuntime?.applyActionVariant?.(null);
+        setDirty(true);render();toast('已切回原始動作');return;
+      }
+      if(item.kind==='outfit'){
+        // Selecting collectible outfit also synchronizes the normal Outfit selector.
+        editor.workingLoadout.outfit=item.baseOutfit;
+        editor.workingOutfitVariant={
+          productId:item.id,provider:item.provider,variantId:item.variantId,
+          baseOutfit:item.baseOutfit,displayNameZh:item.label
+        };
+      }
+      if(item.kind==='action'){
+        // Selecting collectible action also synchronizes the normal Action selector.
+        editor.workingLoadout.pose=item.baseAction;
+        editor.workingActionVariant={
+          productId:item.id,finish:item.finish,baseAction:item.baseAction,
+          displayNameZh:item.label
+        };
+      }
       await applyWorkingToRuntime();
-      setDirty(true);render();
-    }catch(error){console.error('[D3.2 change]',error);toast('更換失敗');}
+      setDirty(true);render();toast(`已預覽 ${item.label}`);
+    }catch(error){console.error('[D3.2.6 collectible]',error);toast('收藏款套用失敗');}
     finally{hideLoading();}
-  };
+    return;
+  }
+  try{
+    showLoading();
+    if(category==='role'){
+      editor.workingLoadout.provider=id;
+      // Outfit collectible is provider-specific. Action collectible is cross-provider.
+      editor.workingOutfitVariant=null;
+    }
+    if(category==='hair') editor.workingLoadout.hair=id;
+    if(category==='outfit'){
+      editor.workingLoadout.outfit=id;
+      if(editor.workingOutfitVariant?.baseOutfit!==id) editor.workingOutfitVariant=null;
+    }
+    if(category==='action'){
+      editor.workingLoadout.pose=id;
+      if(editor.workingActionVariant?.baseAction!==id) editor.workingActionVariant=null;
+    }
+    await applyWorkingToRuntime();
+    setDirty(true);render();
+  }catch(error){console.error('[D3.2 change]',error);toast('更換失敗');}
+  finally{hideLoading();}
+};
 
   async function restoreOriginal(){
     if(!editor.originalLoadout)return;
@@ -8577,7 +8783,8 @@ if(document.readyState==='loading'){
     try{
       editor.workingLoadout=clone(editor.originalLoadout);
       editor.workingTone=clone(editor.originalTone||defaultTone());
-      editor.workingFinish=editor.originalFinish||'base';
+      editor.workingOutfitVariant=clone(editor.originalOutfitVariant);
+      editor.workingActionVariant=clone(editor.originalActionVariant);
       await applyWorkingToRuntime();
     }finally{hideLoading();}
   }
@@ -8587,8 +8794,11 @@ if(document.readyState==='loading'){
     const runtimeLoadout=window.TappieChibizRuntime?.getLoadout?.()||{provider:'cbz_m_v1',pose:'pose_32',outfit:'outfit_00',hair:'hair_01'};
     editor.originalLoadout=clone(runtimeLoadout);editor.workingLoadout=clone(runtimeLoadout);
     editor.originalTone=clone(window.__TAPPIE_AVATAR_TONE__||defaultTone());editor.workingTone=clone(editor.originalTone);
-    editor.originalFinish=window.TappieChibizRuntime?.getFinish?.()||window.__TAPPIE_AVATAR_FINISH__||'base';editor.workingFinish=editor.originalFinish;
-    editor.category='role';setDirty(false);render();
+    editor.originalOutfitVariant=clone(window.TappieChibizRuntime?.getOutfitVariant?.()||window.__TAPPIE_AVATAR_OUTFIT_VARIANT__||null);
+    editor.workingOutfitVariant=clone(editor.originalOutfitVariant);
+    editor.originalActionVariant=clone(window.TappieChibizRuntime?.getActionVariant?.()||window.__TAPPIE_AVATAR_ACTION_VARIANT__||null);
+    editor.workingActionVariant=clone(editor.originalActionVariant);
+    editor.category='role';editor.collectibleGroup='outfit';setDirty(false);render();
     dressing()?.classList.add('show');dressing()?.setAttribute('aria-hidden','false');
     requestAnimationFrame(()=>{initD322Drawer(true);window.TappieChibizRuntime?.mountTo('d32-viewer');});
   };
@@ -8611,8 +8821,13 @@ if(document.readyState==='loading'){
       eyeTone:editor.workingTone.eye,
       skinTone:editor.workingTone.skin,
       hairTone:editor.workingTone.hair,
-      finishRecipe:editor.workingFinish||'base',
-      outfitVariant:null,actionVariant:null,
+      // D3.2.6 dual collectible contract. Both may coexist.
+      activeOutfitVariant:clone(editor.workingOutfitVariant),
+      activeActionVariant:clone(editor.workingActionVariant),
+      outfitVariant:clone(editor.workingOutfitVariant),
+      actionVariant:clone(editor.workingActionVariant),
+      // Backward-compatible field while backend contract is still pending.
+      finishRecipe:editor.workingActionVariant?.finish||'base',
       savedAt:new Date().toISOString()
     };
     try{
@@ -8620,9 +8835,12 @@ if(document.readyState==='loading'){
       if(window.TappieAvatarLoadoutAdapter?.save) await window.TappieAvatarLoadoutAdapter.save(payload);
       window.__TAPPIE_D32_SAVE_PAYLOAD__=clone(payload);
       window.__TAPPIE_AVATAR_TONE__=clone(editor.workingTone);
-      window.__TAPPIE_AVATAR_FINISH__=editor.workingFinish||'base';
+      window.__TAPPIE_AVATAR_OUTFIT_VARIANT__=clone(editor.workingOutfitVariant);
+      window.__TAPPIE_AVATAR_ACTION_VARIANT__=clone(editor.workingActionVariant);
+      window.__TAPPIE_AVATAR_FINISH__=editor.workingActionVariant?.finish||'base';
       window.dispatchEvent(new CustomEvent('tappie:avatar-loadout-save',{detail:clone(payload)}));
-      editor.originalLoadout=clone(editor.workingLoadout);editor.originalTone=clone(editor.workingTone);editor.originalFinish=editor.workingFinish||'base';setDirty(false);
+      editor.originalLoadout=clone(editor.workingLoadout);editor.originalTone=clone(editor.workingTone);
+      editor.originalOutfitVariant=clone(editor.workingOutfitVariant);editor.originalActionVariant=clone(editor.workingActionVariant);setDirty(false);
       const result=document.getElementById('d32-save-result');if(result){result.textContent='已儲存目前外觀';result.classList.add('show');setTimeout(()=>result.classList.remove('show'),1100);}
       setTimeout(()=>{
         dressing()?.classList.remove('show');dressing()?.setAttribute('aria-hidden','true');
@@ -8832,6 +9050,21 @@ if(document.readyState==='loading'){
     getFinish(){
       return window.TappieChibizRuntime?.getFinish?.() || null;
     }
+  };
+})();
+
+</script>
+
+<script id="tappie-d326-js">
+
+(function(){
+  window.TappieD326={
+    version:'D3.2.6',
+    counts(){return {baseActions:40,oceanOutfits:10,goldActions:40,silverActions:40};},
+    variants(){return {
+      outfit:window.TappieChibizRuntime?.getOutfitVariant?.()||null,
+      action:window.TappieChibizRuntime?.getActionVariant?.()||null
+    };}
   };
 })();
 
