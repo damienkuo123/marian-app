@@ -10,6 +10,7 @@
 <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
 <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D0_NAVIGATION_RESTRUCTURE_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D1_CLOUD_CHIBIZ_LANDING_20260725 -->
 <!-- TAPPIE_ICON_SYSTEM_V5_OBJECT_FIRST_20260717 -->
 <!-- TAPPIE_LEADERBOARD_2_5D_REWARD_FULLSCREEN_V1_5_20260716 -->
 <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
@@ -2607,6 +2608,7 @@
 </style>
 
     <!-- TAPPIE DASHBOARD v5.9 CLEAN: dead CSS/JS removed; route styles normalized without UI redesign. -->
+<link href="./assets/chibiz-dashboard/challenge-landing.css?v=phase-d1-20260725" rel="stylesheet"/>
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -2806,12 +2808,25 @@
 </div>
 </section>
 <section class="tab-content" id="tab-challenge">
-<div class="glass-panel" id="challenge-phase-d0-shell" style="margin-top:10px;text-align:center;padding:38px 24px;">
-<div style="width:72px;height:72px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;border-radius:24px;background:rgba(0,102,204,.08);color:var(--primary-blue);"><span class="tappie-ui-icon" data-tappie-icon="arena"></span></div>
-<h3 style="margin:0;color:var(--text-main);font-size:22px;font-weight:900;letter-spacing:2px;">挑戰模式</h3>
-<p style="margin:10px 0 0;color:var(--text-sub);font-size:14px;font-weight:800;line-height:1.7;">Chibiz 挑戰介面將於下一階段接入</p>
+<div class="chibiz-challenge-stage" id="chibiz-challenge-stage">
+<div class="chibiz-challenge-tools">
+<button aria-label="開啟更衣室" class="chibiz-tool-button" onclick="openChibizDressingRoom()" type="button">
+<span aria-hidden="true">👕</span><span>更衣室</span>
+</button>
+</div>
+<div class="chibiz-viewer-shell">
+<div aria-hidden="true" class="chibiz-stage-floor"></div>
+<div id="dashboard-chibiz-viewer"></div>
+<div aria-live="polite" class="chibiz-viewer-status" id="dashboard-chibiz-status">角色將在進入挑戰分頁後載入</div>
+</div>
 </div>
 </section>
+<div class="chibiz-challenge-dock" id="chibiz-challenge-dock">
+<button class="chibiz-challenge-primary" onclick="openChibizChallengeModeChooser()" type="button">
+<span>開始挑戰</span>
+</button>
+</div>
+<div aria-live="polite" class="chibiz-phase-toast" id="chibiz-phase-toast"></div>
 <section class="tab-content" id="tab-learning">
 <div class="glass-panel" id="diagnostic-dashboard" style="margin-top: 10px; width: 100%; padding: 0; display: flex; flex-direction: column;">
 <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -3228,6 +3243,7 @@
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
       syncUnitRouteChrome(tabId);
+      window.TappieChibizChallenge?.onTabChange(tabId);
       if (tabId !== 'unit') hideSingleRouteMilestoneMessage();
 
       // 4. 單元頁定位目前節點；其他分頁回到頂部
@@ -6192,5 +6208,6 @@
     })();
     
   </script>
+<script type="module" src="./assets/chibiz-dashboard/challenge-landing.js?v=phase-d1-20260725"></script>
 </body>
 </html>
