@@ -10,7 +10,7 @@
 <!-- FRONTEND_FEATURE_GATE_HOTFIX_20260618_APPLIED -->
 <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D0_NAVIGATION_RESTRUCTURE_20260725 -->
-<!-- TAPPIE_DASHBOARD_PHASE_D1R_GOLDEN_RUNTIME_INTEGRATION_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D1R_1_ASSET_DIAGNOSTIC_UNIT_UI_RESTORE_20260725 -->
 <!-- TAPPIE_ICON_SYSTEM_V5_OBJECT_FIRST_20260717 -->
 <!-- TAPPIE_LEADERBOARD_2_5D_REWARD_FULLSCREEN_V1_5_20260716 -->
 <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
@@ -2609,144 +2609,213 @@
 
     <!-- TAPPIE DASHBOARD v5.9 CLEAN: dead CSS/JS removed; route styles normalized without UI redesign. -->
 
-<style id="tappie-d1r-style">
+<style id="tappie-d1r1-style">
 
 /* =========================================================
-   Phase D1R｜Golden Runtime Integration
-   UI only. Runtime behavior follows Stage 3B.6C.8.0.2.1.
+   Phase D1R.1
+   1) Asset Response Diagnostic
+   2) Unit Visual Contract Restore
    ========================================================= */
 
 #tab-challenge {
   width: 100%;
-  min-height: calc(100dvh - max(80px, env(safe-area-inset-top) + 80px) - max(80px, env(safe-area-inset-bottom) + 70px));
+  min-height: 100%;
+  padding: 0 0 124px;
   box-sizing: border-box;
-  position: relative;
-  padding: 0 0 122px;
-  overflow: hidden;
 }
 
-.d1r-stage {
+.challenge-route-stage {
   position: relative;
   width: 100%;
-  max-width: 760px;
-  min-height: calc(100dvh - max(80px, env(safe-area-inset-top) + 80px) - max(80px, env(safe-area-inset-bottom) + 70px));
-  margin: 0 auto;
+  min-height: 1080px;
   overflow: hidden;
-  background: #f0f0f2;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(71,166,255,.055), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, #edf6ff 55%, #f8fbff 100%);
 }
 
-.d1r-viewer {
+/* Viewer sits directly on the same visual field as the Unit route. */
+#challenge-golden-viewer {
   position: absolute;
   inset: 0;
   width: 100%;
-  height: 100%;
+  height: min(760px, calc(100dvh - 145px));
   min-height: 560px;
   overflow: hidden;
   touch-action: pan-y;
 }
-
-.d1r-viewer canvas {
-  display: block;
+#challenge-golden-viewer canvas {
   width: 100%;
   height: 100%;
-}
-
-.d1r-tools {
-  position: absolute;
-  z-index: 8;
-  top: 16px;
-  right: 18px;
-}
-
-.d1r-tool-btn {
-  min-height: 48px;
-  padding: 0 18px;
-  border: 1px solid rgba(255,255,255,.96);
-  border-radius: 18px;
-  background: rgba(255,255,255,.82);
-  backdrop-filter: blur(24px) saturate(175%);
-  -webkit-backdrop-filter: blur(24px) saturate(175%);
-  box-shadow: 0 10px 26px rgba(31,61,92,.10), inset 0 1px 0 rgba(255,255,255,1);
-  color: var(--text-main);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.d1r-runtime-status {
-  position: absolute;
-  z-index: 9;
-  top: 18px;
-  left: 18px;
-  max-width: calc(100% - 180px);
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.86);
-  border: 1px solid rgba(255,255,255,.95);
-  box-shadow: 0 8px 20px rgba(31,61,92,.08);
-  color: var(--text-sub);
-  font-size: 11px;
-  line-height: 1.3;
-  font-weight: 900;
-  pointer-events: none;
-}
-
-.d1r-runtime-status.ready {
-  opacity: 0;
-}
-
-.d1r-runtime-status.error {
-  opacity: 1;
-  color: var(--marian-red);
-  border-color: rgba(231,76,60,.20);
-  background: rgba(255,246,246,.96);
-  white-space: normal;
-  border-radius: 14px;
-}
-
-.d1r-dock {
-  position: fixed;
-  z-index: 1100;
-  left: 50%;
-  bottom: max(88px, env(safe-area-inset-bottom) + 78px);
-  transform: translateX(-50%);
-  width: min(92%, 680px);
-  display: none;
-}
-
-body.d1r-challenge-active .d1r-dock {
   display: block;
 }
 
-.d1r-start-btn {
-  width: 100%;
-  min-height: 62px;
-  border: 0;
-  border-radius: 23px;
-  background: linear-gradient(135deg, #0066cc, #29a2ff);
-  box-shadow: 0 16px 34px rgba(0,102,204,.28), inset 0 1px 0 rgba(255,255,255,.34);
-  color: #fff;
-  font: inherit;
-  font-size: 19px;
-  font-weight: 900;
-  letter-spacing: 4px;
+/* Same position / 64px tile language as Unit route utilities. */
+.challenge-route-utility-stack {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 74px);
+  right: 14px;
+  z-index: 1120;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 64px;
+}
+body.challenge-route-active .challenge-route-utility-stack {
+  display: flex;
 }
 
-.d1r-start-btn:active,
-.d1r-tool-btn:active {
+.challenge-route-dressing-btn {
+  position: relative;
+  box-sizing: border-box;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  margin: 0;
+  padding: 0;
+  display: block;
+  overflow: visible;
+  border: 1px solid rgba(255,255,255,.34);
+  border-radius: 18px;
+  color: #fff;
+  cursor: pointer;
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  background: linear-gradient(180deg,#4f98e8 0%,#3578cf 72%,#2b60b4 100%);
+  box-shadow:
+    0 3px 0 #234d92,
+    0 8px 16px rgba(34,67,133,.20),
+    inset 0 1px 0 rgba(255,255,255,.46);
+}
+.challenge-route-dressing-btn:active {
+  transform: translateY(2px) scale(.97);
+}
+
+.challenge-route-dressing-art {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.challenge-route-dressing-art svg {
+  width: 50px;
+  height: 50px;
+  overflow: visible;
+  filter: drop-shadow(0 3px 3px rgba(16,55,104,.20));
+}
+.challenge-route-utility-label {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 4px;
+  height: 12px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 12px;
+  letter-spacing: -.16px;
+  white-space: nowrap;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(18,31,74,.28);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Bottom action dock copies the Unit route's geometry and position. */
+.challenge-route-action-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(max(80px, env(safe-area-inset-bottom) + 70px) + 10px);
+  z-index: 1200;
+  display: none;
+  justify-content: center;
+  box-sizing: border-box;
+  pointer-events: none;
+  padding: 10px 12px 6px;
+}
+body.challenge-route-active .challenge-route-action-dock {
+  display: flex;
+}
+.challenge-route-start-button {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  font: inherit;
+  pointer-events: auto;
+}
+.challenge-route-start-button .single-route-start-card {
+  width: 100%;
+}
+.challenge-route-start-button .single-route-start-action {
+  min-height: 61px;
+}
+.challenge-route-start-button:active {
   transform: scale(.97);
 }
 
-.d1r-toast {
+/* Diagnostic build only. Hidden on success. */
+.challenge-runtime-diagnostic {
+  position: fixed;
+  z-index: 1300;
+  top: calc(env(safe-area-inset-top) + 78px);
+  left: 14px;
+  right: 92px;
+  display: none;
+  max-width: 520px;
+  padding: 11px 12px;
+  box-sizing: border-box;
+  border-radius: 15px;
+  background: rgba(255,248,248,.97);
+  border: 1px solid rgba(231,76,60,.28);
+  box-shadow: 0 10px 24px rgba(99,35,35,.12);
+  color: #c8463c;
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 850;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.challenge-runtime-diagnostic.show { display: block; }
+
+.challenge-runtime-progress {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: min(650px, calc(100dvh - 235px));
+  transform: translateX(-50%);
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.90);
+  border: 1px solid #fff;
+  box-shadow: 0 7px 18px rgba(49,71,92,.08);
+  color: #718090;
+  font-size: 10px;
+  font-weight: 900;
+  opacity: 1;
+  transition: opacity .2s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.challenge-runtime-progress.ready { opacity: 0; }
+
+.challenge-phase-toast {
   position: fixed;
   z-index: 4000;
   left: 50%;
   bottom: max(170px, env(safe-area-inset-bottom) + 160px);
-  transform: translate(-50%, 10px);
+  transform: translate(-50%, 12px);
   padding: 11px 16px;
   border-radius: 15px;
   background: rgba(25,35,46,.90);
@@ -2757,21 +2826,21 @@ body.d1r-challenge-active .d1r-dock {
   pointer-events: none;
   transition: .22s ease;
 }
-.d1r-toast.show {
+.challenge-phase-toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
 }
 
 @media (min-width: 768px) {
-  .d1r-stage { max-width: 760px; }
-  .d1r-viewer { min-height: 680px; }
-  .d1r-tools { right: 28px; top: 22px; }
-  .d1r-runtime-status { left: 28px; top: 24px; }
+  #challenge-golden-viewer {
+    height: min(820px, calc(100dvh - 150px));
+    min-height: 680px;
+  }
 }
 
 </style>
 
-<script type="importmap" id="tappie-d1r-three-importmap">
+<script type="importmap" id="tappie-d1r1-importmap">
 {
   "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
@@ -2979,20 +3048,44 @@ body.d1r-challenge-active .d1r-dock {
 </div>
 </section>
 <section class="tab-content" id="tab-challenge">
-<div class="d1r-stage" id="d1r-stage">
-<div class="d1r-tools">
-<button class="d1r-tool-btn" type="button" onclick="openD1RDressingRoom()" aria-label="開啟更衣室">
-<span aria-hidden="true">👕</span><span>更衣室</span>
-</button>
-</div>
-<div class="d1r-runtime-status" id="d1r-runtime-status" aria-live="polite">等待挑戰分頁顯示</div>
-<div class="d1r-viewer" id="d1r-viewer"></div>
+<div class="challenge-route-stage">
+<div id="challenge-golden-viewer"></div>
+<div class="challenge-runtime-progress" id="challenge-runtime-progress">等待載入角色</div>
 </div>
 </section>
-<div class="d1r-dock" id="d1r-dock">
-<button class="d1r-start-btn" type="button" onclick="openD1RChallengeChooser()">開始挑戰</button>
+
+<div class="challenge-route-utility-stack" aria-label="挑戰快捷功能">
+<button class="challenge-route-dressing-btn" type="button" onclick="openChallengeDressingRoom()" aria-label="更衣室">
+<span class="challenge-route-dressing-art" aria-hidden="true">
+<svg viewBox="0 0 64 64">
+<defs>
+  <linearGradient id="shirtG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8ed8ff"/>
+    <stop offset=".58" stop-color="#55aef0"/>
+    <stop offset="1" stop-color="#2f7fca"/>
+  </linearGradient>
+</defs>
+<path d="M21 13c3.3 3.4 7 5 11 5s7.7-1.6 11-5l10 7-6 11-5-3v22H22V28l-5 3-6-11 10-7z"
+ fill="url(#shirtG)" stroke="#f4fbff" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M26 15c1.5 4 10.5 4 12 0" fill="none" stroke="#dff5ff" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
+</span>
+<span class="challenge-route-utility-label">更衣室</span>
+</button>
 </div>
-<div class="d1r-toast" id="d1r-toast" aria-live="polite"></div>
+
+<div class="challenge-route-action-dock">
+<button class="single-route-start challenge-route-start-button" type="button" onclick="openChallengeChooser()">
+<div class="single-route-start-card">
+<div class="single-route-start-action">
+<span class="single-route-start-main">開始挑戰</span>
+</div>
+</div>
+</button>
+</div>
+
+<div class="challenge-runtime-diagnostic" id="challenge-runtime-diagnostic" aria-live="assertive"></div>
+<div class="challenge-phase-toast" id="challenge-phase-toast" aria-live="polite"></div>
 <section class="tab-content" id="tab-learning">
 <div class="glass-panel" id="diagnostic-dashboard" style="margin-top: 10px; width: 100%; padding: 0; display: flex; flex-direction: column;">
 <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -3409,7 +3502,7 @@ body.d1r-challenge-active .d1r-dock {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tabId}`).classList.add('active');
       syncUnitRouteChrome(tabId);
-      window.TappieD1RGoldenRuntime?.onTabChange(tabId);
+      window.TappieD1R1?.onTabChange(tabId);
       if (tabId !== 'unit') hideSingleRouteMilestoneMessage();
 
       // 4. 單元頁定位目前節點；其他分頁回到頂部
@@ -6375,261 +6468,400 @@ body.d1r-challenge-active .d1r-dock {
     
   </script>
 
-<script type="module" id="tappie-d1r-golden-runtime">
+<script type="module" id="tappie-d1r1-runtime">
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
+import {KTX2Loader} from 'three/addons/loaders/KTX2Loader.js';
 
-const BASE = 'https://assets.tappieapp.com/avatars/chibiz/2026.07.25-r2-fast/';
+const BASE='https://assets.tappieapp.com/avatars/chibiz/2026.07.25-r2-fast/';
 
-// D1R smoke-test loadout only.
-// This is NOT the future persisted student loadout contract.
-const selected = {
-  provider: 'cbz_m_v1',
-  pose: 'pose_32',
-  outfit: 'outfit_00',
-  hair: 'hair_01'
+const selected={
+  provider:'cbz_m_v1',
+  pose:'pose_32',
+  outfit:'outfit_00',
+  hair:'hair_01'
 };
 
-let scene = null;
-let renderer = null;
-let camera = null;
-let controls = null;
-let group = null;
-let KTX = null;
-let ctxLost = false;
-let initialized = false;
-let loading = false;
-let loaded = false;
-let active = false;
-let animationId = null;
+let scene,renderer,camera,controls,group,KTX;
+let ctxLost=false,initialized=false,loaded=false,loading=false,active=false,rafId=null;
+let lastDiagnostic=null;
 
-const mount = () => document.getElementById('d1r-viewer');
-const statusEl = () => document.getElementById('d1r-runtime-status');
+const $=s=>document.querySelector(s);
 
-function setStatus(text, state = '') {
-  const el = statusEl();
-  if (!el) return;
-  el.textContent = text;
-  el.classList.remove('ready', 'error');
-  if (state) el.classList.add(state);
+function urls(c){
+  const p=`providers/${c.provider}/poses/${c.pose}`;
+  return{
+    core:BASE+`${p}/core/module.glb`,
+    body:BASE+`${p}/body/${c.outfit}/module.glb`,
+    outfit:BASE+`${p}/outfits/${c.outfit}/module.glb`,
+    hair:BASE+`${p}/hairs/${c.hair}/module.glb`
+  };
 }
 
-function setup() {
-  if (initialized) return;
-  const host = mount();
-  if (!host) throw new Error('D1R viewer mount not found.');
+function setProgress(text,state=''){
+  const el=$('#challenge-runtime-progress');
+  if(!el)return;
+  el.textContent=text;
+  el.classList.toggle('ready',state==='ready');
+}
 
-  // GOLDEN: same Stage 3B.6C.8 setup contract.
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f0f2);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x555555, 2));
+function hideDiagnostic(){
+  const el=$('#challenge-runtime-diagnostic');
+  if(!el)return;
+  el.classList.remove('show');
+  el.textContent='';
+}
 
-  const dl = new THREE.DirectionalLight(0xffffff, 2.4);
-  dl.position.set(4, 6, 5);
+function showDiagnostic(title,detail){
+  const el=$('#challenge-runtime-diagnostic');
+  if(!el)return;
+  lastDiagnostic={title,detail,at:new Date().toISOString()};
+  const body=typeof detail==='string'?detail:JSON.stringify(detail,null,2);
+  el.textContent=`${title}\n${body}`;
+  el.classList.add('show');
+}
+
+function setup(){
+  if(initialized)return;
+  const host=$('#challenge-golden-viewer');
+  if(!host)throw new Error('challenge-golden-viewer not found');
+
+  // Stage 3B.6C.8.0.2.1 rendering contract.
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0xf0f0f2);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x555555,2));
+
+  const dl=new THREE.DirectionalLight(0xffffff,2.4);
+  dl.position.set(4,6,5);
   scene.add(dl);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   host.replaceChildren(renderer.domElement);
 
-  renderer.domElement.addEventListener('webglcontextlost', (event) => {
-    event.preventDefault();
-    ctxLost = true;
-    setStatus('3D Context Lost，請重新整理', 'error');
+  renderer.domElement.addEventListener('webglcontextlost',e=>{
+    e.preventDefault();
+    ctxLost=true;
+    showDiagnostic('WebGL Context Lost',{contextLost:true});
   });
 
-  camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
-
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
+  camera=new THREE.PerspectiveCamera(35,1,.01,100);
+  controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;
 
   resize();
-  window.addEventListener('resize', resize, { passive: true });
-
-  initialized = true;
+  window.addEventListener('resize',resize,{passive:true});
+  initialized=true;
 }
 
-function resize() {
-  if (!renderer || !camera) return;
-  const host = mount();
-  if (!host) return;
-
-  const width = Math.max(1, host.clientWidth);
-  const height = Math.max(1, host.clientHeight);
-  renderer.setSize(width, height, false);
-  camera.aspect = width / height;
+function resize(){
+  if(!renderer||!camera)return;
+  const host=$('#challenge-golden-viewer');
+  if(!host)return;
+  const w=Math.max(1,host.clientWidth);
+  const h=Math.max(1,host.clientHeight);
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h;
   camera.updateProjectionMatrix();
 }
 
-// GOLDEN decoder/transcoder paths pinned to the SAME Three version.
-// Only delivery path differs from the local benchmark: production uses the version-pinned CDN.
-const D = new DRACOLoader();
+const D=new DRACOLoader();
 D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/libs/draco/gltf/');
 
-function loader() {
-  if (!KTX) {
-    KTX = new KTX2Loader();
+function loader(){
+  if(!KTX){
+    KTX=new KTX2Loader();
     KTX.setTranscoderPath('https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/libs/basis/');
     KTX.detectSupport(renderer);
   }
-
-  const l = new GLTFLoader();
+  const l=new GLTFLoader();
   l.setDRACOLoader(D);
   l.setKTX2Loader(KTX);
   return l;
 }
 
-function dispose(g) {
-  if (!g) return;
-  g.traverse((o) => {
+function dispose(g){
+  if(!g)return;
+  g.traverse(o=>{
     o.geometry?.dispose();
-    (Array.isArray(o.material) ? o.material : [o.material])
+    (Array.isArray(o.material)?o.material:[o.material])
       .filter(Boolean)
-      .forEach((m) => m.dispose?.());
+      .forEach(m=>m.dispose?.());
   });
   g.parent?.remove(g);
 }
 
-function urls(c) {
-  const p = `providers/${c.provider}/poses/${c.pose}`;
-  return {
-    core: BASE + `${p}/core/module.glb`,
-    body: BASE + `${p}/body/${c.outfit}/module.glb`,
-    outfit: BASE + `${p}/outfits/${c.outfit}/module.glb`,
-    hair: BASE + `${p}/hairs/${c.hair}/module.glb`
-  };
-}
-
-function fit() {
-  // GOLDEN: same Stage 3B.6C.8 fit contract.
-  const b = new THREE.Box3().setFromObject(group);
-  const z = b.getSize(new THREE.Vector3());
-  const c = b.getCenter(new THREE.Vector3());
-  const d = Math.max(z.x, z.y, z.z);
-
-  camera.position.set(c.x, c.y + d * 0.06, c.z + d * 2.0);
+function fit(){
+  const b=new THREE.Box3().setFromObject(group);
+  const z=b.getSize(new THREE.Vector3());
+  const c=b.getCenter(new THREE.Vector3());
+  const d=Math.max(z.x,z.y,z.z);
+  camera.position.set(c.x,c.y+d*.06,c.z+d*2.0);
   controls.target.copy(c);
   controls.update();
 }
 
-async function loadGoldenCharacter() {
-  if (loading || loaded) return;
+function hexPrefix(bytes,count=16){
+  return [...bytes.slice(0,count)].map(v=>v.toString(16).padStart(2,'0')).join(' ');
+}
 
-  loading = true;
-  setStatus('正在載入角色…');
-
-  const u = urls(selected);
-  const nextGroup = new THREE.Group();
-
-  try {
-    // GOLDEN: deliberately sequential. Do not parallelize before a separate gate.
-    for (const role of ['core', 'body', 'outfit', 'hair']) {
-      const g = await loader().loadAsync(u[role]);
-      g.scene.traverse((o) => {
-        o.userData.tappieRole = role;
-      });
-      nextGroup.add(g.scene);
-    }
-
-    dispose(group);
-    group = nextGroup;
-    scene.add(group);
-    fit();
-
-    loaded = true;
-    setStatus('角色已載入', 'ready');
-
-    console.info('[Tappie D1R] Golden Runtime loaded', {
-      selected,
-      contextLost: ctxLost
-    });
-  } catch (error) {
-    console.error('[Tappie D1R] Golden Runtime load failed', error);
-    setStatus(`角色載入失敗：${error?.message || error}`, 'error');
-    throw error;
-  } finally {
-    loading = false;
+function textPrefix(bytes,count=180){
+  try{
+    return new TextDecoder('utf-8',{fatal:false})
+      .decode(bytes.slice(0,count))
+      .replace(/\s+/g,' ')
+      .trim();
+  }catch(_){
+    return '';
   }
 }
 
-function animate() {
-  animationId = requestAnimationFrame(animate);
-  if (!active || !renderer || !scene || !camera) return;
-  controls?.update();
-  renderer.render(scene, camera);
+function isGlb(bytes){
+  return bytes.length>=4 &&
+    bytes[0]===0x67 && bytes[1]===0x6c && bytes[2]===0x54 && bytes[3]===0x46;
 }
 
-async function enterChallenge() {
-  active = true;
-  document.body.classList.add('d1r-challenge-active');
+function isKtx2(bytes){
+  const magic=[0xAB,0x4B,0x54,0x58,0x20,0x32,0x30,0xBB,0x0D,0x0A,0x1A,0x0A];
+  return bytes.length>=12 && magic.every((v,i)=>bytes[i]===v);
+}
 
-  // IMPORTANT: initialize only AFTER tab-challenge is visible.
-  // This preserves a real measurable viewer size, matching the golden benchmark.
+function extractExternalImageUrls(glbBuffer,glbUrl){
+  const bytes=new Uint8Array(glbBuffer);
+  if(!isGlb(bytes))return [];
+  try{
+    const dv=new DataView(glbBuffer);
+    const jsonLength=dv.getUint32(12,true);
+    const jsonType=dv.getUint32(16,true);
+    if(jsonType!==0x4E4F534A)return [];
+    const jsonBytes=bytes.slice(20,20+jsonLength);
+    const jsonText=new TextDecoder('utf-8').decode(jsonBytes).replace(/\u0000+$/g,'').trim();
+    const doc=JSON.parse(jsonText);
+    const urls=[];
+    for(const img of (doc.images||[])){
+      if(typeof img?.uri==='string' && !img.uri.startsWith('data:')){
+        urls.push(new URL(img.uri,glbUrl).href);
+      }
+    }
+    return [...new Set(urls)];
+  }catch(e){
+    return [];
+  }
+}
+
+async function fetchBinaryProbe(url,kind,label){
+  const t0=performance.now();
+  let response;
+  try{
+    response=await fetch(url,{method:'GET',mode:'cors',credentials:'omit'});
+  }catch(error){
+    return{
+      ok:false,label,kind,url,
+      phase:'FETCH',
+      error:String(error?.message||error)
+    };
+  }
+
+  const buf=await response.arrayBuffer();
+  const bytes=new Uint8Array(buf);
+  const valid=kind==='glb'?isGlb(bytes):kind==='ktx2'?isKtx2(bytes):response.ok;
+
+  return{
+    ok:response.ok && valid,
+    label,kind,url,
+    status:response.status,
+    statusText:response.statusText,
+    ms:+(performance.now()-t0).toFixed(1),
+    contentType:response.headers.get('content-type'),
+    contentLength:response.headers.get('content-length'),
+    cacheControl:response.headers.get('cache-control'),
+    cfCacheStatus:response.headers.get('cf-cache-status'),
+    cfMitigated:response.headers.get('cf-mitigated'),
+    server:response.headers.get('server'),
+    first16Hex:hexPrefix(bytes,16),
+    textPrefix:valid?'':textPrefix(bytes,180),
+    byteLength:bytes.byteLength,
+    buffer:buf
+  };
+}
+
+function publicProbeRow(row){
+  const {buffer,...rest}=row;
+  return rest;
+}
+
+async function runAssetResponseDiagnostic(){
+  hideDiagnostic();
+  setProgress('正在檢查雲端角色資產…');
+
+  const u=urls(selected);
+  const rows=[];
+  const imageUrls=new Set();
+
+  for(const role of ['core','body','outfit','hair']){
+    const row=await fetchBinaryProbe(u[role],'glb',role);
+    rows.push(row);
+
+    if(!row.ok){
+      const report={
+        verdict:'ASSET_RESPONSE_NOT_GLB',
+        failed:publicProbeRow(row),
+        note:'GLB 正常開頭必須是 67 6c 54 46 (glTF)。'
+      };
+      window.__TAPPIE_D1R1_DIAGNOSTIC__=report;
+      showDiagnostic(`角色資產回應異常｜${role}`,report);
+      throw new Error(`Asset probe failed: ${role}`);
+    }
+
+    for(const imageUrl of extractExternalImageUrls(row.buffer,row.url)){
+      imageUrls.add(imageUrl);
+    }
+  }
+
+  let textureIndex=0;
+  for(const imageUrl of imageUrls){
+    textureIndex+=1;
+    const row=await fetchBinaryProbe(imageUrl,'ktx2',`texture-${textureIndex}`);
+    rows.push(row);
+
+    if(!row.ok){
+      const report={
+        verdict:'ASSET_RESPONSE_NOT_KTX2',
+        failed:publicProbeRow(row),
+        note:'KTX2 正常 magic 應以 ab 4b 54 58 20 32 30 bb 0d 0a 1a 0a 開頭。'
+      };
+      window.__TAPPIE_D1R1_DIAGNOSTIC__=report;
+      showDiagnostic(`共享 KTX2 回應異常｜texture-${textureIndex}`,report);
+      throw new Error(`Texture probe failed: ${imageUrl}`);
+    }
+  }
+
+  const report={
+    verdict:'ASSET_RESPONSE_PROBE_PASS',
+    moduleCount:4,
+    externalTextureCount:imageUrls.size,
+    rows:rows.map(publicProbeRow)
+  };
+  window.__TAPPIE_D1R1_DIAGNOSTIC__=report;
+  return report;
+}
+
+async function loadGoldenCharacter(){
+  if(loading||loaded)return;
+  loading=true;
+
+  try{
+    await runAssetResponseDiagnostic();
+
+    setProgress('正在載入角色…');
+    const u=urls(selected);
+    const next=new THREE.Group();
+
+    // Golden 3B.6C.8.0.2.1 sequence: core -> body -> outfit -> hair
+    for(const role of ['core','body','outfit','hair']){
+      const g=await loader().loadAsync(u[role]);
+      g.scene.traverse(o=>o.userData.tappieRole=role);
+      next.add(g.scene);
+    }
+
+    dispose(group);
+    group=next;
+    scene.add(group);
+    fit();
+    loaded=true;
+    hideDiagnostic();
+    setProgress('角色已載入','ready');
+
+    window.__TAPPIE_D1R1_STATE__={
+      loaded:true,
+      contextLost:ctxLost,
+      selected:{...selected},
+      diagnostic:window.__TAPPIE_D1R1_DIAGNOSTIC__
+    };
+  }catch(error){
+    console.error('[Tappie D1R.1]',error);
+    setProgress('角色載入失敗');
+
+    if(!$('#challenge-runtime-diagnostic')?.classList.contains('show')){
+      showDiagnostic('Golden Loader 失敗',{
+        verdict:'GOLDEN_LOADER_FAILED_AFTER_PROBE',
+        message:String(error?.message||error),
+        stack:String(error?.stack||'').slice(0,1200),
+        assetProbe:window.__TAPPIE_D1R1_DIAGNOSTIC__||null
+      });
+    }
+  }finally{
+    loading=false;
+  }
+}
+
+function anim(){
+  rafId=requestAnimationFrame(anim);
+  if(!active||!renderer||!scene||!camera)return;
+  controls.update();
+  renderer.render(scene,camera);
+}
+
+async function enterChallenge(){
+  active=true;
+  document.body.classList.add('challenge-route-active');
+
+  // Only build WebGL once this tab is visibly active.
   setup();
   resize();
-
-  if (!animationId) animate();
-  if (!loaded) await loadGoldenCharacter();
-
-  // One more resize after the asset settles.
+  if(!rafId)anim();
+  if(!loaded)await loadGoldenCharacter();
   requestAnimationFrame(resize);
 }
 
-function leaveChallenge() {
-  active = false;
-  document.body.classList.remove('d1r-challenge-active');
+function leaveChallenge(){
+  active=false;
+  document.body.classList.remove('challenge-route-active');
 }
 
-window.TappieD1RGoldenRuntime = {
-  onTabChange(tabId) {
-    if (tabId === 'challenge') {
-      enterChallenge().catch(() => {});
-    } else {
-      leaveChallenge();
-    }
+window.TappieD1R1={
+  onTabChange(tabId){
+    if(tabId==='challenge')enterChallenge();
+    else leaveChallenge();
   },
-  getState() {
-    return {
-      initialized,
-      loading,
-      loaded,
-      active,
-      contextLost: ctxLost,
-      selected: { ...selected }
+  rerunDiagnostic(){
+    loaded=false;
+    loadGoldenCharacter();
+  },
+  getState(){
+    return{
+      initialized,loaded,loading,active,contextLost:ctxLost,
+      selected:{...selected},
+      diagnostic:lastDiagnostic||window.__TAPPIE_D1R1_DIAGNOSTIC__||null
     };
   }
 };
 
-function toast(message) {
-  const el = document.getElementById('d1r-toast');
-  if (!el) return;
-  el.textContent = message;
+function toast(message){
+  const el=$('#challenge-phase-toast');
+  if(!el)return;
+  el.textContent=message;
   el.classList.add('show');
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.classList.remove('show'), 1900);
+  toast.timer=setTimeout(()=>el.classList.remove('show'),1800);
 }
+window.openChallengeDressingRoom=()=>toast('更衣室將於 Phase D3 接入');
+window.openChallengeChooser=()=>toast('挑戰方式選擇將於 Phase D2 接入');
 
-window.openD1RDressingRoom = () => toast('更衣室將於 Phase D3 接入');
-window.openD1RChallengeChooser = () => toast('挑戰方式選擇將於 Phase D2 接入');
-
-// Handles reload/direct state where Challenge is already active.
-function syncInitialTab() {
-  if (document.getElementById('tab-challenge')?.classList.contains('active')) {
-    window.TappieD1RGoldenRuntime.onTabChange('challenge');
+function syncInitial(){
+  if($('#tab-challenge')?.classList.contains('active')){
+    window.TappieD1R1.onTabChange('challenge');
   }
 }
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', syncInitialTab, { once: true });
-} else {
-  syncInitialTab();
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',syncInitial,{once:true});
+}else{
+  syncInitial();
 }
 
 </script>
