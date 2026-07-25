@@ -17,6 +17,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_1_EDITOR_PORTAL_SCROLL_NAV_HOTFIX_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_2_LOCKED_SELECTOR_DRAWER_FINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_3_FIXED_CHALLENGE_FULLRANGE_DRAWER_BRIGHT_FINISH_20260726 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_2_4_SAFE_FRAMING_STABLE_DRAWER_STUDIO_METAL_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -3774,6 +3775,65 @@ body > .dressing-room-overlay #d32-viewer canvas{
 }
 
 </style>
+
+<style id="tappie-d324-style">
+
+/* =========================================================
+   D3.2.4｜Safe Framing + Stable Drawer + Selected State
+   ========================================================= */
+
+/* iOS Safari: use flex tracks inside the draggable drawer.
+   This avoids stale Grid track painting while the drawer height changes. */
+body > .dressing-room-overlay .d32-catalog{
+  display:flex !important;
+  flex-direction:column !important;
+  grid-template-rows:none !important;
+}
+
+body > .dressing-room-overlay .d32-drawer-handle{
+  flex:0 0 24px !important;
+}
+body > .dressing-room-overlay .d32-tabs{
+  flex:0 0 auto !important;
+}
+body > .dressing-room-overlay .d32-subtabs{
+  flex:0 0 auto !important;
+}
+body > .dressing-room-overlay .d32-grid{
+  flex:1 1 auto !important;
+  height:auto !important;
+  min-height:0 !important;
+  width:100% !important;
+  position:relative !important;
+  transform:translateZ(0);
+  -webkit-transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+
+/* Selected item language: a thin, calm blue outline instead of changing the whole tile. */
+body > .dressing-room-overlay .d32-item.selected{
+  outline:none !important;
+  background:#f5f8fc !important;
+  box-shadow:
+    inset 0 0 0 2px #3d82d6,
+    0 5px 14px rgba(48,110,180,.08) !important;
+}
+body > .dressing-room-overlay .d32-swatch.selected{
+  outline:none !important;
+  background:#f7faff !important;
+  box-shadow:
+    inset 0 0 0 2px #3d82d6,
+    0 5px 14px rgba(48,110,180,.08) !important;
+}
+
+/* Keep locked state readable without destroying the selected outline language. */
+body > .dressing-room-overlay .d32-item.locked:not(.selected){
+  filter:grayscale(1) !important;
+  opacity:.56 !important;
+}
+
+</style>
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -7525,6 +7585,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {KTX2Loader} from 'three/addons/loaders/KTX2Loader.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 const BASE='https://assets.tappieapp.com/avatars/chibiz/2026.07.25-r2-fast/';
 
@@ -7535,7 +7596,7 @@ let selected={
   hair:'hair_01'
 };
 
-let scene,renderer,camera,controls,group,KTX;
+let scene,renderer,camera,controls,group,KTX,studioEnv;
 let ctxLost=false,initialized=false,loaded=false,loading=false,active=false,rafId=null;
 let lastDiagnostic=null;
 let currentViewerHostId='challenge-golden-viewer';
@@ -7593,6 +7654,15 @@ function setup(){
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+
+  // D3.2.4｜Local studio reflection environment.
+  // Gold / Silver now have something real to reflect without downloading HDR files.
+  const roomEnvironment=new RoomEnvironment();
+  const pmrem=new THREE.PMREMGenerator(renderer);
+  studioEnv=pmrem.fromScene(roomEnvironment,.035).texture;
+  roomEnvironment.dispose?.();
+  pmrem.dispose();
+
   host.replaceChildren(renderer.domElement);
 
   renderer.domElement.addEventListener('webglcontextlost',e=>{
@@ -7655,26 +7725,47 @@ function dispose(g){
 function fit(){
   if(!group||!camera||!controls)return;
   const b=new THREE.Box3().setFromObject(group);
-  const z=b.getSize(new THREE.Vector3());
-  const c=b.getCenter(new THREE.Vector3());
-  const d=Math.max(z.x,z.y,z.z,1e-4);
+  const size=b.getSize(new THREE.Vector3());
+  const center=b.getCenter(new THREE.Vector3());
+
+  // Calculate a real camera-fit distance from both vertical and horizontal FOV.
+  // This is more reliable than using max-dimension only, especially on narrow phones.
+  const vFov=THREE.MathUtils.degToRad(camera.fov);
+  const hFov=2*Math.atan(Math.tan(vFov/2)*Math.max(.01,camera.aspect));
+  const distV=(Math.max(size.y,1e-4)*.5)/Math.tan(vFov*.5);
+  const distH=(Math.max(size.x,1e-4)*.5)/Math.tan(hFov*.5);
+  const safeBase=Math.max(distV,distH)+Math.max(size.z,1e-4)*.55;
+
   const inEditor=currentViewerHostId==='d32-viewer';
   let distance;
+  const target=center.clone();
+
   if(inEditor){
-    // Drawer ratio controls preview size only up to 46% drawer height.
-    // Above that point the drawer keeps moving upward and simply covers more of
-    // the stage; the avatar does NOT continue shrinking.
+    // Drawer down: avatar grows, but still keeps head + feet visible.
+    // Drawer up: avatar shrinks only until 46%; above that size freezes.
     const rawRatio=Number(window.__TAPPIE_D322_DRAWER_RATIO__ ?? .34);
     const visualRatio=Math.max(.045,Math.min(.46,rawRatio));
-    const t=Math.max(0,Math.min(1,(visualRatio-.045)/(.415)));
-    distance=d*(1.62+(2.22-1.62)*t);
+    const t=Math.max(0,Math.min(1,(visualRatio-.045)/.415));
+    distance=safeBase*(1.22+(1.52-1.22)*t);
+    target.y-=size.y*.008;
   }else{
-    distance=d*2.0;
+    // Challenge hero: deliberately a little smaller and higher than D3.2.3
+    // so neither shoes nor hair can sit behind fixed UI.
+    distance=safeBase*1.42;
+    target.y-=size.y*.075;
   }
-  const target=c.clone();
-  // Challenge hero remains a little higher; editor framing is driven by drawer.
-  target.y-=inEditor?d*.035:d*.055;
-  camera.position.set(c.x,c.y+(inEditor?d*.025:d*.035),c.z+distance);
+
+  // Keep current horizontal viewing angle where possible.
+  const azimuth=Number.isFinite(controls.getAzimuthalAngle?.())
+    ? controls.getAzimuthalAngle()
+    : 0;
+  const elevation=inEditor ? size.y*.018 : size.y*.025;
+  camera.position.set(
+    center.x + Math.sin(azimuth)*distance,
+    center.y + elevation,
+    center.z + Math.cos(azimuth)*distance
+  );
+
   controls.target.copy(target);
   controls.update();
 }
@@ -7999,7 +8090,7 @@ function hasAny(text,tokens){return tokens.some(token=>text.includes(token));}
 function cloneRuntimeValue(v){return v?.clone?v.clone():v;}
 function snapshotRuntimeMaterial(mat){
   if(!mat||runtimeMaterialSnapshots.has(mat))return;
-  const props=['color','metalness','roughness','map','normalMap','normalScale','roughnessMap','metalnessMap','aoMap','alphaMap','emissive','emissiveMap','emissiveIntensity','transparent','opacity','alphaTest','depthWrite','vertexColors','envMapIntensity','clearcoat','clearcoatRoughness','transmission','thickness','ior'];
+  const props=['color','metalness','roughness','map','normalMap','normalScale','roughnessMap','metalnessMap','aoMap','alphaMap','emissive','emissiveMap','emissiveIntensity','transparent','opacity','alphaTest','depthWrite','vertexColors','envMap','envMapIntensity','clearcoat','clearcoatRoughness','transmission','thickness','ior'];
   const snap={};
   for(const p of props){if(p in mat)snap[p]=cloneRuntimeValue(mat[p]);}
   runtimeMaterialSnapshots.set(mat,snap);
@@ -8088,7 +8179,7 @@ function runtimeMetalProfile(x){
   return {roughness:.23,detail:.30,clearcoat:.10,forceOpaque:true};
 }
 function applyRuntimeMetal(rows,finish){
-  const finishColor=finish==='gold'?'#f0c45b':'#e1e7ef';
+  const finishColor=finish==='gold'?'#ffc45a':'#eef2f6';
   let changed=0;
   for(const x of rows){
     if(['eyeWhite','screenSurface','logoOverlay'].includes(x.semantic))continue;
@@ -8103,17 +8194,18 @@ function applyRuntimeMetal(rows,finish){
     if('roughnessMap'in m)m.roughnessMap=null;
     if('metalnessMap'in m)m.metalnessMap=null;
     if('emissiveMap'in m)m.emissiveMap=null;
-    if('metalness'in m)m.metalness=profile.visor?.72:(finish==='gold'?.76:.70);
-    if('roughness'in m)m.roughness=Math.max(profile.roughness,finish==='gold'?.26:.29);
-    if('envMapIntensity'in m)m.envMapIntensity=1.65;
+    // D3.2.4｜Studio metal.
+    // Use a real local PMREM environment so Gold/Silver read as reflective metal,
+    // not mustard / grey plastic.
+    if('envMap'in m)m.envMap=studioEnv||null;
+    if('metalness'in m)m.metalness=profile.visor?.88:.92;
+    if('roughness'in m)m.roughness=profile.visor?.15:(finish==='gold'?.20:.17);
+    if('envMapIntensity'in m)m.envMapIntensity=finish==='gold'?1.75:1.55;
     if('vertexColors'in m)m.vertexColors=false;
-    // A very small colored emissive lift keeps shadow regions readable on the
-    // current lightweight studio lighting. This avoids the near-black statue
-    // look while retaining metallic highlights.
     if(m.emissive)m.emissive.set(finishColor);
-    if('emissiveIntensity'in m)m.emissiveIntensity=finish==='gold'?.075:.045;
-    if('clearcoat'in m)m.clearcoat=Math.max(profile.clearcoat,finish==='gold'?.14:.12);
-    if('clearcoatRoughness'in m)m.clearcoatRoughness=Math.min(.34,Math.max(.18,profile.roughness+.04));
+    if('emissiveIntensity'in m)m.emissiveIntensity=finish==='gold'?.012:.006;
+    if('clearcoat'in m)m.clearcoat=profile.visor?.22:.06;
+    if('clearcoatRoughness'in m)m.clearcoatRoughness=.16;
     if(original.normalScale?.isVector2&&m.normalScale?.copy){
       // Locked metal-detail control was 30%, then multiplied by semantic profile detail.
       m.normalScale.copy(original.normalScale).multiplyScalar(.30*profile.detail);
@@ -8530,6 +8622,11 @@ if(document.readyState==='loading'){
     m.shell.style.setProperty('--d322-drawer-height',`${h}px`);
     window.__TAPPIE_D322_DRAWER_RATIO__=Math.max(0,Math.min(1,h/m.available));
     if(refit)requestAnimationFrame(()=>{
+      const grid=document.getElementById('d32-grid');
+      if(grid){
+        // Reading the rect after the drawer height mutation forces Safari to recalc tracks.
+        void grid.getBoundingClientRect();
+      }
       window.TappieChibizRuntime?.resize?.();
       window.TappieChibizRuntime?.fit?.();
     });
@@ -8566,6 +8663,24 @@ if(document.readyState==='loading'){
       drawerPointer=null;
       handle.classList.remove('dragging');
       try{handle.releasePointerCapture?.(event.pointerId)}catch(_){}
+
+      // D3.2.4｜Safari repaint repair.
+      // Preserve scroll position, rerender the current selector, then force a fresh layout.
+      const grid=document.getElementById('d32-grid');
+      const oldScroll=grid?.scrollTop||0;
+      requestAnimationFrame(()=>{
+        try{ render(); }catch(error){ console.warn('[D3.2.4 drawer render]',error); }
+        requestAnimationFrame(()=>{
+          const fresh=document.getElementById('d32-grid');
+          if(!fresh)return;
+          fresh.scrollTop=Math.min(oldScroll,Math.max(0,fresh.scrollHeight-fresh.clientHeight));
+          fresh.style.webkitTransform='translateZ(0)';
+          fresh.style.transform='translateZ(0)';
+          void fresh.offsetHeight;
+          window.TappieChibizRuntime?.resize?.();
+          window.TappieChibizRuntime?.fit?.();
+        });
+      });
     };
     handle.addEventListener('pointerup',end);
     handle.addEventListener('pointercancel',end);
