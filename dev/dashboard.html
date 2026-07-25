@@ -14,6 +14,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D2_CHALLENGE_MODE_CHOOSER_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_1_GLASS_BATTLE_CARDS_REDESIGN_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_EDITOR_ARCHITECTURE_FIX_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_2_1_EDITOR_PORTAL_SCROLL_NAV_HOTFIX_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -3625,6 +3626,29 @@ body.challenge-route-active .challenge-route-action-dock {
   .d32-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .d32-grid.swatches{grid-template-columns:repeat(7,minmax(0,1fr))}
 }
+
+</style>
+
+<style id="tappie-d321-hotfix-style">
+
+:root{--tappie-shell-top:max(60px,env(safe-area-inset-top) + 60px);--tappie-shell-bottom:max(80px,env(safe-area-inset-bottom) + 70px)}
+body>.dressing-room-overlay{position:fixed!important;inset:auto 0 var(--tappie-shell-bottom) 0!important;top:var(--tappie-shell-top)!important;width:auto!important;height:auto!important;z-index:1500!important;overflow:hidden!important;background:#f3f5f8!important;isolation:isolate}
+body>.dressing-room-overlay .dressing-room-page{position:absolute!important;inset:0!important;overflow:hidden!important;padding:0!important;background:#f3f5f8!important}
+body>.dressing-room-overlay .dressing-room-shell{width:100%!important;height:100%!important;min-height:0!important;max-width:none!important;margin:0!important;display:grid!important;grid-template-rows:58px minmax(250px,46%) minmax(0,1fr)!important;overflow:hidden!important}
+body>.dressing-room-overlay .d32-topbar{position:relative!important;z-index:60!important;min-height:58px!important;height:58px!important;padding:8px 16px!important;box-sizing:border-box!important;display:grid!important;grid-template-columns:88px minmax(0,1fr) 88px!important;align-items:center!important;background:rgba(248,250,253,.97)!important;border-bottom:1px solid rgba(115,133,151,.10)!important;box-shadow:0 7px 18px rgba(42,60,80,.035)!important}
+body>.dressing-room-overlay .d32-back,body>.dressing-room-overlay .d32-save{position:relative!important;z-index:2!important;height:42px!important;display:inline-flex!important;align-items:center!important;padding:0!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+body>.dressing-room-overlay .d32-back{justify-content:flex-start!important}body>.dressing-room-overlay .d32-save{justify-content:flex-end!important}body>.dressing-room-overlay .d32-title{display:block!important;visibility:visible!important;line-height:42px!important}
+body>.dressing-room-overlay .d32-stage{min-height:0!important;overflow:hidden!important}
+body>.dressing-room-overlay .d32-catalog{position:relative!important;z-index:20!important;min-height:0!important;height:100%!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto auto minmax(0,1fr)!important;border-radius:28px 28px 0 0!important}
+body>.dressing-room-overlay .d32-tabs{min-height:52px!important;flex:none!important}body>.dressing-room-overlay .d32-subtabs{flex:none!important}
+body>.dressing-room-overlay .d32-grid{position:relative!important;min-height:0!important;height:100%!important;overflow-y:scroll!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-y!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-flow:row!important;grid-auto-rows:148px!important;align-content:start!important;align-items:stretch!important;gap:12px!important;padding:14px 16px 46px!important;box-sizing:border-box!important;scroll-behavior:smooth}
+body>.dressing-room-overlay .d32-grid.swatches{grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-auto-rows:76px!important}
+body>.dressing-room-overlay .d32-item{position:relative!important;width:100%!important;height:148px!important;min-height:148px!important;aspect-ratio:auto!important;align-self:start!important}
+body>.dressing-room-overlay .d32-swatch{width:100%!important;height:76px!important;min-height:76px!important;aspect-ratio:auto!important}
+body>.dressing-room-overlay #d32-viewer canvas{transform:translateY(5px) scale(.94);transform-origin:50% 52%}
+body>.challenge-mode-overlay{z-index:1450!important}body>.challenge-room-modal{z-index:1600!important}
+body:not(.challenge-route-active)>.challenge-route-utility-stack,body:not(.challenge-route-active)>.challenge-route-action-dock{display:none!important}
+@media(min-width:768px){body>.dressing-room-overlay .dressing-room-shell{grid-template-rows:58px minmax(320px,52%) minmax(0,1fr)!important}body>.dressing-room-overlay .d32-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}body>.dressing-room-overlay .d32-grid.swatches{grid-template-columns:repeat(7,minmax(0,1fr))!important}}
 
 </style>
 </head>
@@ -8156,5 +8180,23 @@ if(document.readyState==='loading'){
 })();
 </script>
 
+
+<script id="tappie-d321-hotfix-js">
+
+(function(){
+  const idsToPortal=['dressing-room-overlay','challenge-mode-overlay','challenge-room-modal','challenge-d2-toast'];
+  function portalChallengeLayers(){for(const id of idsToPortal){const el=document.getElementById(id);if(el&&el.parentElement!==document.body)document.body.appendChild(el)}}
+  function editorIsOpen(){return document.getElementById('dressing-room-overlay')?.classList.contains('show')}
+  function chooserIsOpen(){return document.getElementById('challenge-mode-overlay')?.classList.contains('show')}
+  function modalIsOpen(){return document.getElementById('challenge-room-modal')?.classList.contains('show')}
+  function closeChooserLayersNow(){const m=document.getElementById('challenge-room-modal');m?.classList.remove('show');m?.setAttribute('aria-hidden','true');const o=document.getElementById('challenge-mode-overlay');o?.classList.remove('show');o?.setAttribute('aria-hidden','true')}
+  async function closeEditorForNavigation(){const el=document.getElementById('dressing-room-overlay');if(!el?.classList.contains('show'))return;el.classList.remove('show');el.setAttribute('aria-hidden','true');document.body.style.overflow='';try{if(typeof window.cancelD32DressingRoom==='function')await window.cancelD32DressingRoom()}catch(error){console.error('[D3.2.1 navigation close]',error);try{window.TappieChibizRuntime?.mountTo?.('challenge-golden-viewer')}catch(_){}}}
+  function bindBottomNavLifecycle(){const nav=document.getElementById('bottom-nav');if(!nav||nav.dataset.d321Bound==='1')return;nav.dataset.d321Bound='1';nav.addEventListener('click',(event)=>{const item=event.target.closest('.nav-item');if(!item||item.classList.contains('locked'))return;closeChooserLayersNow();if(editorIsOpen())void closeEditorForNavigation();document.body.style.overflow=''},true)}
+  function hardCleanupWhenChallengeInactive(){if(document.body.classList.contains('challenge-route-active'))return;closeChooserLayersNow();const editor=document.getElementById('dressing-room-overlay');if(editor?.classList.contains('show')){editor.classList.remove('show');editor.setAttribute('aria-hidden','true');document.body.style.overflow=''}}
+  function init(){portalChallengeLayers();bindBottomNavLifecycle();const observer=new MutationObserver(hardCleanupWhenChallengeInactive);observer.observe(document.body,{attributes:true,attributeFilter:['class']});document.addEventListener('click',(event)=>{const tab=event.target.closest('.d32-tab,.d32-subtab');if(!tab)return;requestAnimationFrame(()=>{const grid=document.getElementById('d32-grid');if(grid)grid.scrollTop=0})},true);window.TappieD321Lifecycle={portalChallengeLayers,closeEditorForNavigation,hardCleanupWhenChallengeInactive,state(){return{editorOpen:editorIsOpen(),chooserOpen:chooserIsOpen(),modalOpen:modalIsOpen(),editorParent:document.getElementById('dressing-room-overlay')?.parentElement?.tagName||null}}}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+
+</script>
 </body>
 </html>
