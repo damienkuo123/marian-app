@@ -11,6 +11,7 @@
 <!-- TAPPIE_SINGLE_ROUTE_V6_4_SIMPLIFIED_ACTION_DOCK_20260715 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D0_NAVIGATION_RESTRUCTURE_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D1_CLOUD_CHIBIZ_LANDING_20260725 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D1_0_1_SINGLEFILE_ASSET_HOTFIX_20260725 -->
 <!-- TAPPIE_ICON_SYSTEM_V5_OBJECT_FIRST_20260717 -->
 <!-- TAPPIE_LEADERBOARD_2_5D_REWARD_FULLSCREEN_V1_5_20260716 -->
 <!-- TAPPIE_MILESTONE_BUBBLE_DISMISS_ON_INTERACTION_V1_4_20260716 -->
@@ -2608,7 +2609,201 @@
 </style>
 
     <!-- TAPPIE DASHBOARD v5.9 CLEAN: dead CSS/JS removed; route styles normalized without UI redesign. -->
-<link href="./assets/chibiz-dashboard/challenge-landing.css?v=phase-d1-20260725" rel="stylesheet"/>
+
+<style id="tappie-chibiz-d1-inline-css">
+
+/* Tappie Dashboard Phase D1｜Cloud Chibiz Challenge Landing */
+#tab-challenge {
+  min-height: calc(100dvh - max(80px, env(safe-area-inset-top) + 80px) - max(82px, env(safe-area-inset-bottom) + 72px));
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  padding: 0 0 118px;
+}
+.chibiz-challenge-stage {
+  width: 100%;
+  max-width: 760px;
+  min-height: min(680px, calc(100dvh - 160px));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 43%, rgba(255,255,255,.98) 0 20%, rgba(238,246,255,.82) 46%, rgba(228,239,252,.46) 72%, transparent 100%);
+}
+.chibiz-challenge-stage::before,
+.chibiz-challenge-stage::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(48px);
+}
+.chibiz-challenge-stage::before {
+  width: 260px; height: 260px;
+  left: -115px; top: 22%;
+  background: rgba(0,102,204,.13);
+}
+.chibiz-challenge-stage::after {
+  width: 280px; height: 280px;
+  right: -130px; bottom: 12%;
+  background: rgba(243,156,18,.10);
+}
+.chibiz-challenge-tools {
+  position: absolute;
+  z-index: 8;
+  top: 12px;
+  right: 18px;
+  display: flex;
+  gap: 10px;
+}
+.chibiz-tool-button {
+  min-height: 46px;
+  padding: 0 17px;
+  border: 1px solid rgba(255,255,255,.96);
+  border-radius: 18px;
+  background: rgba(255,255,255,.74);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  color: var(--text-main);
+  box-shadow: 0 10px 28px rgba(31,61,92,.10), inset 0 1px 0 rgba(255,255,255,1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.chibiz-tool-button:active { transform: scale(.96); }
+.chibiz-viewer-shell {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 520px;
+  width: 100%;
+  display: grid;
+  place-items: stretch;
+}
+#dashboard-chibiz-viewer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+#dashboard-chibiz-viewer canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+}
+.chibiz-viewer-status {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 150px;
+  padding: 12px 17px;
+  border-radius: 17px;
+  background: rgba(255,255,255,.80);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--text-sub);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(31,61,92,.10);
+  transition: opacity .25s ease;
+}
+.chibiz-viewer-status.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.chibiz-viewer-status.error {
+  color: var(--marian-red);
+  max-width: min(300px, 78vw);
+}
+.chibiz-stage-floor {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: 65px;
+  transform: translateX(-50%);
+  width: min(410px, 76vw);
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(65,93,125,.20) 0%, rgba(65,93,125,.06) 50%, transparent 72%);
+  filter: blur(3px);
+  pointer-events: none;
+}
+.chibiz-challenge-dock {
+  position: fixed;
+  z-index: 1100;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(88px, env(safe-area-inset-bottom) + 78px);
+  width: min(92%, 680px);
+  display: none;
+  box-sizing: border-box;
+}
+body.challenge-mode-active .chibiz-challenge-dock { display: block; }
+.chibiz-challenge-primary {
+  width: 100%;
+  min-height: 62px;
+  border: 0;
+  border-radius: 23px;
+  color: #fff;
+  background: linear-gradient(135deg, #0066cc 0%, #1585e8 55%, #29a2ff 100%);
+  box-shadow: 0 16px 34px rgba(0,102,204,.28), inset 0 1px 0 rgba(255,255,255,.38);
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.chibiz-challenge-primary::before {
+  content:"";
+  position:absolute; inset:0 0 50%;
+  background:linear-gradient(to bottom,rgba(255,255,255,.30),transparent);
+}
+.chibiz-challenge-primary:active { transform: scale(.98); }
+.chibiz-phase-toast {
+  position: fixed;
+  z-index: 4000;
+  left: 50%;
+  bottom: max(170px, env(safe-area-inset-bottom) + 160px);
+  transform: translate(-50%, 18px);
+  width: max-content;
+  max-width: 82vw;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: rgba(25,35,46,.88);
+  color: white;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: .25s ease;
+}
+.chibiz-phase-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (min-width: 768px) {
+  .chibiz-challenge-stage { min-height: min(760px, calc(100dvh - 150px)); }
+  .chibiz-viewer-shell { min-height: 640px; }
+  .chibiz-challenge-tools { right: 28px; top: 18px; }
+}
+
+</style>
 </head>
 <body>
 <div id="dev-scanner-zone" style="display: none; position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 99999; border: 1px solid #ffd700;">
@@ -6208,6 +6403,239 @@
     })();
     
   </script>
-<script type="module" src="./assets/chibiz-dashboard/challenge-landing.js?v=phase-d1-20260725"></script>
+
+<script type="module" id="tappie-chibiz-d1-inline-js">
+
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/KTX2Loader.js';
+
+const BASE = 'https://assets.tappieapp.com/avatars/chibiz/2026.07.25-r2-fast/';
+const CDN = 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/libs/';
+const DEFAULT_LOADOUT = Object.freeze({
+  provider: 'cbz_m_v1',
+  pose: 'pose_32',
+  outfit: 'outfit_00',
+  hair: 'hair_01'
+});
+
+class DashboardChibizChallenge {
+  constructor() {
+    this.mount = document.getElementById('dashboard-chibiz-viewer');
+    this.status = document.getElementById('dashboard-chibiz-status');
+    this.initialized = false;
+    this.loading = false;
+    this.loaded = false;
+    this.active = false;
+    this.contextLost = false;
+    this.group = null;
+    this.frame = 0;
+    this.resizeObserver = null;
+  }
+
+  async init() {
+    if (this.initialized || !this.mount) return;
+    this.initialized = true;
+
+    this.scene = new THREE.Scene();
+    this.scene.background = null;
+
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x6d7f92, 2.4);
+    this.scene.add(hemi);
+
+    const key = new THREE.DirectionalLight(0xffffff, 3.1);
+    key.position.set(4, 7, 6);
+    this.scene.add(key);
+
+    const fill = new THREE.DirectionalLight(0xcfe8ff, 1.5);
+    fill.position.set(-5, 3, 4);
+    this.scene.add(fill);
+
+    this.camera = new THREE.PerspectiveCamera(32, 1, 0.01, 100);
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setClearColor(0x000000, 0);
+    this.mount.appendChild(this.renderer.domElement);
+
+    this.renderer.domElement.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      this.contextLost = true;
+      this.setStatus('3D 顯示暫時中斷，請重新整理', true);
+    });
+
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true;
+    this.controls.enablePan = false;
+    this.controls.enableZoom = false;
+    this.controls.autoRotate = false;
+    this.controls.minPolarAngle = Math.PI * 0.35;
+    this.controls.maxPolarAngle = Math.PI * 0.62;
+
+    this.draco = new DRACOLoader();
+    this.draco.setDecoderPath(CDN + 'draco/gltf/');
+
+    this.ktx2 = new KTX2Loader();
+    this.ktx2.setTranscoderPath(CDN + 'basis/');
+    this.ktx2.detectSupport(this.renderer);
+
+    this.resizeObserver = new ResizeObserver(() => this.resize());
+    this.resizeObserver.observe(this.mount);
+    this.resize();
+    this.animate();
+
+    if (this.active) await this.ensureLoaded();
+  }
+
+  createLoader() {
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(this.draco);
+    loader.setKTX2Loader(this.ktx2);
+    return loader;
+  }
+
+  urls(loadout) {
+    const root = `providers/${loadout.provider}/poses/${loadout.pose}`;
+    return {
+      core: BASE + `${root}/core/module.glb`,
+      body: BASE + `${root}/body/${loadout.outfit}/module.glb`,
+      outfit: BASE + `${root}/outfits/${loadout.outfit}/module.glb`,
+      hair: BASE + `${root}/hairs/${loadout.hair}/module.glb`
+    };
+  }
+
+  async ensureLoaded() {
+    if (this.loaded || this.loading || !this.initialized) return;
+    this.loading = true;
+    this.setStatus('正在載入角色…');
+
+    const next = new THREE.Group();
+    const paths = this.urls(DEFAULT_LOADOUT);
+
+    try {
+      // Production Dashboard first-paint contract:
+      // only the currently equipped four modules are requested.
+      const rows = await Promise.all(
+        ['core', 'body', 'outfit', 'hair'].map(async (role) => {
+          const gltf = await this.createLoader().loadAsync(paths[role]);
+          gltf.scene.traverse((object) => {
+            object.userData.tappieRole = role;
+          });
+          return { role, scene: gltf.scene };
+        })
+      );
+
+      rows.forEach(({ scene }) => next.add(scene));
+      this.disposeGroup(this.group);
+      this.group = next;
+      this.scene.add(next);
+      this.fit();
+      this.loaded = true;
+      this.setStatus('', false, true);
+      window.dispatchEvent(new CustomEvent('tappie:chibiz-dashboard-ready', {
+        detail: { ...DEFAULT_LOADOUT, contextLost: this.contextLost }
+      }));
+    } catch (error) {
+      console.error('[Tappie Chibiz D1]', error);
+      this.setStatus('角色載入失敗，請檢查網路後重新整理', true);
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  fit() {
+    if (!this.group) return;
+    const box = new THREE.Box3().setFromObject(this.group);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    this.camera.position.set(
+      center.x,
+      center.y + maxDim * 0.04,
+      center.z + maxDim * 1.82
+    );
+    this.controls.target.set(center.x, center.y + maxDim * 0.01, center.z);
+    this.controls.update();
+  }
+
+  disposeGroup(group) {
+    if (!group) return;
+    group.traverse((object) => {
+      object.geometry?.dispose?.();
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+      materials.filter(Boolean).forEach((material) => material.dispose?.());
+    });
+    group.parent?.remove(group);
+  }
+
+  resize() {
+    if (!this.renderer || !this.camera || !this.mount) return;
+    const width = Math.max(1, this.mount.clientWidth);
+    const height = Math.max(1, this.mount.clientHeight);
+    this.renderer.setSize(width, height, false);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+  }
+
+  setStatus(message, isError = false, hide = false) {
+    if (!this.status) return;
+    this.status.textContent = message;
+    this.status.classList.toggle('error', isError);
+    this.status.classList.toggle('hidden', hide);
+  }
+
+  onTabChange(tabId) {
+    this.active = tabId === 'challenge';
+    document.body.classList.toggle('challenge-mode-active', this.active);
+    if (!this.active) return;
+    this.init().then(() => {
+      this.resize();
+      this.ensureLoaded();
+    });
+  }
+
+  animate() {
+    this.frame = requestAnimationFrame(() => this.animate());
+    if (!this.active || !this.renderer || !this.scene || !this.camera) return;
+    this.controls?.update();
+    this.renderer.render(this.scene, this.camera);
+  }
+}
+
+function showPhaseToast(message) {
+  const toast = document.getElementById('chibiz-phase-toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showPhaseToast.timer);
+  showPhaseToast.timer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+const runtime = new DashboardChibizChallenge();
+window.TappieChibizChallenge = runtime;
+window.openChibizDressingRoom = () =>
+  showPhaseToast('更衣室將於 Phase D3 接入');
+window.openChibizChallengeModeChooser = () =>
+  showPhaseToast('挑戰方式選擇將於 Phase D2 接入');
+
+// Handles a direct reload while the Challenge tab is already active.
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('tab-challenge')?.classList.contains('active')) {
+    runtime.onTabChange('challenge');
+  }
+});
+
+</script>
 </body>
 </html>
