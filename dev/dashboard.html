@@ -16,6 +16,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_EDITOR_ARCHITECTURE_FIX_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_1_EDITOR_PORTAL_SCROLL_NAV_HOTFIX_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_2_LOCKED_SELECTOR_DRAWER_FINISH_20260726 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_2_3_FIXED_CHALLENGE_FULLRANGE_DRAWER_BRIGHT_FINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -3682,6 +3683,95 @@ body>.dressing-room-overlay #d32-viewer canvas{transform:none!important;transfor
 /* No pinch/wheel zoom: viewport can rotate horizontally only; drawer height controls visible avatar size. */
 .d32-label{font-size:10.5px!important;}
 .d32-item[title]{-webkit-tap-highlight-color:transparent;}
+
+</style>
+
+<style id="tappie-d323-style">
+
+/* =========================================================
+   D3.2.3｜Fixed Challenge + Full-range Drawer
+   ========================================================= */
+
+/* Challenge route behaves like a fixed hero screen.
+   Other tabs keep their normal scrolling behavior. */
+body.challenge-route-active #content-viewport{
+  overflow-y:hidden !important;
+  overscroll-behavior-y:none !important;
+  -webkit-overflow-scrolling:auto !important;
+}
+body.challenge-route-active #tab-challenge{
+  overflow:hidden !important;
+  overscroll-behavior:none !important;
+}
+body.challenge-route-active #challenge-golden-viewer,
+body.challenge-route-active #challenge-golden-viewer canvas{
+  touch-action:none !important;
+  overscroll-behavior:none !important;
+}
+
+/* The wardrobe preview keeps a constant full stage.
+   The drawer overlays the stage instead of consuming its layout height.
+   This lets the drawer travel almost from bottom to top. */
+body > .dressing-room-overlay .dressing-room-shell{
+  --d323-drawer-height:34%;
+  position:relative !important;
+  grid-template-rows:58px minmax(0,1fr) !important;
+}
+
+body > .dressing-room-overlay .d32-stage{
+  grid-row:2 !important;
+  min-height:0 !important;
+  overflow:hidden !important;
+}
+
+body > .dressing-room-overlay .d32-catalog{
+  position:absolute !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+  top:auto !important;
+  height:var(--d323-drawer-height) !important;
+  min-height:32px !important;
+  max-height:none !important;
+  z-index:80 !important;
+  overflow:hidden !important;
+  grid-template-rows:24px auto auto minmax(0,1fr) !important;
+  will-change:height;
+  box-shadow:0 -12px 32px rgba(35,52,72,.07) !important;
+}
+
+/* At the very bottom only the handle needs to remain visible. */
+body > .dressing-room-overlay .d32-drawer-handle{
+  position:relative !important;
+  z-index:90 !important;
+  height:24px !important;
+  min-height:24px !important;
+  touch-action:none !important;
+}
+
+/* Character rotation is horizontal-only; the browser must not drag/bounce the stage. */
+body > .dressing-room-overlay #d32-viewer,
+body > .dressing-room-overlay #d32-viewer canvas{
+  touch-action:none !important;
+  overscroll-behavior:none !important;
+}
+
+/* The actual catalog remains independently scrollable at any expanded height. */
+body > .dressing-room-overlay .d32-grid{
+  min-height:0 !important;
+  height:100% !important;
+  overflow-y:scroll !important;
+  overflow-x:hidden !important;
+  -webkit-overflow-scrolling:touch !important;
+  overscroll-behavior:contain !important;
+  touch-action:pan-y !important;
+}
+
+/* Remove the old canvas transform from the D3.2.1 compatibility layer. */
+body > .dressing-room-overlay #d32-viewer canvas{
+  transform:none !important;
+  transform-origin:center !important;
+}
 
 </style>
 </head>
@@ -7569,9 +7659,20 @@ function fit(){
   const c=b.getCenter(new THREE.Vector3());
   const d=Math.max(z.x,z.y,z.z,1e-4);
   const inEditor=currentViewerHostId==='d32-viewer';
-  const distance=inEditor?d*2.22:d*2.0;
+  let distance;
+  if(inEditor){
+    // Drawer ratio controls preview size only up to 46% drawer height.
+    // Above that point the drawer keeps moving upward and simply covers more of
+    // the stage; the avatar does NOT continue shrinking.
+    const rawRatio=Number(window.__TAPPIE_D322_DRAWER_RATIO__ ?? .34);
+    const visualRatio=Math.max(.045,Math.min(.46,rawRatio));
+    const t=Math.max(0,Math.min(1,(visualRatio-.045)/(.415)));
+    distance=d*(1.62+(2.22-1.62)*t);
+  }else{
+    distance=d*2.0;
+  }
   const target=c.clone();
-  // Challenge hero sits a touch higher; editor stays neutral. No user zoom is enabled.
+  // Challenge hero remains a little higher; editor framing is driven by drawer.
   target.y-=inEditor?d*.035:d*.055;
   camera.position.set(c.x,c.y+(inEditor?d*.025:d*.035),c.z+distance);
   controls.target.copy(target);
@@ -7878,8 +7979,9 @@ function mountViewerTo(hostId){
   currentViewerHostId=hostId;
   host.replaceChildren(renderer.domElement);
   if(controls){
-    controls.minPolarAngle = hostId==='d32-viewer' ? Math.PI*.32 : 0;
-    controls.maxPolarAngle = hostId==='d32-viewer' ? Math.PI*.66 : Math.PI;
+    // D3.2.3: horizontal rotation only. No vertical orbit and no zoom.
+    controls.minPolarAngle = Math.PI * .5;
+    controls.maxPolarAngle = Math.PI * .5;
     controls.enablePan = false;
     controls.enableZoom = false;
     controls.zoomSpeed = 0;
@@ -7986,7 +8088,7 @@ function runtimeMetalProfile(x){
   return {roughness:.23,detail:.30,clearcoat:.10,forceOpaque:true};
 }
 function applyRuntimeMetal(rows,finish){
-  const finishColor=finish==='gold'?'#d6aa35':'#c7cdd5';
+  const finishColor=finish==='gold'?'#f0c45b':'#e1e7ef';
   let changed=0;
   for(const x of rows){
     if(['eyeWhite','screenSurface','logoOverlay'].includes(x.semantic))continue;
@@ -8001,14 +8103,17 @@ function applyRuntimeMetal(rows,finish){
     if('roughnessMap'in m)m.roughnessMap=null;
     if('metalnessMap'in m)m.metalnessMap=null;
     if('emissiveMap'in m)m.emissiveMap=null;
-    if('metalness'in m)m.metalness=profile.visor?.86:1;
-    if('roughness'in m)m.roughness=profile.roughness;
-    if('envMapIntensity'in m)m.envMapIntensity=2.0;
+    if('metalness'in m)m.metalness=profile.visor?.72:(finish==='gold'?.76:.70);
+    if('roughness'in m)m.roughness=Math.max(profile.roughness,finish==='gold'?.26:.29);
+    if('envMapIntensity'in m)m.envMapIntensity=1.65;
     if('vertexColors'in m)m.vertexColors=false;
-    if(m.emissive)m.emissive.set(0x000000);
-    if('emissiveIntensity'in m)m.emissiveIntensity=0;
-    if('clearcoat'in m)m.clearcoat=profile.clearcoat;
-    if('clearcoatRoughness'in m)m.clearcoatRoughness=Math.min(.30,profile.roughness+.02);
+    // A very small colored emissive lift keeps shadow regions readable on the
+    // current lightweight studio lighting. This avoids the near-black statue
+    // look while retaining metallic highlights.
+    if(m.emissive)m.emissive.set(finishColor);
+    if('emissiveIntensity'in m)m.emissiveIntensity=finish==='gold'?.075:.045;
+    if('clearcoat'in m)m.clearcoat=Math.max(profile.clearcoat,finish==='gold'?.14:.12);
+    if('clearcoatRoughness'in m)m.clearcoatRoughness=Math.min(.34,Math.max(.18,profile.roughness+.04));
     if(original.normalScale?.isVector2&&m.normalScale?.copy){
       // Locked metal-detail control was 30%, then multiplied by semantic profile detail.
       m.normalScale.copy(original.normalScale).multiplyScalar(.30*profile.detail);
@@ -8140,7 +8245,7 @@ if(document.readyState==='loading'){
 
   const CATS=[['role','角色'],['tone','色調'],['hair','髮型'],['outfit','穿搭'],['action','動作'],['collectible','收藏款']];
   const roleItems=[
-    {id:'cbz_m_v1',label:'Male'},{id:'cbz_f_v1',label:'Female'}
+    {id:'cbz_m_v1',label:'傑克'},{id:'cbz_f_v1',label:'莉莉'}
   ];
   const hairItems=Array.from({length:11},(_,i)=>({id:`hair_${String(i).padStart(2,'0')}`,label:`Hair ${String(i).padStart(2,'0')}`}));
   const outfitItems=[
@@ -8398,46 +8503,90 @@ if(document.readyState==='loading'){
     finally{button?.classList.remove('is-saving');}
   };
 
-  // D3.2.2 draggable catalog drawer. Default is lower than D3.2.1; maximum equals roughly the former height.
+  // D3.2.3 full-range draggable catalog drawer.
+  // Bottom: only the handle remains visible.
+  // Top: drawer can reach almost to the wardrobe header.
+  // Avatar size changes only until drawer ratio 46%; above that it stays at
+  // the current minimum size while the drawer continues covering the stage.
   let drawerBound=false,drawerStartY=0,drawerStartHeight=0,drawerPointer=null;
   function drawerMetrics(){
     const shell=document.querySelector('#dressing-room-overlay .dressing-room-shell');
     const catalog=document.getElementById('d32-catalog')||document.querySelector('#dressing-room-overlay .d32-catalog');
     if(!shell||!catalog)return null;
     const shellH=shell.getBoundingClientRect().height;
-    const available=Math.max(300,shellH-58);
-    return{shell,catalog,shellH,available,min:Math.max(225,available*.24),max:Math.max(260,available*.46)};
+    const topbarH=58;
+    const available=Math.max(260,shellH-topbarH);
+    return{
+      shell,catalog,shellH,available,
+      min:32,
+      max:Math.max(80,available-8)
+    };
   }
   function setDrawerHeight(px,refit=true){
     const m=drawerMetrics();if(!m)return;
     const h=Math.max(m.min,Math.min(m.max,px));
+    m.shell.style.setProperty('--d323-drawer-height',`${h}px`);
+    // keep the old variable in sync for compatibility with previous CSS/debugging
     m.shell.style.setProperty('--d322-drawer-height',`${h}px`);
-    if(refit)requestAnimationFrame(()=>{window.TappieChibizRuntime?.resize?.();window.TappieChibizRuntime?.fit?.();});
+    window.__TAPPIE_D322_DRAWER_RATIO__=Math.max(0,Math.min(1,h/m.available));
+    if(refit)requestAnimationFrame(()=>{
+      window.TappieChibizRuntime?.resize?.();
+      window.TappieChibizRuntime?.fit?.();
+    });
   }
   function initD322Drawer(reset=false){
-    const handle=document.getElementById('d32-drawer-handle');const m=drawerMetrics();if(!handle||!m)return;
-    if(reset||!m.shell.style.getPropertyValue('--d322-drawer-height'))setDrawerHeight(m.available*.34,false);
-    if(drawerBound)return;drawerBound=true;
+    const handle=document.getElementById('d32-drawer-handle');
+    const m=drawerMetrics();
+    if(!handle||!m)return;
+    if(reset||!m.shell.style.getPropertyValue('--d323-drawer-height')){
+      setDrawerHeight(m.available*.34,false);
+      window.__TAPPIE_D322_DRAWER_RATIO__=.34;
+    }
+    if(drawerBound)return;
+    drawerBound=true;
+
     handle.addEventListener('pointerdown',event=>{
       const now=drawerMetrics();if(!now)return;
-      drawerPointer=event.pointerId;drawerStartY=event.clientY;drawerStartHeight=now.catalog.getBoundingClientRect().height;
-      handle.classList.add('dragging');handle.setPointerCapture?.(event.pointerId);event.preventDefault();
+      drawerPointer=event.pointerId;
+      drawerStartY=event.clientY;
+      drawerStartHeight=now.catalog.getBoundingClientRect().height;
+      handle.classList.add('dragging');
+      handle.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
     });
+
     handle.addEventListener('pointermove',event=>{
       if(drawerPointer!==event.pointerId)return;
-      setDrawerHeight(drawerStartHeight-(event.clientY-drawerStartY),true);event.preventDefault();
+      setDrawerHeight(drawerStartHeight-(event.clientY-drawerStartY),true);
+      event.preventDefault();
     });
-    const end=event=>{if(drawerPointer!==event.pointerId)return;drawerPointer=null;handle.classList.remove('dragging');try{handle.releasePointerCapture?.(event.pointerId)}catch(_){}};
-    handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+
+    const end=event=>{
+      if(drawerPointer!==event.pointerId)return;
+      drawerPointer=null;
+      handle.classList.remove('dragging');
+      try{handle.releasePointerCapture?.(event.pointerId)}catch(_){}
+    };
+    handle.addEventListener('pointerup',end);
+    handle.addEventListener('pointercancel',end);
+
     handle.addEventListener('keydown',event=>{
       if(!['ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
-      const now=drawerMetrics();if(!now)return;event.preventDefault();
+      const now=drawerMetrics();if(!now)return;
+      event.preventDefault();
       const current=now.catalog.getBoundingClientRect().height;
-      if(event.key==='ArrowUp')setDrawerHeight(current+36);
-      if(event.key==='ArrowDown')setDrawerHeight(current-36);
+      if(event.key==='ArrowUp')setDrawerHeight(current+56);
+      if(event.key==='ArrowDown')setDrawerHeight(current-56);
       if(event.key==='Home')setDrawerHeight(now.min);
       if(event.key==='End')setDrawerHeight(now.max);
     });
+
+    // Re-clamp after orientation / viewport changes.
+    window.addEventListener('resize',()=>{
+      const now=drawerMetrics();if(!now)return;
+      const current=now.catalog.getBoundingClientRect().height;
+      setDrawerHeight(current,true);
+    },{passive:true});
   }
   window.initD322Drawer=initD322Drawer;
 
@@ -8478,6 +8627,39 @@ if(document.readyState==='loading'){
   function hardCleanupWhenChallengeInactive(){if(document.body.classList.contains('challenge-route-active'))return;closeChooserLayersNow();const editor=document.getElementById('dressing-room-overlay');if(editor?.classList.contains('show')){editor.classList.remove('show');editor.setAttribute('aria-hidden','true');document.body.style.overflow=''}}
   function init(){portalChallengeLayers();bindBottomNavLifecycle();const observer=new MutationObserver(hardCleanupWhenChallengeInactive);observer.observe(document.body,{attributes:true,attributeFilter:['class']});document.addEventListener('click',(event)=>{const tab=event.target.closest('.d32-tab,.d32-subtab');if(!tab)return;requestAnimationFrame(()=>{const grid=document.getElementById('d32-grid');if(grid)grid.scrollTop=0})},true);window.TappieD321Lifecycle={portalChallengeLayers,closeEditorForNavigation,hardCleanupWhenChallengeInactive,state(){return{editorOpen:editorIsOpen(),chooserOpen:chooserIsOpen(),modalOpen:modalIsOpen(),editorParent:document.getElementById('dressing-room-overlay')?.parentElement?.tagName||null}}}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+
+</script>
+
+<script id="tappie-d323-js">
+
+(function(){
+  function pinChallengeViewport(){
+    if(!document.body.classList.contains('challenge-route-active')) return;
+    const viewport=document.getElementById('content-viewport');
+    if(viewport){
+      viewport.scrollTop=0;
+      try{ viewport.scrollTo({top:0,left:0,behavior:'instant'}); }catch(_){ viewport.scrollTop=0; }
+    }
+    requestAnimationFrame(()=>window.TappieChibizRuntime?.fit?.());
+  }
+
+  // Challenge tab can rotate horizontally, but never vertically / pinch zoom.
+  document.addEventListener('touchmove',(event)=>{
+    const viewer=event.target?.closest?.('#challenge-golden-viewer,#d32-viewer');
+    if(viewer && event.touches?.length>1){
+      event.preventDefault();
+    }
+  },{passive:false,capture:true});
+
+  const observer=new MutationObserver(pinChallengeViewport);
+  observer.observe(document.body,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',pinChallengeViewport,{passive:true});
+
+  window.TappieD323={
+    pinChallengeViewport,
+    drawerRatio(){return window.__TAPPIE_D322_DRAWER_RATIO__ ?? null;}
+  };
 })();
 
 </script>
