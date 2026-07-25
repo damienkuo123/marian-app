@@ -1,4 +1,5 @@
 // sw.js (PWA + Web Push)
+// TAPPIE_SW_CROSS_ORIGIN_BYPASS_HOTFIX_20260725
 self.addEventListener('install', (e) => {
     self.skipWaiting(); // 強制立即接管
     console.log('[Service Worker] Installed');
@@ -35,19 +36,39 @@ function shouldBypassRuntimeCache(requestUrl) {
 self.addEventListener('fetch', (e) => {
     if (e.request.method !== 'GET') return;
 
+    const requestUrl = new URL(e.request.url);
+
+    // Cross-origin requests must bypass the Service Worker completely.
+    // This includes Cloudflare R2 avatar assets, jsDelivr, GAS, Supabase, etc.
+    if (requestUrl.origin !== self.location.origin) {
+        return;
+    }
+
+    const offlineResponse = () => new Response("請檢查網路連線", {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: {
+            "Content-Type": "text/plain; charset=UTF-8",
+            "Cache-Control": "no-store",
+            "X-Tappie-SW-Fallback": "1"
+        }
+    });
+
     if (shouldBypassRuntimeCache(e.request.url)) {
         e.respondWith(
             fetch(new Request(e.request, { cache: 'no-store' }))
                 .catch(() => fetch(e.request))
-                .catch(() => new Response("請檢查網路連線"))
+                .catch(() => offlineResponse())
         );
         return;
     }
 
-    // 其他資源維持原本網路通行，避免影響 GAS / Supabase / Web Push。
-    e.respondWith(fetch(e.request).catch(() => {
-        return new Response("請檢查網路連線");
-    }));
+    // Same-origin resources remain network-first.
+    // On true network failure return a real 503, never a fake HTTP 200.
+    e.respondWith(
+        fetch(e.request)
+            .catch(() => offlineResponse())
+    );
 });
 
 self.addEventListener('push', (event) => {
