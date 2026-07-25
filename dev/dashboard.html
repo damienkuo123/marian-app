@@ -18,6 +18,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_2_LOCKED_SELECTOR_DRAWER_FINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_3_FIXED_CHALLENGE_FULLRANGE_DRAWER_BRIGHT_FINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_4_SAFE_FRAMING_STABLE_DRAWER_STUDIO_METAL_20260726 -->
+<!-- TAPPIE_DASHBOARD_PHASE_D3_2_5_PERSISTENT_SELECTED_ORIGINAL_METAL_STUDIOENV_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -3831,6 +3832,42 @@ body > .dressing-room-overlay .d32-swatch.selected{
 body > .dressing-room-overlay .d32-item.locked:not(.selected){
   filter:grayscale(1) !important;
   opacity:.56 !important;
+}
+
+</style>
+
+<style id="tappie-d325-selected-style">
+
+/* =========================================================
+   D3.2.5｜Persistent Selected Ring
+   ========================================================= */
+body > .dressing-room-overlay .d32-item,
+body > .dressing-room-overlay .d32-swatch{
+  isolation:isolate;
+}
+
+body > .dressing-room-overlay .d32-item.selected::after,
+body > .dressing-room-overlay .d32-swatch.selected::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:40;
+  pointer-events:none;
+  border:2px solid #3d82d6;
+  border-radius:inherit;
+  box-sizing:border-box;
+}
+
+/* Keep the selected state visible even when the real thumbnail has not
+   been published yet and the fallback layer is covering the tile. */
+body > .dressing-room-overlay .d32-item.selected.thumb-fallback::after{
+  border-color:#3d82d6;
+}
+
+body > .dressing-room-overlay .d32-item.selected,
+body > .dressing-room-overlay .d32-swatch.selected{
+  outline:none !important;
+  box-shadow:0 5px 14px rgba(48,110,180,.08) !important;
 }
 
 </style>
@@ -8179,7 +8216,7 @@ function runtimeMetalProfile(x){
   return {roughness:.23,detail:.30,clearcoat:.10,forceOpaque:true};
 }
 function applyRuntimeMetal(rows,finish){
-  const finishColor=finish==='gold'?'#ffc45a':'#eef2f6';
+  const finishColor=finish==='gold'?'#d6aa35':'#c7cdd5';
   let changed=0;
   for(const x of rows){
     if(['eyeWhite','screenSurface','logoOverlay'].includes(x.semantic))continue;
@@ -8194,18 +8231,19 @@ function applyRuntimeMetal(rows,finish){
     if('roughnessMap'in m)m.roughnessMap=null;
     if('metalnessMap'in m)m.metalnessMap=null;
     if('emissiveMap'in m)m.emissiveMap=null;
-    // D3.2.4｜Studio metal.
-    // Use a real local PMREM environment so Gold/Silver read as reflective metal,
-    // not mustard / grey plastic.
-    if('envMap'in m)m.envMap=studioEnv||null;
-    if('metalness'in m)m.metalness=profile.visor?.88:.92;
-    if('roughness'in m)m.roughness=profile.visor?.15:(finish==='gold'?.20:.17);
-    if('envMapIntensity'in m)m.envMapIntensity=finish==='gold'?1.75:1.55;
+    // D3.2.5｜Original 6C.0.1 metal contract + D3.2.4 studio reflections.
+    // Restore the original Gold/Silver recipe exactly for color, metalness,
+    // roughness, emissive and clearcoat, but now give that metal a real PMREM
+    // environment to reflect.
+    if('envMap'in m)m.envMap=studioEnv||original.envMap||null;
+    if('metalness'in m)m.metalness=profile.visor?.86:1;
+    if('roughness'in m)m.roughness=profile.roughness;
+    if('envMapIntensity'in m)m.envMapIntensity=2.0;
     if('vertexColors'in m)m.vertexColors=false;
-    if(m.emissive)m.emissive.set(finishColor);
-    if('emissiveIntensity'in m)m.emissiveIntensity=finish==='gold'?.012:.006;
-    if('clearcoat'in m)m.clearcoat=profile.visor?.22:.06;
-    if('clearcoatRoughness'in m)m.clearcoatRoughness=.16;
+    if(m.emissive)m.emissive.set(0x000000);
+    if('emissiveIntensity'in m)m.emissiveIntensity=0;
+    if('clearcoat'in m)m.clearcoat=profile.clearcoat;
+    if('clearcoatRoughness'in m)m.clearcoatRoughness=Math.min(.30,profile.roughness+.02);
     if(original.normalScale?.isVector2&&m.normalScale?.copy){
       // Locked metal-detail control was 30%, then multiplied by semantic profile detail.
       m.normalScale.copy(original.normalScale).multiplyScalar(.30*profile.detail);
@@ -8774,6 +8812,26 @@ if(document.readyState==='loading'){
   window.TappieD323={
     pinChallengeViewport,
     drawerRatio(){return window.__TAPPIE_D322_DRAWER_RATIO__ ?? null;}
+  };
+})();
+
+</script>
+
+<script id="tappie-d325-js">
+
+(function(){
+  window.TappieD325 = {
+    version:'D3.2.5',
+    getSelectedTile(){
+      const tile=document.querySelector('#d32-grid .d32-item.selected,#d32-grid .d32-swatch.selected');
+      return tile ? {
+        className:tile.className,
+        label:tile.querySelector?.('.d32-label')?.textContent?.trim() || tile.getAttribute('aria-label') || null
+      } : null;
+    },
+    getFinish(){
+      return window.TappieChibizRuntime?.getFinish?.() || null;
+    }
   };
 })();
 
