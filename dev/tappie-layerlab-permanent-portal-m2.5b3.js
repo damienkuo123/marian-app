@@ -1,0 +1,572 @@
+(() => {
+  'use strict';
+
+  const VERSION = 'M2.5B3-DEV2';
+  const RUNTIME_URL =
+    'https://assets.tappieapp.com/avatars/layerlab/casual/2026.07.28-m2.5b2/index.html';
+  const RUNTIME_ORIGIN = 'https://assets.tappieapp.com';
+
+  const PORTAL_ID = 'layerlab-runtime-portal';
+  const FRAME_ID = 'layerlab-runtime-frame-b3';
+  const CHALLENGE_TARGET = 'challenge-golden-viewer';
+  const WARDROBE_TARGET = 'd32-viewer';
+
+  if (window.TappieLayerLabPortal?.version === VERSION) return;
+
+  let resolveReady;
+  let rejectReady;
+  let readyPromise = new Promise((resolve, reject) => {
+    resolveReady = resolve;
+    rejectReady = reject;
+  });
+
+  const state = {
+    version: VERSION,
+    iframeCreateCount: 0,
+    iframeLoadCount: 0,
+    runtimeReadyCount: 0,
+    responseCount: 0,
+    commandSeq: 0,
+    target: null,
+    visible: false,
+    lastRect: null,
+    lastRuntimeEvent: null,
+    pending: new Map(),
+    layoutRaf: 0,
+    ready: false,
+    legacyMountCallsSuppressed: 0
+  };
+
+  function progress(text, ready = false) {
+    const el = document.getElementById('challenge-runtime-progress');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle('ready', !!ready);
+  }
+
+  function debugEnabled() {
+    try {
+      return new URLSearchParams(location.search).get('layerlabPortalDebug') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function ensurePortal() {
+    let portal = document.getElementById(PORTAL_ID);
+    if (portal) return portal;
+
+    portal = document.createElement('div');
+    portal.id = PORTAL_ID;
+    portal.setAttribute('aria-label', 'LayerLab permanent runtime portal');
+
+    const frame = document.createElement('iframe');
+    frame.id = FRAME_ID;
+    frame.title = 'Tappie LayerLab avatar runtime';
+    frame.src = RUNTIME_URL;
+    frame.loading = 'eager';
+    frame.setAttribute('allow', 'fullscreen; autoplay');
+    frame.setAttribute('allowfullscreen', '');
+    frame.setAttribute('scrolling', 'no');
+
+    frame.addEventListener('load', () => {
+      state.iframeLoadCount += 1;
+      progress('角色引擎已連線，等待 READY…', false);
+      renderDiagnostic();
+    });
+
+    portal.appendChild(frame);
+    document.body.appendChild(portal);
+    state.iframeCreateCount += 1;
+    progress('LayerLab 角色載入中…', false);
+    return portal;
+  }
+
+  function frame() {
+    return document.getElementById(FRAME_ID);
+  }
+
+  function isWardrobeOpen() {
+    const overlay = document.getElementById('dressing-room-overlay');
+    return !!overlay?.classList.contains('show') &&
+      overlay.getAttribute('aria-hidden') !== 'true';
+  }
+
+  function isChallengeActive() {
+    return document.body.classList.contains('challenge-route-active') ||
+      document.getElementById('tab-challenge')?.classList.contains('active');
+  }
+
+  function targetInfo() {
+    if (isWardrobeOpen()) {
+      const el = document.getElementById(WARDROBE_TARGET);
+      if (el) return { id: WARDROBE_TARGET, el, wardrobe: true };
+    }
+
+    if (isChallengeActive()) {
+      const el = document.getElementById(CHALLENGE_TARGET);
+      if (el) return { id: CHALLENGE_TARGET, el, wardrobe: false };
+    }
+
+    return null;
+  }
+
+  function rectForTarget(target) {
+    const r = target.el.getBoundingClientRect();
+    let bottom = r.bottom;
+
+    // The existing drawer overlays the stage. Because the permanent portal
+    // stays under BODY and must never be reparented, project only into the
+    // currently visible stage above the drawer. This also makes drawer height
+    // control the effective avatar viewport without touching Unity camera/FOV.
+    if (target.wardrobe) {
+      const catalog = document.querySelector(
+        '#dressing-room-overlay.show .d32-catalog'
+      );
+      if (catalog) {
+        const c = catalog.getBoundingClientRect();
+        if (c.top > r.top && c.top < bottom) bottom = c.top;
+      }
+    }
+
+    return {
+      left: r.left,
+      top: r.top,
+      width: Math.max(0, r.width),
+      height: Math.max(0, bottom - r.top)
+    };
+  }
+
+  function sameRect(a, b) {
+    if (!a || !b) return false;
+    return Math.abs(a.left - b.left) < 0.5 &&
+      Math.abs(a.top - b.top) < 0.5 &&
+      Math.abs(a.width - b.width) < 0.5 &&
+      Math.abs(a.height - b.height) < 0.5;
+  }
+
+  function placePortal() {
+    state.layoutRaf = 0;
+    const portal = ensurePortal();
+    const target = targetInfo();
+
+    portal.classList.toggle('is-wardrobe-target', !!target?.wardrobe);
+
+    if (!target) {
+      portal.classList.remove('is-visible');
+      portal.dataset.target = '';
+      state.target = null;
+      state.visible = false;
+      renderDiagnostic();
+      return;
+    }
+
+    const rect = rectForTarget(target);
+
+    if (rect.width < 2 || rect.height < 2) {
+      portal.classList.remove('is-visible');
+      state.visible = false;
+      state.target = target.id;
+      renderDiagnostic();
+      return;
+    }
+
+    if (!sameRect(state.lastRect, rect) || state.target !== target.id) {
+      portal.style.left = `${rect.left}px`;
+      portal.style.top = `${rect.top}px`;
+      portal.style.width = `${rect.width}px`;
+      portal.style.height = `${rect.height}px`;
+      portal.dataset.target = target.id;
+      state.lastRect = rect;
+      state.target = target.id;
+    }
+
+    portal.classList.add('is-visible');
+    state.visible = true;
+    renderDiagnostic();
+  }
+
+  function schedulePlace() {
+    if (state.layoutRaf) return;
+    state.layoutRaf = requestAnimationFrame(placePortal);
+  }
+
+  function rawCommand(command, args = {}) {
+    const runtimeFrame = frame();
+    if (!runtimeFrame?.contentWindow) {
+      return Promise.reject(new Error('B3 permanent runtime iframe missing.'));
+    }
+
+    const id = `b3-${Date.now()}-${++state.commandSeq}`;
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        state.pending.delete(id);
+        reject(new Error(`B3 command timeout: ${command}`));
+      }, 8000);
+
+      state.pending.set(id, { resolve, reject, timer, command });
+
+      runtimeFrame.contentWindow.postMessage({
+        source: 'tappie-layerlab-parent-command',
+        id,
+        command,
+        args
+      }, RUNTIME_ORIGIN);
+    });
+  }
+
+  async function command(commandName, args = {}, options = {}) {
+    if (!options.skipReady) await waitReady();
+    return rawCommand(commandName, args);
+  }
+
+  async function waitReady() {
+    ensurePortal();
+    if (state.ready) return snapshot();
+    return readyPromise;
+  }
+
+  function onRuntimeMessage(event) {
+    const runtimeFrame = frame();
+    if (!runtimeFrame || event.source !== runtimeFrame.contentWindow) return;
+    if (event.origin !== RUNTIME_ORIGIN) return;
+
+    const msg = event.data;
+    if (!msg || msg.source !== 'tappie-layerlab-browser-contract') return;
+
+    state.lastRuntimeEvent = {
+      kind: msg.kind || null,
+      event: msg.event || null,
+      command: msg.command || null,
+      at: Date.now()
+    };
+
+    if (msg.kind === 'event' && msg.event === 'ready') {
+      state.runtimeReadyCount += 1;
+      state.ready = true;
+      progress('角色準備完成', true);
+      resolveReady?.(snapshot());
+      window.dispatchEvent(
+        new CustomEvent('tappie:avatar-runtime-ready', { detail: snapshot() })
+      );
+    }
+
+    if (msg.kind === 'response') {
+      state.responseCount += 1;
+      const pending = state.pending.get(msg.id);
+      if (pending) {
+        state.pending.delete(msg.id);
+        clearTimeout(pending.timer);
+        if (msg.ok) pending.resolve(msg.result);
+        else pending.reject(
+          new Error(msg.error || `B3 ${pending.command} failed`)
+        );
+      }
+    }
+
+    renderDiagnostic();
+  }
+
+  function installLifecycleShim() {
+    window.TappieD1R1 = {
+      onTabChange(tabId) {
+        const active = tabId === 'challenge';
+        document.body.classList.toggle('challenge-route-active', active);
+        schedulePlace();
+      },
+      rerunDiagnostic() {
+        return selfTest();
+      },
+      getState() {
+        return snapshot();
+      }
+    };
+  }
+
+  function suppressLegacyChibizMounts() {
+    const legacy = window.TappieChibizRuntime;
+    if (!legacy || legacy.__TAPPIE_M25B3_SUPPRESSED__) return;
+
+    const originalMount =
+      typeof legacy.mountTo === 'function' ? legacy.mountTo.bind(legacy) : null;
+
+    legacy.mountTo = function(hostId) {
+      if (hostId === CHALLENGE_TARGET || hostId === WARDROBE_TARGET) {
+        state.legacyMountCallsSuppressed += 1;
+        schedulePlace();
+        renderDiagnostic();
+        return true;
+      }
+      return originalMount ? originalMount(hostId) : false;
+    };
+
+    legacy.__TAPPIE_M25B3_SUPPRESSED__ = true;
+  }
+
+  function openWardrobeShell() {
+    const overlay = document.getElementById('dressing-room-overlay');
+    if (!overlay) return;
+
+    document.body.dataset.m25b3PrevOverflow =
+      document.body.style.overflow || '';
+    document.body.style.overflow = 'hidden';
+
+    overlay.classList.add('show');
+    overlay.setAttribute('aria-hidden', 'false');
+
+    try { window.initD322Drawer?.(true); } catch (_) {}
+
+    schedulePlace();
+    setTimeout(schedulePlace, 50);
+    setTimeout(schedulePlace, 220);
+  }
+
+  function closeWardrobeShell() {
+    const overlay = document.getElementById('dressing-room-overlay');
+    if (!overlay) return;
+
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden', 'true');
+
+    document.body.style.overflow =
+      document.body.dataset.m25b3PrevOverflow || '';
+
+    schedulePlace();
+    setTimeout(schedulePlace, 80);
+  }
+
+  function installWardrobeLifecycleShim() {
+    // B3 is lifecycle-only. Do not call the old Chibiz/M2.5A1 wardrobe host,
+    // because those implementations move or initialize legacy runtimes.
+    window.openChallengeDressingRoomV301 = openWardrobeShell;
+    window.openChallengeDressingRoom = openWardrobeShell;
+    window.cancelD32DressingRoom = closeWardrobeShell;
+    window.saveD32DressingRoom = closeWardrobeShell;
+  }
+
+  function compatibilityApi() {
+    const api = {
+      version: VERSION,
+      runtimeUrl: RUNTIME_URL,
+      enter() {
+        document.body.classList.add('challenge-route-active');
+        schedulePlace();
+      },
+      leave() {
+        document.body.classList.remove('challenge-route-active');
+        schedulePlace();
+      },
+      ready: waitReady,
+      call: (name, payload) => command(name, payload || {}),
+      getCatalog: () => command('getCatalog'),
+      getState: () => command('getState', { refresh: true }),
+      getMirrorState: () => command('getState', { refresh: true }),
+      getCapabilities: () => command('getContractInfo'),
+      requestSourceTruth: () => command('requestSourceTruth'),
+      randomize: () => command('randomize'),
+      setPart: (type, displayIndex) =>
+        command('setPart', { type, displayIndex }),
+      playAnimation: name => command('playAnimation', { name }),
+      resetRotation: () => command('resetRotation'),
+      applyState: async config => {
+        const parts = config?.parts || config?.selections || {};
+        const entries = Array.isArray(parts)
+          ? parts.map(x => [x?.type, x?.displayIndex])
+          : Object.entries(parts);
+        for (const [type, displayIndex] of entries) {
+          if (type == null || displayIndex == null) continue;
+          await command('setPart', { type, displayIndex });
+        }
+        if (config?.animation) {
+          await command('playAnimation', { name: config.animation });
+        }
+        if (config?.resetRotation === true) {
+          await command('resetRotation');
+        }
+        return command('getState', { refresh: true });
+      },
+      reload() {
+        throw new Error(
+          'M2.5B3 invariant forbids runtime reload during UI lifecycle.'
+        );
+      },
+      destroy() {
+        throw new Error(
+          'M2.5B3 invariant forbids runtime destroy during UI lifecycle.'
+        );
+      },
+      selfTest,
+      snapshot
+    };
+
+    window.TappieLayerLabRuntimeHost = api;
+    window.TappieAvatarHost = api;
+    return api;
+  }
+
+  function diagnosticHost() {
+    if (!debugEnabled()) return null;
+
+    let el = document.getElementById('layerlab-b3-diagnostic');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'layerlab-b3-diagnostic';
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function renderDiagnostic() {
+    const el = diagnosticHost();
+    if (!el) return;
+
+    const healthy =
+      state.iframeCreateCount === 1 &&
+      state.iframeLoadCount <= 1 &&
+      state.runtimeReadyCount <= 1;
+
+    el.innerHTML = `
+      <strong>M2.5B3 ${healthy ? 'PORTAL OK' : 'CHECK'}</strong>
+      <span>target: ${state.target || 'hidden'}</span>
+      <span>iframe create: ${state.iframeCreateCount}</span>
+      <span>iframe load: ${state.iframeLoadCount}</span>
+      <span>runtime READY: ${state.runtimeReadyCount}</span>
+      <span>responses: ${state.responseCount}</span>
+      <span>legacy mount suppressed: ${state.legacyMountCallsSuppressed}</span>
+    `;
+    el.classList.toggle('is-warning', !healthy);
+  }
+
+  function bindGeometry() {
+    const resizeObserver = new ResizeObserver(schedulePlace);
+
+    [CHALLENGE_TARGET, WARDROBE_TARGET].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) resizeObserver.observe(el);
+    });
+
+    const catalog = document.querySelector('#dressing-room-overlay .d32-catalog');
+    if (catalog) resizeObserver.observe(catalog);
+
+    const mutationObserver = new MutationObserver(schedulePlace);
+    mutationObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class', 'style'],
+      childList: true,
+      subtree: true
+    });
+
+    window.addEventListener('resize', schedulePlace, { passive: true });
+    window.addEventListener('orientationchange', schedulePlace, { passive: true });
+    document.getElementById('content-viewport')?.addEventListener(
+      'scroll',
+      schedulePlace,
+      { passive: true }
+    );
+
+    document.addEventListener('pointermove', event => {
+      if (event.target?.closest?.('#d32-drawer-handle')) schedulePlace();
+    }, { passive: true });
+  }
+
+  async function selfTest() {
+    await waitReady();
+    const contractInfo = await command('getContractInfo');
+    const runtimeState = await command('getState', { refresh: true });
+
+    return {
+      ok: true,
+      portal: snapshot(),
+      contractInfo,
+      state: runtimeState
+    };
+  }
+
+  function snapshot() {
+    return JSON.parse(JSON.stringify({
+      version: state.version,
+      iframeCreateCount: state.iframeCreateCount,
+      iframeLoadCount: state.iframeLoadCount,
+      runtimeReadyCount: state.runtimeReadyCount,
+      responseCount: state.responseCount,
+      legacyMountCallsSuppressed: state.legacyMountCallsSuppressed,
+      target: state.target,
+      visible: state.visible,
+      frameParent: frame()?.parentElement?.id || null,
+      frameSrc: frame()?.src || null,
+      ready: state.ready
+    }));
+  }
+
+  function install() {
+    ensurePortal();
+    installLifecycleShim();
+    suppressLegacyChibizMounts();
+    installWardrobeLifecycleShim();
+    compatibilityApi();
+    bindGeometry();
+
+    const challengeInitiallyActive =
+      document.getElementById('tab-challenge')?.classList.contains('active');
+
+    document.body.classList.toggle(
+      'challenge-route-active',
+      !!challengeInitiallyActive
+    );
+
+    schedulePlace();
+    setTimeout(schedulePlace, 100);
+    setTimeout(schedulePlace, 500);
+    renderDiagnostic();
+
+    // Reclaim shims after older DOMContentLoaded/load hooks have fired.
+    document.addEventListener('DOMContentLoaded', () => {
+      installLifecycleShim();
+      suppressLegacyChibizMounts();
+      installWardrobeLifecycleShim();
+      compatibilityApi();
+      schedulePlace();
+    }, { once: true });
+
+    window.addEventListener('load', () => {
+      installLifecycleShim();
+      suppressLegacyChibizMounts();
+      installWardrobeLifecycleShim();
+      compatibilityApi();
+      schedulePlace();
+    }, { once: true });
+  }
+
+  window.addEventListener('message', onRuntimeMessage);
+
+  window.TappieLayerLabPortal = {
+    version: VERSION,
+    runtimeUrl: RUNTIME_URL,
+    ready: waitReady,
+    command,
+    getCatalog: () => command('getCatalog'),
+    getState: () => command('getState', { refresh: true }),
+    requestSourceTruth: () => command('requestSourceTruth'),
+    randomize: () => command('randomize'),
+    setPart: (type, displayIndex) =>
+      command('setPart', { type, displayIndex }),
+    playAnimation: name => command('playAnimation', { name }),
+    resetRotation: () => command('resetRotation'),
+    selfTest,
+    snapshot,
+    refreshLayout: schedulePlace,
+    openWardrobe: openWardrobeShell,
+    closeWardrobe: closeWardrobeShell
+  };
+
+  // Script is injected at the end of BODY, so the target DOM already exists.
+  // Install immediately so older DOMContentLoaded handlers resolve to the B3
+  // lifecycle shim rather than starting Chibiz or the old M2.4A2 iframe.
+  install();
+
+  console.info(
+    '[Tappie LayerLab M2.5B3] permanent portal installed',
+    RUNTIME_URL
+  );
+})();
