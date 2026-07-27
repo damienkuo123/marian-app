@@ -21,6 +21,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_5_PERSISTENT_SELECTED_ORIGINAL_METAL_STUDIOENV_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_6_COLLECTIBLE_DUALTRACK_OCEAN_80ACTIONFINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_7_UNIFIED_AVATAR_FRAMING_CONTRACT_20260726 -->
+<!-- TAPPIE_DASHBOARD_PHASE_M2_4A1_LAYERLAB_IFRAME_HOST_20260727 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -9337,5 +9338,231 @@ window.selectD32Item=async function(category,id,locked){
 })();
 
 </script>
+
+
+<!-- =========================================================
+     M2.4A1 | LayerLab Casual Frozen Runtime Host Swap
+     - Keeps the existing Challenge UI/DOM contract.
+     - Uses an isolated iframe host for the frozen official Unity WebGL runtime.
+     - Leaves legacy Chibiz code in place but inactive for this gate.
+     - Dressing room remains legacy and is intentionally NOT migrated in A1.
+     ========================================================= -->
+<style id="tappie-m24a1-layerlab-host-style">
+  #challenge-golden-viewer.tappie-layerlab-host {
+    background: transparent;
+    isolation: isolate;
+  }
+  #challenge-golden-viewer .tappie-layerlab-avatar-frame {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+  }
+  /* If an old Chibiz canvas was ever created in this session, never let it
+     visually overlap the LayerLab host.  The old runtime code itself stays
+     untouched until the later cleanup gate. */
+  body.tappie-layerlab-host-active #challenge-golden-viewer > canvas {
+    display: none !important;
+  }
+</style>
+
+<script id="tappie-m24a1-layerlab-host-js">
+(function(){
+  'use strict';
+
+  const VERSION = 'M2.4A1';
+  const RUNTIME_URL = 'https://assets.tappieapp.com/avatars/layerlab/casual/2026.07.27-m2.3n.10/index.html';
+  const HOST_ID = 'challenge-golden-viewer';
+
+  const state = {
+    active: false,
+    mounted: false,
+    documentLoaded: false,
+    iframe: null,
+    lastEnterAt: null,
+    lastLoadAt: null,
+    error: null
+  };
+
+  function host(){
+    return document.getElementById(HOST_ID);
+  }
+
+  function progress(text, ready=false){
+    const el=document.getElementById('challenge-runtime-progress');
+    if(!el) return;
+    el.textContent=text;
+    el.classList.toggle('ready', !!ready);
+  }
+
+  function ensureFrame(){
+    const el=host();
+    if(!el){
+      state.error='challenge-golden-viewer not found';
+      console.error('[Tappie LayerLab M2.4A1]', state.error);
+      return null;
+    }
+
+    el.classList.add('tappie-layerlab-host');
+
+    let frame=el.querySelector('iframe.tappie-layerlab-avatar-frame');
+    if(frame){
+      state.iframe=frame;
+      state.mounted=true;
+      return frame;
+    }
+
+    progress('LayerLab 角色載入中…', false);
+
+    frame=document.createElement('iframe');
+    frame.className='tappie-layerlab-avatar-frame';
+    frame.title='Tappie LayerLab Avatar Runtime';
+    frame.src=RUNTIME_URL;
+    frame.loading='eager';
+    frame.setAttribute('allow','fullscreen; autoplay');
+    frame.setAttribute('allowfullscreen','');
+    frame.setAttribute('scrolling','no');
+
+    frame.addEventListener('load',()=>{
+      state.documentLoaded=true;
+      state.lastLoadAt=new Date().toISOString();
+      state.error=null;
+      // Cross-origin iframe load means the runtime document is reachable.
+      // Unity readiness remains owned by the frozen runtime's own loading UI.
+      progress('LayerLab Runtime 已連線', true);
+      console.info('[Tappie LayerLab M2.4A1] iframe document loaded');
+    });
+
+    frame.addEventListener('error',()=>{
+      state.documentLoaded=false;
+      state.error='iframe load error';
+      progress('LayerLab 載入失敗，請重新整理');
+      console.error('[Tappie LayerLab M2.4A1] iframe load error');
+    });
+
+    el.appendChild(frame);
+    state.iframe=frame;
+    state.mounted=true;
+    return frame;
+  }
+
+  function enterChallenge(){
+    state.active=true;
+    state.lastEnterAt=new Date().toISOString();
+    document.body.classList.add('challenge-route-active','tappie-layerlab-host-active');
+    const frame=ensureFrame();
+    if(frame && !state.documentLoaded) progress('LayerLab 角色載入中…', false);
+  }
+
+  function leaveChallenge(){
+    state.active=false;
+    document.body.classList.remove('challenge-route-active','tappie-layerlab-host-active');
+    // Deliberately keep the one frozen iframe alive between tab switches.
+    // M2.4A1 validates stable re-entry first; suspend/destroy policy is a later gate.
+  }
+
+  function reload(){
+    const frame=ensureFrame();
+    if(!frame) return;
+    state.documentLoaded=false;
+    state.error=null;
+    progress('重新載入 LayerLab…', false);
+    // Reassign the exact frozen URL: preserve normal browser/R2 caching.
+    frame.src=RUNTIME_URL;
+  }
+
+  function destroy(){
+    const frame=state.iframe || host()?.querySelector('iframe.tappie-layerlab-avatar-frame');
+    if(frame?.parentNode) frame.parentNode.removeChild(frame);
+    state.iframe=null;
+    state.mounted=false;
+    state.documentLoaded=false;
+    state.active=false;
+    document.body.classList.remove('tappie-layerlab-host-active');
+    progress('等待載入角色', false);
+  }
+
+  function snapshot(){
+    return {
+      version: VERSION,
+      runtimeUrl: RUNTIME_URL,
+      active: state.active,
+      mounted: state.mounted,
+      documentLoaded: state.documentLoaded,
+      lastEnterAt: state.lastEnterAt,
+      lastLoadAt: state.lastLoadAt,
+      error: state.error
+    };
+  }
+
+  window.TappieLayerLabRuntimeHost={
+    version: VERSION,
+    runtimeUrl: RUNTIME_URL,
+    enter: enterChallenge,
+    leave: leaveChallenge,
+    reload,
+    destroy,
+    getState: snapshot
+  };
+
+  function installLifecycleShim(){
+    // Compatibility shim: the existing SPA already calls TappieD1R1.onTabChange().
+    // Re-apply this after deferred module scripts run, because the legacy Chibiz
+    // module also defines TappieD1R1 during page startup.
+    window.TappieD1R1={
+      onTabChange(tabId){
+        if(tabId==='challenge') enterChallenge();
+        else leaveChallenge();
+      },
+      rerunDiagnostic(){ reload(); },
+      getState(){ return snapshot(); }
+    };
+  }
+
+  function guardLegacyChallengeMount(){
+    const legacy=window.TappieChibizRuntime;
+    if(!legacy || legacy.__TAPPIE_M24A1_GUARDED__) return;
+    const originalMount=typeof legacy.mountTo==='function' ? legacy.mountTo.bind(legacy) : null;
+    if(!originalMount) return;
+    legacy.mountTo=function(hostId){
+      // The legacy dressing room may still use d32-viewer during this gate,
+      // but it must never replace the new LayerLab Challenge host on close.
+      if(hostId===HOST_ID){
+        ensureFrame();
+        return true;
+      }
+      return originalMount(hostId);
+    };
+    legacy.__TAPPIE_M24A1_GUARDED__=true;
+  }
+
+  function finalizeInstall(){
+    installLifecycleShim();
+    guardLegacyChallengeMount();
+    if(document.getElementById('tab-challenge')?.classList.contains('active')){
+      enterChallenge();
+    }
+  }
+
+  // Install immediately for normal classic-script callers, then install again
+  // after deferred module evaluation so legacy TappieD1R1 cannot win the race.
+  installLifecycleShim();
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',finalizeInstall,{once:true});
+    window.addEventListener('load',()=>{ installLifecycleShim(); guardLegacyChallengeMount(); },{once:true});
+  }else{
+    finalizeInstall();
+  }
+
+  console.info('[Tappie LayerLab M2.4A1] host installed', RUNTIME_URL);
+})();
+</script>
+
 </body>
 </html>
