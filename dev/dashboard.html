@@ -22,6 +22,7 @@
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_6_COLLECTIBLE_DUALTRACK_OCEAN_80ACTIONFINISH_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_2_7_UNIFIED_AVATAR_FRAMING_CONTRACT_20260726 -->
 <!-- TAPPIE_DASHBOARD_PHASE_M2_4A1_LAYERLAB_IFRAME_HOST_20260727 -->
+<!-- TAPPIE_DASHBOARD_PHASE_M2_4A2_LAYERLAB_POSTMESSAGE_CONTRACT_20260727 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_2_COMPACT_GLASS_ROOM_FLOW_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D2_3_D3_0_PREMIUM_CHALLENGE_DRESSING_20260725 -->
 <!-- TAPPIE_DASHBOARD_PHASE_D3_1_ZEPETO_STYLE_REAL_SELECTOR_20260725 -->
@@ -9341,13 +9342,13 @@ window.selectD32Item=async function(category,id,locked){
 
 
 <!-- =========================================================
-     M2.4A1 | LayerLab Casual Frozen Runtime Host Swap
-     - Keeps the existing Challenge UI/DOM contract.
-     - Uses an isolated iframe host for the frozen official Unity WebGL runtime.
-     - Leaves legacy Chibiz code in place but inactive for this gate.
-     - Dressing room remains legacy and is intentionally NOT migrated in A1.
+     M2.4A2 | LayerLab Dashboard ↔ Runtime Contract
+     - Keeps the M2.4A1 isolated iframe host and tab lifecycle.
+     - Adds a cross-origin postMessage contract for the versioned R2 runtime.
+     - Unity Build binaries remain frozen; only the browser shell gets a bridge.
+     - Dressing room remains legacy in this gate. M2.5 will migrate the UI.
      ========================================================= -->
-<style id="tappie-m24a1-layerlab-host-style">
+<style id="tappie-m24a2-layerlab-host-style">
   #challenge-golden-viewer.tappie-layerlab-host {
     background: transparent;
     isolation: isolate;
@@ -9364,30 +9365,41 @@ window.selectD32Item=async function(category,id,locked){
     padding: 0;
     background: transparent;
   }
-  /* If an old Chibiz canvas was ever created in this session, never let it
-     visually overlap the LayerLab host.  The old runtime code itself stays
-     untouched until the later cleanup gate. */
   body.tappie-layerlab-host-active #challenge-golden-viewer > canvas {
     display: none !important;
   }
 </style>
 
-<script id="tappie-m24a1-layerlab-host-js">
+<script id="tappie-m24a2-layerlab-host-js">
 (function(){
   'use strict';
 
-  const VERSION = 'M2.4A1';
-  const RUNTIME_URL = 'https://assets.tappieapp.com/avatars/layerlab/casual/2026.07.27-m2.3n.10/index.html';
+  const VERSION = 'M2.4A2';
+  const PROTOCOL = 'tappie-avatar-v1';
+  const RUNTIME_URL = 'https://assets.tappieapp.com/avatars/layerlab/casual/2026.07.27-m2.4a2/index.html';
+  const RUNTIME_ORIGIN = new URL(RUNTIME_URL).origin;
   const HOST_ID = 'challenge-golden-viewer';
+  const COMMAND_TIMEOUT_MS = 12000;
 
   const state = {
     active: false,
     mounted: false,
     documentLoaded: false,
+    bridgeReady: false,
+    runtimeReady: false,
     iframe: null,
+    capabilities: null,
+    mirrorState: null,
     lastEnterAt: null,
     lastLoadAt: null,
-    error: null
+    lastReadyAt: null,
+    error: null,
+    requestSeq: 0,
+    pending: new Map(),
+    pingTimer: null,
+    readyPromise: null,
+    resolveReady: null,
+    rejectReady: null
   };
 
   function host(){
@@ -9401,16 +9413,136 @@ window.selectD32Item=async function(category,id,locked){
     el.classList.toggle('ready', !!ready);
   }
 
+  function resetReadyPromise(){
+    state.readyPromise = new Promise((resolve,reject)=>{
+      state.resolveReady=resolve;
+      state.rejectReady=reject;
+    });
+  }
+  resetReadyPromise();
+
+  function runtimeWindow(){
+    return state.iframe?.contentWindow || null;
+  }
+
+  function post(message){
+    const target=runtimeWindow();
+    if(!target) throw new Error('LayerLab iframe is not mounted.');
+    target.postMessage(message, RUNTIME_ORIGIN);
+  }
+
+  function settlePending(id, ok, payload){
+    const pending=state.pending.get(id);
+    if(!pending) return;
+    state.pending.delete(id);
+    clearTimeout(pending.timer);
+    if(ok) pending.resolve(payload);
+    else pending.reject(new Error(payload?.message || payload?.error || 'LayerLab command failed.'));
+  }
+
+  function rejectAllPending(message){
+    for(const [id,pending] of state.pending){
+      clearTimeout(pending.timer);
+      pending.reject(new Error(message));
+      state.pending.delete(id);
+    }
+  }
+
+  function call(command, payload, options={}){
+    ensureFrame();
+    const id=`dash-${Date.now()}-${++state.requestSeq}`;
+    const timeoutMs=Number(options.timeoutMs)||COMMAND_TIMEOUT_MS;
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>{
+        state.pending.delete(id);
+        reject(new Error(`LayerLab command timeout: ${command}`));
+      },timeoutMs);
+      state.pending.set(id,{resolve,reject,timer,command});
+      try{
+        post({
+          channel:PROTOCOL,
+          source:'tappie-dashboard',
+          type:'command',
+          id,
+          command,
+          payload:payload ?? null
+        });
+      }catch(error){
+        clearTimeout(timer);
+        state.pending.delete(id);
+        reject(error);
+      }
+    });
+  }
+
+  function startHandshake(){
+    clearInterval(state.pingTimer);
+    const started=Date.now();
+    const tick=()=>{
+      if(state.runtimeReady){ clearInterval(state.pingTimer); state.pingTimer=null; return; }
+      if(Date.now()-started>65000){
+        clearInterval(state.pingTimer);state.pingTimer=null;
+        if(!state.runtimeReady){ state.error='runtime READY handshake timeout'; progress('角色啟動較久，請稍候…',false); }
+        return;
+      }
+      call('ping',null,{timeoutMs:1800}).catch(()=>{});
+    };
+    tick();
+    state.pingTimer=setInterval(tick,700);
+  }
+
+  function onRuntimeMessage(event){
+    if(event.origin!==RUNTIME_ORIGIN) return;
+    if(!state.iframe || event.source!==state.iframe.contentWindow) return;
+    const msg=event.data;
+    if(!msg || msg.channel!==PROTOCOL || msg.source!=='tappie-layerlab-runtime') return;
+
+    if(msg.type==='event'){
+      if(msg.event==='bridge-ready'){
+        state.bridgeReady=true;
+        state.error=null;
+        progress('角色引擎已連線，正在啟動…',false);
+      }
+      if(msg.event==='runtime-ready'){
+        state.bridgeReady=true;
+        state.runtimeReady=true;
+        state.lastReadyAt=new Date().toISOString();
+        state.error=null;
+        if(msg.payload?.capabilities) state.capabilities=msg.payload.capabilities;
+        if(msg.payload?.mirrorState) state.mirrorState=msg.payload.mirrorState;
+        progress('角色準備完成',true);
+        clearInterval(state.pingTimer);state.pingTimer=null;
+        state.resolveReady?.(snapshot());
+        window.dispatchEvent(new CustomEvent('tappie:avatar-runtime-ready',{detail:snapshot()}));
+      }
+      if(msg.event==='state'){
+        if(msg.payload?.mirrorState) state.mirrorState=msg.payload.mirrorState;
+        window.dispatchEvent(new CustomEvent('tappie:avatar-runtime-state',{detail:msg.payload||{}}));
+      }
+      if(msg.event==='runtime-error'){
+        state.error=msg.payload?.message || 'LayerLab runtime error';
+        progress('角色載入失敗，請重新整理',false);
+      }
+      return;
+    }
+
+    if(msg.type==='response' && msg.id){
+      if(msg.payload?.capabilities) state.capabilities=msg.payload.capabilities;
+      if(msg.payload?.mirrorState) state.mirrorState=msg.payload.mirrorState;
+      settlePending(msg.id, msg.ok!==false, msg.payload||msg.error||null);
+    }
+  }
+  window.addEventListener('message',onRuntimeMessage);
+
   function ensureFrame(){
     const el=host();
     if(!el){
       state.error='challenge-golden-viewer not found';
-      console.error('[Tappie LayerLab M2.4A1]', state.error);
+      console.error('[Tappie LayerLab M2.4A2]', state.error);
       return null;
     }
 
     el.classList.add('tappie-layerlab-host');
-
     let frame=el.querySelector('iframe.tappie-layerlab-avatar-frame');
     if(frame){
       state.iframe=frame;
@@ -9418,8 +9550,7 @@ window.selectD32Item=async function(category,id,locked){
       return frame;
     }
 
-    progress('LayerLab 角色載入中…', false);
-
+    progress('LayerLab 角色載入中…',false);
     frame=document.createElement('iframe');
     frame.className='tappie-layerlab-avatar-frame';
     frame.title='Tappie LayerLab Avatar Runtime';
@@ -9433,17 +9564,21 @@ window.selectD32Item=async function(category,id,locked){
       state.documentLoaded=true;
       state.lastLoadAt=new Date().toISOString();
       state.error=null;
-      // Cross-origin iframe load means the runtime document is reachable.
-      // Unity readiness remains owned by the frozen runtime's own loading UI.
-      progress('LayerLab Runtime 已連線', true);
-      console.info('[Tappie LayerLab M2.4A1] iframe document loaded');
+      state.bridgeReady=false;
+      state.runtimeReady=false;
+      progress('LayerLab Runtime 已連線，等待 READY…',false);
+      startHandshake();
+      console.info('[Tappie LayerLab M2.4A2] iframe document loaded');
     });
 
     frame.addEventListener('error',()=>{
       state.documentLoaded=false;
+      state.bridgeReady=false;
+      state.runtimeReady=false;
       state.error='iframe load error';
-      progress('LayerLab 載入失敗，請重新整理');
-      console.error('[Tappie LayerLab M2.4A1] iframe load error');
+      progress('LayerLab 載入失敗，請重新整理',false);
+      state.rejectReady?.(new Error(state.error));
+      console.error('[Tappie LayerLab M2.4A2] iframe load error');
     });
 
     el.appendChild(frame);
@@ -9457,64 +9592,185 @@ window.selectD32Item=async function(category,id,locked){
     state.lastEnterAt=new Date().toISOString();
     document.body.classList.add('challenge-route-active','tappie-layerlab-host-active');
     const frame=ensureFrame();
-    if(frame && !state.documentLoaded) progress('LayerLab 角色載入中…', false);
+    if(frame && !state.runtimeReady) progress(state.documentLoaded?'等待角色 READY…':'LayerLab 角色載入中…',false);
   }
 
   function leaveChallenge(){
     state.active=false;
     document.body.classList.remove('challenge-route-active','tappie-layerlab-host-active');
-    // Deliberately keep the one frozen iframe alive between tab switches.
-    // M2.4A1 validates stable re-entry first; suspend/destroy policy is a later gate.
+    // Keep the single iframe alive across SPA tab switches.
   }
 
   function reload(){
     const frame=ensureFrame();
     if(!frame) return;
+    rejectAllPending('LayerLab runtime reloaded.');
+    clearInterval(state.pingTimer);state.pingTimer=null;
     state.documentLoaded=false;
+    state.bridgeReady=false;
+    state.runtimeReady=false;
+    state.capabilities=null;
+    state.mirrorState=null;
     state.error=null;
-    progress('重新載入 LayerLab…', false);
-    // Reassign the exact frozen URL: preserve normal browser/R2 caching.
+    resetReadyPromise();
+    progress('重新載入 LayerLab…',false);
     frame.src=RUNTIME_URL;
   }
 
   function destroy(){
+    rejectAllPending('LayerLab runtime destroyed.');
+    clearInterval(state.pingTimer);state.pingTimer=null;
     const frame=state.iframe || host()?.querySelector('iframe.tappie-layerlab-avatar-frame');
     if(frame?.parentNode) frame.parentNode.removeChild(frame);
     state.iframe=null;
     state.mounted=false;
     state.documentLoaded=false;
+    state.bridgeReady=false;
+    state.runtimeReady=false;
+    state.capabilities=null;
+    state.mirrorState=null;
     state.active=false;
+    state.error=null;
+    resetReadyPromise();
     document.body.classList.remove('tappie-layerlab-host-active');
-    progress('等待載入角色', false);
+    progress('等待載入角色',false);
+  }
+
+  async function waitReady(){
+    ensureFrame();
+    if(state.runtimeReady) return snapshot();
+    return state.readyPromise;
+  }
+
+  async function randomize(){
+    await waitReady();
+    return call('randomize');
+  }
+
+  async function setPart(type, displayIndex){
+    await waitReady();
+    if(!type) throw new Error('setPart requires type.');
+    const index=Number(displayIndex);
+    if(!Number.isFinite(index) || index<0) throw new Error('setPart requires a valid displayIndex.');
+    return call('setPart',{type:String(type),displayIndex:index});
+  }
+
+  async function playAnimation(name){
+    await waitReady();
+    if(!name) throw new Error('playAnimation requires name.');
+    return call('playAnimation',{name:String(name)});
+  }
+
+  async function resetRotation(){
+    await waitReady();
+    return call('resetRotation');
+  }
+
+  async function getCapabilities(){
+    await waitReady();
+    if(state.capabilities) return state.capabilities;
+    const result=await call('getCapabilities');
+    return result?.capabilities || state.capabilities;
+  }
+
+  async function getMirrorState(){
+    await waitReady();
+    const result=await call('getState');
+    return result?.mirrorState || state.mirrorState;
+  }
+
+  async function applyState(config={}){
+    await waitReady();
+    const parts=config.parts || config.selections || {};
+    const entries=Array.isArray(parts)
+      ? parts.map(x=>[x?.type,x?.displayIndex])
+      : Object.entries(parts);
+    for(const [type,index] of entries){
+      if(type==null || index==null) continue;
+      await setPart(type,index);
+    }
+    if(config.animation) await playAnimation(config.animation);
+    if(config.resetRotation===true) await resetRotation();
+    return getMirrorState();
   }
 
   function snapshot(){
     return {
-      version: VERSION,
-      runtimeUrl: RUNTIME_URL,
-      active: state.active,
-      mounted: state.mounted,
-      documentLoaded: state.documentLoaded,
-      lastEnterAt: state.lastEnterAt,
-      lastLoadAt: state.lastLoadAt,
-      error: state.error
+      version:VERSION,
+      protocol:PROTOCOL,
+      runtimeUrl:RUNTIME_URL,
+      active:state.active,
+      mounted:state.mounted,
+      documentLoaded:state.documentLoaded,
+      bridgeReady:state.bridgeReady,
+      runtimeReady:state.runtimeReady,
+      capabilities:state.capabilities,
+      mirrorState:state.mirrorState,
+      lastEnterAt:state.lastEnterAt,
+      lastLoadAt:state.lastLoadAt,
+      lastReadyAt:state.lastReadyAt,
+      pendingCommands:state.pending.size,
+      error:state.error
     };
   }
 
-  window.TappieLayerLabRuntimeHost={
-    version: VERSION,
-    runtimeUrl: RUNTIME_URL,
-    enter: enterChallenge,
-    leave: leaveChallenge,
+  async function selfTest(){
+    await waitReady();
+    const caps=await getCapabilities();
+    const mirror=await getMirrorState();
+    return {ok:true,version:VERSION,protocol:PROTOCOL,capabilities:caps,mirrorState:mirror};
+  }
+
+  const api={
+    version:VERSION,
+    protocol:PROTOCOL,
+    runtimeUrl:RUNTIME_URL,
+    enter:enterChallenge,
+    leave:leaveChallenge,
+    ready:waitReady,
+    call,
+    randomize,
+    setPart,
+    playAnimation,
+    resetRotation,
+    getCapabilities,
+    getMirrorState,
+    applyState,
+    selfTest,
     reload,
     destroy,
-    getState: snapshot
+    getState:snapshot
   };
 
+  window.TappieLayerLabRuntimeHost=api;
+  window.TappieAvatarHost=api;
+
+  function installDebugPanel(){
+    if(new URLSearchParams(location.search).get('avatarContractDebug')!=='1') return;
+    if(document.getElementById('m24a2-contract-debug')) return;
+    const panel=document.createElement('aside');
+    panel.id='m24a2-contract-debug';
+    panel.style.cssText='position:fixed;z-index:9998;left:8px;top:max(92px,calc(env(safe-area-inset-top) + 68px));width:250px;padding:10px;border-radius:14px;background:rgba(255,255,255,.94);box-shadow:0 10px 28px rgba(0,0,0,.16);font:11px/1.35 -apple-system,BlinkMacSystemFont,sans-serif;color:#16212c';
+    panel.innerHTML=`<strong>M2.4A2 Contract</strong><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px"><button data-a2="random">Random</button><button data-a2="idle">Idle</button><button data-a2="jump">Jump</button><button data-a2="dance">Dance</button><button data-a2="reset">Reset</button></div><div style="display:flex;gap:5px;margin-top:6px"><input data-a2-type value="Top" style="width:72px"><input data-a2-index value="1" inputmode="numeric" style="width:48px"><button data-a2="equip">Equip</button></div><div data-a2-state style="margin-top:7px;font-weight:800">Waiting…</div>`;
+    panel.addEventListener('click',async event=>{
+      const cmd=event.target?.dataset?.a2;if(!cmd)return;
+      const label=panel.querySelector('[data-a2-state]');
+      try{
+        label.textContent='Running…';
+        if(cmd==='random')await randomize();
+        if(cmd==='idle')await playAnimation('Stand_Idle1');
+        if(cmd==='jump')await playAnimation('Action_Jump');
+        if(cmd==='dance')await playAnimation('Dance_1');
+        if(cmd==='reset')await resetRotation();
+        if(cmd==='equip')await setPart(panel.querySelector('[data-a2-type]').value,panel.querySelector('[data-a2-index]').value);
+        const st=snapshot();label.textContent=st.runtimeReady?'READY / command PASS':'Waiting READY…';
+      }catch(error){label.textContent='ERROR: '+(error?.message||error);}
+    });
+    document.body.appendChild(panel);
+    waitReady().then(()=>{const label=panel.querySelector('[data-a2-state]');if(label)label.textContent='READY';}).catch(error=>{const label=panel.querySelector('[data-a2-state]');if(label)label.textContent='ERROR: '+(error?.message||error);});
+  }
+
   function installLifecycleShim(){
-    // Compatibility shim: the existing SPA already calls TappieD1R1.onTabChange().
-    // Re-apply this after deferred module scripts run, because the legacy Chibiz
-    // module also defines TappieD1R1 during page startup.
     window.TappieD1R1={
       onTabChange(tabId){
         if(tabId==='challenge') enterChallenge();
@@ -9527,40 +9783,35 @@ window.selectD32Item=async function(category,id,locked){
 
   function guardLegacyChallengeMount(){
     const legacy=window.TappieChibizRuntime;
-    if(!legacy || legacy.__TAPPIE_M24A1_GUARDED__) return;
+    if(!legacy || legacy.__TAPPIE_M24A2_GUARDED__) return;
     const originalMount=typeof legacy.mountTo==='function' ? legacy.mountTo.bind(legacy) : null;
     if(!originalMount) return;
     legacy.mountTo=function(hostId){
-      // The legacy dressing room may still use d32-viewer during this gate,
-      // but it must never replace the new LayerLab Challenge host on close.
       if(hostId===HOST_ID){
         ensureFrame();
         return true;
       }
       return originalMount(hostId);
     };
-    legacy.__TAPPIE_M24A1_GUARDED__=true;
+    legacy.__TAPPIE_M24A2_GUARDED__=true;
   }
 
   function finalizeInstall(){
     installLifecycleShim();
     guardLegacyChallengeMount();
-    if(document.getElementById('tab-challenge')?.classList.contains('active')){
-      enterChallenge();
-    }
+    installDebugPanel();
+    if(document.getElementById('tab-challenge')?.classList.contains('active')) enterChallenge();
   }
 
-  // Install immediately for normal classic-script callers, then install again
-  // after deferred module evaluation so legacy TappieD1R1 cannot win the race.
   installLifecycleShim();
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',finalizeInstall,{once:true});
-    window.addEventListener('load',()=>{ installLifecycleShim(); guardLegacyChallengeMount(); },{once:true});
+    window.addEventListener('load',()=>{installLifecycleShim();guardLegacyChallengeMount();},{once:true});
   }else{
     finalizeInstall();
   }
 
-  console.info('[Tappie LayerLab M2.4A1] host installed', RUNTIME_URL);
+  console.info('[Tappie LayerLab M2.4A2] parent contract installed',RUNTIME_URL);
 })();
 </script>
 
