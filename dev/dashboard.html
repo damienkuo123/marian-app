@@ -9211,7 +9211,7 @@ window.selectD32Item=async function(category,id,locked){
     window.closeChallengeRoomModal=function(){modal()?.classList.remove('show');modal()?.setAttribute('aria-hidden','true');};
     window.selectChallengeClass=function(button){selectedClass=button?.dataset?.class||'E1';document.querySelectorAll('.challenge-class-chip').forEach(el=>el.classList.toggle('selected',el===button));const cap=document.getElementById('challenge-class-caption');if(cap)cap.textContent=`已選擇 ${selectedClass}`;button?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});};
     window.demoCreateChallengeRoom=function(){const list=roomList();if(!list)return;document.getElementById('challenge-room-empty')?.remove();const existing=list.querySelector(`[data-demo-room="${selectedClass}"]`);if(existing){chooserToast(`${selectedClass} 房間已存在`);window.closeChallengeRoomModal();return;}const item=document.createElement('div');item.className='challenge-room-item';item.dataset.demoRoom=selectedClass;item.innerHTML=`<div class="challenge-room-dot">${selectedClass}</div><div class="challenge-room-copy"><div class="challenge-room-name">${selectedClass} 挑戰房間</div><div class="challenge-room-meta">等待同學加入</div></div><button class="challenge-room-join" type="button">等待中</button>`;list.prepend(item);window.__TAPPIE_D322_ROOM__={classCode:selectedClass,status:'waiting',demoOnly:true,at:new Date().toISOString()};window.closeChallengeRoomModal();chooserToast(`${selectedClass} 房間已開啟`);};
-    window.selectChallengeAI=function(level){const labels={easy:'簡單',normal:'一般',hard:'困難'};window.__TAPPIE_D322_AI__={difficulty:level,label:labels[level]||level,at:new Date().toISOString()};chooserToast(`已選擇 ${labels[level]||level}`);};
+    window.selectChallengeAI=function(level){const labels={easy:'簡單',normal:'一般',hard:'困難'};window.__TAPPIE_D322_AI__={difficulty:level,label:labels[level]||level,at:new Date().toISOString()};chooserToast(`正在進入 ${labels[level]||level} 挑戰`);setTimeout(()=>{location.href=`./challenge.html?mode=ai&difficulty=${encodeURIComponent(level)}&from=dashboard`;},260);};
   })();
 
   // compatibility name
@@ -9329,5 +9329,21 @@ window.selectD32Item=async function(category,id,locked){
 <link rel="stylesheet" href="./tappie-layerlab-official-wardrobe-m2.5b4r3a5_4.css?v=20260801-r5">
 <script src="./tappie-layerlab-official-wardrobe-m2.5b4r3a5_4.js?v=20260801-r5"></script>
 
+
+<script id="tappie-challenge-page-return-route">
+(function(){
+  function openRequestedTab(){
+    const params=new URLSearchParams(location.search);
+    if(params.get('tab')!=='challenge') return;
+    const nav=[...document.querySelectorAll('#bottom-nav .nav-item')].find(el=>el.getAttribute('onclick')?.includes("switchTab('challenge'"));
+    if(!nav || nav.classList.contains('locked')) return;
+    try{ switchTab('challenge','挑戰',nav); }catch(error){ console.warn('[Challenge return route]',error); }
+    params.delete('tab');
+    const query=params.toString();
+    history.replaceState(null,'',location.pathname+(query?'?'+query:'')+location.hash);
+  }
+  window.addEventListener('load',()=>{ setTimeout(openRequestedTab,360); setTimeout(openRequestedTab,1200); },{once:true});
+})();
+</script>
 </body>
 </html>
