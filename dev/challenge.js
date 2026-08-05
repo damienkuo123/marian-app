@@ -6,6 +6,9 @@
   const params = new URLSearchParams(location.search);
   const difficulty = ['easy','normal','hard'].includes(params.get('difficulty')) ? params.get('difficulty') : 'normal';
   const WIN_TARGET = 5;
+  const unityArena = window.TappieChallengeArena || null;
+  let iframeFallbackStarted = false;
+  document.body.classList.toggle('challenge-debug', params.get('challengeDebug') === '1');
 
   const opponents = {
     easy: { label: '簡單 · 暖身', name: '森林小隊員' },
@@ -49,7 +52,18 @@
   $('difficultyLabel').textContent = opponent.label;
   $('opponentName').textContent = opponent.name;
 
+  const requestedPlayerName = (params.get('playerName') || '').trim();
+  if (requestedPlayerName) $('playerName').textContent = requestedPlayerName.slice(0, 32);
+
   function command(actorName, name, args = {}) {
+    if (unityArena?.isReady()) {
+      if (name === 'randomize') return Promise.resolve({ handledBy: 'unity-default-opponent' });
+      if (name === 'playAnimation') {
+        const method = actorName === 'player' ? 'PlayPlayerAnimation' : 'PlayOpponentAnimation';
+        return unityArena.send(method, String(args.name || 'Stand_Idle1'));
+      }
+      return Promise.resolve({ handledBy: 'unity-arena' });
+    }
     const actor = actors[actorName];
     return new Promise((resolve, reject) => {
       if (!actor?.frame?.contentWindow) return reject(new Error(`${actorName} runtime iframe missing`));
@@ -81,9 +95,34 @@
 
   function bindActorMessages(actorName) {
     const actor = actors[actorName];
-    actor.frame.src = RUNTIME_URL;
     actor.frame.addEventListener('load', () => { actor.status.textContent = actorName === 'player' ? '我方連線中' : '對手連線中'; });
     actor.frame.addEventListener('error', () => { actor.status.textContent = '使用角色預覽圖'; });
+  }
+
+  function startIframeFallback() {
+    if (iframeFallbackStarted) return;
+    iframeFallbackStarted = true;
+    Object.entries(actors).forEach(([actorName, actor]) => {
+      actor.ready = false;
+      actor.stage.classList.remove('is-ready');
+      actor.status.textContent = actorName === 'player' ? '我方載入中' : '對手載入中';
+      actor.frame.src = actor.frame.dataset.src || RUNTIME_URL;
+    });
+  }
+
+  function stopIframeFallback() {
+    if (!iframeFallbackStarted) return;
+    iframeFallbackStarted = false;
+    Object.values(actors).forEach(actor => {
+      actor.ready = false;
+      actor.pending.forEach(pending => {
+        clearTimeout(pending.timer);
+        pending.reject(new Error('Unity Arena 已接管角色顯示'));
+      });
+      actor.pending.clear();
+      actor.frame.src = 'about:blank';
+      actor.stage.classList.remove('is-ready');
+    });
   }
 
   window.addEventListener('message', event => {
@@ -109,6 +148,20 @@
 
   bindActorMessages('player');
   bindActorMessages('opponent');
+
+  window.addEventListener('tappie:challenge-arena-fallback', startIframeFallback);
+  window.addEventListener('tappie:challenge-arena-ready', () => {
+    stopIframeFallback();
+    actors.player.ready = true;
+    actors.opponent.ready = true;
+    actors.player.status.textContent = 'Unity 我方準備完成';
+    actors.opponent.status.textContent = 'Unity 對手準備完成';
+    void unityArena.initialize({
+      difficulty,
+      playerLoadout: unityArena.readStoredLoadout()
+    }).catch(error => console.error('[Challenge Arena v0.7] initialize failed', error));
+  });
+  if (!unityArena || unityArena.state.phase === 'disabled' || unityArena.state.phase === 'error') startIframeFallback();
 
   function renderScoreTrack(trackId, score, previous, side) {
     const track = $(trackId);
@@ -149,6 +202,15 @@
   }
 
   function playRoundAnimations(type) {
+    if (unityArena?.isReady()) {
+      const cue = type === 'win'
+        ? { cue: 'ROUND_WIN', actor: 'player', returnToBattle: true }
+        : type === 'lose'
+          ? { cue: 'ROUND_WIN', actor: 'opponent', returnToBattle: true }
+          : { cue: 'TIE', actor: 'player', returnToBattle: true };
+      void unityArena.playCue(cue).catch(() => {});
+      return;
+    }
     if (type === 'win') {
       setFocus('player');
       if (actors.player.ready) void command('player', 'playAnimation', { name: 'Emoji_Cheer' }).catch(() => command('player', 'playAnimation', { name: 'Emoji_Nice' })).catch(() => {});
@@ -197,6 +259,14 @@
     $('endSheet').classList.add('is-visible');
     $('endSheet').setAttribute('aria-hidden', 'false');
     setFocus(playerWon ? 'player' : 'opponent', 0);
+    if (unityArena?.isReady()) {
+      void unityArena.playCue({
+        cue: 'FINAL_WIN',
+        actor: playerWon ? 'player' : 'opponent',
+        returnToBattle: false
+      }).catch(() => {});
+      return true;
+    }
     if (playerWon) {
       if (actors.player.ready) void command('player', 'playAnimation', { name: 'Dance_2' }).catch(() => {});
       if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Emoji_Cry' }).catch(() => {});
@@ -227,8 +297,10 @@
         state.round += 1;
         $('questionNumber').textContent = state.round;
         render();
-        if (actors.player.ready) void command('player', 'playAnimation', { name: 'Stand_Idle1' }).catch(() => {});
-        if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Stand_Idle2' }).catch(() => {});
+        if (!unityArena?.isReady()) {
+          if (actors.player.ready) void command('player', 'playAnimation', { name: 'Stand_Idle1' }).catch(() => {});
+          if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Stand_Idle2' }).catch(() => {});
+        }
       }
     }, 1280);
   }
@@ -245,7 +317,11 @@
     $('skillCutin').classList.add('is-visible');
     $('skillCutin').setAttribute('aria-hidden', 'false');
     setFocus('player', 900);
-    if (actors.player.ready) void command('player', 'playAnimation', { name: 'Action_Punch' }).catch(() => {});
+    if (unityArena?.isReady()) {
+      void unityArena.playCue({ cue: 'SKILL_SUCCESS', actor: 'player', returnToBattle: true }).catch(() => {});
+    } else if (actors.player.ready) {
+      void command('player', 'playAnimation', { name: 'Action_Punch' }).catch(() => {});
+    }
     setTimeout(() => {
       state.energy = 0;
       state.skillArmed = true;
@@ -265,6 +341,7 @@
     $('endSheet').setAttribute('aria-hidden', 'true');
     arena.classList.remove('focus-player', 'focus-opponent');
     $('arenaCaption').textContent = '面對對手，準備開口';
+    if (unityArena?.isReady()) void unityArena.resetRoundPose().catch(() => {});
     render();
   });
 
