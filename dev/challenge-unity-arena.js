@@ -73,6 +73,7 @@
     if (elements.loadingLabel) {
       elements.loadingLabel.textContent = `正在載入 Mega City Arena ${Math.round(state.progress * 100)}%`;
     }
+    emit('tappie:challenge-arena-progress', { arenaId, progress: state.progress });
     updateDebug('WebGL');
   }
 
@@ -171,8 +172,8 @@
           : 'StreamingAssets',
         companyName: manifest.companyName || 'Tappie',
         productName: manifest.productName || 'Tappie Challenge Mega City Arena 01',
-        productVersion: manifest.productVersion || '0.7.0',
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+        productVersion: manifest.productVersion || '0.7.2',
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
         showBanner(message, type) {
           if (type === 'error') console.error('[Unity]', message);
           else if (debugEnabled) console.warn('[Unity]', message);
@@ -296,7 +297,7 @@
   }
 
   const api = {
-    contract: 'TAPPIE-CHALLENGE-HTML-MEGA-CITY-ARENA-V0.7.0',
+    contract: 'TAPPIE-CHALLENGE-HTML-MEGA-CITY-ARENA-V0.7.2',
     state,
     load,
     retry,
