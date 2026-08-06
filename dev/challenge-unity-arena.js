@@ -3,11 +3,15 @@
 
   const HOST_OBJECT = 'Tappie_Challenge_Production_Runtime';
   const DEFAULT_ARENA = 'low-poly-mega-city-01';
+  const CATALOG_PATH = './unity/arenas/catalog.json';
   const params = new URLSearchParams(location.search);
-  const arenaId = (params.get('arena') || DEFAULT_ARENA).trim();
-  const arenaDisabled = arenaId === 'off' || arenaId === 'none';
+  const requestedArena = (params.get('arena') || '').trim();
+  let arenaId = requestedArena || DEFAULT_ARENA;
+  let arenaLabel = arenaId;
+  let arenaDisabled = arenaId === 'off' || arenaId === 'none';
+  let manifestPath = `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`;
+  let arenaSelectionResolved = Boolean(requestedArena);
   const debugEnabled = params.get('arenaDebug') === '1';
-  const manifestPath = `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`;
 
   const elements = {
     shell: document.getElementById('arenaShell'),
@@ -50,6 +54,63 @@
     window.dispatchEvent(new CustomEvent(name, { detail }));
   }
 
+  function isSelectableArena(entry) {
+    if (!entry || typeof entry !== 'object') return false;
+    const id = String(entry.id || '').trim();
+    if (!id) return false;
+    const status = String(entry.status || '').trim().toLowerCase();
+    return !['disabled', 'off', 'archived', 'hidden', 'failed'].includes(status);
+  }
+
+  async function resolveArenaSelection() {
+    if (arenaSelectionResolved) {
+      state.arenaId = arenaId;
+      return arenaId;
+    }
+    arenaSelectionResolved = true;
+    try {
+      const catalogUrl = new URL(CATALOG_PATH, location.href);
+      const response = await fetch(catalogUrl.href, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Arena catalog HTTP ${response.status}`);
+      const catalog = await response.json();
+      if (catalog?.schema !== 'tappie.challenge.arena-catalog.v1') {
+        throw new Error(`Arena catalog schema 不符：${catalog?.schema || 'missing'}`);
+      }
+      const selectable = Array.isArray(catalog.arenas) ? catalog.arenas.filter(isSelectableArena) : [];
+      if (!selectable.length) throw new Error('Arena catalog 沒有可用場景');
+      const selected = selectable[Math.floor(Math.random() * selectable.length)];
+      arenaId = String(selected.id).trim();
+      arenaLabel = String(selected.label || arenaId).trim();
+      manifestPath = String(selected.runtimeManifest || `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`).trim();
+      arenaDisabled = false;
+      state.arenaId = arenaId;
+      state.catalogEntry = selected;
+      emit('tappie:challenge-arena-selected', {
+        arenaId,
+        label: arenaLabel,
+        source: 'catalog-random',
+        eligibleArenaIds: selectable.map(item => item.id)
+      });
+      updateDebug(`selected ${arenaId}`);
+      return arenaId;
+    } catch (error) {
+      arenaId = DEFAULT_ARENA;
+      arenaLabel = DEFAULT_ARENA;
+      manifestPath = `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`;
+      arenaDisabled = false;
+      state.arenaId = arenaId;
+      state.catalogError = error instanceof Error ? error.message : String(error);
+      console.warn('[Tappie Challenge Arena] catalog random fallback', error);
+      emit('tappie:challenge-arena-selected', {
+        arenaId,
+        label: arenaLabel,
+        source: 'default-fallback',
+        error: state.catalogError
+      });
+      return arenaId;
+    }
+  }
+
   function updateDebug(message) {
     if (!elements.debug) return;
     elements.debug.hidden = !debugEnabled;
@@ -71,7 +132,7 @@
     state.progress = Math.max(0, Math.min(1, Number(value) || 0));
     if (elements.progress) elements.progress.style.width = `${Math.round(state.progress * 100)}%`;
     if (elements.loadingLabel) {
-      elements.loadingLabel.textContent = `正在載入 Mega City Arena ${Math.round(state.progress * 100)}%`;
+      elements.loadingLabel.textContent = `正在載入 ${arenaLabel || arenaId} ${Math.round(state.progress * 100)}%`;
     }
     emit('tappie:challenge-arena-progress', { arenaId, progress: state.progress });
     updateDebug('WebGL');
@@ -140,6 +201,7 @@
   }
 
   async function load() {
+    await resolveArenaSelection();
     if (arenaDisabled) {
       emit('tappie:challenge-arena-fallback', { arenaId, reason: 'disabled' });
       return null;
@@ -297,7 +359,7 @@
   }
 
   const api = {
-    contract: 'TAPPIE-CHALLENGE-HTML-MEGA-CITY-ARENA-V0.7.2',
+    contract: 'TAPPIE-CHALLENGE-HTML-RANDOM-ARENA-V0.1',
     state,
     load,
     retry,
