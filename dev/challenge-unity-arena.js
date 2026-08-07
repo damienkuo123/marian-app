@@ -6,12 +6,12 @@
   const CATALOG_PATH = './unity/arenas/catalog.json';
   const params = new URLSearchParams(location.search);
   const requestedArena = (params.get('arena') || '').trim();
+  const debugEnabled = params.get('arenaDebug') === '1';
   let arenaId = requestedArena || DEFAULT_ARENA;
   let arenaLabel = arenaId;
-  let arenaDisabled = arenaId === 'off' || arenaId === 'none';
+  let arenaDisabled = ['off', 'none'].includes(arenaId.toLowerCase());
   let manifestPath = `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`;
-  let arenaSelectionResolved = Boolean(requestedArena);
-  const debugEnabled = params.get('arenaDebug') === '1';
+  let arenaSelectionResolved = false;
 
   const elements = {
     shell: document.getElementById('arenaShell'),
@@ -29,11 +29,15 @@
     phase: arenaDisabled ? 'disabled' : 'idle',
     progress: 0,
     manifest: null,
+    catalogEntry: null,
     unityInstance: null,
     runtimeReady: false,
     pendingRuntimeReady: false,
     lastRuntimeEvent: null,
-    error: null
+    error: null,
+    qualityProfile: 'balanced',
+    devicePixelRatio: 1,
+    timings: { loaderStartedAt: performance.now() }
   };
 
   let loadPromise = null;
@@ -62,12 +66,18 @@
     return !['disabled', 'off', 'archived', 'hidden', 'failed'].includes(status);
   }
 
+  function setRuntimeArenaUrl(value) {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set('arenaRuntime', value);
+      history.replaceState(history.state, '', url.href);
+    } catch (_) {}
+  }
+
   async function resolveArenaSelection() {
-    if (arenaSelectionResolved) {
-      state.arenaId = arenaId;
-      return arenaId;
-    }
+    if (arenaSelectionResolved) return arenaId;
     arenaSelectionResolved = true;
+    if (arenaDisabled) return arenaId;
     try {
       const catalogUrl = new URL(CATALOG_PATH, location.href);
       const response = await fetch(catalogUrl.href, { cache: 'no-store' });
@@ -78,18 +88,26 @@
       }
       const selectable = Array.isArray(catalog.arenas) ? catalog.arenas.filter(isSelectableArena) : [];
       if (!selectable.length) throw new Error('Arena catalog 沒有可用場景');
-      const selected = selectable[Math.floor(Math.random() * selectable.length)];
+      let selected = null;
+      if (requestedArena) {
+        selected = selectable.find(item => String(item.id).trim() === requestedArena);
+        if (!selected) throw new Error(`指定 Arena 不存在或已停用：${requestedArena}`);
+      } else {
+        selected = selectable[Math.floor(Math.random() * selectable.length)];
+      }
       arenaId = String(selected.id).trim();
       arenaLabel = String(selected.label || arenaId).trim();
       manifestPath = String(selected.runtimeManifest || `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`).trim();
       arenaDisabled = false;
       state.arenaId = arenaId;
       state.catalogEntry = selected;
+      setRuntimeArenaUrl(arenaId);
       emit('tappie:challenge-arena-selected', {
         arenaId,
         label: arenaLabel,
-        source: 'catalog-random',
-        eligibleArenaIds: selectable.map(item => item.id)
+        source: requestedArena ? 'catalog-forced' : 'catalog-random',
+        eligibleArenaIds: selectable.map(item => item.id),
+        sharedWorld: Boolean(selected.worldId || selected.profileId)
       });
       updateDebug(`selected ${arenaId}`);
       return arenaId;
@@ -100,7 +118,8 @@
       arenaDisabled = false;
       state.arenaId = arenaId;
       state.catalogError = error instanceof Error ? error.message : String(error);
-      console.warn('[Tappie Challenge Arena] catalog random fallback', error);
+      setRuntimeArenaUrl(arenaId);
+      console.warn('[Tappie Challenge Arena] catalog fallback', error);
       emit('tappie:challenge-arena-selected', {
         arenaId,
         label: arenaLabel,
@@ -111,10 +130,32 @@
     }
   }
 
+  function chooseQualityProfile() {
+    const explicit = String(params.get('arenaQuality') || '').trim().toLowerCase();
+    if (['high', 'balanced', 'cool'].includes(explicit)) return explicit;
+    const mobile = matchMedia?.('(pointer: coarse)')?.matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (!mobile) return 'high';
+    const cores = Number(navigator.hardwareConcurrency || 4);
+    const memory = Number(navigator.deviceMemory || 0);
+    return cores >= 6 && (!memory || memory >= 4) ? 'high' : 'balanced';
+  }
+
+  function computeDevicePixelRatio(profile) {
+    const canvas = elements.canvas;
+    const width = Math.max(1, canvas?.clientWidth || innerWidth || 390);
+    const height = Math.max(1, canvas?.clientHeight || Math.round((innerHeight || 844) * .64));
+    const longCss = Math.max(width, height);
+    const nativeDpr = Math.max(1, Number(window.devicePixelRatio || 1));
+    const targetLong = profile === 'high' ? 2048 : profile === 'cool' ? 1440 : 1792;
+    const cap = profile === 'high' ? 2.5 : profile === 'cool' ? 1.75 : 2.15;
+    return Math.max(1, Math.min(nativeDpr, cap, targetLong / longCss));
+  }
+
   function updateDebug(message) {
     if (!elements.debug) return;
     elements.debug.hidden = !debugEnabled;
-    elements.debug.value = `${state.phase} · ${Math.round(state.progress * 100)}% · ${message || ''}`;
+    const dpr = Number(state.devicePixelRatio || 1).toFixed(2);
+    elements.debug.value = `${state.phase} · ${Math.round(state.progress * 100)}% · ${arenaId} · ${state.qualityProfile}@${dpr} · ${message || ''}`;
     elements.debug.textContent = elements.debug.value;
   }
 
@@ -182,10 +223,12 @@
   function activateRuntimeReady(detail) {
     if (state.pendingRuntimeReady && state.unityInstance && !state.runtimeReady) {
       state.runtimeReady = true;
+      state.timings.runtimeReadyAt = performance.now();
+      state.timings.totalReadyMs = Math.round(state.timings.runtimeReadyAt - state.timings.loaderStartedAt);
       setProgress(1);
-      setPhase('ready', 'Runtime ready');
+      setPhase('ready', `Runtime ready ${state.timings.totalReadyMs}ms`);
       readyResolve(api);
-      emit('tappie:challenge-arena-ready', { arenaId, runtime: detail, api });
+      emit('tappie:challenge-arena-ready', { arenaId, runtime: detail, api, diagnostics: diagnostics() });
     }
   }
 
@@ -217,14 +260,22 @@
       const response = await fetch(manifestUrl.href, { cache: 'no-store' });
       if (!response.ok) throw new Error(`Arena manifest HTTP ${response.status}`);
       const manifest = await response.json();
-      if (manifest.arenaId && manifest.arenaId !== arenaId) {
+      const shared = manifest.sharedMultiArena === true || manifest.schema === 'tappie.challenge.shared-arena-runtime.v1';
+      if (!shared && manifest.arenaId && manifest.arenaId !== arenaId) {
         throw new Error(`Arena manifest ID 不符：${manifest.arenaId}`);
       }
+      if (shared && Array.isArray(manifest.arenas) && !manifest.arenas.some(item => item?.id === arenaId)) {
+        throw new Error(`Shared Arena manifest 未包含：${arenaId}`);
+      }
       state.manifest = manifest;
+      state.sharedMultiArena = shared;
       const loaderUrl = resolveAsset(manifestUrl, manifest.loaderUrl);
       await loadScript(loaderUrl);
       if (typeof window.createUnityInstance !== 'function') throw new Error('Unity Loader 未提供 createUnityInstance');
 
+      state.qualityProfile = chooseQualityProfile();
+      state.devicePixelRatio = computeDevicePixelRatio(state.qualityProfile);
+      state.timings.instanceStartedAt = performance.now();
       const config = {
         dataUrl: resolveAsset(manifestUrl, manifest.dataUrl),
         frameworkUrl: resolveAsset(manifestUrl, manifest.frameworkUrl),
@@ -233,15 +284,17 @@
           ? new URL(manifest.streamingAssetsUrl, manifestUrl).href
           : 'StreamingAssets',
         companyName: manifest.companyName || 'Tappie',
-        productName: manifest.productName || 'Tappie Challenge Mega City Arena 01',
-        productVersion: manifest.productVersion || '0.7.2',
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        productName: manifest.productName || 'Tappie Challenge Mega City Arena',
+        productVersion: manifest.productVersion || '1.0.0-alpha6',
+        devicePixelRatio: state.devicePixelRatio,
         showBanner(message, type) {
           if (type === 'error') console.error('[Unity]', message);
           else if (debugEnabled) console.warn('[Unity]', message);
         }
       };
       state.unityInstance = await window.createUnityInstance(elements.canvas, config, setProgress);
+      state.timings.instanceCreatedAt = performance.now();
+      state.timings.instanceCreateMs = Math.round(state.timings.instanceCreatedAt - state.timings.instanceStartedAt);
       setPhase('loading', 'Runtime initialization');
       activateRuntimeReady(state.lastRuntimeEvent);
       if (state.runtimeReady) setPhase('ready', 'Runtime ready');
@@ -313,6 +366,7 @@
 
   async function initialize(config = {}) {
     await readyPromise;
+    await send('SetQualityProfile', state.qualityProfile).catch(() => {});
     const player = normalizeLoadout(config.playerLoadout || readStoredLoadout());
     const opponent = normalizeLoadout(config.opponentLoadout || {});
     if (player.parts.length) {
@@ -337,6 +391,29 @@
     } catch (_) { return {}; }
   }
 
+  function diagnostics() {
+    return {
+      arenaId,
+      label: arenaLabel,
+      phase: state.phase,
+      progress: state.progress,
+      sharedMultiArena: Boolean(state.sharedMultiArena),
+      qualityProfile: state.qualityProfile,
+      devicePixelRatio: state.devicePixelRatio,
+      canvasCss: {
+        width: elements.canvas?.clientWidth || 0,
+        height: elements.canvas?.clientHeight || 0
+      },
+      canvasPixels: {
+        width: elements.canvas?.width || 0,
+        height: elements.canvas?.height || 0
+      },
+      timings: { ...state.timings },
+      hardwareConcurrency: navigator.hardwareConcurrency || null,
+      deviceMemory: navigator.deviceMemory || null
+    };
+  }
+
   async function unload() {
     if (!state.unityInstance) return;
     try { await send('DisposeRuntime', 'challenge-page-unload'); } catch (_) {}
@@ -359,7 +436,7 @@
   }
 
   const api = {
-    contract: 'TAPPIE-CHALLENGE-HTML-RANDOM-ARENA-V0.1',
+    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.2-ALPHA6',
     state,
     load,
     retry,
@@ -372,11 +449,17 @@
     setCamera: camera => send('SetCamera', camera),
     resetRoundPose: () => send('ResetRoundPose', ''),
     playMatchIntro: () => send('PlayMatchIntro', ''),
+    beginRewardSelection: payload => send('BeginRewardSelection', payload || ''),
+    selectRewardChest: index => send('SelectRewardChest', String(index)),
+    clearRewardZone: () => send('ClearRewardZone', ''),
+    setQualityProfile: profile => send('SetQualityProfile', profile),
+    diagnostics,
     waitForRuntime,
     readStoredLoadout
   };
 
   window.TappieChallengeArena = api;
+  window.__TAPPIE_ARENA_DIAGNOSTICS__ = diagnostics;
   window.addEventListener('tappie:challenge-runtime', handleRuntimeEvent);
   window.addEventListener('pagehide', () => {
     if (state.unityInstance) {

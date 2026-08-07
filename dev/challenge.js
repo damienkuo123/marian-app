@@ -8,6 +8,7 @@
   const MIN_RECORDING_MS = 500;
   const params = new URLSearchParams(location.search);
   const difficulty = ['easy', 'normal', 'hard'].includes(params.get('difficulty')) ? params.get('difficulty') : 'normal';
+  const rewardZoneEnabled = params.get('rewardZone') === '1';
   const unityArena = window.TappieChallengeArena || null;
   const $ = id => document.getElementById(id);
   const arena = $('arenaShell');
@@ -79,7 +80,7 @@
     opponentLoadout = createRandomLoadout('opponent');
   }
   window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__ = Object.freeze({ player: playerLoadout, opponent: opponentLoadout });
-  console.info('[Tappie Challenge v0.7.2] Random actor pair', window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__);
+  console.info('[Tappie Challenge v0.8.0-alpha6] Random actor pair', window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__);
 
   const actors = {
     player: { frame: $('playerRuntimeFrame'), stage: $('playerRuntimeStage'), status: $('playerRuntimeStatus'), ready: false, commandSeq: 0, pending: new Map() },
@@ -107,7 +108,10 @@
     micReady: false,
     worldPrepared: false,
     starting: false,
-    progress: 0
+    progress: 0,
+    readyButtonShown: false,
+    introStartedAt: 0,
+    introCompletedAt: 0
   };
 
   let iframeFallbackStarted = false;
@@ -154,7 +158,7 @@
       await command(actorName, 'playAnimation', { name: idle }).catch(() => command(actorName, 'playAnimation', { name: 'Stand_Idle1' }));
       actor.status.textContent = actorName === 'player' ? '我方準備完成' : '對手準備完成';
     } catch (error) {
-      console.warn(`[Challenge Arena v0.7.2] ${actorName} iframe fallback`, error);
+      console.warn(`[Challenge Arena v0.8.0-alpha6] ${actorName} iframe fallback`, error);
       actor.status.textContent = '使用角色預覽圖';
     }
   }
@@ -177,7 +181,6 @@
     gate.worldPrepared = true;
     gate.progress = 1;
     updateGate();
-    void tryStartMatch();
   }
 
   function stopIframeFallback() {
@@ -219,6 +222,13 @@
   bindActorMessages('player');
   bindActorMessages('opponent');
 
+  const enterChallengeButton = $('enterChallengeButton');
+  const readyProgress = document.querySelector('.ready-progress');
+  const readyPermission = document.querySelector('.ready-permission');
+  enterChallengeButton.hidden = true;
+  enterChallengeButton.disabled = true;
+  enterChallengeButton.textContent = '場景載入中…';
+
   function setGateProgress(value) {
     gate.progress = Math.max(gate.progress, Math.min(1, Number(value) || 0));
     $('readyProgressBar').style.width = `${Math.round(gate.progress * 100)}%`;
@@ -231,19 +241,43 @@
   }
 
   function updateGate() {
-    $('playerReadyState').textContent = gate.playerReady ? '已準備' : '尚未準備';
-    $('opponentReadyState').textContent = gate.opponentReady ? '已準備' : gate.playerReady ? '正在連線…' : '等待對手';
+    const assetsReady = gate.worldPrepared && gate.progress >= .999;
+    $('playerReadyState').textContent = gate.playerReady ? '已確認' : assetsReady ? '等待確認' : '載入中';
+    $('opponentReadyState').textContent = gate.opponentReady ? '已確認' : gate.playerReady ? '等待對手…' : assetsReady ? '等待確認' : '連線中';
     document.querySelector('.ready-actor-player').classList.toggle('is-ready', gate.playerReady);
     document.querySelector('.ready-actor-opponent').classList.toggle('is-ready', gate.opponentReady);
     if (gate.starting) return;
+
+    if (!assetsReady) {
+      if (readyProgress) readyProgress.hidden = false;
+      if (readyPermission) readyPermission.hidden = true;
+      enterChallengeButton.hidden = true;
+      enterChallengeButton.disabled = true;
+      enterChallengeButton.textContent = '場景載入中…';
+      setGateStatus(`正在準備 Arena ${Math.round(gate.progress * 100)}%`);
+      return;
+    }
+
+    if (readyProgress) readyProgress.hidden = true;
+    if (readyPermission) readyPermission.hidden = false;
+
     if (!gate.playerReady) {
-      setGateStatus(`正在準備 Mega City Arena ${Math.round(gate.progress * 100)}%`);
-    } else if (!gate.opponentReady) {
-      setGateStatus('正在等待對手…');
-    } else if (!gate.worldPrepared) {
-      setGateStatus(`雙方已準備，場景載入中 ${Math.round(gate.progress * 100)}%`);
+      enterChallengeButton.hidden = false;
+      enterChallengeButton.disabled = false;
+      enterChallengeButton.textContent = '進入挑戰';
+      gate.readyButtonShown = true;
+      setGateStatus('場景與角色準備完成，按下後等待對手。');
+      return;
+    }
+
+    enterChallengeButton.hidden = false;
+    enterChallengeButton.disabled = true;
+    if (!gate.opponentReady) {
+      enterChallengeButton.textContent = '等待對手中…';
+      setGateStatus('你已確認，正在等待對手進入…');
     } else {
-      setGateStatus('雙方已準備，可以進入挑戰');
+      enterChallengeButton.textContent = '雙方已準備';
+      setGateStatus('雙方已確認，正在開始入場運鏡…');
     }
   }
 
@@ -267,9 +301,9 @@
       });
       gate.worldPrepared = true;
       setGateProgress(1);
-      await tryStartMatch();
+      updateGate();
     })().catch(error => {
-      console.error('[Challenge Arena v0.7.2] initialize failed', error);
+      console.error('[Challenge Arena v0.8.0-alpha6] initialize failed', error);
       unityInitializePromise = null;
       startIframeFallback();
     });
@@ -290,14 +324,15 @@
   }
 
   $('enterChallengeButton').addEventListener('click', async () => {
-    const button = $('enterChallengeButton');
+    const button = enterChallengeButton;
+    if (!gate.worldPrepared || gate.progress < .999 || gate.playerReady || gate.starting) return;
     button.disabled = true;
+    button.textContent = '正在開啟麥克風…';
     setGateStatus('正在開啟麥克風…');
     try {
       await ensureMicrophone();
       gate.micReady = true;
       gate.playerReady = true;
-      button.hidden = true;
       updateGate();
       setTimeout(() => {
         gate.opponentReady = true;
@@ -305,7 +340,6 @@
         void tryStartMatch();
       }, randomInt(850, 1450));
       void refreshAzureToken().catch(error => console.warn('[Challenge Speech] token preload', error));
-      await tryStartMatch();
     } catch (error) {
       console.error('[Challenge Speech] microphone', error);
       gate.micReady = false;
@@ -320,25 +354,44 @@
 
   async function tryStartMatch() {
     if (gate.starting || state.sessionStarted) return;
-    if (!gate.playerReady || !gate.opponentReady || !gate.micReady || !gate.worldPrepared) return;
+    if (!gate.playerReady || !gate.opponentReady || !gate.micReady || !gate.worldPrepared || gate.progress < .999) return;
     gate.starting = true;
-    setGateStatus('雙方已準備，正在進入 Mega City Arena…');
+    gate.introStartedAt = performance.now();
+    setGateStatus('雙方已準備，開始入場運鏡…');
+    enterChallengeButton.textContent = '開始入場';
+    $('recordButton').disabled = true;
+    setRecordButton('等待入場運鏡完成');
+    $('arenaCaption').textContent = '雙方正在進場';
+
+    // The gate must leave before PlayMatchIntro, otherwise the complete intro
+    // runs behind the waiting page and the user only sees BATTLE_MAIN.
+    $('readyGate').classList.add('is-leaving');
+    await new Promise(resolve => setTimeout(resolve, 440));
+    $('readyGate').hidden = true;
+
     try {
       if (unityArena?.isReady()) {
-        const introComplete = unityArena.waitForRuntime('intro-complete', null, 18000);
+        const introComplete = unityArena.waitForRuntime('intro-complete', null, 16000);
         await unityArena.playMatchIntro();
         await introComplete.catch(error => console.warn('[Challenge Arena] intro completion fallback', error));
+        await unityArena.setCamera('BATTLE_MAIN').catch(() => {});
       } else {
-        await new Promise(resolve => setTimeout(resolve, 900));
+        await new Promise(resolve => setTimeout(resolve, 1200));
       }
     } finally {
+      gate.introCompletedAt = performance.now();
       state.sessionStarted = true;
       prepareRound();
       $('recordButton').disabled = false;
       setRecordButton('開始錄音');
       $('arenaCaption').textContent = '面對對手，準備開口';
-      $('readyGate').classList.add('is-leaving');
-      setTimeout(() => { $('readyGate').hidden = true; }, 460);
+      window.__TAPPIE_CHALLENGE_GATE_DIAGNOSTICS__ = {
+        worldPrepared: gate.worldPrepared,
+        progress: gate.progress,
+        introMs: Math.round(gate.introCompletedAt - gate.introStartedAt),
+        arena: unityArena?.state?.arenaId || null,
+        arenaDiagnostics: unityArena?.diagnostics?.() || null
+      };
     }
   }
 
@@ -478,6 +531,14 @@
     $('endSheet').setAttribute('aria-hidden', 'false');
     setFocus(playerWon ? 'player' : 'opponent', 0);
     $('recordButton').disabled = true;
+    const rewardChoice = $('rewardChoice');
+    rewardChoice.hidden = !(playerWon && rewardZoneEnabled && unityArena?.isReady());
+    $('finishBattle').hidden = !rewardChoice.hidden;
+    if (!rewardChoice.hidden) {
+      [...rewardChoice.querySelectorAll('button')].forEach(button => { button.disabled = false; });
+      void unityArena.beginRewardSelection({ arenaId: unityArena.state?.arenaId, chestCount: 3 }).catch(() => {});
+      $('endCopy').textContent = '選一個寶箱，角色會走到獎勵前。';
+    }
     if (unityArena?.isReady()) {
       void unityArena.playCue({ cue: 'FINAL_WIN', actor: playerWon ? 'player' : 'opponent', returnToBattle: false }).catch(() => {});
     } else if (playerWon) {
@@ -754,6 +815,21 @@
       $('arenaCaption').textContent = '重擊已準備，本回合勝出亮 2 格';
       render();
     }, 900);
+  });
+
+  const rewardChoice = $('rewardChoice');
+  rewardChoice?.addEventListener('click', event => {
+    const button = event.target.closest('[data-reward-chest]');
+    if (!button || button.disabled) return;
+    const index = Number(button.dataset.rewardChest || 0);
+    [...rewardChoice.querySelectorAll('button')].forEach(item => { item.disabled = true; });
+    $('endCopy').textContent = '角色正在前往寶箱…';
+    void unityArena?.selectRewardChest(index).catch(() => {});
+    setTimeout(() => {
+      rewardChoice.hidden = true;
+      $('endCopy').textContent = `已選擇寶箱 ${String.fromCharCode(65 + index)}，獎勵已加入。`;
+      $('finishBattle').hidden = false;
+    }, 2200);
   });
 
   const goBack = () => { location.href = './dashboard.html?tab=challenge'; };
