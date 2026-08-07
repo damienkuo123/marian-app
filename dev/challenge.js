@@ -80,7 +80,7 @@
     opponentLoadout = createRandomLoadout('opponent');
   }
   window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__ = Object.freeze({ player: playerLoadout, opponent: opponentLoadout });
-  console.info('[Tappie Challenge v0.8.0-alpha6] Random actor pair', window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__);
+  console.info('[Tappie Challenge v0.8.1-alpha7] Random actor pair', window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__);
 
   const actors = {
     player: { frame: $('playerRuntimeFrame'), stage: $('playerRuntimeStage'), status: $('playerRuntimeStatus'), ready: false, commandSeq: 0, pending: new Map() },
@@ -99,7 +99,9 @@
     lastPlayerScore: 0,
     lastOpponentScore: 0,
     currentQuestion: questions[0],
-    pendingOpponentScore: 0
+    pendingOpponentScore: 0,
+    rewardMode: false,
+    rewardSelected: false
   };
 
   const gate = {
@@ -158,7 +160,7 @@
       await command(actorName, 'playAnimation', { name: idle }).catch(() => command(actorName, 'playAnimation', { name: 'Stand_Idle1' }));
       actor.status.textContent = actorName === 'player' ? '我方準備完成' : '對手準備完成';
     } catch (error) {
-      console.warn(`[Challenge Arena v0.8.0-alpha6] ${actorName} iframe fallback`, error);
+      console.warn(`[Challenge Arena v0.8.1-alpha7] ${actorName} iframe fallback`, error);
       actor.status.textContent = '使用角色預覽圖';
     }
   }
@@ -303,7 +305,7 @@
       setGateProgress(1);
       updateGate();
     })().catch(error => {
-      console.error('[Challenge Arena v0.8.0-alpha6] initialize failed', error);
+      console.error('[Challenge Arena v0.8.1-alpha7] initialize failed', error);
       unityInitializePromise = null;
       startIframeFallback();
     });
@@ -371,10 +373,13 @@
 
     try {
       if (unityArena?.isReady()) {
+        await unityArena.suspendStableCamera().catch(() => {});
         const introComplete = unityArena.waitForRuntime('intro-complete', null, 16000);
         await unityArena.playMatchIntro();
         await introComplete.catch(error => console.warn('[Challenge Arena] intro completion fallback', error));
-        await unityArena.setCamera('BATTLE_MAIN').catch(() => {});
+        // Match Intro already ends on the approved Battle Main pose. Resume the
+        // stabilizer without asking the canonical runtime to replay that shot.
+        await unityArena.resumeStableCamera('BATTLE_MAIN').catch(() => {});
       } else {
         await new Promise(resolve => setTimeout(resolve, 1200));
       }
@@ -521,24 +526,35 @@
     }
   }
 
+  async function enterRewardMode() {
+    if (state.rewardMode) return;
+    state.rewardMode = true;
+    state.rewardSelected = false;
+    $('recordButton').disabled = true;
+    $('skillButton').disabled = true;
+    $('battleControls').hidden = true;
+    $('rewardControls').hidden = false;
+    $('finishRewardMode').hidden = true;
+    $('confirmRewardChest').hidden = false;
+    $('confirmRewardChest').disabled = false;
+    $('rewardControlTitle').textContent = '走到想選的寶箱前';
+    $('rewardControlStatus').textContent = '拖曳搖桿控制角色；靠近寶箱後再開啟。';
+    $('arenaCaption').textContent = '勝利！前往選擇獎勵寶箱';
+    arena.classList.add('reward-mode');
+    await unityArena?.suspendStableCamera().catch(() => {});
+    await unityArena?.beginRewardSelection({
+      arenaId: unityArena.state?.arenaId,
+      chestCount: 3,
+      control: 'third-person-joystick'
+    }).catch(error => console.warn('[Challenge Reward] begin', error));
+  }
+
   function finishIfNeeded() {
     if (state.player < WIN_TARGET && state.opponent < WIN_TARGET) return false;
     const playerWon = state.player >= WIN_TARGET;
-    $('endTitle').textContent = playerWon ? '挑戰成功' : '這次差一點';
-    $('endCopy').textContent = playerWon ? '你率先亮滿五格，完成本場口說對決。' : '對手率先亮滿五格；可以回到挑戰後再試一次。';
-    renderFinalLamps(playerWon ? 'player' : 'opponent');
-    $('endSheet').classList.add('is-visible');
-    $('endSheet').setAttribute('aria-hidden', 'false');
     setFocus(playerWon ? 'player' : 'opponent', 0);
     $('recordButton').disabled = true;
-    const rewardChoice = $('rewardChoice');
-    rewardChoice.hidden = !(playerWon && rewardZoneEnabled && unityArena?.isReady());
-    $('finishBattle').hidden = !rewardChoice.hidden;
-    if (!rewardChoice.hidden) {
-      [...rewardChoice.querySelectorAll('button')].forEach(button => { button.disabled = false; });
-      void unityArena.beginRewardSelection({ arenaId: unityArena.state?.arenaId, chestCount: 3 }).catch(() => {});
-      $('endCopy').textContent = '選一個寶箱，角色會走到獎勵前。';
-    }
+
     if (unityArena?.isReady()) {
       void unityArena.playCue({ cue: 'FINAL_WIN', actor: playerWon ? 'player' : 'opponent', returnToBattle: false }).catch(() => {});
     } else if (playerWon) {
@@ -548,6 +564,18 @@
       if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Dance_2' }).catch(() => {});
       if (actors.player.ready) void command('player', 'playAnimation', { name: 'Emoji_Cry' }).catch(() => {});
     }
+
+    if (playerWon && rewardZoneEnabled && unityArena?.isReady()) {
+      $('arenaCaption').textContent = '挑戰成功，準備進入獎勵區';
+      setTimeout(() => { void enterRewardMode(); }, 1250);
+      return true;
+    }
+
+    $('endTitle').textContent = playerWon ? '挑戰成功' : '這次差一點';
+    $('endCopy').textContent = playerWon ? '你率先亮滿五格，完成本場口說對決。' : '對手率先亮滿五格；可以回到挑戰後再試一次。';
+    renderFinalLamps(playerWon ? 'player' : 'opponent');
+    $('endSheet').classList.add('is-visible');
+    $('endSheet').setAttribute('aria-hidden', 'false');
     return true;
   }
 
@@ -817,24 +845,76 @@
     }, 900);
   });
 
-  const rewardChoice = $('rewardChoice');
-  rewardChoice?.addEventListener('click', event => {
-    const button = event.target.closest('[data-reward-chest]');
-    if (!button || button.disabled) return;
-    const index = Number(button.dataset.rewardChest || 0);
-    [...rewardChoice.querySelectorAll('button')].forEach(item => { item.disabled = true; });
-    $('endCopy').textContent = '角色正在前往寶箱…';
-    void unityArena?.selectRewardChest(index).catch(() => {});
+  const rewardJoystick = $('rewardJoystick');
+  const rewardJoystickKnob = $('rewardJoystickKnob');
+  let rewardPointerId = null;
+  let rewardMove = { x: 0, y: 0 };
+  let rewardSendQueued = false;
+
+  function sendRewardMove(x, y) {
+    rewardMove = { x, y };
+    if (rewardSendQueued) return;
+    rewardSendQueued = true;
+    requestAnimationFrame(() => {
+      rewardSendQueued = false;
+      void unityArena?.setRewardMoveInput(rewardMove).catch(() => {});
+    });
+  }
+
+  function updateRewardJoystick(event) {
+    const rect = rewardJoystick.getBoundingClientRect();
+    const radius = Math.max(1, Math.min(rect.width, rect.height) * .36);
+    let x = event.clientX - (rect.left + rect.width / 2);
+    let y = event.clientY - (rect.top + rect.height / 2);
+    const length = Math.hypot(x, y);
+    if (length > radius) { x = x / length * radius; y = y / length * radius; }
+    rewardJoystickKnob.style.transform = `translate(${x}px, ${y}px)`;
+    sendRewardMove(x / radius, -y / radius);
+  }
+
+  function releaseRewardJoystick() {
+    rewardPointerId = null;
+    rewardJoystickKnob.style.transform = 'translate(0, 0)';
+    sendRewardMove(0, 0);
+  }
+
+  rewardJoystick?.addEventListener('pointerdown', event => {
+    if (!state.rewardMode || state.rewardSelected) return;
+    rewardPointerId = event.pointerId;
+    rewardJoystick.setPointerCapture(event.pointerId);
+    updateRewardJoystick(event);
+  });
+  rewardJoystick?.addEventListener('pointermove', event => {
+    if (event.pointerId !== rewardPointerId) return;
+    updateRewardJoystick(event);
+  });
+  rewardJoystick?.addEventListener('pointerup', releaseRewardJoystick);
+  rewardJoystick?.addEventListener('pointercancel', releaseRewardJoystick);
+  rewardJoystick?.addEventListener('lostpointercapture', releaseRewardJoystick);
+
+  $('confirmRewardChest')?.addEventListener('click', async () => {
+    if (!state.rewardMode || state.rewardSelected) return;
+    state.rewardSelected = true;
+    releaseRewardJoystick();
+    $('confirmRewardChest').disabled = true;
+    $('rewardControlStatus').textContent = '正在確認最近的寶箱…';
+    await unityArena?.confirmRewardSelection().catch(() => {});
     setTimeout(() => {
-      rewardChoice.hidden = true;
-      $('endCopy').textContent = `已選擇寶箱 ${String.fromCharCode(65 + index)}，獎勵已加入。`;
-      $('finishBattle').hidden = false;
-    }, 2200);
+      $('rewardControlTitle').textContent = '獎勵已加入';
+      $('rewardControlStatus').textContent = '寶箱已選擇，可以回到挑戰。';
+      $('confirmRewardChest').hidden = true;
+      $('finishRewardMode').hidden = false;
+      $('arenaCaption').textContent = '獎勵已加入';
+    }, 700);
   });
 
   const goBack = () => { location.href = './dashboard.html?tab=challenge'; };
   $('backButton').addEventListener('click', goBack);
   $('finishBattle').addEventListener('click', goBack);
+  $('finishRewardMode')?.addEventListener('click', () => {
+    void unityArena?.endRewardSelection().catch(() => {});
+    goBack();
+  });
 
   window.addEventListener('pagehide', () => {
     clearInterval(azureRefreshTimer);
@@ -842,6 +922,10 @@
     if (mediaRecorder?.state === 'recording') mediaRecorder.stop();
     micStream?.getTracks().forEach(track => track.stop());
     window.speechSynthesis?.cancel();
+    if (state.rewardMode) {
+      releaseRewardJoystick();
+      try { unityArena?.endRewardSelection(); } catch (_) {}
+    }
   });
 
   setGateProgress(unityArena?.state?.progress || 0);

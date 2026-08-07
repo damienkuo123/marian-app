@@ -436,7 +436,7 @@
   }
 
   const api = {
-    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.2-ALPHA6',
+    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.3-ALPHA7',
     state,
     load,
     retry,
@@ -449,8 +449,12 @@
     setCamera: camera => send('SetCamera', camera),
     resetRoundPose: () => send('ResetRoundPose', ''),
     playMatchIntro: () => send('PlayMatchIntro', ''),
+    suspendStableCamera: () => send('SuspendStableCamera', ''),
+    resumeStableCamera: mode => send('ResumeStableCamera', mode || 'BATTLE_MAIN'),
     beginRewardSelection: payload => send('BeginRewardSelection', payload || ''),
-    selectRewardChest: index => send('SelectRewardChest', String(index)),
+    setRewardMoveInput: input => send('SetRewardMoveInput', input || { x: 0, y: 0 }),
+    confirmRewardSelection: () => send('ConfirmRewardSelection', ''),
+    endRewardSelection: () => send('EndRewardSelection', ''),
     clearRewardZone: () => send('ClearRewardZone', ''),
     setQualityProfile: profile => send('SetQualityProfile', profile),
     diagnostics,
