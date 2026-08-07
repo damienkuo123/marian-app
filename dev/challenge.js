@@ -9,6 +9,7 @@
   const params = new URLSearchParams(location.search);
   const difficulty = ['easy', 'normal', 'hard'].includes(params.get('difficulty')) ? params.get('difficulty') : 'normal';
   const rewardZoneEnabled = params.get('rewardZone') === '1';
+  const arenaDebugEnabled = params.get('arenaDebug') === '1';
   const unityArena = window.TappieChallengeArena || null;
   const $ = id => document.getElementById(id);
   const arena = $('arenaShell');
@@ -980,6 +981,15 @@
 
   window.addEventListener('tappie:reward-state', event => {
     const detail = event.detail || {};
+    if (arenaDebugEnabled) {
+      const debug = $('unityArenaDebug');
+      if (debug) {
+        const base = String(debug.textContent || '').split('\nreward:')[0];
+        const fixed = value => Number.isFinite(Number(value)) ? Number(value).toFixed(2) : '-';
+        debug.textContent = `${base}\nreward: ${detail.owner || '-'} · input(${fixed(detail.moveX)},${fixed(detail.moveY)}) m=${fixed(detail.magnitude)} age=${fixed(detail.inputAge)} packets=${detail.movePackets ?? 0}\n${detail.locomotion || '-'} · grounded=${detail.grounded ? 1 : 0} obstacle=${detail.obstacleBlocked ? 1 : 0} ledge=${detail.ledgeBlocked ? 1 : 0} · ground=${fixed(detail.groundY)} sole=${fixed(detail.soleY)} vy=${fixed(detail.verticalVelocity)}\npos(${fixed(detail.playerX)},${fixed(detail.playerY)},${fixed(detail.playerZ)}) · proxies G${detail.groundProxyCount ?? 0}/O${detail.obstacleProxyCount ?? 0}`;
+        debug.hidden = false;
+      }
+    }
     if (!state.rewardMode) return;
     if (detail.selected) {
       state.rewardSelected = true;
