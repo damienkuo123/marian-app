@@ -364,6 +364,19 @@
     });
   }
 
+
+  async function sendAndWait(method, payload, eventKind, timeoutMs = 6000, fallbackMs = 2200) {
+    const runtimeEvent = eventKind
+      ? waitForRuntime(eventKind, null, timeoutMs).catch(() => null)
+      : Promise.resolve(null);
+    await send(method, payload);
+    if (!eventKind) return null;
+    return Promise.race([
+      runtimeEvent,
+      new Promise(resolve => setTimeout(() => resolve(null), fallbackMs))
+    ]);
+  }
+
   async function initialize(config = {}) {
     await readyPromise;
     await send('SetQualityProfile', state.qualityProfile).catch(() => {});
@@ -436,7 +449,7 @@
   }
 
   const api = {
-    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.3-ALPHA7',
+    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.4-ALPHA8',
     state,
     load,
     retry,
@@ -446,13 +459,18 @@
     send,
     initialize,
     playCue: cue => send('PlayCue', cue),
+    playCueAndWait: (cue, eventKind, timeoutMs, fallbackMs) =>
+      sendAndWait('PlayCue', cue, eventKind, timeoutMs, fallbackMs),
     setCamera: camera => send('SetCamera', camera),
     resetRoundPose: () => send('ResetRoundPose', ''),
+    playActorAnimation: (actor, animation) =>
+      send(actor === 'opponent' ? 'PlayOpponentAnimation' : 'PlayPlayerAnimation', animation || 'Stand_Idle1'),
     playMatchIntro: () => send('PlayMatchIntro', ''),
     suspendStableCamera: () => send('SuspendStableCamera', ''),
     resumeStableCamera: mode => send('ResumeStableCamera', mode || 'BATTLE_MAIN'),
     beginRewardSelection: payload => send('BeginRewardSelection', payload || ''),
     setRewardMoveInput: input => send('SetRewardMoveInput', input || { x: 0, y: 0 }),
+    setRewardLookInput: input => send('SetRewardLookInput', input || { x: 0, y: 0 }),
     confirmRewardSelection: () => send('ConfirmRewardSelection', ''),
     endRewardSelection: () => send('EndRewardSelection', ''),
     clearRewardZone: () => send('ClearRewardZone', ''),

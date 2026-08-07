@@ -80,7 +80,7 @@
     opponentLoadout = createRandomLoadout('opponent');
   }
   window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__ = Object.freeze({ player: playerLoadout, opponent: opponentLoadout });
-  console.info('[Tappie Challenge v0.8.1-alpha7] Random actor pair', window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__);
+  console.info('[Tappie Challenge v0.9.0-alpha8] Random actor pair', window.__TAPPIE_CHALLENGE_RANDOM_LOADOUTS__);
 
   const actors = {
     player: { frame: $('playerRuntimeFrame'), stage: $('playerRuntimeStage'), status: $('playerRuntimeStatus'), ready: false, commandSeq: 0, pending: new Map() },
@@ -160,7 +160,7 @@
       await command(actorName, 'playAnimation', { name: idle }).catch(() => command(actorName, 'playAnimation', { name: 'Stand_Idle1' }));
       actor.status.textContent = actorName === 'player' ? '我方準備完成' : '對手準備完成';
     } catch (error) {
-      console.warn(`[Challenge Arena v0.8.1-alpha7] ${actorName} iframe fallback`, error);
+      console.warn(`[Challenge Arena v0.9.0-alpha8] ${actorName} iframe fallback`, error);
       actor.status.textContent = '使用角色預覽圖';
     }
   }
@@ -305,7 +305,7 @@
       setGateProgress(1);
       updateGate();
     })().catch(error => {
-      console.error('[Challenge Arena v0.8.1-alpha7] initialize failed', error);
+      console.error('[Challenge Arena v0.9.0-alpha8] initialize failed', error);
       unityInitializePromise = null;
       startIframeFallback();
     });
@@ -373,13 +373,11 @@
 
     try {
       if (unityArena?.isReady()) {
-        await unityArena.suspendStableCamera().catch(() => {});
         const introComplete = unityArena.waitForRuntime('intro-complete', null, 16000);
         await unityArena.playMatchIntro();
         await introComplete.catch(error => console.warn('[Challenge Arena] intro completion fallback', error));
-        // Match Intro already ends on the approved Battle Main pose. Resume the
-        // stabilizer without asking the canonical runtime to replay that shot.
-        await unityArena.resumeStableCamera('BATTLE_MAIN').catch(() => {});
+        // Canonical Match Intro owns the full camera sequence and already settles
+        // on the approved BATTLE_MAIN. No second camera owner is resumed here.
       } else {
         await new Promise(resolve => setTimeout(resolve, 1200));
       }
@@ -478,29 +476,36 @@
     if (duration > 0) setTimeout(() => arena.classList.remove('focus-player', 'focus-opponent'), duration);
   }
 
-  function playRoundAnimations(type) {
+  async function playRoundAnimations(type) {
     if (unityArena?.isReady()) {
       const cue = type === 'win'
         ? { cue: 'ROUND_WIN', actor: 'player', returnToBattle: true }
         : type === 'lose'
           ? { cue: 'ROUND_WIN', actor: 'opponent', returnToBattle: true }
           : { cue: 'TIE', actor: 'player', returnToBattle: true };
-      void unityArena.playCue(cue).catch(() => {});
+      const fallbackMs = type === 'tie' ? 1350 : 2650;
+      await unityArena.playCueAndWait(
+        cue,
+        type === 'tie' ? 'tie-complete' : 'round-win-complete',
+        6000,
+        fallbackMs
+      ).catch(() => delay(fallbackMs));
       return;
     }
     if (type === 'win') {
       setFocus('player');
-      if (actors.player.ready) void command('player', 'playAnimation', { name: 'Emoji_Cheer' }).catch(() => command('player', 'playAnimation', { name: 'Emoji_Nice' })).catch(() => {});
+      if (actors.player.ready) await command('player', 'playAnimation', { name: 'Emoji_Cheer' }).catch(() => command('player', 'playAnimation', { name: 'Emoji_Nice' })).catch(() => {});
       if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Reaction_Struck' }).catch(() => {});
     } else if (type === 'lose') {
       setFocus('opponent');
-      if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Emoji_Cheer' }).catch(() => command('opponent', 'playAnimation', { name: 'Emoji_Nice' })).catch(() => {});
+      if (actors.opponent.ready) await command('opponent', 'playAnimation', { name: 'Emoji_Cheer' }).catch(() => command('opponent', 'playAnimation', { name: 'Emoji_Nice' })).catch(() => {});
       if (actors.player.ready) void command('player', 'playAnimation', { name: 'Reaction_Struck' }).catch(() => {});
     } else {
       setFocus(null, 0);
       if (actors.player.ready) void command('player', 'playAnimation', { name: 'Emoji_Aghast' }).catch(() => {});
       if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Emoji_Aghast' }).catch(() => {});
     }
+    await delay(type === 'tie' ? 1350 : 2400);
   }
 
   function showResult(type, myScore, enemyScore, gained) {
@@ -538,36 +543,52 @@
     $('confirmRewardChest').hidden = false;
     $('confirmRewardChest').disabled = false;
     $('rewardControlTitle').textContent = '走到想選的寶箱前';
-    $('rewardControlStatus').textContent = '拖曳搖桿控制角色；靠近寶箱後再開啟。';
+    $('rewardControlStatus').textContent = '左側搖桿移動；拖曳遊戲畫面旋轉視角。靠近寶箱後再開啟。';
     $('arenaCaption').textContent = '勝利！前往選擇獎勵寶箱';
     arena.classList.add('reward-mode');
-    await unityArena?.suspendStableCamera().catch(() => {});
     await unityArena?.beginRewardSelection({
       arenaId: unityArena.state?.arenaId,
       chestCount: 3,
-      control: 'third-person-joystick'
+      control: 'third-person-joystick-orbit',
+      radiusMeters: 50
     }).catch(error => console.warn('[Challenge Reward] begin', error));
   }
 
-  function finishIfNeeded() {
-    if (state.player < WIN_TARGET && state.opponent < WIN_TARGET) return false;
+  function isMatchComplete() {
+    return state.player >= WIN_TARGET || state.opponent >= WIN_TARGET;
+  }
+
+  async function finishMatchIfNeeded() {
+    if (!isMatchComplete()) return false;
     const playerWon = state.player >= WIN_TARGET;
     setFocus(playerWon ? 'player' : 'opponent', 0);
     $('recordButton').disabled = true;
 
     if (unityArena?.isReady()) {
-      void unityArena.playCue({ cue: 'FINAL_WIN', actor: playerWon ? 'player' : 'opponent', returnToBattle: false }).catch(() => {});
+      await unityArena.playCueAndWait(
+        { cue: 'FINAL_WIN', actor: playerWon ? 'player' : 'opponent', returnToBattle: false },
+        'final-win-complete',
+        8500,
+        3800
+      ).catch(() => delay(3800));
+      // Reward must never inherit Dance/Final pose or its cinematic camera.
+      await unityArena.resetRoundPose().catch(() => {});
+      await unityArena.playActorAnimation('player', 'Stand_Idle1').catch(() => {});
+      await delay(120);
     } else if (playerWon) {
-      if (actors.player.ready) void command('player', 'playAnimation', { name: 'Dance_2' }).catch(() => {});
+      if (actors.player.ready) await command('player', 'playAnimation', { name: 'Dance_2' }).catch(() => {});
       if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Emoji_Cry' }).catch(() => {});
+      await delay(3200);
+      if (actors.player.ready) await command('player', 'playAnimation', { name: 'Stand_Idle1' }).catch(() => {});
     } else {
-      if (actors.opponent.ready) void command('opponent', 'playAnimation', { name: 'Dance_2' }).catch(() => {});
+      if (actors.opponent.ready) await command('opponent', 'playAnimation', { name: 'Dance_2' }).catch(() => {});
       if (actors.player.ready) void command('player', 'playAnimation', { name: 'Emoji_Cry' }).catch(() => {});
+      await delay(3200);
     }
 
     if (playerWon && rewardZoneEnabled && unityArena?.isReady()) {
-      $('arenaCaption').textContent = '挑戰成功，準備進入獎勵區';
-      setTimeout(() => { void enterRewardMode(); }, 1250);
+      $('arenaCaption').textContent = '挑戰成功，進入獎勵探索';
+      await enterRewardMode();
       return true;
     }
 
@@ -594,15 +615,14 @@
     if (type === 'lose') state.opponent = Math.min(WIN_TARGET, state.opponent + 1);
     state.energy = Math.min(3, state.energy + 1);
     state.skillArmed = false;
-    playRoundAnimations(type);
+    const roundAnimation = playRoundAnimations(type);
     showResult(type, myScore, enemyScore, gained);
     $('arenaCaption').textContent = type === 'win' ? `發音 ${myScore} 分，回合勝利` : type === 'tie' ? `雙方 ${myScore} 分，再來一次` : `發音 ${myScore} 分，對手勝出`;
     render();
-    await delay(2150);
-    if (finishIfNeeded()) return;
+    await roundAnimation;
+    if (await finishMatchIfNeeded()) return;
     state.round += 1;
     if (unityArena?.isReady()) {
-      await unityArena.setCamera('BATTLE_MAIN').catch(() => {});
       await unityArena.resetRoundPose().catch(() => {});
     }
     prepareRound();
@@ -764,7 +784,7 @@
   }
 
   async function startRecording() {
-    if (!state.sessionStarted || state.processing || state.recording || finishIfNeeded()) return;
+    if (!state.sessionStarted || state.processing || state.recording || isMatchComplete()) return;
     await ensureMicrophone();
     if (!window.MediaRecorder) throw new Error('此瀏覽器不支援 MediaRecorder');
     recordingChunks = [];
@@ -833,7 +853,7 @@
     $('skillCutin').classList.add('is-visible');
     $('skillCutin').setAttribute('aria-hidden', 'false');
     setFocus('player', 900);
-    if (unityArena?.isReady()) void unityArena.playCue({ cue: 'SKILL_SUCCESS', actor: 'player', returnToBattle: true }).catch(() => {});
+    if (unityArena?.isReady()) void unityArena.playActorAnimation('player', 'Action_Punch').catch(() => {});
     else if (actors.player.ready) void command('player', 'playAnimation', { name: 'Action_Punch' }).catch(() => {});
     setTimeout(() => {
       state.energy = 0;
@@ -891,6 +911,50 @@
   rewardJoystick?.addEventListener('pointerup', releaseRewardJoystick);
   rewardJoystick?.addEventListener('pointercancel', releaseRewardJoystick);
   rewardJoystick?.addEventListener('lostpointercapture', releaseRewardJoystick);
+
+
+  let rewardLookPointerId = null;
+  let rewardLookLastX = 0;
+  let rewardLookLastY = 0;
+  let rewardLookSendQueued = false;
+  let rewardLookDelta = { x: 0, y: 0 };
+
+  function sendRewardLook(x, y) {
+    rewardLookDelta.x += x;
+    rewardLookDelta.y += y;
+    if (rewardLookSendQueued) return;
+    rewardLookSendQueued = true;
+    requestAnimationFrame(() => {
+      rewardLookSendQueued = false;
+      const payload = { x: rewardLookDelta.x, y: rewardLookDelta.y };
+      rewardLookDelta = { x: 0, y: 0 };
+      void unityArena?.setRewardLookInput(payload).catch(() => {});
+    });
+  }
+
+  arena?.addEventListener('pointerdown', event => {
+    if (!state.rewardMode || state.rewardSelected || rewardJoystick?.contains(event.target)) return;
+    if (event.target.closest?.('button, a, input')) return;
+    rewardLookPointerId = event.pointerId;
+    rewardLookLastX = event.clientX;
+    rewardLookLastY = event.clientY;
+    arena.setPointerCapture?.(event.pointerId);
+  });
+  arena?.addEventListener('pointermove', event => {
+    if (event.pointerId !== rewardLookPointerId) return;
+    const dx = event.clientX - rewardLookLastX;
+    const dy = event.clientY - rewardLookLastY;
+    rewardLookLastX = event.clientX;
+    rewardLookLastY = event.clientY;
+    sendRewardLook(dx, dy);
+  });
+  const releaseRewardLook = event => {
+    if (event?.pointerId != null && event.pointerId !== rewardLookPointerId) return;
+    rewardLookPointerId = null;
+  };
+  arena?.addEventListener('pointerup', releaseRewardLook);
+  arena?.addEventListener('pointercancel', releaseRewardLook);
+  arena?.addEventListener('lostpointercapture', releaseRewardLook);
 
   $('confirmRewardChest')?.addEventListener('click', async () => {
     if (!state.rewardMode || state.rewardSelected) return;
