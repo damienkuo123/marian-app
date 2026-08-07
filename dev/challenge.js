@@ -540,8 +540,8 @@
     $('battleControls').hidden = true;
     $('rewardControls').hidden = false;
     $('finishRewardMode').hidden = true;
-    $('confirmRewardChest').hidden = false;
-    $('confirmRewardChest').disabled = false;
+    $('rewardChestAction').hidden = true;
+    $('rewardJumpButton').disabled = false;
     $('rewardControlTitle').textContent = '走到想選的寶箱前';
     $('rewardControlStatus').textContent = '左側搖桿移動；拖曳遊戲畫面旋轉視角。靠近寶箱後再開啟。';
     $('arenaCaption').textContent = '勝利！前往選擇獎勵寶箱';
@@ -615,7 +615,8 @@
     if (type === 'lose') state.opponent = Math.min(WIN_TARGET, state.opponent + 1);
     state.energy = Math.min(3, state.energy + 1);
     state.skillArmed = false;
-    const roundAnimation = playRoundAnimations(type);
+    const matchCompleteAfterScore = isMatchComplete();
+    const roundAnimation = matchCompleteAfterScore ? Promise.resolve() : playRoundAnimations(type);
     showResult(type, myScore, enemyScore, gained);
     $('arenaCaption').textContent = type === 'win' ? `發音 ${myScore} 分，回合勝利` : type === 'tie' ? `雙方 ${myScore} 分，再來一次` : `發音 ${myScore} 分，對手勝出`;
     render();
@@ -870,6 +871,20 @@
   let rewardPointerId = null;
   let rewardMove = { x: 0, y: 0 };
   let rewardSendQueued = false;
+  let rewardHeartbeatTimer = 0;
+
+  function stopRewardHeartbeat() {
+    if (rewardHeartbeatTimer) clearInterval(rewardHeartbeatTimer);
+    rewardHeartbeatTimer = 0;
+  }
+
+  function startRewardHeartbeat() {
+    stopRewardHeartbeat();
+    rewardHeartbeatTimer = window.setInterval(() => {
+      if (rewardPointerId == null || !state.rewardMode || state.rewardSelected) return;
+      void unityArena?.setRewardMoveInput(rewardMove).catch(() => {});
+    }, 50);
+  }
 
   function sendRewardMove(x, y) {
     rewardMove = { x, y };
@@ -889,11 +904,15 @@
     const length = Math.hypot(x, y);
     if (length > radius) { x = x / length * radius; y = y / length * radius; }
     rewardJoystickKnob.style.transform = `translate(${x}px, ${y}px)`;
+    const magnitude = Math.min(1, Math.hypot(x, y) / radius);
+    rewardJoystick.classList.toggle('is-running', magnitude >= .70);
     sendRewardMove(x / radius, -y / radius);
   }
 
   function releaseRewardJoystick() {
     rewardPointerId = null;
+    stopRewardHeartbeat();
+    rewardJoystick?.classList.remove('is-running');
     rewardJoystickKnob.style.transform = 'translate(0, 0)';
     sendRewardMove(0, 0);
   }
@@ -903,6 +922,7 @@
     rewardPointerId = event.pointerId;
     rewardJoystick.setPointerCapture(event.pointerId);
     updateRewardJoystick(event);
+    startRewardHeartbeat();
   });
   rewardJoystick?.addEventListener('pointermove', event => {
     if (event.pointerId !== rewardPointerId) return;
@@ -956,20 +976,45 @@
   arena?.addEventListener('pointercancel', releaseRewardLook);
   arena?.addEventListener('lostpointercapture', releaseRewardLook);
 
-  $('confirmRewardChest')?.addEventListener('click', async () => {
-    if (!state.rewardMode || state.rewardSelected) return;
-    state.rewardSelected = true;
-    releaseRewardJoystick();
-    $('confirmRewardChest').disabled = true;
-    $('rewardControlStatus').textContent = '正在確認最近的寶箱…';
-    await unityArena?.confirmRewardSelection().catch(() => {});
-    setTimeout(() => {
+  const rewardChestAction = $('rewardChestAction');
+
+  window.addEventListener('tappie:reward-state', event => {
+    const detail = event.detail || {};
+    if (!state.rewardMode) return;
+    if (detail.selected) {
+      state.rewardSelected = true;
+      releaseRewardJoystick();
+      rewardChestAction.hidden = true;
+      $('rewardJumpButton').disabled = true;
       $('rewardControlTitle').textContent = '獎勵已加入';
       $('rewardControlStatus').textContent = '寶箱已選擇，可以回到挑戰。';
-      $('confirmRewardChest').hidden = true;
       $('finishRewardMode').hidden = false;
       $('arenaCaption').textContent = '獎勵已加入';
-    }, 700);
+      return;
+    }
+    const visible = Boolean(detail.active && detail.nearChest && !state.rewardSelected);
+    rewardChestAction.hidden = !visible;
+    if (visible) {
+      rewardChestAction.style.left = `${Math.max(8, Math.min(92, Number(detail.screenX || .5) * 100))}%`;
+      rewardChestAction.style.top = `${Math.max(16, Math.min(82, Number(detail.screenY || .5) * 100))}%`;
+      rewardChestAction.textContent = `開啟寶箱 ${Number(detail.chestIndex || 0) + 1}`;
+      $('rewardControlStatus').textContent = '已靠近寶箱，點擊寶箱上方的按鈕領取。';
+    } else {
+      $('rewardControlStatus').textContent = '內圈走路、外圈跑步；拖曳畫面旋轉視角。';
+    }
+  });
+
+  rewardChestAction?.addEventListener('click', async () => {
+    if (!state.rewardMode || state.rewardSelected) return;
+    rewardChestAction.disabled = true;
+    $('rewardControlStatus').textContent = '正在開啟寶箱…';
+    await unityArena?.confirmRewardSelection().catch(() => {});
+    setTimeout(() => { rewardChestAction.disabled = false; }, 800);
+  });
+
+  $('rewardJumpButton')?.addEventListener('click', () => {
+    if (!state.rewardMode || state.rewardSelected) return;
+    void unityArena?.rewardJump().catch(() => {});
   });
 
   const goBack = () => { location.href = './dashboard.html?tab=challenge'; };
@@ -982,6 +1027,7 @@
 
   window.addEventListener('pagehide', () => {
     clearInterval(azureRefreshTimer);
+    stopRewardHeartbeat();
     clearTimeout(recordingTimer);
     if (mediaRecorder?.state === 'recording') mediaRecorder.stop();
     micStream?.getTracks().forEach(track => track.stop());

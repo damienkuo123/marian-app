@@ -146,8 +146,8 @@
     const height = Math.max(1, canvas?.clientHeight || Math.round((innerHeight || 844) * .64));
     const longCss = Math.max(width, height);
     const nativeDpr = Math.max(1, Number(window.devicePixelRatio || 1));
-    const targetLong = profile === 'high' ? 2048 : profile === 'cool' ? 1440 : 1792;
-    const cap = profile === 'high' ? 2.5 : profile === 'cool' ? 1.75 : 2.15;
+    const targetLong = profile === 'high' ? 2048 : profile === 'cool' ? 1440 : 2048;
+    const cap = profile === 'high' ? 2.5 : profile === 'cool' ? 1.75 : 2.5;
     return Math.max(1, Math.min(nativeDpr, cap, targetLong / longCss));
   }
 
@@ -285,7 +285,7 @@
           : 'StreamingAssets',
         companyName: manifest.companyName || 'Tappie',
         productName: manifest.productName || 'Tappie Challenge Mega City Arena',
-        productVersion: manifest.productVersion || '1.0.0-alpha6',
+        productVersion: manifest.productVersion || '1.0.0-alpha9',
         devicePixelRatio: state.devicePixelRatio,
         showBanner(message, type) {
           if (type === 'error') console.error('[Unity]', message);
@@ -449,7 +449,7 @@
   }
 
   const api = {
-    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.4-ALPHA8',
+    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.5-ALPHA9',
     state,
     load,
     retry,
@@ -471,6 +471,7 @@
     beginRewardSelection: payload => send('BeginRewardSelection', payload || ''),
     setRewardMoveInput: input => send('SetRewardMoveInput', input || { x: 0, y: 0 }),
     setRewardLookInput: input => send('SetRewardLookInput', input || { x: 0, y: 0 }),
+    rewardJump: () => send('RewardJump', ''),
     confirmRewardSelection: () => send('ConfirmRewardSelection', ''),
     endRewardSelection: () => send('EndRewardSelection', ''),
     clearRewardZone: () => send('ClearRewardZone', ''),
