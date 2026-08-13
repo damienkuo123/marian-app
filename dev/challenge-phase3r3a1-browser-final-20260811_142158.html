@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#eef4fb">
+  <title>Tappie 口說對決｜Mega City Arena</title>
+  <link rel="stylesheet" href="./challenge.css?v=20260810-phase2f-grounding-framing-v1">
+  <link rel="stylesheet" href="./challenge-unity-arena.css?v=20260810-phase2f-grounding-framing-v1">
+  <link rel="stylesheet" href="./challenge-v072.css?v=20260810-phase2f-grounding-framing-v1">
+</head>
+<body>
+  <main class="challenge-app" id="challengeApp">
+    <header class="battle-topbar">
+      <button class="back-button" id="backButton" type="button" aria-label="返回挑戰">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5.5 9 12l6.5 6.5"/></svg>
+      </button>
+      <div class="title-block"><span>TAPPIE CHALLENGE</span><strong>口說對決</strong></div>
+      <div class="coin-chip"><i>T</i><strong id="coinCount">220</strong></div>
+    </header>
+
+    <section class="ready-gate" id="readyGate" aria-labelledby="readyGateTitle">
+      <div class="ready-gate-card">
+        <span class="ready-eyebrow">MEGA CITY ARENA</span>
+        <h1 id="readyGateTitle">雙方準備好，再一起進場</h1>
+        <p class="ready-copy">世界、角色與麥克風會先完成準備；雙方都確認後才播放入場運鏡並開始第一題。</p>
+        <div class="ready-versus" aria-label="本場隨機角色">
+          <article class="ready-actor ready-actor-player">
+            <div class="ready-portrait"><img src="./assets/player.png" alt="我方隨機角色預覽"></div>
+            <span>PLAYER</span><strong id="readyPlayerName">Damien</strong>
+            <small id="playerReadyState">尚未準備</small>
+          </article>
+          <div class="ready-vs" aria-hidden="true">VS</div>
+          <article class="ready-actor ready-actor-opponent">
+            <div class="ready-portrait"><img src="./assets/opponent-fallback.png" alt="對手隨機角色預覽"></div>
+            <span>OPPONENT</span><strong id="readyOpponentName">森林小隊員</strong>
+            <small id="opponentReadyState">等待對手</small>
+          </article>
+        </div>
+        <div class="ready-progress" aria-hidden="true"><i id="readyProgressBar"></i></div>
+        <p class="ready-status" id="readyStatus" role="status">正在準備 Mega City Arena 0%</p>
+        <button class="ready-button" id="enterChallengeButton" type="button" hidden disabled>場景載入中…</button>
+        <small class="ready-permission">按下後會要求麥克風權限，用於本場發音評分。</small>
+      </div>
+    </section>
+
+    <section class="arena-shell" id="arenaShell" aria-label="雙角色 3D 對戰舞台">
+      <div class="unity-arena-runtime" id="unityArenaRuntime" aria-live="polite">
+        <canvas id="unityArenaCanvas" tabindex="-1" aria-label="Low Poly Mega City 3D Arena"></canvas>
+        <div class="unity-arena-loading" id="unityArenaLoading">
+          <strong id="unityArenaLoadingLabel">正在載入 Mega City Arena</strong>
+          <span><i id="unityArenaProgress"></i></span>
+        </div>
+        <div class="unity-arena-error" id="unityArenaError" hidden>
+          <strong>3D Arena 暫時無法載入</strong>
+          <span>已自動切換至 Challenge 相容畫面。</span>
+          <button id="unityArenaRetry" type="button">重新載入 Arena</button>
+        </div>
+        <output id="unityArenaDebug" hidden></output>
+      </div>
+      <div class="arena-sky"></div>
+      <div class="arena-horizon"></div>
+      <div class="arena-floor-grid"></div>
+      <div class="arena-light arena-light-player"></div>
+      <div class="arena-light arena-light-opponent"></div>
+
+      <div class="score-hud" aria-label="先得五分">
+        <div class="score-track score-track-player" id="playerScoreTrack" aria-label="我方 0 / 5">
+          <span>你</span><div class="score-lamps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="round-status"><b id="roundLabel">ROUND 1</b><span>先亮滿 5 格</span></div>
+        <div class="score-track score-track-opponent" id="opponentScoreTrack" aria-label="對手 0 / 5">
+          <div class="score-lamps" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><span>對手</span>
+        </div>
+      </div>
+
+      <div class="opponent-nameplate">
+        <span id="difficultyLabel">一般</span>
+        <strong id="opponentName">橘光探險家</strong>
+      </div>
+
+      <div class="avatar-stage avatar-stage-opponent" id="opponentRuntimeStage">
+        <img class="avatar-fallback" src="./assets/opponent-fallback.png" alt="對手角色">
+        <iframe
+          id="opponentRuntimeFrame"
+          title="LayerLab 對手角色 Runtime"
+          src="about:blank"
+          data-src="https://assets.tappieapp.com/avatars/layerlab/casual/2026.07.30-m2.5b4r3a4b/index.html"
+          allow="fullscreen; autoplay"
+          scrolling="no"
+          loading="eager"
+          referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="runtime-status" id="opponentRuntimeStatus">對手載入中</div>
+      </div>
+
+      <div class="avatar-stage avatar-stage-player" id="playerRuntimeStage">
+        <img class="avatar-fallback" src="./assets/player.png" alt="我方角色">
+        <iframe
+          id="playerRuntimeFrame"
+          title="LayerLab 我方角色 Runtime"
+          src="about:blank"
+          data-src="https://assets.tappieapp.com/avatars/layerlab/casual/2026.07.30-m2.5b4r3a4b/index.html"
+          allow="fullscreen; autoplay"
+          scrolling="no"
+          loading="eager"
+          referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="runtime-status" id="playerRuntimeStatus">我方載入中</div>
+      </div>
+
+      <div class="player-nameplate"><span>PLAYER</span><strong id="playerName">Damien</strong></div>
+      <div class="arena-center-mark" aria-hidden="true"><i></i></div>
+      <div class="arena-caption" id="arenaCaption">面對對手，準備開口</div>
+      <button class="reward-chest-action" id="rewardChestAction" type="button" hidden>開啟寶箱</button>
+
+      <button class="skill-orb" id="skillButton" type="button" disabled aria-label="重擊能量 0 / 3">
+        <span class="skill-orb-ring" id="skillOrbRing"></span>
+        <span class="skill-orb-core"><b>⚡</b><small id="skillFraction">0/3</small></span>
+        <span class="skill-orb-label">重擊</span>
+      </button>
+    </section>
+
+    <section class="control-deck" id="controlDeck">
+      <div id="battleControls">
+        <div class="question-row">
+          <div><span>Buildings · 第 <b id="questionNumber">1</b> 題</span><p id="questionSentence">We are going to the <strong>museum</strong>.</p></div>
+          <button class="audio-button" id="audioButton" type="button" aria-label="播放題目">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9v6l5 3V6z"/></svg>
+          </button>
+        </div>
+        <button class="record-button" id="recordButton" type="button" disabled><i></i><span>等待雙方進場</span></button>
+        <p class="skill-helper" id="energyHint">完成 3 題即可使用重擊；勝出時一次亮 2 格。</p>
+      </div>
+
+      <div class="reward-controls" id="rewardControls" hidden>
+        <div class="reward-control-copy">
+          <span>REWARD WALK</span>
+          <strong id="rewardControlTitle">走到想選的寶箱前</strong>
+          <small id="rewardControlStatus">左側搖桿控制移動；拖曳上方遊戲畫面可旋轉視角。</small>
+        </div>
+        <div class="reward-control-row">
+          <div class="reward-joystick" id="rewardJoystick" role="application" aria-label="角色移動搖桿">
+            <i></i><b id="rewardJoystickKnob"></b>
+          </div>
+          <div class="reward-control-actions">
+            <button class="reward-jump-button" id="rewardJumpButton" type="button"><span>↑</span><strong>跳躍</strong></button>
+            <button class="reward-finish-button" id="finishRewardMode" type="button" hidden>回到挑戰</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="round-result" id="roundResult" aria-hidden="true">
+      <div class="round-result-card"><span id="resultLabel">回合勝利</span><div><strong id="mySpeechScore">88</strong><b>:</b><strong id="enemySpeechScore">74</strong></div><p id="resultCopy">亮起 1 格</p></div>
+    </div>
+
+    <div class="skill-cutin" id="skillCutin" aria-hidden="true"><div class="skill-ray"></div><span>⚡</span><strong>重擊發動</strong><small>本回合勝出時一次亮起 2 格</small></div>
+
+    <div class="end-sheet" id="endSheet" aria-hidden="true">
+      <div class="end-card"><span>MATCH COMPLETE</span><h2 id="endTitle">挑戰成功</h2><div class="final-lamps" id="finalLamps"></div><p id="endCopy">率先亮滿五格，完成本場口說對決。</p><button id="finishBattle" type="button">回到挑戰</button></div>
+    </div>
+  </main>
+
+  <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+  <script src="./tappie-api.js?v=20260808-alpha9-2"></script>
+  <script src="./tappie-alpha11-webgl-controls.js?v=20260810-phase2f-grounding-framing-v1"></script>
+  <script src="./challenge-state-coordinator.js?v=20260810-phase2f-grounding-framing-v1"></script>
+  <script src="./challenge-unity-arena-phase3r3a1-browser-final-20260811_142158.js?v=20260811_142158"></script>
+  <script src="./challenge-phase3r3a1-browser-final-20260811_142158.js?v=20260811_142158"></script>
+</body>
+</html>

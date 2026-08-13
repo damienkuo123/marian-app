@@ -2,13 +2,15 @@
   'use strict';
 
   const HOST_OBJECT = 'Tappie_Challenge_Production_Runtime';
-  const DEFAULT_ARENA = 'low-poly-mega-city-01';
+  const CLEAN_OBJECT = 'TappieChallengeCleanCoordinator';
+  const DEFAULT_ARENA = 'football-field';
   const CATALOG_PATH = './unity/arenas/catalog.json';
   const params = new URLSearchParams(location.search);
   const requestedArena = (params.get('arena') || '').trim();
   const debugEnabled = params.get('arenaDebug') === '1';
   let arenaId = requestedArena || DEFAULT_ARENA;
   let arenaLabel = arenaId;
+  let runtimeProfileId = arenaId;
   let arenaDisabled = ['off', 'none'].includes(arenaId.toLowerCase());
   let manifestPath = `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`;
   let arenaSelectionResolved = false;
@@ -37,7 +39,9 @@
     error: null,
     qualityProfile: 'balanced',
     devicePixelRatio: 1,
-    timings: { loaderStartedAt: performance.now() }
+    timings: { loaderStartedAt: performance.now() },
+    controlMode: 'legacy-alpha9',
+    capabilityContract: null
   };
 
   let loadPromise = null;
@@ -69,7 +73,10 @@
   function setRuntimeArenaUrl(value) {
     try {
       const url = new URL(location.href);
+      const preserved = [...url.searchParams.entries()].filter(([key]) => key !== 'arenaRuntime');
+      url.search = '';
       url.searchParams.set('arenaRuntime', value);
+      for (const [key, itemValue] of preserved) url.searchParams.append(key, itemValue);
       history.replaceState(history.state, '', url.href);
     } catch (_) {}
   }
@@ -97,11 +104,13 @@
       }
       arenaId = String(selected.id).trim();
       arenaLabel = String(selected.label || arenaId).trim();
+      runtimeProfileId = String(selected.profileId || arenaId).trim();
       manifestPath = String(selected.runtimeManifest || `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`).trim();
       arenaDisabled = false;
       state.arenaId = arenaId;
       state.catalogEntry = selected;
-      setRuntimeArenaUrl(arenaId);
+      state.runtimeProfileId = runtimeProfileId;
+      setRuntimeArenaUrl(runtimeProfileId);
       emit('tappie:challenge-arena-selected', {
         arenaId,
         label: arenaLabel,
@@ -114,11 +123,13 @@
     } catch (error) {
       arenaId = DEFAULT_ARENA;
       arenaLabel = DEFAULT_ARENA;
+      runtimeProfileId = DEFAULT_ARENA;
       manifestPath = `./unity/arenas/${encodeURIComponent(arenaId)}/arena-runtime-manifest.json`;
       arenaDisabled = false;
       state.arenaId = arenaId;
       state.catalogError = error instanceof Error ? error.message : String(error);
-      setRuntimeArenaUrl(arenaId);
+      state.runtimeProfileId = runtimeProfileId;
+      setRuntimeArenaUrl(runtimeProfileId);
       console.warn('[Tappie Challenge Arena] catalog fallback', error);
       emit('tappie:challenge-arena-selected', {
         arenaId,
@@ -264,11 +275,14 @@
       if (!shared && manifest.arenaId && manifest.arenaId !== arenaId) {
         throw new Error(`Arena manifest ID 不符：${manifest.arenaId}`);
       }
-      if (shared && Array.isArray(manifest.arenas) && !manifest.arenas.some(item => item?.id === arenaId)) {
-        throw new Error(`Shared Arena manifest 未包含：${arenaId}`);
+      if (shared && Array.isArray(manifest.arenas) && !manifest.arenas.some(item => item?.id === runtimeProfileId)) {
+        throw new Error(`Shared Arena manifest 未包含 runtime profile：${runtimeProfileId}`);
       }
       state.manifest = manifest;
       state.sharedMultiArena = shared;
+      const caps = { ...(state.catalogEntry?.capabilities || {}), ...(manifest.capabilities || {}) };
+      state.controlMode = String(caps.gameplayControlMode || manifest.gameplayControlMode || 'legacy-alpha9');
+      state.capabilityContract = String(caps.contract || manifest.capabilityContract || '');
       const loaderUrl = resolveAsset(manifestUrl, manifest.loaderUrl);
       await loadScript(loaderUrl);
       if (typeof window.createUnityInstance !== 'function') throw new Error('Unity Loader 未提供 createUnityInstance');
@@ -293,6 +307,7 @@
         }
       };
       state.unityInstance = await window.createUnityInstance(elements.canvas, config, setProgress);
+      window.TappieAlpha11Controls?.bind?.(state.unityInstance);
       state.timings.instanceCreatedAt = performance.now();
       state.timings.instanceCreateMs = Math.round(state.timings.instanceCreatedAt - state.timings.instanceStartedAt);
       setPhase('loading', 'Runtime initialization');
@@ -310,6 +325,13 @@
       return state.unityInstance;
     })().catch(fail);
     return loadPromise;
+  }
+
+  function sendTo(objectName, method, payload = '') {
+    if (!state.unityInstance) return Promise.reject(new Error('Unity Arena 尚未建立'));
+    const value = typeof payload === 'string' ? payload : JSON.stringify(payload ?? {});
+    try { state.unityInstance.SendMessage(objectName, method, value); return Promise.resolve(); }
+    catch (error) { return Promise.reject(error); }
   }
 
   function send(method, payload = '') {
@@ -366,15 +388,20 @@
 
 
   async function sendAndWait(method, payload, eventKind, timeoutMs = 6000, fallbackMs = 2200) {
+    const messageToken = method === 'PlayCue' && payload && typeof payload === 'object'
+      ? String(payload.cue || '').trim()
+      : null;
     const runtimeEvent = eventKind
-      ? waitForRuntime(eventKind, null, timeoutMs).catch(() => null)
+      ? waitForRuntime(eventKind, messageToken || null, timeoutMs)
       : Promise.resolve(null);
     await send(method, payload);
     if (!eventKind) return null;
-    return Promise.race([
-      runtimeEvent,
-      new Promise(resolve => setTimeout(() => resolve(null), fallbackMs))
-    ]);
+    try {
+      return await runtimeEvent;
+    } catch (error) {
+      console.warn(`[Tappie Challenge Arena] completion timeout: ${eventKind} after ${timeoutMs}ms`, error);
+      return null;
+    }
   }
 
   async function initialize(config = {}) {
@@ -407,6 +434,7 @@
   function diagnostics() {
     return {
       arenaId,
+      runtimeProfileId,
       label: arenaLabel,
       phase: state.phase,
       progress: state.progress,
@@ -422,6 +450,10 @@
         height: elements.canvas?.height || 0
       },
       timings: { ...state.timings },
+      controlMode: state.controlMode,
+      capabilityContract: state.capabilityContract,
+      alpha11ControlBound: Boolean(window.TappieAlpha11Controls?.isBound?.()),
+      cleanStateContract: window.TappieChallengeState?.contract || null,
       hardwareConcurrency: navigator.hardwareConcurrency || null,
       deviceMemory: navigator.deviceMemory || null
     };
@@ -448,8 +480,27 @@
     return load();
   }
 
+  const isCleanAlpha11 = () => state.controlMode === 'alpha11-single-motor-v1';
+  const cleanState = value => {
+    if (!isCleanAlpha11()) return Promise.resolve();
+    const next = String(value || '').trim().toUpperCase();
+    // REWARD_GAMEPLAY is atomically entered by BeginReward so state and socket creation cannot race.
+    if (next === 'REWARD_GAMEPLAY') return Promise.resolve();
+    return sendTo(CLEAN_OBJECT, 'SetChallengeState', next);
+  };
+  const beginReward = payload => {
+    if (!isCleanAlpha11()) return send('BeginRewardSelection', payload || '');
+    window.TappieAlpha11Controls?.clearAll?.();
+    return sendTo(CLEAN_OBJECT, 'BeginReward', payload || {});
+  };
+  const endReward = reason => {
+    if (!isCleanAlpha11()) return send('EndRewardSelection', reason || '');
+    window.TappieAlpha11Controls?.clearAll?.();
+    return sendTo(CLEAN_OBJECT, 'EndReward', reason || 'frontend');
+  };
+
   const api = {
-    contract: 'TAPPIE-CHALLENGE-SHARED-MULTI-ARENA-HTML-V0.5-ALPHA9',
+    contract: 'TAPPIE-CHALLENGE-ALPHA11-PHASE2F-PRODUCTION-GROUNDING-FRAMING-V1.0',
     state,
     load,
     retry,
@@ -468,13 +519,28 @@
     playMatchIntro: () => send('PlayMatchIntro', ''),
     suspendStableCamera: () => send('SuspendStableCamera', ''),
     resumeStableCamera: mode => send('ResumeStableCamera', mode || 'BATTLE_MAIN'),
-    beginRewardSelection: payload => send('BeginRewardSelection', payload || ''),
-    setRewardMoveInput: input => send('SetRewardMoveInput', input || { x: 0, y: 0 }),
-    setRewardLookInput: input => send('SetRewardLookInput', input || { x: 0, y: 0 }),
-    rewardJump: () => send('RewardJump', ''),
-    confirmRewardSelection: () => send('ConfirmRewardSelection', ''),
-    endRewardSelection: () => send('EndRewardSelection', ''),
-    clearRewardZone: () => send('ClearRewardZone', ''),
+    setChallengeState: cleanState,
+    beginRewardSelection: beginReward,
+    setRewardMoveInput: input => isCleanAlpha11()
+      ? Promise.resolve(window.TappieAlpha11Controls?.move?.(Number(input?.x || 0), Number(input?.y || 0), Math.hypot(Number(input?.x || 0), Number(input?.y || 0)) >= .70))
+      : send('SetRewardMoveInput', input || { x: 0, y: 0 }),
+    setRewardLookInput: input => isCleanAlpha11()
+      ? Promise.resolve(window.TappieAlpha11Controls?.look?.(Number(input?.x || 0), Number(input?.y || 0), true))
+      : send('SetRewardLookInput', input || { x: 0, y: 0 }),
+    endRewardLook: () => isCleanAlpha11()
+      ? Promise.resolve(window.TappieAlpha11Controls?.endLook?.())
+      : Promise.resolve(),
+    rewardJump: () => isCleanAlpha11()
+      ? Promise.resolve(window.TappieAlpha11Controls?.jump?.())
+      : send('RewardJump', ''),
+    returnRewardToBattlePose: () => isCleanAlpha11()
+      ? sendTo(CLEAN_OBJECT, 'ReturnRewardPlayerToBattlePose', '')
+      : Promise.resolve(),
+    confirmRewardSelection: () => isCleanAlpha11()
+      ? sendTo(CLEAN_OBJECT, 'ConfirmRewardSelection', '')
+      : send('ConfirmRewardSelection', ''),
+    endRewardSelection: () => endReward('frontend'),
+    clearRewardZone: () => isCleanAlpha11() ? endReward('clear') : send('ClearRewardZone', ''),
     setQualityProfile: profile => send('SetQualityProfile', profile),
     diagnostics,
     waitForRuntime,
@@ -482,10 +548,13 @@
   };
 
   window.TappieChallengeArena = api;
+  window.TappieChallengeState?.bind?.(api);
   window.__TAPPIE_ARENA_DIAGNOSTICS__ = diagnostics;
   window.addEventListener('tappie:challenge-runtime', handleRuntimeEvent);
   window.addEventListener('pagehide', () => {
     if (state.unityInstance) {
+      try { window.TappieAlpha11Controls?.clearAll?.(); window.TappieAlpha11Controls?.enableGameplay?.(false); } catch (_) {}
+      try { state.unityInstance.SendMessage(CLEAN_OBJECT, 'EndReward', 'pagehide'); } catch (_) {}
       try { state.unityInstance.SendMessage(HOST_OBJECT, 'DisposeRuntime', 'pagehide'); } catch (_) {}
     }
   });

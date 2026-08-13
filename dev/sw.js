@@ -25,7 +25,13 @@ const TAPPIE_NO_CACHE_PATHS = [
     '/station.html',
     '/manifest.json',
     '/tappie-api.js',
-    '/tappie-student-session.js'
+    '/tappie-student-session.js',
+    '/challenge.html',
+    '/challenge.js',
+    '/challenge-unity-arena.js',
+    '/challenge-state-coordinator.js',
+    '/tappie-alpha11-webgl-controls.js',
+    '/unity/arenas/catalog.json'
 ];
 
 function shouldBypassRuntimeCache(requestUrl) {
